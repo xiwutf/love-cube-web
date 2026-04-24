@@ -1,0 +1,43 @@
+/* 全局 CSS 变量 */
+:root {
+  --color-primary: #FF6B8A;
+  --color-primary-light: #FFE8EE;
+  --color-text: #333333;
+  --color-text-secondary: #888888;
+  --color-border: #F0F0F0;
+  --color-bg: #F8F8F8;
+  --color-white: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  /* 移动端优化 */
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-white);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 覆盖 Vant 主色 */
+:root {
+  --van-primary-color: #FF6B8A;
+  --van-button-primary-background: #FF6B8A;
+  --van-button-primary-border-color: #FF6B8A;
+}
