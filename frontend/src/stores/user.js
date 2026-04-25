@@ -107,7 +107,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => userInfo.value?.role === 'admin')
+  const isAdmin = computed(() => ['admin', 'super_admin', 'root'].includes(String(userInfo.value?.role || '').toLowerCase()))
 
   if (token.value) {
     refreshCurrentUser().catch(() => {

@@ -76,6 +76,9 @@ public class User {
     @Column(name = "user_status", length = 32)
     private String userStatus;
 
+    @Column(name = "role", length = 32)
+    private String role;
+
     @Column(name = "invite_code_status", length = 32)
     private String inviteCodeStatus;
 
@@ -91,6 +94,9 @@ public class User {
         updatedAt = LocalDateTime.now();
         if (userStatus == null || userStatus.isBlank()) {
             userStatus = "NORMAL";
+        }
+        if (role == null || role.isBlank()) {
+            role = "USER";
         }
         if (inviteCodeStatus == null || inviteCodeStatus.isBlank()) {
             inviteCodeStatus = "ENABLED";

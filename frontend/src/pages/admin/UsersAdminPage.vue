@@ -28,12 +28,24 @@
           <tr v-for="item in users" :key="item.userId">
             <td>{{ item.username || `用户${item.userId}` }}</td>
             <td>{{ item.phone || '无手机号' }}</td>
-            <td>{{ item.role || 'user' }}</td>
+            <td>
+              <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
+                <option v-for="opt in allowedRoleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </td>
             <td>{{ item.verificationStatus || 'none' }}</td>
             <td><span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span></td>
             <td>{{ formatDate(item.createdAt) }}</td>
             <td>
               <div class="admin-cell-actions">
+                <button
+                  class="admin-btn"
+                  type="button"
+                  :disabled="savingRoleUserId === item.userId || !canEditRole(item)"
+                  @click="saveRole(item)"
+                >
+                  {{ savingRoleUserId === item.userId ? '保存中...' : '保存角色' }}
+                </button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'banned')">封禁</button>
               </div>
@@ -50,7 +62,20 @@
           <strong>{{ item.username || `用户${item.userId}` }}</strong>
           <span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span>
         </div>
-        <p class="admin-row-meta">{{ item.phone || '无手机号' }} · {{ item.role || 'user' }}</p>
+        <p class="admin-row-meta">{{ item.phone || '无手机号' }}</p>
+        <div class="admin-row-role">
+          <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
+            <option v-for="opt in allowedRoleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <button
+            class="admin-btn"
+            type="button"
+            :disabled="savingRoleUserId === item.userId || !canEditRole(item)"
+            @click="saveRole(item)"
+          >
+            {{ savingRoleUserId === item.userId ? '保存中...' : '保存角色' }}
+          </button>
+        </div>
         <p class="admin-row-meta">认证：{{ item.verificationStatus || 'none' }} · 注册：{{ formatDate(item.createdAt) }}</p>
         <div class="admin-toolbar">
           <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
@@ -63,12 +88,25 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
-import { getAdminUsers } from '@/api/adminContent.js'
+import { getAdminUsers, updateAdminUserRole } from '@/api/adminContent.js'
+import { useUserStore } from '@/stores/user.js'
 
 const loading = ref(false)
 const users = ref([])
+const savingRoleUserId = ref(null)
+const userStore = useUserStore()
+const roleOptions = [
+  { value: 'user', label: '普通用户' },
+  { value: 'admin', label: '管理员' },
+  { value: 'super_admin', label: '超级管理员' },
+  { value: 'root', label: 'Root' }
+]
+const rootRoleOptions = roleOptions
+const adminRoleOptions = roleOptions.filter((item) => item.value === 'user' || item.value === 'admin')
+const currentAdminRole = computed(() => normalizeRole(userStore.syncCurrentUser()?.role || 'user'))
+const allowedRoleOptions = computed(() => (currentAdminRole.value === 'root' ? rootRoleOptions : adminRoleOptions))
 
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
@@ -76,12 +114,29 @@ function normalizeUsers(rows) {
       userId: item.userId ?? item.id,
       username: item.username ?? '',
       phone: item.phone ?? '',
-      role: item.role ?? 'user',
+      role: normalizeRole(item.role ?? 'user'),
       verificationStatus: item.verificationStatus ?? 'none',
       status: item.status ?? 'active',
       createdAt: item.createdAt ?? null
     }))
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+}
+
+function normalizeRole(value) {
+  const role = String(value || '').trim().toLowerCase()
+  if (role === 'admin' || role === 'super_admin' || role === 'root') return role
+  return 'user'
+}
+
+function isHighPrivilegeRole(value) {
+  const role = normalizeRole(value)
+  return role === 'root' || role === 'super_admin'
+}
+
+function canEditRole(item) {
+  if (!item?.userId) return false
+  if (currentAdminRole.value === 'root') return true
+  return !isHighPrivilegeRole(item.role)
 }
 
 async function loadUsers() {
@@ -107,5 +162,48 @@ function setStatus(_item, _status) {
   showToast({ type: 'fail', message: '封禁状态接口待接入（当前仅展示真实用户）' })
 }
 
+async function saveRole(item) {
+  if (!item?.userId) {
+    showToast({ type: 'fail', message: '缺少用户ID，无法保存' })
+    return
+  }
+  if (!canEditRole(item)) {
+    showToast({ type: 'fail', message: '仅 ROOT 可修改 ROOT/SUPER_ADMIN 角色' })
+    return
+  }
+  if (currentAdminRole.value !== 'root' && !['user', 'admin'].includes(item.role)) {
+    showToast({ type: 'fail', message: '普通管理员仅可设置 USER/ADMIN' })
+    return
+  }
+  try {
+    savingRoleUserId.value = item.userId
+    await updateAdminUserRole(item.userId, item.role)
+    showToast({ type: 'success', message: '角色已更新' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '角色更新失败' })
+  } finally {
+    savingRoleUserId.value = null
+  }
+}
+
 onMounted(loadUsers)
 </script>
+
+<style scoped>
+.admin-select {
+  min-width: 120px;
+  height: 32px;
+  border: 1px solid #d8deea;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 8px;
+  color: #1f2937;
+}
+
+.admin-row-role {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>

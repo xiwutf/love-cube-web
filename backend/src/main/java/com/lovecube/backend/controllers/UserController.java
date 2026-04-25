@@ -6,6 +6,7 @@ import com.lovecube.backend.entity.UserStatistics;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserStatisticsRepository;
+import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.UserService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -29,6 +33,9 @@ public class UserController {
 
     @Autowired
     private UserStatisticsRepository userStatisticsRepository;
+
+    @Autowired
+    private AdminAuthService adminAuthService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -218,7 +225,7 @@ public class UserController {
         result.put("phoneNumber", user.getPhoneNumber());
         result.put("gender", convertGender(user.getGender()));
         result.put("location", user.getLocation());
-        result.put("role", isAdminUser(user) ? "admin" : "user");
+        result.put("role", adminAuthService.isAdmin(user) ? "admin" : "user");
         result.put("status", "active");
         result.put("verificationStatus", "none");
         result.put("verificationRejectReason", "");
@@ -258,13 +265,6 @@ public class UserController {
         result.put("completionRate", calculateCompletionRate(user));
 
         return ResponseEntity.ok(result);
-    }
-
-    private boolean isAdminUser(User user) {
-        if (user == null || user.getPhoneNumber() == null) {
-            return false;
-        }
-        return Set.of("13800000000", "15030251407").contains(user.getPhoneNumber());
     }
 
     private String convertGender(Integer gender) {

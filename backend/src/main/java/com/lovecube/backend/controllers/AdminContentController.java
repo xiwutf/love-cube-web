@@ -21,12 +21,17 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
 public class AdminContentController {
+    private static final Set<String> ALLOWED_ROLES = Set.of("USER", "ADMIN", "SUPER_ADMIN", "ROOT");
+    private static final Set<String> ADMIN_MANAGEABLE_ROLES = Set.of("USER", "ADMIN");
+    private static final Set<String> HIGH_PRIVILEGE_ROLES = Set.of("SUPER_ADMIN", "ROOT");
+
     private final AnnouncementRepository announcementRepository;
     private final ArticleRepository articleRepository;
     private final PlatformEventRepository platformEventRepository;
@@ -136,7 +141,7 @@ public class AdminContentController {
             item.put("userId", user.getUserid());
             item.put("username", user.getUsername() == null ? "" : user.getUsername());
             item.put("phone", user.getPhoneNumber() == null ? "" : user.getPhoneNumber());
-            item.put("role", adminAuthService.isAdmin(user) ? "admin" : "user");
+            item.put("role", normalizeRoleForView(user.getRole(), adminAuthService.isAdmin(user)));
             item.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
             item.put("verificationStatus", "none");
             item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
@@ -144,6 +149,64 @@ public class AdminContentController {
             item.put("createdAt", user.getCreatedAt());
             return item;
         }).collect(Collectors.toList());
+    }
+
+    @PutMapping("/users/{userId}/role")
+    public Map<String, Object> updateUserRole(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User operator = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isAdmin(operator)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "无后台权限"
+            );
+        }
+
+        String rawRole = String.valueOf(payload.getOrDefault("role", "")).trim().toUpperCase();
+        if (!ALLOWED_ROLES.contains(rawRole)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "角色无效，仅支持 USER/ADMIN/SUPER_ADMIN/ROOT"
+            );
+        }
+        String operatorRole = resolveOperatorRole(operator);
+
+        User target = userRepository.findById(userId).orElseThrow(() ->
+                new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "用户不存在"
+                )
+        );
+        String targetRole = resolveOperatorRole(target);
+
+        if (!"ROOT".equals(operatorRole)) {
+            if (HIGH_PRIVILEGE_ROLES.contains(targetRole)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "仅 ROOT 可修改 ROOT/SUPER_ADMIN 账号"
+                );
+            }
+            if (!ADMIN_MANAGEABLE_ROLES.contains(rawRole)) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "普通管理员仅可设置 USER/ADMIN"
+                );
+            }
+        }
+
+        // Avoid accidentally locking out the current operator.
+        if (operator.getUserid().equals(target.getUserid()) && "USER".equals(rawRole)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "不能将当前登录管理员降级为 USER"
+            );
+        }
+
+        target.setRole(rawRole);
+        userRepository.save(target);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", target.getUserid());
+        result.put("role", normalizeRoleForView(target.getRole(), adminAuthService.isAdmin(target)));
+        result.put("message", "角色更新成功");
+        return result;
     }
 
     @GetMapping("/invites")
@@ -229,5 +292,36 @@ public class AdminContentController {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    private String normalizeRoleForView(String role, boolean isAdminFallback) {
+        if (role == null || role.isBlank()) {
+            return isAdminFallback ? "admin" : "user";
+        }
+        String normalized = role.trim().toLowerCase();
+        if ("super_admin".equals(normalized)) {
+            return "super_admin";
+        }
+        if ("root".equals(normalized)) {
+            return "root";
+        }
+        if ("admin".equals(normalized)) {
+            return "admin";
+        }
+        return "user";
+    }
+
+    private String resolveOperatorRole(User user) {
+        if (user == null) {
+            return "USER";
+        }
+        String role = user.getRole();
+        if (role != null && !role.isBlank()) {
+            String normalized = role.trim().toUpperCase();
+            if (ALLOWED_ROLES.contains(normalized)) {
+                return normalized;
+            }
+        }
+        return adminAuthService.isAdmin(user) ? "ADMIN" : "USER";
     }
 }
