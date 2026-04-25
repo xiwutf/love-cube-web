@@ -1,4 +1,4 @@
-/* 全局 CSS 变量 */
+﻿/* 全局 CSS 变量 */
 :root {
   --color-primary: #FF6B8A;
   --color-primary-light: #FFE8EE;
@@ -32,7 +32,7 @@ html, body {
   overflow-x: hidden;
 }
 
-/* fellowship 模块壳：移动端居中约束（由 App.vue 路由判断挂载） */
+/* fellowship 模块壳：移动端居中约束（由 App.vue 按路由挂载） */
 .fellowship-shell {
   width: 100%;
   max-width: 100%;
