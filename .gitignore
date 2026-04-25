@@ -1,0 +1,13 @@
+﻿# Local assistant/tooling
+.claude/
+
+# Logs
+*.log
+backend/logs/
+
+# Build outputs
+backend/target/
+frontend/dist/
+
+# Dependencies and local bundler caches
+frontend/node_modules/
