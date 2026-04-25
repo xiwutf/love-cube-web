@@ -30,6 +30,34 @@ public class UploadController
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final String AVATAR_DIR = "uploads/avatar/";
     private final String PHOTOS_DIR = "uploads/photos/";
+    private final String IMAGES_DIR = "uploads/images/";
+
+    /** 通用图片上传，前端 H5 统一调用此接口 */
+    @PostMapping("/image")
+    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("文件为空");
+        }
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String ext = originalFilename != null && originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : ".jpg";
+            if (!isValidImageExtension(ext)) {
+                return ResponseEntity.badRequest().body("不支持的文件类型");
+            }
+            String filename = UUID.randomUUID().toString() + ext;
+            String savePath = System.getProperty("user.dir") + "/" + IMAGES_DIR;
+            File dir = new File(savePath);
+            if (!dir.exists()) dir.mkdirs();
+            file.transferTo(new File(dir, filename));
+            String url = appProperties.getBaseUrl() + "/uploads/images/" + filename;
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "上传失败: " + e.getMessage()));
+        }
+    }
 
     @PostMapping("/avatar")
     public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file) {

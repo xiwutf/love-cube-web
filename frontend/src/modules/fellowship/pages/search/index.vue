@@ -16,7 +16,7 @@
         v-for="u in list"
         :key="u.userId"
         :user="u"
-        @click="router.push(`/user-profile/${u.userId}`)"
+        @click="router.push(`/fellowship/user-profile/${u.userId}`)"
       />
       <van-empty
         v-if="!loading && !keyword && !list.length"
@@ -37,11 +37,11 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import AppTabBar from '@/components/AppTabBar.vue'
-import UserCard from '@/components/UserCard.vue'
-import { normalizeUser } from '@/utils/normalizeUser.js'
-import { debounce } from '@/utils/format.js'
-import request from '@/api/request.js'
+import AppTabBar from '@f/components/AppTabBar.vue'
+import UserCard  from '@f/components/UserCard.vue'
+import { normalizeUser } from '@f/utils/normalizeUser.js'
+import { debounce } from '@f/utils/format.js'
+import request from '@f/api/request.js'
 
 const router   = useRouter()
 const keyword  = ref('')
@@ -55,7 +55,7 @@ async function fetchSearch(reset = false) {
   if (reset) { page = 0; list.value = []; noMore.value = false }
   if (!keyword.value.trim() || loading.value || noMore.value) return
 
-  loading.value = true
+  loading.value  = true
   searched.value = true
   try {
     const data  = await request.get('/search', { params: { keyword: keyword.value, page, size: 10 } })

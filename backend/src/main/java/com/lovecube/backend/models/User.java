@@ -59,6 +59,12 @@ public class User
     @Column(name = "photos", columnDefinition = "TEXT")
     private String photos; // 生活照片JSON数组
 
+    @Column(name = "vip_status")
+    private String vipStatus; // none / month / season / year
+
+    @Column(name = "vip_expires_at")
+    private LocalDateTime vipExpiresAt; // VIP 到期时间
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;//注册时间
 

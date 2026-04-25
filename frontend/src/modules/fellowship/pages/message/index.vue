@@ -5,7 +5,6 @@
     </div>
 
     <van-tabs v-model:active="activeTab" color="#FF6B8A" title-active-color="#FF6B8A" sticky offset-top="48">
-      <!-- Tab1: 聊天 -->
       <van-tab title="聊天" :badge="msgStore.unreadChat || ''">
         <van-pull-refresh v-model="refreshingChat" @refresh="loadChat">
           <van-list v-model:loading="loadingChat" :finished="true" finished-text="">
@@ -42,7 +41,6 @@
         </van-pull-refresh>
       </van-tab>
 
-      <!-- Tab2: 互动 -->
       <van-tab title="互动" :badge="msgStore.unreadInteract || ''">
         <van-pull-refresh v-model="refreshingInteract" @refresh="loadInteract">
           <van-list v-model:loading="loadingInteract" :finished="true" finished-text="">
@@ -64,12 +62,11 @@
         </van-pull-refresh>
       </van-tab>
 
-      <!-- Tab3: 访客 -->
       <van-tab title="访客" :badge="msgStore.unreadVisitor || ''">
         <van-pull-refresh v-model="refreshingVisitor" @refresh="loadVisitor">
           <van-list v-model:loading="loadingVisitor" :finished="true" finished-text="">
             <div v-for="item in visitorList" :key="item.id" class="chat-item"
-                 @click="router.push(`/user-profile/${item.visitorId}`)">
+                 @click="router.push(`/fellowship/user-profile/${item.visitorId}`)">
               <van-image round width="46" height="46" :src="getAvatar(item.visitor)" fit="cover">
                 <template #error>
                   <div class="avatar-fallback sm">{{ (item.visitor?.nickname || '?')[0] }}</div>
@@ -96,29 +93,26 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppTabBar from '@/components/AppTabBar.vue'
-import { useMessageStore } from '@/stores/message.js'
+import AppTabBar from '@f/components/AppTabBar.vue'
+import { useMessageStore } from '@f/stores/message.js'
 import { getChatList, getInteractList, getVisitorList, getUnreadCount,
-         markInteractRead, markVisitorRead } from '@/api/message.js'
-import { deleteChat } from '@/api/chat.js'
-import { useUserStore } from '@/stores/user.js'
+         markInteractRead, markVisitorRead } from '@f/api/message.js'
+import { deleteChat } from '@f/api/chat.js'
+import { useUserStore } from '@f/stores/user.js'
 import { showConfirmDialog, showToast } from 'vant'
-import { formatTime } from '@/utils/format.js'
-import { getAvatar } from '@/utils/image.js'
-import { normalizeUser } from '@/utils/normalizeUser.js'
+import { formatTime } from '@f/utils/format.js'
+import { getAvatar } from '@f/utils/image.js'
 
 const route     = useRoute()
 const router    = useRouter()
 const msgStore  = useMessageStore()
 const userStore = useUserStore()
 
-// Tab 索引映射
-const TAB_MAP = { chat: 0, interact: 1, visitor: 2 }
+const TAB_MAP   = { chat: 0, interact: 1, visitor: 2 }
 const activeTab = ref(TAB_MAP[route.query.tab] ?? 0)
 
-// 聊天列表
-const chatList      = ref([])
-const loadingChat   = ref(false)
+const chatList       = ref([])
+const loadingChat    = ref(false)
 const refreshingChat = ref(false)
 
 async function loadChat() {
@@ -139,9 +133,8 @@ async function loadChat() {
   }
 }
 
-// 互动列表
-const interactList      = ref([])
-const loadingInteract   = ref(false)
+const interactList       = ref([])
+const loadingInteract    = ref(false)
 const refreshingInteract = ref(false)
 
 async function loadInteract() {
@@ -157,9 +150,8 @@ async function loadInteract() {
   }
 }
 
-// 访客列表
-const visitorList      = ref([])
-const loadingVisitor   = ref(false)
+const visitorList       = ref([])
+const loadingVisitor    = ref(false)
 const refreshingVisitor = ref(false)
 
 async function loadVisitor() {
@@ -175,7 +167,6 @@ async function loadVisitor() {
   }
 }
 
-// 拉取未读数
 async function fetchUnread() {
   try {
     const data = await getUnreadCount()
@@ -187,9 +178,8 @@ async function fetchUnread() {
   } catch {}
 }
 
-// 切换 tab 时按需加载
 watch(activeTab, (tab) => {
-  if (tab === 0 && !chatList.value.length)    loadChat()
+  if (tab === 0 && !chatList.value.length)     loadChat()
   if (tab === 1 && !interactList.value.length) loadInteract()
   if (tab === 2 && !visitorList.value.length)  loadVisitor()
 })
@@ -200,7 +190,7 @@ onMounted(async () => {
 })
 
 function goChat(item) {
-  router.push(`/chat/${item.userId}`)
+  router.push(`/fellowship/chat/${item.userId}`)
 }
 
 async function handleDeleteChat(item) {
@@ -219,7 +209,7 @@ async function handleDeleteChat(item) {
 }
 
 function interactLabel(type) {
-  const map = { like: '喜欢了你', follow: '关注了你', greet: '向你打了招呼', match: '和你配对成功' }
+  const map = { like: '喜欢了你', follow: '关注了你', greet: '向你打了招呼', match: '和你认识成功' }
   return map[type] || '与你互动'
 }
 </script>
