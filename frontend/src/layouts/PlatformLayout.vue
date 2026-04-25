@@ -119,8 +119,8 @@ function handleLogout() {
 <style scoped>
 .platform-layout {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f3f7fc 0%, #ffffff 460px);
-  color: #1f2937;
+  background: #f5f7fb;
+  color: #111827;
 }
 
 .platform-header {
@@ -134,12 +134,12 @@ function handleLogout() {
 
 .nav-wrap {
   width: 100%;
-  min-height: 78px;
+  min-height: 64px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 18px;
-  padding: 0 24px;
+  padding: 0 32px;
 }
 
 .brand {
@@ -195,15 +195,15 @@ function handleLogout() {
 }
 
 .nav-links a {
-  color: #475569;
+  color: #374151;
   text-decoration: none;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
 }
 
 .nav-links a.router-link-exact-active,
 .nav-links a.is-active {
-  color: #ff5f84;
+  color: #1f4fd8;
 }
 
 .account-slot {

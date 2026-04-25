@@ -1,0 +1,124 @@
+name: Deploy LoveCube Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-main
+  cancel-in-progress: true
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Ensure mvnw executable
+        run: chmod +x backend/mvnw
+
+      - name: Build backend jar
+        working-directory: backend
+        run: ./mvnw -DskipTests package
+
+      - name: Upload jar to server temp directory
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: 22
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "backend/target/*.jar"
+          target: "/tmp/lovecube-api-release"
+          strip_components: 2
+
+      - name: Deploy and restart backend
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: 22
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -eu
+
+            DEPLOY_DIR="/opt/lovecube-api"
+            RELEASE_DIR="/tmp/lovecube-api-release"
+            TARGET_JAR="$DEPLOY_DIR/lovecube-api.jar"
+            BACKUP_DIR="$DEPLOY_DIR/backup"
+            APP_LOG="$DEPLOY_DIR/app.log"
+
+            echo "[deploy] Prepare directories"
+            mkdir -p "$DEPLOY_DIR" "$BACKUP_DIR" "$RELEASE_DIR"
+
+            NEW_JAR="$(ls -t "$RELEASE_DIR"/*.jar | head -n 1)"
+            if [ -z "${NEW_JAR:-}" ] || [ ! -f "$NEW_JAR" ]; then
+              echo "[deploy] ERROR: no jar found in $RELEASE_DIR"
+              exit 1
+            fi
+            echo "[deploy] New jar: $NEW_JAR"
+
+            OLD_PIDS="$(pgrep -f "$TARGET_JAR" || true)"
+            if [ -n "$OLD_PIDS" ]; then
+              echo "[deploy] Stop old process: $OLD_PIDS"
+              echo "$OLD_PIDS" | xargs kill || true
+              sleep 3
+              STILL_RUNNING="$(pgrep -f "$TARGET_JAR" || true)"
+              if [ -n "$STILL_RUNNING" ]; then
+                echo "[deploy] Force stop process: $STILL_RUNNING"
+                echo "$STILL_RUNNING" | xargs kill -9 || true
+              fi
+            else
+              echo "[deploy] No old process found"
+            fi
+
+            if [ -f "$TARGET_JAR" ]; then
+              BACKUP_FILE="$BACKUP_DIR/lovecube-api-$(date +%Y%m%d-%H%M%S).jar"
+              cp "$TARGET_JAR" "$BACKUP_FILE"
+              echo "[deploy] Backup old jar to $BACKUP_FILE"
+            fi
+
+            mv -f "$NEW_JAR" "$TARGET_JAR"
+            chmod 644 "$TARGET_JAR"
+            echo "[deploy] Deployed jar -> $TARGET_JAR"
+
+            echo "[deploy] Start backend"
+            nohup java -jar "$TARGET_JAR" \
+              --spring.config.location=file:/opt/lovecube-api/application.yml \
+              > "$APP_LOG" 2>&1 &
+
+            sleep 10
+
+            echo "[deploy] Check port 8090"
+            if ! ss -ltnp | grep -q ":8090"; then
+              echo "[deploy] ERROR: 8090 is not listening"
+              echo "[deploy] Last 120 lines of app.log:"
+              tail -n 120 "$APP_LOG" || true
+              exit 1
+            fi
+
+            echo "[deploy] Check API: /api/announcements"
+            if ! curl -fsS "http://127.0.0.1:8090/api/announcements" >/tmp/lovecube-health.json; then
+              echo "[deploy] ERROR: health check failed"
+              echo "[deploy] Last 120 lines of app.log:"
+              tail -n 120 "$APP_LOG" || true
+              exit 1
+            fi
+
+            echo "[deploy] Health check response (first 300 chars):"
+            head -c 300 /tmp/lovecube-health.json || true
+            echo
+            echo "[deploy] Last 80 lines of app.log:"
+            tail -n 80 "$APP_LOG" || true
+            echo "[deploy] SUCCESS"

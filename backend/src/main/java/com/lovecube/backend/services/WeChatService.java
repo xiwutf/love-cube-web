@@ -17,15 +17,22 @@ public class WeChatService
 {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    @Value("${wechat.appid}")
+    @Value("${wechat.appid:}")
     private String appid;
-    @Value("${wechat.secret}")
+    @Value("${wechat.secret:}")
     private String secret;
     @Autowired
     private UserRepository userRepository; // 注入数据库访问层
 
     public Map<String, Object> login(String code)
     {
+        if (!isWeChatConfigured()) {
+            Map<String, Object> disabled = new HashMap<>();
+            disabled.put("status", "WECHAT_CONFIG_MISSING");
+            disabled.put("message", "微信登录未启用：缺少 wechat.appid 或 wechat.secret 配置");
+            return disabled;
+        }
+
         String url = String.format(
                 "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
                 appid, secret, code);
@@ -55,6 +62,10 @@ public class WeChatService
             result.put("message", "微信登录失败");
         }
         return result;
+    }
+
+    public boolean isWeChatConfigured() {
+        return appid != null && !appid.isBlank() && secret != null && !secret.isBlank();
     }
 
     private String generateToken(User user)

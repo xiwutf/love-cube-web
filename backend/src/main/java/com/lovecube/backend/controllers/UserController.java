@@ -64,6 +64,9 @@ public class UserController {
             if (profileData.containsKey("nickname")) {
                 user.setUsername((String) profileData.get("nickname"));
             }
+            if (profileData.containsKey("username")) {
+                user.setUsername((String) profileData.get("username"));
+            }
             if (profileData.containsKey("gender")) {
                 String gender = (String) profileData.get("gender");
                 user.setGender("男".equals(gender) ? 1 : 2);
@@ -106,8 +109,14 @@ public class UserController {
             if (profileData.containsKey("signature")) {
                 user.setBio((String) profileData.get("signature"));
             }
+            if (profileData.containsKey("bio")) {
+                user.setBio((String) profileData.get("bio"));
+            }
             if (profileData.containsKey("avatar")) {
                 user.setProfilePhoto((String) profileData.get("avatar"));
+            }
+            if (profileData.containsKey("profilePhoto")) {
+                user.setProfilePhoto((String) profileData.get("profilePhoto"));
             }
 
             userRepository.save(user);
@@ -202,9 +211,17 @@ public class UserController {
 
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getUserid());
+        result.put("id", user.getUserid());
+        result.put("username", user.getUsername());
         result.put("nickname", user.getUsername());
+        result.put("phone", user.getPhoneNumber());
+        result.put("phoneNumber", user.getPhoneNumber());
         result.put("gender", convertGender(user.getGender()));
         result.put("location", user.getLocation());
+        result.put("role", isAdminUser(user) ? "admin" : "user");
+        result.put("status", "active");
+        result.put("verificationStatus", "none");
+        result.put("verificationRejectReason", "");
         result.put("profilePhoto", user.getProfilePhoto());
         
         // 格式化生日字段，确保前端能正确获取
@@ -241,6 +258,10 @@ public class UserController {
         result.put("completionRate", calculateCompletionRate(user));
 
         return ResponseEntity.ok(result);
+    }
+
+    private boolean isAdminUser(User user) {
+        return user != null && "13800000000".equals(user.getPhoneNumber());
     }
 
     private String convertGender(Integer gender) {

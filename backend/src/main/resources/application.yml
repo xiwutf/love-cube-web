@@ -27,7 +27,11 @@ spring:
 
   sql:
     init:
-      mode: never
+      mode: always
+      schema-locations:
+        - classpath:schema-platform.sql
+      data-locations:
+        - classpath:seed-empty.sql
 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
@@ -82,8 +86,8 @@ springdoc:
     path: /swagger-ui.html
 
 wechat:
-  appid: wx5cd57f95b505d1f4
-  secret: f82aa93556baeaee07ca60297c7a2509
+  appid: ${WECHAT_APPID:}
+  secret: ${WECHAT_SECRET:}
   api:
     login:
       path: /api/wechat/login
