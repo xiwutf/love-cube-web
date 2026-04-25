@@ -1,15 +1,12 @@
-<template>
+﻿<template>
   <div class="login-page">
-    <!-- Logo 区 -->
     <div class="logo-area">
-      <div class="logo-icon">💝</div>
+      <div class="logo-icon">💕</div>
       <h1 class="logo-title">Love Cube</h1>
-      <p class="logo-sub">遇见你，是最好的事</p>
+      <p class="logo-sub">统一用户登录中心</p>
     </div>
 
-    <!-- Tab 切换：登录 / 注册 -->
     <van-tabs v-model:active="activeTab" class="login-tabs" color="#FF6B8A" title-active-color="#FF6B8A">
-      <!-- 登录 -->
       <van-tab title="登录">
         <van-form @submit="handleLogin" class="form-wrap">
           <van-cell-group inset>
@@ -32,21 +29,13 @@
             />
           </van-cell-group>
           <div class="btn-wrap">
-            <van-button
-              round
-              block
-              type="primary"
-              native-type="submit"
-              :loading="loading"
-              loading-text="登录中..."
-            >
+            <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="登录中...">
               登录
             </van-button>
           </div>
         </van-form>
       </van-tab>
 
-      <!-- 注册 -->
       <van-tab title="注册">
         <van-form @submit="handleRegister" class="form-wrap">
           <van-cell-group inset>
@@ -54,7 +43,7 @@
               v-model="regForm.username"
               name="username"
               label="昵称"
-              placeholder="给自己起个名字吧"
+              placeholder="给自己起个名字"
             />
             <van-field
               v-model="regForm.phone"
@@ -75,46 +64,47 @@
             />
           </van-cell-group>
           <div class="btn-wrap">
-            <van-button
-              round
-              block
-              type="primary"
-              native-type="submit"
-              :loading="loading"
-              loading-text="注册中..."
-            >
+            <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
               注册
             </van-button>
           </div>
         </van-form>
       </van-tab>
     </van-tabs>
+
+    <p class="hint">演示账号：admin 13800000000 / 123456，普通用户 13900000000 / 123456</p>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { login, register } from '@/api/auth.js'
 import { useUserStore } from '@/stores/user.js'
 
-const router    = useRouter()
+const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const activeTab = ref(0)
-const loading   = ref(false)
-
+const loading = ref(false)
 const loginForm = reactive({ phone: '', password: '' })
-const regForm   = reactive({ username: '', phone: '', password: '' })
+const regForm = reactive({ username: '', phone: '', password: '' })
+
+function resolveRedirect() {
+  const fromQuery = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+  const fromStore = userStore.consumePostLoginRedirect()
+  const target = fromQuery || fromStore
+  if (target) return decodeURIComponent(target)
+  return route.path.startsWith('/fellowship') ? '/fellowship/discover' : '/account'
+}
 
 async function handleLogin() {
   loading.value = true
   try {
-    const res = await login({ phone: loginForm.phone, password: loginForm.password })
-    userStore.setAuth(res.token, res.userId)
+    await userStore.login({ phone: loginForm.phone, password: loginForm.password })
     showToast({ message: '登录成功', type: 'success' })
-    router.replace('/')
+    router.replace(resolveRedirect())
   } catch (err) {
     showToast({ message: err.message || '登录失败', type: 'fail' })
   } finally {
@@ -125,14 +115,13 @@ async function handleLogin() {
 async function handleRegister() {
   loading.value = true
   try {
-    const res = await register({
-      phone:    regForm.phone,
-      password: regForm.password,
-      username: regForm.username
+    await userStore.register({
+      username: regForm.username,
+      phone: regForm.phone,
+      password: regForm.password
     })
-    userStore.setAuth(res.token, res.userId)
     showToast({ message: '注册成功', type: 'success' })
-    router.replace('/')
+    router.replace(resolveRedirect())
   } catch (err) {
     showToast({ message: err.message || '注册失败', type: 'fail' })
   } finally {
@@ -150,26 +139,26 @@ async function handleRegister() {
 
 .logo-area {
   text-align: center;
-  padding: 60px 0 32px;
+  padding: 56px 0 28px;
 }
 
 .logo-icon {
-  font-size: 60px;
+  font-size: 56px;
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .logo-title {
   font-size: 28px;
   font-weight: 700;
-  color: #FF6B8A;
+  color: #ff6b8a;
   letter-spacing: 2px;
 }
 
 .logo-sub {
   margin-top: 8px;
   font-size: 13px;
-  color: #aaa;
+  color: #7b889b;
 }
 
 .login-tabs {
@@ -182,5 +171,12 @@ async function handleRegister() {
 
 .btn-wrap {
   padding: 24px 16px 0;
+}
+
+.hint {
+  margin: 18px 18px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.6;
 }
 </style>

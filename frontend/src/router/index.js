@@ -1,44 +1,96 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-import { storage } from '@/utils/storage.js'
+﻿import { createRouter, createWebHashHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user.js'
 
 const auth = { meta: { requiresAuth: true } }
+const adminAuth = { meta: { requiresAuth: true, requiresAdmin: true } }
 
 const routes = [
-  // 公开页
-  { path: '/login',   component: () => import('@/pages/login/index.vue') },
-  { path: '/welcome', component: () => import('@/pages/welcome/index.vue') },
+  {
+    path: '/',
+    component: () => import('@/layouts/PlatformLayout.vue'),
+    children: [
+      { path: '', component: () => import('@/pages/WebsiteHome.vue') },
+      { path: 'login', component: () => import('@/pages/login/index.vue') },
+      { path: 'register', redirect: '/login' },
+      { path: 'account', component: () => import('@/pages/platform/AccountCenterPage.vue'), ...auth },
+      { path: 'announcements', component: () => import('@/pages/platform/AnnouncementsPage.vue') },
+      { path: 'announcements/:id', component: () => import('@/pages/platform/AnnouncementDetailPage.vue') },
+      { path: 'articles', component: () => import('@/pages/platform/ArticlesPage.vue') },
+      { path: 'articles/:id', component: () => import('@/pages/platform/ArticleDetailPage.vue') },
+      { path: 'events', component: () => import('@/pages/platform/EventsPage.vue') },
+      { path: 'events/:id', component: () => import('@/pages/platform/EventDetailPage.vue') },
+      { path: 'about', component: () => import('@/pages/platform/AboutPage.vue') },
+      { path: 'fellowship-intro', component: () => import('@/pages/platform/FellowshipIntroPage.vue') },
+      { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue') }
+    ]
+  },
+  {
+    path: '/admin',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    ...adminAuth,
+    children: [
+      { path: '', component: () => import('@/pages/admin/DashboardPage.vue') },
+      { path: 'announcements', component: () => import('@/pages/admin/AnnouncementsAdminPage.vue') },
+      { path: 'articles', component: () => import('@/pages/admin/ArticlesAdminPage.vue') },
+      { path: 'events', component: () => import('@/pages/admin/EventsAdminPage.vue') },
+      { path: 'users', component: () => import('@/pages/admin/UsersAdminPage.vue') },
+      { path: 'verifications', component: () => import('@/pages/admin/VerificationsAdminPage.vue') },
+      { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') }
+    ]
+  },
+  {
+    path: '/fellowship',
+    component: () => import('@/layouts/FellowshipLayout.vue'),
+    children: [
+      { path: '', component: () => import('@/pages/fellowship/landing.vue') },
+      { path: 'login', component: () => import('@/pages/login/index.vue') },
+      { path: 'welcome', component: () => import('@/pages/welcome/index.vue') },
 
-  // 需登录 - TabBar 主页面
-  { path: '/',          component: () => import('@/pages/home/index.vue'),     ...auth },
-  { path: '/match',     component: () => import('@/pages/match/index.vue'),    ...auth },
-  { path: '/message',   component: () => import('@/pages/message/index.vue'),  ...auth },
-  { path: '/personal',  component: () => import('@/pages/personal/index.vue'), ...auth },
-  { path: '/search',    component: () => import('@/pages/search/index.vue'),   ...auth },
-  { path: '/dynamic',   component: () => import('@/pages/dynamic/index.vue'),  ...auth },
+      { path: 'discover', component: () => import('@/pages/home/index.vue'), ...auth },
+      { path: 'match', component: () => import('@/pages/match/index.vue'), ...auth },
+      { path: 'messages', component: () => import('@/pages/message/index.vue'), ...auth },
+      { path: 'me', component: () => import('@/pages/personal/index.vue'), ...auth },
 
-  // 需登录 - 子页面
-  { path: '/profile',                   component: () => import('@/pages/profile/index.vue'),      ...auth },
-  { path: '/profile-edit',              component: () => import('@/pages/profile-edit/index.vue'), ...auth },
-  { path: '/settings',                  component: () => import('@/pages/settings/index.vue'),     ...auth },
-  { path: '/newcomers',                 component: () => import('@/pages/newcomers/index.vue'),    ...auth },
-  { path: '/user-profile/:id',          component: () => import('@/pages/user-profile/index.vue'), ...auth },
-  { path: '/chat/:receiverId',          component: () => import('@/pages/chat/index.vue'),         ...auth },
+      { path: 'search', component: () => import('@/pages/search/index.vue'), ...auth },
+      { path: 'dynamic', component: () => import('@/pages/dynamic/index.vue'), ...auth },
+      { path: 'profile-edit', component: () => import('@/pages/profile-edit/index.vue'), ...auth },
+      { path: 'settings', component: () => import('@/pages/settings/index.vue'), ...auth },
+      { path: 'newcomers', component: () => import('@/pages/newcomers/index.vue'), ...auth },
+      { path: 'user-profile/:id', component: () => import('@/pages/user-profile/index.vue'), ...auth },
+      { path: 'chat/:receiverId', component: () => import('@/pages/chat/index.vue'), ...auth },
+      { path: 'vip', component: () => import('@/pages/vip/index.vue'), ...auth },
 
-  // 兜底
+      { path: 'home', redirect: '/fellowship/discover' },
+      { path: 'message', redirect: '/fellowship/messages' },
+      { path: 'personal', redirect: '/fellowship/me' }
+    ]
+  },
+  { path: '/vip', redirect: '/fellowship/vip' },
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
 const router = createRouter({
-  // hash 模式：静态托管无需服务端配置 fallback
   history: createWebHashHistory(),
   routes
 })
 
-// 全局路由守卫：未登录跳登录页
 router.beforeEach((to) => {
-  const token = storage.get('token')
+  const userStore = useUserStore()
+  const token = userStore.token
+
   if (to.meta.requiresAuth && !token) {
-    return { path: '/login' }
+    userStore.setPostLoginRedirect(to.fullPath)
+    if (to.path.startsWith('/fellowship')) {
+      return { path: '/fellowship/login', query: { redirect: encodeURIComponent(to.fullPath) } }
+    }
+    return { path: '/login', query: { redirect: encodeURIComponent(to.fullPath) } }
+  }
+
+  if (to.meta.requiresAdmin) {
+    userStore.syncCurrentUser()
+    if (!userStore.isAdmin) {
+      return { path: '/' }
+    }
   }
 })
 

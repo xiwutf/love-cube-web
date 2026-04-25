@@ -1,0 +1,239 @@
+﻿:root {
+  --platform-primary: #ff5f84;
+  --platform-primary-dark: #e84f73;
+  --platform-text-main: #0f172a;
+  --platform-text-soft: #475569;
+  --platform-border: #e2e8f0;
+  --platform-bg: #f6f8fb;
+}
+
+.platform-container {
+  width: min(1200px, 100% - 48px);
+  margin: 0 auto;
+}
+
+.platform-page {
+  width: min(1200px, 100% - 48px);
+  margin: 30px auto 48px;
+}
+
+.platform-block {
+  margin-top: 16px;
+}
+
+.platform-card {
+  background: #fff;
+  border: 1px solid var(--platform-border);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.platform-soft-card {
+  background: linear-gradient(160deg, #fff4f7 0%, #ffffff 55%);
+}
+
+.platform-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--platform-primary);
+}
+
+.platform-title {
+  margin-top: 8px;
+  color: var(--platform-text-main);
+  font-size: clamp(30px, 4.2vw, 52px);
+  line-height: 1.15;
+}
+
+.platform-subtitle {
+  margin-top: 12px;
+  color: var(--platform-text-soft);
+  line-height: 1.8;
+  max-width: 78ch;
+}
+
+.platform-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.platform-section-title {
+  color: var(--platform-text-main);
+  font-size: 26px;
+}
+
+.platform-grid-3 {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.platform-grid-2 {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.platform-list {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.platform-item-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.platform-item-link:hover {
+  border-color: #ffc6d4;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.platform-meta {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.platform-heading {
+  margin-top: 9px;
+  color: var(--platform-text-main);
+  font-size: 20px;
+}
+
+.platform-text {
+  margin-top: 9px;
+  color: var(--platform-text-soft);
+  line-height: 1.75;
+}
+
+.platform-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.platform-btn,
+.platform-link {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.platform-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 11px 18px;
+  min-height: 44px;
+}
+
+.platform-btn-primary {
+  background: linear-gradient(135deg, var(--platform-primary), var(--platform-primary-dark));
+  color: #fff;
+}
+
+.platform-btn-ghost {
+  border: 1px solid #ffc4d2;
+  color: var(--platform-primary-dark);
+  background: #fff;
+}
+
+.platform-link {
+  color: var(--platform-primary);
+}
+
+.platform-backlink {
+  text-decoration: none;
+  color: var(--platform-primary);
+  font-weight: 700;
+}
+
+.platform-empty {
+  margin-top: 14px;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .platform-container,
+  .platform-page {
+    width: min(100%, 100% - 32px);
+  }
+
+  .platform-title {
+    font-size: clamp(30px, 4vw, 42px);
+  }
+
+  .platform-section-title {
+    font-size: 24px;
+  }
+
+  .platform-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .platform-container,
+  .platform-page {
+    width: calc(100% - 24px);
+  }
+
+  .platform-page {
+    margin: 16px auto 28px;
+  }
+
+  .platform-card {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .platform-title {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .platform-subtitle,
+  .platform-text {
+    line-height: 1.65;
+    font-size: 14px;
+  }
+
+  .platform-section-head {
+    align-items: flex-end;
+  }
+
+  .platform-section-title {
+    font-size: 20px;
+  }
+
+  .platform-grid-3,
+  .platform-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .platform-heading {
+    font-size: 17px;
+  }
+
+  .platform-actions {
+    gap: 8px;
+  }
+
+  .platform-btn {
+    min-height: 46px;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+}

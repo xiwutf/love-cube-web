@@ -22,17 +22,35 @@ html, body {
   font-size: 14px;
   color: var(--color-text);
   background-color: var(--color-bg);
-  /* 移动端优化 */
   -webkit-font-smoothing: antialiased;
 }
 
+/* #app 全宽，由页面/模块自行控制宽度约束 */
 #app {
   height: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  background: var(--color-white);
   position: relative;
   overflow-x: hidden;
+}
+
+/* fellowship 模块壳：移动端居中约束（由 App.vue 路由判断挂载） */
+.fellowship-shell {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  background: var(--color-white);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+@media (min-width: 768px) {
+  .fellowship-shell {
+    max-width: 480px;
+    margin: 16px auto;
+    border: 1px solid #eceff3;
+    border-radius: 22px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  }
 }
 
 /* 覆盖 Vant 主色 */

@@ -1,8 +1,9 @@
-<template>
+﻿<template>
   <div class="settings-page">
     <NavBar title="设置" />
 
     <van-cell-group inset title="账号" class="group">
+      <van-cell title="账号中心" is-link @click="router.push('/account')" />
       <van-cell title="退出登录" is-link @click="handleLogout" title-class="danger-text" />
     </van-cell-group>
 
@@ -11,7 +12,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="关于" class="group">
-      <van-cell title="版本号" value="v0.1.0" />
+      <van-cell title="版本号" value="v0.2.0" />
       <van-cell title="Love Cube" value="遇见你，是最好的事" />
     </van-cell-group>
   </div>
@@ -25,7 +26,7 @@ import NavBar from '@/components/NavBar.vue'
 import { useUserStore } from '@/stores/user.js'
 import { storage } from '@/utils/storage.js'
 
-const router    = useRouter()
+const router = useRouter()
 const userStore = useUserStore()
 const cacheSize = ref('已优化')
 
@@ -41,11 +42,10 @@ function handleLogout() {
 function handleClearCache() {
   showConfirmDialog({ title: '清理缓存', message: '确认清除本地缓存数据？' })
     .then(() => {
-      // 只清除非鉴权缓存（保留 token/userId）
-      const token  = storage.get('token')
+      const token = storage.get('token')
       const userId = storage.get('userId')
       storage.clear()
-      if (token)  storage.set('token',  token)
+      if (token) storage.set('token', token)
       if (userId) storage.set('userId', userId)
       cacheSize.value = '已清理'
       showToast({ message: '缓存已清理', type: 'success' })

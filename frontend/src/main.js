@@ -1,10 +1,12 @@
-import { createApp } from 'vue'
+﻿import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Vant from 'vant'
 import 'vant/lib/index.css'
 import App from './App.vue'
 import router from './router/index.js'
 import './assets/global.css'
+import './assets/platform.css'
+import './assets/admin.css'
 
 const app = createApp(App)
 app.use(createPinia())

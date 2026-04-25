@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <van-tabbar v-model="active" active-color="#FF6B8A" fixed placeholder>
-    <van-tabbar-item icon="home-o"    @click="go('/')">首页</van-tabbar-item>
-    <van-tabbar-item icon="search"    @click="go('/search')">发现</van-tabbar-item>
-    <van-tabbar-item icon="like-o"    @click="go('/match')">匹配</van-tabbar-item>
-    <van-tabbar-item icon="chat-o"    :badge="msgStore.totalUnread || ''" @click="go('/message')">消息</van-tabbar-item>
-    <van-tabbar-item icon="contact-o" @click="go('/personal')">我的</van-tabbar-item>
+    <van-tabbar-item icon="home-o" @click="go('/fellowship/discover')">首页</van-tabbar-item>
+    <van-tabbar-item icon="search" @click="go('/fellowship/search')">发现</van-tabbar-item>
+    <van-tabbar-item icon="like-o" @click="go('/fellowship/match')">认识</van-tabbar-item>
+    <van-tabbar-item icon="chat-o" :badge="msgStore.totalUnread || ''" @click="go('/fellowship/messages')">消息</van-tabbar-item>
+    <van-tabbar-item icon="contact-o" @click="go('/fellowship/me')">我的</van-tabbar-item>
   </van-tabbar>
 </template>
 
@@ -13,11 +13,18 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessageStore } from '@/stores/message.js'
 
-const route    = useRoute()
-const router   = useRouter()
+const route = useRoute()
+const router = useRouter()
 const msgStore = useMessageStore()
 
-const tabMap = ['/', '/search', '/match', '/message', '/personal']
+const tabMap = [
+  '/fellowship/discover',
+  '/fellowship/search',
+  '/fellowship/match',
+  '/fellowship/messages',
+  '/fellowship/me'
+]
+
 const active = computed(() => {
   const idx = tabMap.indexOf(route.path)
   return idx >= 0 ? idx : 0
