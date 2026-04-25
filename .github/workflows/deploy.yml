@@ -13,6 +13,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      RELOAD_NGINX: ${{ secrets.RELOAD_NGINX }}
 
     steps:
       - name: Checkout
@@ -56,7 +58,7 @@ jobs:
           strip_components: 2
 
       - name: Reload nginx (optional)
-        if: ${{ secrets.RELOAD_NGINX == 'true' }}
+        if: ${{ env.RELOAD_NGINX == 'true' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
