@@ -2,8 +2,9 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.utils.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,36 +12,35 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
-/**
- * H5 端账号密码登录/注册接口
- * 微信小程序仍走 /api/wechat/login，两套登录互不干扰。
- *
- * JWT 复用同一套密钥和 subject=openid 的机制：
- * H5 用户若无微信 openid，则在首次登录时写入虚拟 openid（h5_<userId>），
- * 后续所有依赖 openid 的接口无需任何改动。
- */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Set<String> BOOTSTRAP_ADMIN_PHONES = Set.of(
+            "13800000000",
+            "15030251407"
+    );
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final FellowshipInviteService fellowshipInviteService;
 
-    @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    public AuthController(
+            UserRepository userRepository,
+            BCryptPasswordEncoder passwordEncoder,
+            FellowshipInviteService fellowshipInviteService
+    ) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.fellowshipInviteService = fellowshipInviteService;
+    }
 
-    /**
-     * H5 登录
-     * Body: { "phone": "138xxxx", "password": "xxx" }
-     *    或 { "email": "xx@xx.com", "password": "xxx" }
-     * 返回: { "userId": 1, "token": "xxx" }
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String phone    = body.get("phone");
-        String email    = body.get("email");
+        String phone = body.get("phone");
+        String email = body.get("email");
         String password = body.get("password");
 
         if (password == null || password.isEmpty()) {
@@ -64,7 +64,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "密码错误"));
         }
 
-        // 确保 H5 用户有 openid（复用已有 JWT 机制，无需改其他接口）
         if (user.getOpenid() == null || user.getOpenid().isEmpty()) {
             user.setOpenid("h5_" + user.getUserid());
             userRepository.save(user);
@@ -77,16 +76,13 @@ public class AuthController {
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * H5 注册
-     * Body: { "phone": "138xxxx", "password": "xxx", "username": "可选昵称" }
-     * 返回: { "userId": 1, "token": "xxx" }
-     */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
-        String phone    = body.get("phone");
+    public ResponseEntity<?> register(@RequestBody Map<String, String> body, HttpServletRequest request) {
+        String phone = body.get("phone");
         String password = body.get("password");
         String username = body.get("username");
+        String inviteCodeRaw = body.get("inviteCode");
+        String inviteCode = inviteCodeRaw == null ? "" : inviteCodeRaw.trim().toUpperCase();
 
         if (phone == null || phone.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "手机号不能为空"));
@@ -98,23 +94,87 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "该手机号已注册"));
         }
 
-        User user = new User();
-        user.setPhoneNumber(phone);
-        user.setPasswordHash(passwordEncoder.encode(password));
-        user.setUsername(username != null && !username.isEmpty()
-                ? username
-                : "用户" + phone.substring(phone.length() - 4));
-        // openid NOT NULL 约束：先用 UUID 占位，save 后拿到 userId 再更新为稳定值
-        user.setOpenid("h5_tmp_" + UUID.randomUUID().toString().replace("-", ""));
-        User saved = userRepository.save(user);
+        boolean allowRegisterWithoutInvite = isBootstrapAdmin(phone) || userRepository.count() == 0;
+        User inviter = null;
+        if (!allowRegisterWithoutInvite) {
+            if (inviteCode.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "邀请码不能为空"));
+            }
+            try {
+                inviter = fellowshipInviteService.validateInviteCodeForRegistration(inviteCode);
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body(Map.of("message", "邀请码无效"));
+            }
+        }
 
-        saved.setOpenid("h5_" + saved.getUserid());
-        userRepository.save(saved);
+        try {
+            User user = new User();
+            user.setPhoneNumber(phone);
+            user.setPasswordHash(passwordEncoder.encode(password));
+            user.setUsername(username != null && !username.isEmpty() ? username : "用户" + phone.substring(phone.length() - 4));
+            user.setOpenid("h5_tmp_" + UUID.randomUUID().toString().replace("-", ""));
+            user.setInvitedByUserId(inviter == null ? null : inviter.getUserid());
+            user.setRegisterIp(resolveClientIp(request));
+            user.setRegisterUserAgent(trim(request.getHeader("User-Agent"), 500));
+            user.setUserStatus("NORMAL");
+            user.setInviteCodeStatus("ENABLED");
 
-        String token = JwtUtil.generateToken(saved.getOpenid());
-        Map<String, Object> result = new HashMap<>();
-        result.put("userId", saved.getUserid());
-        result.put("token", token);
-        return ResponseEntity.ok(result);
+            User saved = userRepository.save(user);
+            saved.setOpenid("h5_" + saved.getUserid());
+            saved.setInviteCode(fellowshipInviteService.generateUniqueInviteCode(saved.getUserid()));
+            userRepository.save(saved);
+
+            if (inviter != null) {
+                fellowshipInviteService.createSuccessRecord(
+                        inviteCode,
+                        inviter,
+                        saved,
+                        saved.getRegisterIp(),
+                        saved.getRegisterUserAgent()
+                );
+            }
+
+            String token = JwtUtil.generateToken(saved.getOpenid());
+            Map<String, Object> result = new HashMap<>();
+            result.put("userId", saved.getUserid());
+            result.put("token", token);
+            return ResponseEntity.ok(result);
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "注册失败，请稍后重试"));
+        }
+    }
+
+    private boolean isBootstrapAdmin(String phone) {
+        return BOOTSTRAP_ADMIN_PHONES.contains(phone);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String[] headerCandidates = {
+                "X-Forwarded-For",
+                "X-Real-IP",
+                "Proxy-Client-IP",
+                "WL-Proxy-Client-IP"
+        };
+        for (String header : headerCandidates) {
+            String value = request.getHeader(header);
+            if (value != null && !value.isBlank() && !"unknown".equalsIgnoreCase(value)) {
+                if (value.contains(",")) {
+                    return value.split(",")[0].trim();
+                }
+                return trim(value, 64);
+            }
+        }
+        return trim(request.getRemoteAddr(), 64);
+    }
+
+    private String trim(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.trim();
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength);
     }
 }

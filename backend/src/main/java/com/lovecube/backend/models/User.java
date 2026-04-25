@@ -2,79 +2,99 @@ package com.lovecube.backend.models;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
-/**
- * @author Admin
- * 创建一个 User 实体类，使用JPA注解来映射数据库中的 users 表
- */
 @Entity
 @Data
 @Table(name = "users")
-public class User
-{
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userid; //用户ID
+    private Long userid;
 
     @Column(name = "username")
-    private String username;//用户名
+    private String username;
 
     @Column(name = "email")
-    private String email;//邮箱
+    private String email;
 
     @Column(name = "phone_number")
-    private String phoneNumber;//手机号
+    private String phoneNumber;
 
     @Column(name = "password_hash")
-    private String passwordHash;//加密后的密码
+    private String passwordHash;
 
     @Column(name = "openid")
-    private String openid; // 微信用户的唯一标识
+    private String openid;
 
     @Column(name = "profile_photo")
-    private String profilePhoto;//头像url
+    private String profilePhoto;
 
     @Column(name = "bio")
-    private String bio;//个人简介
+    private String bio;
 
     @Column(name = "age")
-    private Integer age;//年龄
+    private Integer age;
 
     @Column(name = "gender")
-    private Integer gender;//性别
+    private Integer gender;
 
     @Column(name = "location")
-    private String location;// 用户所在地
+    private String location;
 
     @Column(name = "occupation")
-    private String occupation;//工作
+    private String occupation;
 
     @Column(name = "height")
-    private Integer height; // 用户身高(厘米)
+    private Integer height;
 
     @Column(name = "birth_date")
-    private LocalDateTime birthDate;//出生日期
+    private LocalDateTime birthDate;
 
     @Column(name = "photos", columnDefinition = "TEXT")
-    private String photos; // 生活照片JSON数组
+    private String photos;
 
     @Column(name = "vip_status")
-    private String vipStatus; // none / month / season / year
+    private String vipStatus;
 
     @Column(name = "vip_expires_at")
-    private LocalDateTime vipExpiresAt; // VIP 到期时间
+    private LocalDateTime vipExpiresAt;
+
+    @Column(name = "invite_code", unique = true, length = 32)
+    private String inviteCode;
+
+    @Column(name = "invited_by_user_id")
+    private Long invitedByUserId;
+
+    @Column(name = "register_ip", length = 64)
+    private String registerIp;
+
+    @Column(name = "register_user_agent", length = 500)
+    private String registerUserAgent;
+
+    @Column(name = "user_status", length = 32)
+    private String userStatus;
+
+    @Column(name = "invite_code_status", length = 32)
+    private String inviteCodeStatus;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt;//注册时间
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;//最后更新时间
+    private LocalDateTime updatedAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (userStatus == null || userStatus.isBlank()) {
+            userStatus = "NORMAL";
+        }
+        if (inviteCodeStatus == null || inviteCodeStatus.isBlank()) {
+            inviteCodeStatus = "ENABLED";
+        }
     }
 
     @PreUpdate

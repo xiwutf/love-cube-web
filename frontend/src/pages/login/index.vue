@@ -64,7 +64,15 @@
                   type="password"
                   :rules="[{ required: true, message: '请填写密码' }, { min: 6, message: '密码至少 6 位' }]"
                 />
+                <van-field
+                  v-model="regForm.inviteCode"
+                  name="inviteCode"
+                  label="邀请码"
+                  placeholder="请输入邀请码"
+                  :rules="[{ required: true, message: '请填写邀请码' }]"
+                />
               </van-cell-group>
+              <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码。</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
                   注册
@@ -74,7 +82,7 @@
           </van-tab>
         </van-tabs>
 
-        <p class="hint">演示账号：admin 13800000000 / 123456，普通用户 13900000000 / 123456</p>
+        <p class="hint">演示账号：admin 13800000000 / 123456；普通用户 13900000000 / 123456</p>
       </section>
     </div>
   </div>
@@ -93,7 +101,7 @@ const userStore = useUserStore()
 const activeTab = ref(0)
 const loading = ref(false)
 const loginForm = reactive({ phone: '', password: '' })
-const regForm = reactive({ username: '', phone: '', password: '' })
+const regForm = reactive({ username: '', phone: '', password: '', inviteCode: '' })
 const isFellowshipRoute = computed(() => route.path.startsWith('/fellowship'))
 
 function resolveRedirect() {
@@ -123,7 +131,8 @@ async function handleRegister() {
     await userStore.register({
       username: regForm.username,
       phone: regForm.phone,
-      password: regForm.password
+      password: regForm.password,
+      inviteCode: regForm.inviteCode
     })
     showToast({ message: '注册成功', type: 'success' })
     router.replace(resolveRedirect())
@@ -194,6 +203,13 @@ async function handleRegister() {
 
 .btn-wrap {
   padding: 24px 16px 0;
+}
+
+.invite-tip {
+  margin: 10px 18px 0;
+  color: #f43f5e;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 :deep(.van-button--primary) {
@@ -278,4 +294,3 @@ async function handleRegister() {
   }
 }
 </style>
-

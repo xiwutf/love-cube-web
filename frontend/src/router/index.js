@@ -34,6 +34,7 @@ const routes = [
       { path: 'articles', component: () => import('@/pages/admin/ArticlesAdminPage.vue') },
       { path: 'events', component: () => import('@/pages/admin/EventsAdminPage.vue') },
       { path: 'users', component: () => import('@/pages/admin/UsersAdminPage.vue') },
+      { path: 'invites', component: () => import('@/pages/admin/InvitesAdminPage.vue') },
       { path: 'verifications', component: () => import('@/pages/admin/VerificationsAdminPage.vue') },
       { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') }
     ]
@@ -49,7 +50,7 @@ const routes = [
       { path: 'discover', component: () => import('@/pages/home/index.vue'), ...auth },
       { path: 'match', component: () => import('@/pages/match/index.vue'), ...auth },
       { path: 'messages', component: () => import('@/pages/message/index.vue'), ...auth },
-      { path: 'me', component: () => import('@/pages/personal/index.vue'), ...auth },
+      { path: 'me', component: () => import('@/pages/fellowship/MePage.vue'), ...auth },
 
       { path: 'search', component: () => import('@/pages/search/index.vue'), ...auth },
       { path: 'dynamic', component: () => import('@/pages/dynamic/index.vue'), ...auth },
@@ -57,6 +58,9 @@ const routes = [
       { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), ...auth },
       { path: 'profile/edit', component: () => import('@/pages/fellowship/profile/edit.vue'), ...auth },
       { path: 'settings', component: () => import('@/pages/settings/index.vue'), ...auth },
+      { path: 'verify', component: () => import('@/pages/fellowship/VerifyPage.vue'), ...auth },
+      { path: 'blacklist', component: () => import('@/pages/fellowship/BlacklistPage.vue'), ...auth },
+      { path: 'invite', component: () => import('@/pages/fellowship/InvitePage.vue'), ...auth },
       { path: 'my-likes', component: () => import('@/pages/personal/MyLikesPage.vue'), ...auth },
       { path: 'following', component: () => import('@/pages/personal/FollowingPage.vue'), ...auth },
       { path: 'privacy', component: () => import('@/pages/personal/PrivacySettingsPage.vue'), ...auth },

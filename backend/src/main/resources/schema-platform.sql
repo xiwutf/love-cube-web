@@ -148,3 +148,71 @@ CREATE TABLE IF NOT EXISTS fellowship_profile (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+SET @db = DATABASE();
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN invite_code VARCHAR(32) NULL', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'invite_code'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN invited_by_user_id BIGINT NULL', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'invited_by_user_id'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN register_ip VARCHAR(64) NULL', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'register_ip'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN register_user_agent VARCHAR(500) NULL', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'register_user_agent'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN user_status VARCHAR(32) NOT NULL DEFAULT ''NORMAL''', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'user_status'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD COLUMN invite_code_status VARCHAR(32) NOT NULL DEFAULT ''ENABLED''', 'SELECT 1')
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'invite_code_status'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+    SELECT IF(COUNT(*) = 0, 'ALTER TABLE users ADD UNIQUE INDEX uk_users_invite_code (invite_code)', 'SELECT 1')
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND INDEX_NAME = 'uk_users_invite_code'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS invite_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    invite_code VARCHAR(32) NOT NULL,
+    inviter_user_id BIGINT NOT NULL,
+    invitee_user_id BIGINT NULL,
+    invitee_username VARCHAR(128) NULL,
+    register_ip VARCHAR(64) NULL,
+    register_user_agent VARCHAR(500) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'SUCCESS',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_invite_code (invite_code),
+    INDEX idx_inviter_user_id (inviter_user_id),
+    INDEX idx_invitee_user_id (invitee_user_id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_status (status)
+);

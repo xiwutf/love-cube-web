@@ -8,6 +8,7 @@
         <router-link to="/admin/articles">资讯管理</router-link>
         <router-link to="/admin/events">活动管理</router-link>
         <router-link to="/admin/users">用户管理</router-link>
+        <router-link to="/admin/invites">邀请关系</router-link>
         <router-link to="/admin/verifications">认证审核</router-link>
         <router-link to="/admin/reports">举报处理</router-link>
       </nav>

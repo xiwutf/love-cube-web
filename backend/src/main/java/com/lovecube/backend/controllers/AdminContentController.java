@@ -13,8 +13,10 @@ import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.FellowshipInviteService;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +34,7 @@ public class AdminContentController {
     private final VerificationRequestRepository verificationRequestRepository;
     private final ReportRecordRepository reportRecordRepository;
     private final AdminAuthService adminAuthService;
+    private final FellowshipInviteService fellowshipInviteService;
 
     public AdminContentController(
             AnnouncementRepository announcementRepository,
@@ -40,7 +43,8 @@ public class AdminContentController {
             UserRepository userRepository,
             VerificationRequestRepository verificationRequestRepository,
             ReportRecordRepository reportRecordRepository,
-            AdminAuthService adminAuthService
+            AdminAuthService adminAuthService,
+            FellowshipInviteService fellowshipInviteService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -49,6 +53,7 @@ public class AdminContentController {
         this.verificationRequestRepository = verificationRequestRepository;
         this.reportRecordRepository = reportRecordRepository;
         this.adminAuthService = adminAuthService;
+        this.fellowshipInviteService = fellowshipInviteService;
     }
 
     @GetMapping("/announcements")
@@ -132,11 +137,34 @@ public class AdminContentController {
             item.put("username", user.getUsername() == null ? "" : user.getUsername());
             item.put("phone", user.getPhoneNumber() == null ? "" : user.getPhoneNumber());
             item.put("role", adminAuthService.isAdmin(user) ? "admin" : "user");
-            item.put("status", "active");
+            item.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
             item.put("verificationStatus", "none");
+            item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
+            item.put("invitedByUserId", user.getInvitedByUserId());
             item.put("createdAt", user.getCreatedAt());
             return item;
         }).collect(Collectors.toList());
+    }
+
+    @GetMapping("/invites")
+    public List<Map<String, Object>> listInvites(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "inviterUserId", required = false) Long inviterUserId,
+            @RequestParam(value = "inviteeUserId", required = false) Long inviteeUserId,
+            @RequestParam(value = "inviteCode", required = false) String inviteCode,
+            @RequestParam(value = "startTime", required = false) String startTime,
+            @RequestParam(value = "endTime", required = false) String endTime,
+            @RequestParam(value = "status", required = false) String status
+    ) {
+        adminAuthService.requireAdmin(authHeader);
+        return fellowshipInviteService.searchInvites(
+                inviterUserId,
+                inviteeUserId,
+                inviteCode,
+                parseDateTime(startTime, false),
+                parseDateTime(endTime, true),
+                status
+        );
     }
 
     @GetMapping("/verifications")
@@ -185,5 +213,21 @@ public class AdminContentController {
             payload.setCreatedAt(LocalDateTime.now());
         }
         return reportRecordRepository.save(payload);
+    }
+
+    private LocalDateTime parseDateTime(String value, boolean toEndOfDay) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception ignored) {
+        }
+        try {
+            LocalDate date = LocalDate.parse(value);
+            return toEndOfDay ? date.atTime(23, 59, 59) : date.atStartOfDay();
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 }
