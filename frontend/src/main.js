@@ -4,9 +4,7 @@ import Vant from 'vant'
 import 'vant/lib/index.css'
 import App from './App.vue'
 import router from './router/index.js'
-import './assets/global.css'
-import './assets/platform.css'
-import './assets/admin.css'
+import './assets/styles/index.css'
 
 const app = createApp(App)
 app.use(createPinia())

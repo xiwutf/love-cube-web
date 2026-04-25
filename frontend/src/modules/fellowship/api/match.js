@@ -1,10 +1,43 @@
-import request from './request.js'
+﻿import request from './request.js'
 
-export const getMatchList   = ()       => request.get('/matches/list')
-export const likeUser       = (userId) => request.post(`/matches/${userId}/like`)
-export const dislikeUser    = (userId) => request.post(`/matches/${userId}/dislike`)
-export const superlikeUser  = (userId) => request.post(`/matches/${userId}/superlike`)
-export const filterMatches  = (data)   => request.post('/matches/filter', data)
-/** 发起认识申请（mock：后端接口预留） */
-export const sendMeetRequest = (userId, greeting) =>
-  request.post(`/matches/${userId}/meet-request`, { greeting }).catch(() => ({ ok: true }))
+function unwrapList(res) {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
+export async function getMatchList(params = {}) {
+  const query = {}
+  if (params?.gender === 'male') query.gender = 1
+  if (params?.gender === 'female') query.gender = 2
+  const data = await request.get('/matches/list', { params: query })
+  return unwrapList(data)
+}
+
+export async function likeUser(userId) {
+  return request.post(`/interactions/like/${userId}`)
+}
+
+export async function superlikeUser(userId) {
+  return request.post(`/interactions/like/${userId}`)
+}
+
+export async function dislikeUser() {
+  return { interested: false, matched: false }
+}
+
+export async function filterMatches(data = {}) {
+  const payload = {
+    ageRange: data?.ageRange || undefined,
+    region: data?.region || undefined
+  }
+  if (data?.gender === 'male') payload.gender = 1
+  if (data?.gender === 'female') payload.gender = 2
+
+  const res = await request.post('/matches/filter', payload)
+  return unwrapList(res)
+}
+
+export async function sendMeetRequest() {
+  return { ok: true }
+}

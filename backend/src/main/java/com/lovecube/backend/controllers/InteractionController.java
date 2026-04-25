@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -95,6 +96,45 @@ public class InteractionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "操作失败: " + e.getMessage()));
         }
+    }
+
+    /**
+     * 我点赞的人
+     */
+    @GetMapping("/likes/sent")
+    public ResponseEntity<?> getMyLikes(@RequestHeader("Authorization") String authHeader) {
+        User currentUser = getCurrentUser(authHeader);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+        }
+        List<Map<String, Object>> list = interactionService.getSentLikeUsers(currentUser.getUserid());
+        return ResponseEntity.ok(list);
+    }
+
+    /**
+     * 互相喜欢
+     */
+    @GetMapping("/likes/mutual")
+    public ResponseEntity<?> getMutualLikes(@RequestHeader("Authorization") String authHeader) {
+        User currentUser = getCurrentUser(authHeader);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+        }
+        List<Map<String, Object>> list = interactionService.getMutualLikeUsers(currentUser.getUserid());
+        return ResponseEntity.ok(list);
+    }
+
+    /**
+     * 我的关注
+     */
+    @GetMapping("/following")
+    public ResponseEntity<?> getFollowing(@RequestHeader("Authorization") String authHeader) {
+        User currentUser = getCurrentUser(authHeader);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+        }
+        List<Map<String, Object>> list = interactionService.getFollowingUsers(currentUser.getUserid());
+        return ResponseEntity.ok(list);
     }
     
     /**

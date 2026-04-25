@@ -34,3 +34,14 @@ function go(path) {
   if (route.path !== path) router.push(path)
 }
 </script>
+
+<style scoped>
+@media (min-width: 768px) {
+  :deep(.van-tabbar--fixed) {
+    left: 50%;
+    right: auto;
+    width: 480px;
+    transform: translateX(-50%);
+  }
+}
+</style>

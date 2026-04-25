@@ -62,7 +62,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { showImagePreview, showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import { likeUser } from '@/api/match.js'
-import request from '@/api/request.js'
+import { fetchFellowshipUserDetail } from '@/api/fellowship.js'
 import { toFullUrl } from '@/utils/image.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { storage } from '@/utils/storage.js'
@@ -75,7 +75,7 @@ const liked = ref(false)
 
 onMounted(async () => {
   try {
-    const data = await request.get(`/users/${route.params.id}`)
+    const data = await fetchFellowshipUserDetail(route.params.id)
     user.value = normalizeUser(data)
   } catch {
     showToast({ message: '加载失败', type: 'fail' })

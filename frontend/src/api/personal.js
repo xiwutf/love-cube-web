@@ -1,0 +1,8 @@
+import request from './request.js'
+
+export const getMyLikeUsers = () => request.get('/interactions/likes/sent')
+export const getMutualLikeUsers = () => request.get('/interactions/likes/mutual')
+export const getFollowingUsers = () => request.get('/interactions/following')
+export const toggleFollowUser = (userId) => request.post(`/interactions/follow/${userId}`)
+export const getMyDynamicCount = () => request.get('/dynamics/me/count')
+

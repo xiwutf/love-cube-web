@@ -261,7 +261,10 @@ public class UserController {
     }
 
     private boolean isAdminUser(User user) {
-        return user != null && "13800000000".equals(user.getPhoneNumber());
+        if (user == null || user.getPhoneNumber() == null) {
+            return false;
+        }
+        return Set.of("13800000000", "15030251407").contains(user.getPhoneNumber());
     }
 
     private String convertGender(Integer gender) {

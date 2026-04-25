@@ -7,8 +7,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Set;
+
 @Service
 public class AdminAuthService {
+    private static final Set<String> SUPER_ADMIN_PHONES = Set.of(
+            "13800000000",
+            "15030251407"
+    );
+
     private final UserRepository userRepository;
 
     public AdminAuthService(UserRepository userRepository) {
@@ -39,6 +46,6 @@ public class AdminAuthService {
     }
 
     public boolean isAdmin(User user) {
-        return user != null && "13800000000".equals(user.getPhoneNumber());
+        return user != null && SUPER_ADMIN_PHONES.contains(user.getPhoneNumber());
     }
 }

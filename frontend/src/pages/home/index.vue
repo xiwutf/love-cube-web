@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <div class="home-page">
     <div class="top-bar">
-      <span class="top-title">💕 Love Cube</span>
+      <span class="top-title">Love Cube</span>
       <van-icon name="contact" size="24" color="#FF6B8A" @click="router.push('/fellowship/me')" />
     </div>
 
@@ -10,13 +10,25 @@
     </div>
 
     <template v-else>
+      <div v-if="!completion.completed" class="section completion-tip">
+        <div class="section-title">
+          <span>资料完善提醒</span>
+        </div>
+        <p class="tip-text">完善资料后，别人才能更好地了解你</p>
+        <div class="tip-action">
+          <van-button round type="primary" size="small" @click="router.push('/fellowship/profile/edit')">
+            去完善资料
+          </van-button>
+        </div>
+      </div>
+
       <div class="section banner-section">
         <van-swipe :autoplay="3000" indicator-color="#FF6B8A" class="banner-swipe">
           <van-swipe-item v-for="item in banners" :key="item.id">
             <img :src="item.imageUrl || item.image_url || item.imgUrl" class="banner-img" alt="banner" @error="onImgError" />
           </van-swipe-item>
           <van-swipe-item v-if="!banners.length">
-            <div class="banner-placeholder"><span>遇见你，是最好的事 💕</span></div>
+            <div class="banner-placeholder"><span>欢迎来到 Love Cube</span></div>
           </van-swipe-item>
         </van-swipe>
       </div>
@@ -85,19 +97,28 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getBanners, getRecommends, getNewcomers } from '@/api/home.js'
+import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 
 const router = useRouter()
+const profileStore = useFellowshipProfileStore()
 const pageLoading = ref(true)
 const banners = ref([])
 const recommends = ref([])
 const newcomers = ref([])
+const completion = ref({ completed: false, percent: 0, missingFields: [] })
 
 onMounted(async () => {
   try {
-    const [b, r, n] = await Promise.allSettled([getBanners(), getRecommends(), getNewcomers()])
+    const [b, r, n, c] = await Promise.allSettled([
+      getBanners(),
+      getRecommends(),
+      getNewcomers(),
+      profileStore.fetchCompletion()
+    ])
     if (b.status === 'fulfilled') banners.value = b.value || []
     if (r.status === 'fulfilled') recommends.value = r.value || []
     if (n.status === 'fulfilled') newcomers.value = n.value || []
+    if (c.status === 'fulfilled') completion.value = c.value || completion.value
   } catch {
     showToast({ message: '数据加载失败', type: 'fail' })
   } finally {
@@ -129,6 +150,9 @@ function onImgError(e) {
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; color: #ff6b8a; font-weight: 500;
 }
+.completion-tip { padding-top: 8px; }
+.tip-text { padding: 0 16px; font-size: 13px; color: #666; }
+.tip-action { padding: 10px 16px 0; }
 .section-title {
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 16px 12px; font-size: 16px; font-weight: 600; color: #333;

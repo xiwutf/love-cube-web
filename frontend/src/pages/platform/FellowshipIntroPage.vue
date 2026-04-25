@@ -10,7 +10,7 @@
         </h1>
         <p class="intro-subtitle">为五象新区青年打造的真实可靠联谊交友平台</p>
         <div class="platform-actions intro-actions">
-          <router-link to="/fellowship" class="platform-btn platform-btn-primary intro-primary-btn">立即注册</router-link>
+          <router-link to="/fellowship" class="platform-btn platform-btn-primary intro-primary-btn">立即注册/登录</router-link>
           <router-link to="/about" class="platform-btn platform-btn-ghost intro-ghost-btn">了解更多</router-link>
         </div>
       </div>
@@ -88,8 +88,8 @@
 
 .intro-hero-overlay {
   position: relative;
-  z-index: 2;
-  padding: 44px 40px 54px;
+  z-index: 3;
+  padding: 44px 40px 150px;
   max-width: 560px;
 }
 
@@ -121,6 +121,8 @@
 }
 
 .intro-actions {
+  position: relative;
+  z-index: 4;
   margin-top: 28px;
 }
 
@@ -167,6 +169,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  pointer-events: none;
 }
 
 .intro-badge {
@@ -244,7 +247,7 @@
   }
 
   .intro-hero-overlay {
-    padding: 32px 24px 42px;
+    padding: 32px 24px 136px;
   }
 
   .intro-title {
@@ -298,7 +301,7 @@
   }
 
   .intro-hero-overlay {
-    padding: 24px 16px 24px;
+    padding: 24px 16px 128px;
     max-width: 100%;
   }
 

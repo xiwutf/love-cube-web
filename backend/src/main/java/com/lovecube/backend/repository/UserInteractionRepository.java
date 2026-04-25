@@ -41,6 +41,12 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      */
     List<UserInteraction> findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
         Long toUserId, UserInteraction.InteractionType interactionType);
+
+    /**
+     * 获取用户发起的指定类型互动
+     */
+    List<UserInteraction> findByFromUserIdAndInteractionTypeOrderByCreatedAtDesc(
+        Long fromUserId, UserInteraction.InteractionType interactionType);
     
     /**
      * 获取两个用户之间的特定互动

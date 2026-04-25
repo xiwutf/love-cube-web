@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="search-page">
     <div class="search-bar">
       <van-search
@@ -16,13 +16,15 @@
         v-for="u in list"
         :key="u.userId"
         :user="u"
-        @click="router.push(`/user-profile/${u.userId}`)"
+        @click="router.push(`/fellowship/user-profile/${u.userId}`)"
       />
+
       <van-empty
         v-if="!loading && !keyword && !list.length"
         description="输入昵称开始搜索"
         image-size="80"
       />
+
       <van-empty
         v-else-if="!loading && searched && !list.length"
         description="未找到相关用户"
@@ -43,22 +45,33 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 import { debounce } from '@/utils/format.js'
 import request from '@/api/request.js'
 
-const router   = useRouter()
-const keyword  = ref('')
-const list     = ref([])
-const loading  = ref(false)
-const noMore   = ref(false)
+const router = useRouter()
+const keyword = ref('')
+const list = ref([])
+const loading = ref(false)
+const noMore = ref(false)
 const searched = ref(false)
-let   page     = 0
+let page = 0
 
 async function fetchSearch(reset = false) {
-  if (reset) { page = 0; list.value = []; noMore.value = false }
-  if (!keyword.value.trim() || loading.value || noMore.value) return
+  if (reset) {
+    page = 0
+    list.value = []
+    noMore.value = false
+  }
+
+  if (!keyword.value.trim()) {
+    loading.value = false
+    return
+  }
+  if (loading.value || noMore.value) return
 
   loading.value = true
   searched.value = true
   try {
-    const data  = await request.get('/search', { params: { keyword: keyword.value, page, size: 10 } })
+    const data = await request.get('/search', {
+      params: { keyword: keyword.value, page, size: 10 }
+    })
     const items = (Array.isArray(data) ? data : []).map(normalizeUser)
     list.value.push(...items)
     if (items.length < 10) noMore.value = true
@@ -68,19 +81,31 @@ async function fetchSearch(reset = false) {
   }
 }
 
-function doSearch() { fetchSearch(true) }
-
-function onCancel() {
-  keyword.value  = ''
-  list.value     = []
-  searched.value = false
-  noMore.value   = false
-  page           = 0
+function doSearch() {
+  fetchSearch(true)
 }
 
-const onInput = debounce(() => { if (keyword.value.trim()) fetchSearch(true) }, 400)
+function onCancel() {
+  keyword.value = ''
+  list.value = []
+  searched.value = false
+  noMore.value = false
+  loading.value = false
+  page = 0
+}
 
-function loadMore() { fetchSearch() }
+const onInput = debounce(() => {
+  if (keyword.value.trim()) fetchSearch(true)
+  else loading.value = false
+}, 400)
+
+function loadMore() {
+  if (!keyword.value.trim()) {
+    loading.value = false
+    return
+  }
+  fetchSearch()
+}
 </script>
 
 <style scoped>

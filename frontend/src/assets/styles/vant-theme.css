@@ -1,0 +1,5 @@
+:root {
+  --van-primary-color: var(--color-primary);
+  --van-button-primary-background: var(--color-primary);
+  --van-button-primary-border-color: var(--color-primary);
+}

@@ -26,7 +26,8 @@ request.interceptors.response.use(
       const currentHash = window.location.hash?.replace(/^#/, '') || '/'
       const encoded = encodeURIComponent(currentHash)
       setTimeout(() => {
-        window.location.hash = `#/login?redirect=${encoded}`
+        const loginPath = currentHash.startsWith('/fellowship') ? '/fellowship/login' : '/login'
+        window.location.hash = `#${loginPath}?redirect=${encoded}`
       }, 100)
     }
 
