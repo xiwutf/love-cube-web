@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="admin-page">
     <section class="platform-card">
       <p class="platform-kicker">Admin Overview</p>

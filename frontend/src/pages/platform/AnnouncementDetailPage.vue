@@ -1,9 +1,9 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <router-link to="/announcements" class="platform-backlink">← 返回公告列表</router-link>
 
-    <article v-if="item && item.status === 'published'" class="platform-card platform-block">
-      <p class="platform-meta">{{ item.date }}</p>
+    <article v-if="item" class="platform-card platform-block">
+      <p class="platform-meta">{{ formatDate(item.publishDate) }}</p>
       <h1 class="platform-title">{{ item.title }}</h1>
       <p class="platform-subtitle">{{ item.summary }}</p>
       <p class="platform-text">{{ item.content }}</p>
@@ -17,11 +17,23 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePlatformState } from '@/mock/platformState.js'
+import { fetchAnnouncementDetail } from '@/api/platformContent.js'
 
 const route = useRoute()
-const { state } = usePlatformState()
-const item = computed(() => state.announcements.find((entry) => entry.id === route.params.id))
+const item = ref(null)
+
+function formatDate(value) {
+  if (!value) return ''
+  return String(value).replace('T', ' ').slice(0, 10)
+}
+
+onMounted(async () => {
+  try {
+    item.value = await fetchAnnouncementDetail(route.params.id)
+  } catch {
+    item.value = null
+  }
+})
 </script>

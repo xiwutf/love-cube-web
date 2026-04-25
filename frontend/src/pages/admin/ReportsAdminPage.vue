@@ -1,11 +1,46 @@
-﻿<template>
+<template>
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">举报处理</h1>
-      <p class="platform-subtitle">查看举报内容并更新处理状态与备注。</p>
+      <p class="platform-subtitle">PC 提供完整处理视图；手机端保留状态更新与备注填写。</p>
     </section>
 
-    <div class="admin-list">
+    <section class="admin-table-wrap admin-desktop-only">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>类型</th>
+            <th>举报内容</th>
+            <th>关联用户</th>
+            <th>状态</th>
+            <th>处理备注</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in state.reports" :key="item.id">
+            <td>{{ item.type }}</td>
+            <td>{{ item.content }}</td>
+            <td>{{ item.reporterId }} → {{ item.targetUserId }}<br /><span class="admin-row-meta">{{ item.createdAt }}</span></td>
+            <td>
+              <select v-model="item.status" class="admin-select">
+                <option value="pending">pending</option>
+                <option value="processing">processing</option>
+                <option value="resolved">resolved</option>
+              </select>
+            </td>
+            <td><textarea v-model="item.note" class="admin-textarea" placeholder="处理备注" /></td>
+            <td>
+              <div class="admin-cell-actions">
+                <button class="admin-btn" type="button" @click="save(item)">保存处理结果</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="admin-list admin-mobile-only">
       <article v-for="item in state.reports" :key="item.id" class="admin-row">
         <div class="admin-row-head">
           <strong>{{ item.type }}</strong>

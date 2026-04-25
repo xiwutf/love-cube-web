@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="landing-page">
     <div class="content">
       <div class="logo">💕</div>

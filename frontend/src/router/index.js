@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 
 const auth = { meta: { requiresAuth: true } }
@@ -74,7 +74,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
   const token = userStore.token
 
@@ -87,7 +87,7 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.requiresAdmin) {
-    userStore.syncCurrentUser()
+    await userStore.refreshCurrentUser().catch(() => null)
     if (!userStore.isAdmin) {
       return { path: '/' }
     }

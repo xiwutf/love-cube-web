@@ -1,13 +1,34 @@
-﻿import { computed, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { storage } from '@/utils/storage.js'
-import { usePlatformState } from '@/mock/platformState.js'
+import { login as loginApi, register as registerApi } from '@/api/auth.js'
+import { getMe } from '@/api/user.js'
 
 const REDIRECT_KEY = 'postLoginRedirect'
 
-export const useUserStore = defineStore('user', () => {
-  const { getUserById, sanitizeUser, loginWithPassword, registerAccount, ensureUserById } = usePlatformState()
+function normalizeUser(raw) {
+  if (!raw) return null
+  const id = String(raw.userId ?? raw.id ?? '')
+  return {
+    id,
+    userId: id,
+    username: raw.username ?? raw.nickname ?? '',
+    nickname: raw.nickname ?? raw.username ?? '',
+    phone: raw.phone ?? raw.phoneNumber ?? '',
+    role: raw.role ?? 'user',
+    status: raw.status ?? 'active',
+    verificationStatus: raw.verificationStatus ?? 'none',
+    verificationRejectReason: raw.verificationRejectReason ?? '',
+    avatar: raw.profilePhoto ?? '',
+    bio: raw.bio ?? raw.signature ?? '',
+    location: raw.location ?? '',
+    gender: raw.gender ?? '',
+    birthday: raw.birthday ?? '',
+    height: raw.height ?? ''
+  }
+}
 
+export const useUserStore = defineStore('user', () => {
   const token = ref(storage.get('token') || '')
   const userId = ref(storage.get('userId') || '')
   const userInfo = ref(null)
@@ -17,32 +38,51 @@ export const useUserStore = defineStore('user', () => {
     userId.value = String(newUserId)
     storage.set('token', newToken)
     storage.set('userId', String(newUserId))
-    syncCurrentUser()
   }
 
   function setUserInfo(info) {
     userInfo.value = info
   }
 
-  function syncCurrentUser() {
-    if (!userId.value) {
+  async function refreshCurrentUser() {
+    if (!token.value) {
       userInfo.value = null
       return null
     }
-    const user = getUserById(userId.value) || ensureUserById(userId.value)
-    userInfo.value = sanitizeUser(user)
+    const me = await getMe()
+    const normalized = normalizeUser(me)
+    if (normalized?.userId) {
+      userId.value = normalized.userId
+      storage.set('userId', normalized.userId)
+    }
+    userInfo.value = normalized
+    return userInfo.value
+  }
+
+  function syncCurrentUser() {
+    if (!token.value) {
+      userInfo.value = null
+      return null
+    }
+    if (!userInfo.value) {
+      refreshCurrentUser().catch(() => {
+        logout()
+      })
+    }
     return userInfo.value
   }
 
   async function login(form) {
-    const res = loginWithPassword(form)
+    const res = await loginApi(form)
     setAuth(res.token, res.userId)
+    await refreshCurrentUser()
     return res
   }
 
   async function register(form) {
-    const res = registerAccount(form)
+    const res = await registerApi(form)
     setAuth(res.token, res.userId)
+    await refreshCurrentUser()
     return res
   }
 
@@ -69,8 +109,10 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => userInfo.value?.role === 'admin')
 
-  if (token.value && userId.value) {
-    syncCurrentUser()
+  if (token.value) {
+    refreshCurrentUser().catch(() => {
+      logout()
+    })
   }
 
   return {
@@ -82,6 +124,7 @@ export const useUserStore = defineStore('user', () => {
     setAuth,
     setUserInfo,
     syncCurrentUser,
+    refreshCurrentUser,
     login,
     register,
     logout,

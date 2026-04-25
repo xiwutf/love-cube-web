@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="settings-page">
     <NavBar title="设置" />
 

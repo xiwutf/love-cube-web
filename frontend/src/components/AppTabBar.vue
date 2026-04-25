@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <van-tabbar v-model="active" active-color="#FF6B8A" fixed placeholder>
     <van-tabbar-item icon="home-o" @click="go('/fellowship/discover')">首页</van-tabbar-item>
     <van-tabbar-item icon="search" @click="go('/fellowship/search')">发现</van-tabbar-item>

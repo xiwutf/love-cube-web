@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="welcome-page" @click="goHome">
     <div class="content">
       <div class="logo">💕</div>

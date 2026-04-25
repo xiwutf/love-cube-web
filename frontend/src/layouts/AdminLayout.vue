@@ -1,7 +1,8 @@
-﻿<template>
+<template>
   <div class="admin-layout">
     <aside class="admin-sidebar">
       <router-link to="/admin" class="admin-brand">Love Cube Admin</router-link>
+      <p class="admin-sub">运营控制台</p>
       <nav class="admin-nav">
         <router-link to="/admin/announcements">公告管理</router-link>
         <router-link to="/admin/articles">资讯管理</router-link>
@@ -12,6 +13,7 @@
       </nav>
       <router-link to="/" class="back-home">返回官网</router-link>
     </aside>
+
     <main class="admin-main">
       <router-view />
     </main>
@@ -22,7 +24,7 @@
 .admin-layout {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 252px 1fr;
   background: #f3f6fa;
 }
 
@@ -35,7 +37,7 @@
   height: 100vh;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
 }
 
 .admin-brand {
@@ -45,7 +47,13 @@
   color: #0f172a;
 }
 
+.admin-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
 .admin-nav {
+  margin-top: 8px;
   display: grid;
   gap: 6px;
 }
@@ -54,9 +62,10 @@
 .back-home {
   text-decoration: none;
   color: #475569;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-radius: 10px;
   font-weight: 600;
+  font-size: 14px;
 }
 
 .admin-nav a.router-link-exact-active {
@@ -65,6 +74,7 @@
 }
 
 .back-home {
+  margin-top: 8px;
   color: #d9486d;
   background: #fff5f8;
 }
@@ -79,14 +89,43 @@
   }
 
   .admin-sidebar {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     height: auto;
     border-right: 0;
     border-bottom: 1px solid #e2e8f0;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .admin-brand {
+    font-size: 17px;
+  }
+
+  .admin-sub {
+    display: none;
   }
 
   .admin-nav {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    margin-top: 2px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .admin-nav a,
+  .back-home {
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 6px;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <section class="platform-card platform-soft-card">
       <p class="platform-kicker">Account Center</p>

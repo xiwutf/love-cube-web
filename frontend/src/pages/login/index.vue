@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :class="['login-page', isFellowshipRoute ? 'is-fellowship' : 'is-platform']">
     <div class="login-shell">
       <section class="login-card">

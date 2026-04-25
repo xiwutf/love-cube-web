@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="personal-page">
     <div class="top-bar">
       <span class="top-title">我的</span>

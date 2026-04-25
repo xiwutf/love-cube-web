@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <router-link to="/about" class="platform-backlink">← 返回关于我们</router-link>
 

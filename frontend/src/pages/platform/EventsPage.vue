@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <section class="platform-card">
       <p class="platform-kicker">Events</p>
@@ -13,7 +13,7 @@
         :to="`/events/${item.id}`"
         class="platform-card platform-item-link"
       >
-        <p class="platform-meta">{{ item.time }} · {{ item.location }}</p>
+        <p class="platform-meta">{{ formatDate(item.eventTime, true) }} · {{ item.location }}</p>
         <h3 class="platform-heading">{{ item.title }}</h3>
         <p class="platform-text">{{ item.summary }}（报名 {{ item.signupCount || 0 }} 人）</p>
       </router-link>
@@ -22,9 +22,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { usePlatformState } from '@/mock/platformState.js'
+import { onMounted, ref } from 'vue'
+import { fetchEvents } from '@/api/platformContent.js'
 
-const { state } = usePlatformState()
-const list = computed(() => state.events.filter((item) => item.status === 'published'))
+const list = ref([])
+
+function formatDate(value, withTime = false) {
+  if (!value) return ''
+  const normalized = String(value).replace('T', ' ')
+  return withTime ? normalized.slice(0, 16) : normalized.slice(0, 10)
+}
+
+onMounted(async () => {
+  list.value = await fetchEvents({ status: 'published' })
+})
 </script>

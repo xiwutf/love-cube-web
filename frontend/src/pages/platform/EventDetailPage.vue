@@ -1,31 +1,41 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <router-link to="/events" class="platform-backlink">← 返回活动列表</router-link>
 
-    <article v-if="item && item.status === 'published'" class="platform-card platform-block">
-      <p class="platform-meta">{{ item.time }} · {{ item.location }}</p>
+    <article v-if="item" class="platform-card platform-block">
+      <p class="platform-meta">{{ formatDate(item.eventTime, true) }} · {{ item.location }}</p>
       <h1 class="platform-title">{{ item.title }}</h1>
       <p class="platform-subtitle">{{ item.summary }}</p>
       <p class="platform-text">{{ item.content }}</p>
-      <p class="platform-text">当前报名人数（占位）：{{ item.signupCount || 0 }}</p>
-      <div class="platform-actions">
-        <router-link to="/fellowship-intro" class="platform-btn platform-btn-primary">查看联谊模块说明</router-link>
-      </div>
+      <p class="platform-text">当前报名人数：{{ item.signupCount || 0 }}</p>
     </article>
 
     <div v-else class="platform-card platform-empty">
       <h2 class="platform-heading">未找到活动</h2>
-      <p class="platform-text">该活动可能已结束，或链接无效。</p>
+      <p class="platform-text">该活动可能已下线，或链接无效。</p>
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePlatformState } from '@/mock/platformState.js'
+import { fetchEventDetail } from '@/api/platformContent.js'
 
 const route = useRoute()
-const { state } = usePlatformState()
-const item = computed(() => state.events.find((entry) => entry.id === route.params.id))
+const item = ref(null)
+
+function formatDate(value, withTime = false) {
+  if (!value) return ''
+  const normalized = String(value).replace('T', ' ')
+  return withTime ? normalized.slice(0, 16) : normalized.slice(0, 10)
+}
+
+onMounted(async () => {
+  try {
+    item.value = await fetchEventDetail(route.params.id)
+  } catch {
+    item.value = null
+  }
+})
 </script>

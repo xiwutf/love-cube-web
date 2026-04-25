@@ -1,8 +1,8 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <router-link to="/articles" class="platform-backlink">← 返回资讯列表</router-link>
 
-    <article v-if="item && item.status === 'published'" class="platform-card platform-block">
+    <article v-if="item" class="platform-card platform-block">
       <p class="platform-meta">{{ item.tag }}</p>
       <h1 class="platform-title">{{ item.title }}</h1>
       <p class="platform-subtitle">{{ item.summary }}</p>
@@ -17,11 +17,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { usePlatformState } from '@/mock/platformState.js'
+import { fetchArticleDetail } from '@/api/platformContent.js'
 
 const route = useRoute()
-const { state } = usePlatformState()
-const item = computed(() => state.articles.find((entry) => entry.id === route.params.id))
+const item = ref(null)
+
+onMounted(async () => {
+  try {
+    item.value = await fetchArticleDetail(route.params.id)
+  } catch {
+    item.value = null
+  }
+})
 </script>

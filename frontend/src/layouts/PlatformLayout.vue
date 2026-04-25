@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="platform-layout">
     <header class="platform-header">
       <div class="platform-container nav-wrap">

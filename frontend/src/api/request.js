@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 import { storage } from '@/utils/storage.js'
 
 const request = axios.create({

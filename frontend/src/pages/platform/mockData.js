@@ -1,4 +1,4 @@
-﻿export const announcements = [
+export const announcements = [
   {
     id: 'safety-upgrade-20260410',
     date: '2026-04-10',

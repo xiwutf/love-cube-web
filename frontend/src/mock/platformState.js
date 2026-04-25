@@ -1,4 +1,4 @@
-﻿import { reactive } from 'vue'
+import { reactive } from 'vue'
 import { announcements as seedAnnouncements, articles as seedArticles, events as seedEvents, policyPages } from '@/pages/platform/mockData.js'
 import { storage } from '@/utils/storage.js'
 

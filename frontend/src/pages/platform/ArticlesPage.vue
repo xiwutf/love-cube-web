@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page">
     <section class="platform-card">
       <p class="platform-kicker">Articles</p>
@@ -22,9 +22,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { usePlatformState } from '@/mock/platformState.js'
+import { onMounted, ref } from 'vue'
+import { fetchArticles } from '@/api/platformContent.js'
 
-const { state } = usePlatformState()
-const list = computed(() => state.articles.filter((item) => item.status === 'published'))
+const list = ref([])
+
+onMounted(async () => {
+  list.value = await fetchArticles({ status: 'published' })
+})
 </script>

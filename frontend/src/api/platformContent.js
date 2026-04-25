@@ -1,0 +1,25 @@
+import request from './request.js'
+
+export function fetchAnnouncements(params = { status: 'published' }) {
+  return request.get('/announcements', { params })
+}
+
+export function fetchAnnouncementDetail(id) {
+  return request.get(`/announcements/${id}`)
+}
+
+export function fetchArticles(params = { status: 'published' }) {
+  return request.get('/articles', { params })
+}
+
+export function fetchArticleDetail(id) {
+  return request.get(`/articles/${id}`)
+}
+
+export function fetchEvents(params = { status: 'published' }) {
+  return request.get('/events', { params })
+}
+
+export function fetchEventDetail(id) {
+  return request.get(`/events/${id}`)
+}

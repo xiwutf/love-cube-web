@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="home-page">
     <div class="top-bar">
       <span class="top-title">💕 Love Cube</span>

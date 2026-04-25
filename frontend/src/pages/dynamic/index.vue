@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="dynamic-page">
     <div class="top-bar"><span class="top-title">动态</span></div>
 

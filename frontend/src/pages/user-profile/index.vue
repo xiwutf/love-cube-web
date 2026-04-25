@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="user-profile-page">
     <NavBar title="TA 的资料" />
 
