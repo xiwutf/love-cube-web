@@ -1,83 +1,87 @@
-Ôªø<template>
-  <div class="login-page">
-    <div class="logo-area">
-      <div class="logo-icon">üíï</div>
-      <h1 class="logo-title">Love Cube</h1>
-      <p class="logo-sub">Áªü‰∏ÄÁî®Êà∑ÁôªÂΩï‰∏≠ÂøÉ</p>
+<template>
+  <div :class="['login-page', isFellowshipRoute ? 'is-fellowship' : 'is-platform']">
+    <div class="login-shell">
+      <section class="login-card">
+        <div class="logo-area">
+          <span class="logo-mark" aria-hidden="true">LC</span>
+          <h1 class="logo-title">Love Cube</h1>
+          <p class="logo-sub">Õ≥“ª”√ªßµ«¬º÷––ƒ</p>
+        </div>
+
+        <van-tabs v-model:active="activeTab" class="login-tabs" color="#FF6B8A" title-active-color="#FF6B8A">
+          <van-tab title="µ«¬º">
+            <van-form @submit="handleLogin" class="form-wrap">
+              <van-cell-group inset>
+                <van-field
+                  v-model="loginForm.phone"
+                  name="phone"
+                  label=" ÷ª˙∫≈"
+                  placeholder="«Î ‰»Î ÷ª˙∫≈"
+                  type="tel"
+                  maxlength="11"
+                  :rules="[{ required: true, message: '«ÎÃÓ–¥ ÷ª˙∫≈' }]"
+                />
+                <van-field
+                  v-model="loginForm.password"
+                  name="password"
+                  label="√‹¬Î"
+                  placeholder="«Î ‰»Î√‹¬Î"
+                  type="password"
+                  :rules="[{ required: true, message: '«ÎÃÓ–¥√‹¬Î' }]"
+                />
+              </van-cell-group>
+              <div class="btn-wrap">
+                <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="µ«¬º÷–...">
+                  µ«¬º
+                </van-button>
+              </div>
+            </van-form>
+          </van-tab>
+
+          <van-tab title="◊¢≤·">
+            <van-form @submit="handleRegister" class="form-wrap">
+              <van-cell-group inset>
+                <van-field
+                  v-model="regForm.username"
+                  name="username"
+                  label="Í«≥∆"
+                  placeholder="∏¯◊‘º∫∆∏ˆ√˚◊÷"
+                />
+                <van-field
+                  v-model="regForm.phone"
+                  name="phone"
+                  label=" ÷ª˙∫≈"
+                  placeholder="«Î ‰»Î ÷ª˙∫≈"
+                  type="tel"
+                  maxlength="11"
+                  :rules="[{ required: true, message: '«ÎÃÓ–¥ ÷ª˙∫≈' }]"
+                />
+                <van-field
+                  v-model="regForm.password"
+                  name="password"
+                  label="√‹¬Î"
+                  placeholder="÷¡…Ÿ 6 Œª"
+                  type="password"
+                  :rules="[{ required: true, message: '«ÎÃÓ–¥√‹¬Î' }, { min: 6, message: '√‹¬Î÷¡…Ÿ 6 Œª' }]"
+                />
+              </van-cell-group>
+              <div class="btn-wrap">
+                <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="◊¢≤·÷–...">
+                  ◊¢≤·
+                </van-button>
+              </div>
+            </van-form>
+          </van-tab>
+        </van-tabs>
+
+        <p class="hint">—› æ’À∫≈£∫admin 13800000000 / 123456£¨∆’Õ®”√ªß 13900000000 / 123456</p>
+      </section>
     </div>
-
-    <van-tabs v-model:active="activeTab" class="login-tabs" color="#FF6B8A" title-active-color="#FF6B8A">
-      <van-tab title="ÁôªÂΩï">
-        <van-form @submit="handleLogin" class="form-wrap">
-          <van-cell-group inset>
-            <van-field
-              v-model="loginForm.phone"
-              name="phone"
-              label="ÊâãÊú∫Âè∑"
-              placeholder="ËØ∑ËæìÂÖ•ÊâãÊú∫Âè∑"
-              type="tel"
-              maxlength="11"
-              :rules="[{ required: true, message: 'ËØ∑Â°´ÂÜôÊâãÊú∫Âè∑' }]"
-            />
-            <van-field
-              v-model="loginForm.password"
-              name="password"
-              label="ÂØÜÁ†Å"
-              placeholder="ËØ∑ËæìÂÖ•ÂØÜÁ†Å"
-              type="password"
-              :rules="[{ required: true, message: 'ËØ∑Â°´ÂÜôÂØÜÁ†Å' }]"
-            />
-          </van-cell-group>
-          <div class="btn-wrap">
-            <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="ÁôªÂΩï‰∏≠...">
-              ÁôªÂΩï
-            </van-button>
-          </div>
-        </van-form>
-      </van-tab>
-
-      <van-tab title="Ê≥®ÂÜå">
-        <van-form @submit="handleRegister" class="form-wrap">
-          <van-cell-group inset>
-            <van-field
-              v-model="regForm.username"
-              name="username"
-              label="ÊòµÁß∞"
-              placeholder="ÁªôËá™Â∑±Ëµ∑‰∏™ÂêçÂ≠ó"
-            />
-            <van-field
-              v-model="regForm.phone"
-              name="phone"
-              label="ÊâãÊú∫Âè∑"
-              placeholder="ËØ∑ËæìÂÖ•ÊâãÊú∫Âè∑"
-              type="tel"
-              maxlength="11"
-              :rules="[{ required: true, message: 'ËØ∑Â°´ÂÜôÊâãÊú∫Âè∑' }]"
-            />
-            <van-field
-              v-model="regForm.password"
-              name="password"
-              label="ÂØÜÁ†Å"
-              placeholder="Ëá≥Â∞ë 6 ‰Ωç"
-              type="password"
-              :rules="[{ required: true, message: 'ËØ∑Â°´ÂÜôÂØÜÁ†Å' }, { min: 6, message: 'ÂØÜÁ†ÅËá≥Â∞ë 6 ‰Ωç' }]"
-            />
-          </van-cell-group>
-          <div class="btn-wrap">
-            <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="Ê≥®ÂÜå‰∏≠...">
-              Ê≥®ÂÜå
-            </van-button>
-          </div>
-        </van-form>
-      </van-tab>
-    </van-tabs>
-
-    <p class="hint">ÊºîÁ§∫Ë¥¶Âè∑Ôºöadmin 13800000000 / 123456ÔºåÊôÆÈÄöÁî®Êà∑ 13900000000 / 123456</p>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { useUserStore } from '@/stores/user.js'
@@ -90,6 +94,7 @@ const activeTab = ref(0)
 const loading = ref(false)
 const loginForm = reactive({ phone: '', password: '' })
 const regForm = reactive({ username: '', phone: '', password: '' })
+const isFellowshipRoute = computed(() => route.path.startsWith('/fellowship'))
 
 function resolveRedirect() {
   const fromQuery = typeof route.query.redirect === 'string' ? route.query.redirect : ''
@@ -103,10 +108,10 @@ async function handleLogin() {
   loading.value = true
   try {
     await userStore.login({ phone: loginForm.phone, password: loginForm.password })
-    showToast({ message: 'ÁôªÂΩïÊàêÂäü', type: 'success' })
+    showToast({ message: 'µ«¬º≥…π¶', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
-    showToast({ message: err.message || 'ÁôªÂΩïÂ§±Ë¥•', type: 'fail' })
+    showToast({ message: err.message || 'µ«¬º ß∞‹', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -120,10 +125,10 @@ async function handleRegister() {
       phone: regForm.phone,
       password: regForm.password
     })
-    showToast({ message: 'Ê≥®ÂÜåÊàêÂäü', type: 'success' })
+    showToast({ message: '◊¢≤·≥…π¶', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
-    showToast({ message: err.message || 'Ê≥®ÂÜåÂ§±Ë¥•', type: 'fail' })
+    showToast({ message: err.message || '◊¢≤· ß∞‹', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -133,32 +138,50 @@ async function handleRegister() {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(160deg, #fff0f3 0%, #ffffff 40%);
-  padding-bottom: 40px;
+}
+
+.login-shell {
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 18px 0 36px;
+}
+
+.login-card {
+  background: transparent;
 }
 
 .logo-area {
   text-align: center;
-  padding: 56px 0 28px;
+  padding: 18px 0 24px;
 }
 
-.logo-icon {
-  font-size: 56px;
-  line-height: 1;
-  margin-bottom: 10px;
+.logo-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #ff6f92, #e84f73);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 14px 26px rgba(232, 79, 115, 0.32);
 }
 
 .logo-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #ff6b8a;
-  letter-spacing: 2px;
+  margin-top: 14px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #1f2a44;
+  letter-spacing: -0.01em;
 }
 
 .logo-sub {
   margin-top: 8px;
-  font-size: 13px;
-  color: #7b889b;
+  font-size: 14px;
+  color: #64748b;
 }
 
 .login-tabs {
@@ -173,10 +196,85 @@ async function handleRegister() {
   padding: 24px 16px 0;
 }
 
+:deep(.van-button--primary) {
+  font-weight: 700;
+  box-shadow: 0 14px 24px rgba(255, 107, 138, 0.28);
+}
+
+:deep(.van-cell-group--inset) {
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid #ecf0f4;
+}
+
 .hint {
-  margin: 18px 18px 0;
+  margin: 20px 18px 0;
   font-size: 12px;
   color: #94a3b8;
   line-height: 1.6;
+}
+
+.is-platform {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(255, 111, 146, 0.18) 0, rgba(255, 111, 146, 0) 34%),
+    linear-gradient(165deg, #f6f8fd 0%, #ffffff 48%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 12px;
+}
+
+.is-platform .login-shell {
+  width: min(100%, 560px);
+  padding: 0;
+}
+
+.is-platform .login-card {
+  border: 1px solid #e8edf3;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+  padding: 18px 18px 24px;
+}
+
+.is-fellowship {
+  background: linear-gradient(160deg, #fff0f3 0%, #ffffff 40%);
+  padding-bottom: 40px;
+}
+
+@media (max-width: 767px) {
+  .is-platform {
+    display: block;
+    padding: 0 0 22px;
+    background: linear-gradient(160deg, #fff0f3 0%, #ffffff 40%);
+  }
+
+  .is-platform .login-shell {
+    width: 100%;
+    padding: 14px 0 24px;
+  }
+
+  .is-platform .login-card {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .logo-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .logo-title {
+    font-size: 28px;
+  }
+
+  .logo-sub {
+    font-size: 13px;
+  }
 }
 </style>

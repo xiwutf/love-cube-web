@@ -1,35 +1,40 @@
-ï»¿<template>
+<template>
   <div class="platform-layout">
     <header class="platform-header">
       <div class="platform-container nav-wrap">
         <router-link to="/" class="brand" @click="menuOpen = false">
-          <span class="brand-logo">LC</span>
-          <span class="brand-text">Love Cube å¹³å°</span>
+          <span class="brand-logo" aria-hidden="true">
+            <span class="brand-logo-core">LC</span>
+          </span>
+          <span class="brand-copy">
+            <span class="brand-text">Love Cube</span>
+            <span class="brand-tag">Æ½Ì¨¹ÙÍø</span>
+          </span>
         </router-link>
 
-        <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="æ‰“å¼€èœå•">
-          {{ menuOpen ? 'å…³é—­' : 'èœå•' }}
+        <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="´ò¿ª²Ëµ¥">
+          {{ menuOpen ? '?' : '?' }}
         </button>
 
         <nav class="nav-links nav-links-desktop">
-          <router-link to="/" :class="{ 'is-active': isActive('/') }">é¦–é¡µ</router-link>
-          <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">å…¬å‘Š</router-link>
-          <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">èµ„è®¯</router-link>
-          <router-link to="/events" :class="{ 'is-active': isActive('/events') }">æ´»åŠ¨</router-link>
-          <router-link to="/about" :class="{ 'is-active': isActive('/about') }">å…³äºæˆ‘ä»¬</router-link>
-          <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">è”è°Šä»‹ç»</router-link>
+          <router-link to="/" :class="{ 'is-active': isActive('/') }">Ê×Ò³</router-link>
+          <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">¹«¸æ</router-link>
+          <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">×ÊÑ¶</router-link>
+          <router-link to="/events" :class="{ 'is-active': isActive('/events') }">»î¶¯</router-link>
+          <router-link to="/about" :class="{ 'is-active': isActive('/about') }">¹ØÓÚÎÒÃÇ</router-link>
+          <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">ÁªÒê½éÉÜ</router-link>
         </nav>
 
         <div class="account-slot">
           <template v-if="userStore.isLoggedIn">
-            <router-link to="/account" class="account-entry">{{ userStore.userInfo?.username || 'æˆ‘çš„è´¦å·' }}</router-link>
-            <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">åå°</router-link>
-            <button class="logout-btn" type="button" @click="handleLogout">é€€å‡º</button>
+            <router-link to="/account" class="account-entry">{{ userStore.userInfo?.username || 'ÎÒµÄÕËºÅ' }}</router-link>
+            <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">ºóÌ¨</router-link>
+            <button class="logout-btn" type="button" @click="handleLogout">ÍË³ö</button>
           </template>
           <template v-else>
-            <router-link to="/login" class="login-entry">ç™»å½• / æ³¨å†Œ</router-link>
+            <router-link to="/login" class="login-entry">µÇÂ¼ / ×¢²á</router-link>
           </template>
-          <router-link to="/fellowship-intro" class="fellowship-entry">è¿›å…¥ è”è°Š</router-link>
+          <router-link to="/fellowship-intro" class="fellowship-entry">½øÈëÁªÒê</router-link>
         </div>
       </div>
     </header>
@@ -39,24 +44,24 @@
     </main>
 
     <nav class="mobile-quick-nav">
-      <router-link to="/" :class="{ 'is-active': isActive('/') }">é¦–é¡µ</router-link>
-      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">å…¬å‘Š</router-link>
-      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">èµ„è®¯</router-link>
-      <router-link to="/events" :class="{ 'is-active': isActive('/events') }">æ´»åŠ¨</router-link>
-      <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">è”è°Š</router-link>
+      <router-link to="/" :class="{ 'is-active': isActive('/') }">Ê×Ò³</router-link>
+      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">¹«¸æ</router-link>
+      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">×ÊÑ¶</router-link>
+      <router-link to="/events" :class="{ 'is-active': isActive('/events') }">»î¶¯</router-link>
+      <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">ÁªÒê</router-link>
     </nav>
 
     <footer class="platform-footer">
       <div class="platform-container footer-inner">
         <div>
           <p class="footer-title">Love Cube Platform</p>
-          <p>å¹³å°å®˜ç½‘ç”¨äºå…¬å‘Šã€èµ„è®¯ä¸æ´»åŠ¨å‘å¸ƒï¼›è”è°Šæ¨¡å—ç”¨äºç§»åŠ¨ç«¯äº’åŠ¨ç¤¾äº¤ã€‚</p>
+          <p>Æ½Ì¨¹ÙÍøÓÃÓÚ¹«¸æ¡¢×ÊÑ¶Óë»î¶¯·¢²¼£»ÁªÒêÄ£¿éÓÃÓÚÒÆ¶¯¶Ë»¥¶¯Éç½»¡£</p>
         </div>
         <div class="footer-links">
-          <router-link to="/policies/terms">ç”¨æˆ·åè®®</router-link>
-          <router-link to="/policies/privacy">éšç§æ”¿ç­–</router-link>
-          <router-link to="/policies/content-policy">å†…å®¹è§„èŒƒ</router-link>
-          <router-link to="/policies/safety">å®‰å…¨è¯´æ˜</router-link>
+          <router-link to="/policies/terms">ÓÃ»§Ğ­Òé</router-link>
+          <router-link to="/policies/privacy">ÒşË½Õş²ß</router-link>
+          <router-link to="/policies/content-policy">ÄÚÈİ¹æ·¶</router-link>
+          <router-link to="/policies/safety">°²È«ËµÃ÷</router-link>
         </div>
       </div>
     </footer>
@@ -66,16 +71,16 @@
     </transition>
     <transition name="menu-slide">
       <nav v-if="menuOpen" class="mobile-menu-panel">
-        <router-link to="/" :class="{ 'is-active': isActive('/') }" @click="menuOpen = false">é¦–é¡µ</router-link>
-        <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">å…¬å‘Š</router-link>
-        <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">èµ„è®¯</router-link>
-        <router-link to="/events" :class="{ 'is-active': isActive('/events') }" @click="menuOpen = false">æ´»åŠ¨</router-link>
-        <router-link to="/about" :class="{ 'is-active': isActive('/about') }" @click="menuOpen = false">å…³äºæˆ‘ä»¬</router-link>
-        <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }" @click="menuOpen = false">è¿›å…¥ è”è°Š</router-link>
-        <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">æˆ‘çš„è´¦å·</router-link>
-        <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">ç®¡ç†åå°</router-link>
-        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">ç™»å½• / æ³¨å†Œ</router-link>
-        <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">é€€å‡ºç™»å½•</button>
+        <router-link to="/" :class="{ 'is-active': isActive('/') }" @click="menuOpen = false">Ê×Ò³</router-link>
+        <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">¹«¸æ</router-link>
+        <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">×ÊÑ¶</router-link>
+        <router-link to="/events" :class="{ 'is-active': isActive('/events') }" @click="menuOpen = false">»î¶¯</router-link>
+        <router-link to="/about" :class="{ 'is-active': isActive('/about') }" @click="menuOpen = false">¹ØÓÚÎÒÃÇ</router-link>
+        <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }" @click="menuOpen = false">½øÈëÁªÒê</router-link>
+        <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">ÎÒµÄÕËºÅ</router-link>
+        <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">¹ÜÀíºóÌ¨</router-link>
+        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">µÇÂ¼ / ×¢²á</router-link>
+        <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">ÍË³öµÇÂ¼</button>
       </nav>
     </transition>
   </div>
@@ -111,7 +116,7 @@ function handleLogout() {
 <style scoped>
 .platform-layout {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f4f7fb 0%, #ffffff 420px);
+  background: linear-gradient(180deg, #f3f7fc 0%, #ffffff 460px);
   color: #1f2937;
 }
 
@@ -119,53 +124,76 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.88);
   border-bottom: 1px solid #e2e8f0;
 }
 
 .nav-wrap {
-  min-height: 72px;
+  min-height: 78px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
-  font-size: 20px;
-  font-weight: 800;
-  color: #0f172a;
 }
 
 .brand-logo {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ff5f84, #e84f73);
+  background: linear-gradient(145deg, #ff6f92, #e84f73);
+  box-shadow: 0 12px 24px rgba(232, 79, 115, 0.28);
+}
+
+.brand-logo-core {
   color: #fff;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.brand-copy {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brand-text {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.brand-tag {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .nav-links {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 18px;
 }
 
 .nav-links a {
   color: #475569;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .nav-links a.router-link-exact-active,
@@ -188,31 +216,30 @@ function handleLogout() {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  padding: 6px 12px;
+  padding: 7px 12px;
   text-decoration: none;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  transition: all 0.2s ease;
 }
 
-.account-entry,
-.admin-entry {
-  border: 1px solid #e2e8f0;
-  color: #334155;
-  background: #fff;
+.account-entry:hover,
+.admin-entry:hover,
+.login-entry:hover,
+.logout-btn:hover {
+  border-color: #ffd0db;
+  color: #ff5f84;
 }
 
 .admin-entry {
   border-color: #cbd5e1;
 }
 
-.login-entry {
-  border: 1px solid #ffd2dc;
-  color: #e84f73;
-  background: #fff;
-}
-
+.login-entry,
 .logout-btn {
-  border: 1px solid #ffe4ec;
+  border-color: #ffd2dc;
   color: #e84f73;
-  background: #fff7fa;
 }
 
 .fellowship-entry {
@@ -222,7 +249,7 @@ function handleLogout() {
   font-size: 13px;
   font-weight: 700;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 9px 14px;
   box-shadow: 0 10px 22px rgba(255, 95, 132, 0.28);
 }
 
@@ -231,14 +258,17 @@ function handleLogout() {
   border: 1px solid #ffd2dc;
   background: #fff;
   color: #e84f73;
-  font-size: 13px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 18px;
   font-weight: 700;
-  border-radius: 999px;
-  padding: 8px 14px;
+  align-items: center;
+  justify-content: center;
 }
 
 .platform-main {
-  min-height: calc(100vh - 72px - 112px);
+  min-height: calc(100vh - 78px - 124px);
 }
 
 .mobile-quick-nav {
@@ -251,18 +281,18 @@ function handleLogout() {
 }
 
 .footer-inner {
-  min-height: 112px;
+  min-height: 124px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   font-size: 13px;
   color: #64748b;
 }
 
 .footer-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #0f172a;
 }
@@ -286,18 +316,18 @@ function handleLogout() {
   border: 1px solid #ffd8e3;
   color: #e84f73;
   background: #fff8fa;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
   font-weight: 700;
   text-align: left;
-  padding: 10px 8px;
+  padding: 12px 10px;
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .nav-wrap {
     grid-template-columns: auto 1fr;
     gap: 14px;
-    padding: 10px 0;
+    padding: 12px 0;
   }
 
   .account-slot {
@@ -313,22 +343,26 @@ function handleLogout() {
 @media (max-width: 767px) {
   .nav-wrap {
     grid-template-columns: 1fr auto;
-    min-height: 60px;
+    min-height: 64px;
     gap: 10px;
   }
 
-  .brand {
+  .brand-logo {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+
+  .brand-text {
     font-size: 17px;
   }
 
-  .brand-logo {
-    width: 24px;
-    height: 24px;
+  .brand-tag {
+    display: none;
   }
 
   .menu-toggle {
     display: inline-flex;
-    align-items: center;
   }
 
   .nav-links-desktop,
@@ -337,8 +371,8 @@ function handleLogout() {
   }
 
   .platform-main {
-    min-height: calc(100vh - 60px - 58px);
-    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+    min-height: calc(100vh - 64px - 58px);
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
   .mobile-quick-nav {
@@ -363,7 +397,7 @@ function handleLogout() {
     text-decoration: none;
     color: #64748b;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .mobile-quick-nav a.router-link-exact-active,
@@ -372,11 +406,11 @@ function handleLogout() {
   }
 
   .platform-footer {
-    padding-bottom: calc(66px + env(safe-area-inset-bottom));
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
   }
 
   .footer-inner {
-    min-height: 88px;
+    min-height: 92px;
     font-size: 12px;
   }
 
@@ -389,23 +423,24 @@ function handleLogout() {
 
   .mobile-menu-panel {
     position: fixed;
-    top: calc(60px + env(safe-area-inset-top));
+    top: calc(64px + env(safe-area-inset-top));
     left: 0;
     right: 0;
     z-index: 101;
     background: #fff;
     border-bottom: 1px solid #e2e8f0;
     display: grid;
-    padding: 10px 12px;
+    padding: 12px;
     gap: 6px;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
   }
 
   .mobile-menu-panel a {
     text-decoration: none;
     color: #334155;
     font-size: 15px;
-    font-weight: 600;
-    padding: 10px 8px;
+    font-weight: 700;
+    padding: 11px 9px;
     border-radius: 10px;
   }
 
