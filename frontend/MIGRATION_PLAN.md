@@ -208,3 +208,27 @@ npm run build          # 产物在 dist/
 | `wx.previewImage` | Vant `showImagePreview` |
 | `wx.createAnimation` | CSS transition / Vue `<Transition>` |
 | `wx.pageScrollTo` | `element.scrollIntoView()` |
+
+---
+
+## 补充迁移（2026-04-25）
+
+在首版基础上发现并修复的遗留问题：
+
+| # | 类型 | 描述 | 状态 |
+|---|------|------|------|
+| S1 | Bug 修复 | 上传接口不匹配：后端新增 `POST /api/upload/image` 通用端点 | ✅ |
+| S2 | 缺失页面 | VIP 会员页（`/vip`）：月卡/季卡/年卡套餐，前端页面 + 路由 + API 模块 + 「我的」页面入口 | ✅ |
+| S2 | 缺失后端 | `PaymentController` (`POST /api/payment/vip`)，含续期逻辑 | ✅ |
+| S3 | 缺失功能 | 聊天列表左滑删除：`deleteChat` API 调用 + `<van-swipe-cell>` 交互 | ✅ |
+
+### ⚠️ 数据库迁移（需手动执行）
+
+VIP 功能需要在 `users` 表中新增两列：
+
+```sql
+ALTER TABLE users ADD COLUMN vip_status VARCHAR(20) DEFAULT 'none';
+ALTER TABLE users ADD COLUMN vip_expires_at DATETIME NULL;
+```
+
+执行后重启后端即可生效。
