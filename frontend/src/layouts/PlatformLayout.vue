@@ -1,14 +1,16 @@
 <template>
   <div class="platform-layout">
     <header class="platform-header">
-      <div class="platform-container nav-wrap">
+      <div class="nav-wrap">
         <router-link to="/" class="brand" @click="menuOpen = false">
           <span class="brand-logo" aria-hidden="true">
-            <span class="brand-logo-core">LC</span>
+            <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
           </span>
           <span class="brand-copy">
             <span class="brand-text">Love Cube</span>
-            <span class="brand-tag">平台官网</span>
+            <span class="brand-tag">多元连接平台</span>
           </span>
         </router-link>
 
@@ -18,8 +20,8 @@
 
         <nav class="nav-links nav-links-desktop">
           <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-          <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">公告</router-link>
-          <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">资讯</router-link>
+          <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
+          <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
           <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
           <router-link to="/about" :class="{ 'is-active': isActive('/about') }">关于我们</router-link>
           <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊介绍</router-link>
@@ -32,9 +34,9 @@
             <button class="logout-btn" type="button" @click="handleLogout">退出</button>
           </template>
           <template v-else>
-            <router-link to="/login" class="login-entry">登录 / 注册</router-link>
+            <router-link to="/login" class="login-entry">登录</router-link>
+            <router-link to="/login" class="register-entry">立即加入</router-link>
           </template>
-          <router-link to="/fellowship-intro" class="fellowship-entry">进入联谊</router-link>
         </div>
       </div>
     </header>
@@ -45,14 +47,14 @@
 
     <nav class="mobile-quick-nav">
       <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">公告</router-link>
-      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">资讯</router-link>
+      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">动态</router-link>
+      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">内容</router-link>
       <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
       <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊</router-link>
     </nav>
 
     <footer class="platform-footer">
-      <div class="platform-container footer-inner">
+      <div class="footer-inner">
         <div>
           <p class="footer-title">Love Cube Platform</p>
           <p>平台官网用于公告、资讯与活动发布；联谊模块用于移动端互动社交。</p>
@@ -72,14 +74,15 @@
     <transition name="menu-slide">
       <nav v-if="menuOpen" class="mobile-menu-panel">
         <router-link to="/" :class="{ 'is-active': isActive('/') }" @click="menuOpen = false">首页</router-link>
-        <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">公告</router-link>
-        <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">资讯</router-link>
+        <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">平台动态</router-link>
+        <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">精选内容</router-link>
         <router-link to="/events" :class="{ 'is-active': isActive('/events') }" @click="menuOpen = false">活动</router-link>
         <router-link to="/about" :class="{ 'is-active': isActive('/about') }" @click="menuOpen = false">关于我们</router-link>
-        <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }" @click="menuOpen = false">进入联谊</router-link>
+        <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }" @click="menuOpen = false">联谊介绍</router-link>
         <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">我的账号</router-link>
         <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link>
-        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录 / 注册</router-link>
+        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录</router-link>
+        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">立即加入</router-link>
         <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button>
       </nav>
     </transition>
@@ -130,11 +133,13 @@ function handleLogout() {
 }
 
 .nav-wrap {
+  width: 100%;
   min-height: 78px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 18px;
+  padding: 0 24px;
 }
 
 .brand {
@@ -242,7 +247,7 @@ function handleLogout() {
   color: #e84f73;
 }
 
-.fellowship-entry {
+.register-entry {
   text-decoration: none;
   background: linear-gradient(135deg, #ff5f84, #e84f73);
   color: #fff;
@@ -281,12 +286,14 @@ function handleLogout() {
 }
 
 .footer-inner {
+  width: 100%;
   min-height: 124px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  padding: 0 24px;
   font-size: 13px;
   color: #64748b;
 }
@@ -345,6 +352,7 @@ function handleLogout() {
     grid-template-columns: 1fr auto;
     min-height: 64px;
     gap: 10px;
+    padding: 0 12px;
   }
 
   .brand-logo {
@@ -411,6 +419,7 @@ function handleLogout() {
 
   .footer-inner {
     min-height: 92px;
+    padding: 0 12px;
     font-size: 12px;
   }
 
