@@ -13,6 +13,10 @@ export function updateAdminUserStatus(userId, status) {
   return request.put(`/admin/users/${userId}/status`, { status })
 }
 
+export function forceDeleteAdminUser(userId) {
+  return request.delete(`/admin/users/${userId}/force`)
+}
+
 // Stats
 export function getAdminStats() {
   return request.get('/admin/stats')

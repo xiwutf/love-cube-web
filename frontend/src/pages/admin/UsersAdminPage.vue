@@ -46,6 +46,14 @@
                 </button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'banned')">封禁</button>
+                <button
+                  v-if="canForceDelete(item)"
+                  class="admin-btn danger"
+                  type="button"
+                  @click="forceDelete(item)"
+                >
+                  强制删除
+                </button>
               </div>
             </td>
           </tr>
@@ -78,6 +86,7 @@
         <div class="admin-toolbar">
           <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
           <button class="admin-btn" type="button" @click="setStatus(item, 'banned')">封禁</button>
+          <button v-if="canForceDelete(item)" class="admin-btn danger" type="button" @click="forceDelete(item)">强制删除</button>
         </div>
       </article>
       <van-empty v-if="!loading && !users.length" description="暂无用户数据" />
@@ -87,8 +96,8 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { showToast } from 'vant'
-import { getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/api/adminContent.js'
+import { showConfirmDialog, showToast } from 'vant'
+import { forceDeleteAdminUser, getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/api/adminContent.js'
 import { useUserStore } from '@/stores/user.js'
 
 const loading = ref(false)
@@ -112,7 +121,8 @@ function normalizeUsers(rows) {
       role: normalizeRole(item.role ?? 'user'),
       verificationStatus: item.verificationStatus ?? 'none',
       status: item.status ?? 'active',
-      createdAt: item.createdAt ?? null
+      createdAt: item.createdAt ?? null,
+      canForceDelete: !!item.canForceDelete
     }))
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
 }
@@ -125,6 +135,10 @@ function normalizeRole(value) {
 function canEditRole(item) {
   if (!item?.userId) return false
   return currentAdminRole.value === 'admin'
+}
+
+function canForceDelete(item) {
+  return !!item?.canForceDelete
 }
 
 async function loadUsers() {
@@ -177,6 +191,28 @@ async function saveRole(item) {
     showToast({ type: 'fail', message: e.message || '角色更新失败' })
   } finally {
     savingRoleUserId.value = null
+  }
+}
+
+async function forceDelete(item) {
+  if (!canForceDelete(item)) {
+    showToast({ type: 'fail', message: '当前账号无强制删除权限' })
+    return
+  }
+  try {
+    await showConfirmDialog({
+      title: '强制删除账号',
+      message: `该操作将直接删除用户 ${item.username || `用户${item.userId}`} 的数据库账号，且不可恢复，确认继续吗？`
+    })
+  } catch {
+    return
+  }
+  try {
+    const result = await forceDeleteAdminUser(item.userId)
+    users.value = users.value.filter((u) => u.userId !== item.userId)
+    showToast({ type: 'success', message: result.message || '用户已删除' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '强制删除失败' })
   }
 }
 

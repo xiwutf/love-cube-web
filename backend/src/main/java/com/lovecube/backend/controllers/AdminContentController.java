@@ -161,6 +161,9 @@ public class AdminContentController {
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
                     item.put("createdAt", user.getCreatedAt());
+                    item.put("canForceDelete", hiddenSuperAdminOperator
+                            && !operator.getUserid().equals(user.getUserid())
+                            && !adminAuthService.isHiddenSuperAdmin(user));
                     return item;
                 }).collect(Collectors.toList());
     }
@@ -409,6 +412,32 @@ public class AdminContentController {
         result.put("status", "DISABLED".equalsIgnoreCase(target.getUserStatus()) ? "banned" : "active");
         result.put("message", "banned".equals(status) ? "用户已封禁" : "用户已解封");
         return result;
+    }
+
+    @DeleteMapping("/users/{userId}/force")
+    public Map<String, Object> forceDeleteUser(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long userId
+    ) {
+        User operator = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isHiddenSuperAdmin(operator)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅超级管理员可执行强制删除");
+        }
+        if (operator.getUserid().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不能删除当前登录账号");
+        }
+
+        User target = userRepository.findById(userId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+        if (adminAuthService.isHiddenSuperAdmin(target)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "不能删除超级管理员账号");
+        }
+
+        userRepository.delete(target);
+        return Map.of(
+                "userId", userId,
+                "message", "用户已从数据库强制删除"
+        );
     }
 
     @GetMapping("/stats")
