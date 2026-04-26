@@ -69,12 +69,18 @@ jobs:
             fi
             echo "[deploy] New jar: $NEW_JAR"
 
-            OLD_PIDS="$(pgrep -f "$TARGET_JAR" || true)"
+            OLD_PIDS="$(ss -ltnp | awk '/:8090/ {print $NF}' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
+            if [ -z "${OLD_PIDS:-}" ]; then
+              OLD_PIDS="$(pgrep -f "$TARGET_JAR" || true)"
+            fi
             if [ -n "$OLD_PIDS" ]; then
               echo "[deploy] Stop old process: $OLD_PIDS"
               echo "$OLD_PIDS" | xargs kill || true
               sleep 3
-              STILL_RUNNING="$(pgrep -f "$TARGET_JAR" || true)"
+              STILL_RUNNING="$(ss -ltnp | awk '/:8090/ {print $NF}' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
+              if [ -z "${STILL_RUNNING:-}" ]; then
+                STILL_RUNNING="$(pgrep -f "$TARGET_JAR" || true)"
+              fi
               if [ -n "$STILL_RUNNING" ]; then
                 echo "[deploy] Force stop process: $STILL_RUNNING"
                 echo "$STILL_RUNNING" | xargs kill -9 || true
@@ -114,16 +120,32 @@ jobs:
               exit 1
             fi
 
-            echo "[deploy] Check API: /api/announcements"
-            if ! curl -fsS "http://127.0.0.1:8090/api/announcements" >/tmp/lovecube-health.json; then
+            echo "[deploy] Check API: /admin/api/announcements"
+            if ! curl -fsS "http://127.0.0.1:8090/admin/api/announcements" >/tmp/lovecube-health.json; then
               echo "[deploy] ERROR: health check failed"
               echo "[deploy] Last 120 lines of app.log:"
               tail -n 120 "$APP_LOG" || true
               exit 1
             fi
 
+            echo "[deploy] Check storage mode endpoint"
+            if ! curl -fsS "http://127.0.0.1:8090/admin/api/upload/storage-status" >/tmp/lovecube-storage.json; then
+              echo "[deploy] ERROR: storage status check failed"
+              echo "[deploy] Last 120 lines of app.log:"
+              tail -n 120 "$APP_LOG" || true
+              exit 1
+            fi
+            if ! grep -q '"mode":"oss"' /tmp/lovecube-storage.json; then
+              echo "[deploy] ERROR: storage mode is not oss"
+              cat /tmp/lovecube-storage.json || true
+              exit 1
+            fi
+
             echo "[deploy] Health check response (first 300 chars):"
             head -c 300 /tmp/lovecube-health.json || true
+            echo
+            echo "[deploy] Storage status response:"
+            cat /tmp/lovecube-storage.json || true
             echo
             echo "[deploy] Last 80 lines of app.log:"
             tail -n 80 "$APP_LOG" || true
