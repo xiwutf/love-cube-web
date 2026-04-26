@@ -508,10 +508,10 @@ public class UnifiedProfileService {
             created.setUserId(user.getUserid());
             return created;
         });
-        p.setNickname(user.getUsername());
-        p.setAvatar(user.getProfilePhoto());
-        p.setAge(user.getAge());
-        p.setGender(fromGenderCode(user.getGender()));
+        if (user.getUsername() != null) p.setNickname(user.getUsername());
+        if (user.getProfilePhoto() != null) p.setAvatar(user.getProfilePhoto());
+        if (user.getAge() != null) p.setAge(user.getAge());
+        if (user.getGender() != null) p.setGender(fromGenderCode(user.getGender()));
         p.setCity(user.getLocation());
         p.setEducation(p.getEducation());
         p.setLastActiveTime(LocalDateTime.now());
