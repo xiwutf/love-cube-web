@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.dto.ChatPartnerDTO;
 import com.lovecube.backend.models.ChatMessage;
 import com.lovecube.backend.repository.ChatMessageRepository;
+import com.lovecube.backend.services.BlacklistService;
 import com.lovecube.backend.services.ChatMessageService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class ChatController {
 
     @Autowired
     private ChatMessageService chatMessageService;
+
+    @Autowired
+    private BlacklistService blacklistService;
 
     /**
      * 获取聊天历史记录
@@ -100,6 +104,11 @@ public class ChatController {
             message.setSenderId(Long.parseLong(messageData.get("senderId").toString()));
             message.setReceiverId(Long.parseLong(messageData.get("receiverId").toString()));
             message.setContent(messageData.get("content").toString());
+
+            if (blacklistService.isBlocked(message.getSenderId(), message.getReceiverId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "无法发送消息：用户关系受限", "code", "BLOCKED"));
+            }
             // 暂时注释掉type字段设置，因为数据库表中没有这个字段
             // message.setType(messageData.getOrDefault("type", "chat").toString());
             message.setRead(false);

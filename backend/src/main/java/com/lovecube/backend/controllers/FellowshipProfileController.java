@@ -1,6 +1,5 @@
 package com.lovecube.backend.controllers;
 
-import com.lovecube.backend.entity.FellowshipProfile;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.services.FellowshipProfileService;
 import org.springframework.http.HttpStatus;
@@ -22,7 +21,7 @@ public class FellowshipProfileController {
     public ResponseEntity<?> getMyProfile(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             User currentUser = fellowshipProfileService.requireCurrentUser(authHeader);
-            FellowshipProfile profile = fellowshipProfileService.getMyProfile(currentUser);
+            Map<String, Object> profile = fellowshipProfileService.getMyProfile(currentUser);
             return ResponseEntity.ok(fellowshipProfileService.toResponse(profile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
@@ -38,7 +37,7 @@ public class FellowshipProfileController {
     ) {
         try {
             User currentUser = fellowshipProfileService.requireCurrentUser(authHeader);
-            FellowshipProfile profile = fellowshipProfileService.updateMyProfile(currentUser, payload);
+            Map<String, Object> profile = fellowshipProfileService.updateMyProfile(currentUser, payload);
             return ResponseEntity.ok(fellowshipProfileService.toResponse(profile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
@@ -59,4 +58,3 @@ public class FellowshipProfileController {
         }
     }
 }
-
