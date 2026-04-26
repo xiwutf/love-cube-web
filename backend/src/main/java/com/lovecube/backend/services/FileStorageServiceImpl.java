@@ -24,7 +24,12 @@ public class FileStorageServiceImpl implements FileStorageService {
     @Override
     public String uploadAvatar(MultipartFile file) throws IOException {
         if (appProperties.getOss().isEnabled()) {
-            return uploadToOss(file, normalizeFolder(appProperties.getOss().getAvatarFolder(), "avatars/"));
+            try {
+                return uploadToOss(file, normalizeFolder(appProperties.getOss().getAvatarFolder(), "avatars/"));
+            } catch (Exception e) {
+                System.err.println("OSS avatar upload failed, fallback to local storage: " + e.getMessage());
+                return uploadToLocal(file, "uploads/avatar/");
+            }
         } else {
             return uploadToLocal(file, "uploads/avatar/");
         }
@@ -33,7 +38,12 @@ public class FileStorageServiceImpl implements FileStorageService {
     @Override
     public String uploadPhoto(MultipartFile file) throws IOException {
         if (appProperties.getOss().isEnabled()) {
-            return uploadToOss(file, normalizeFolder(appProperties.getOss().getPhotosFolder(), "photos/"));
+            try {
+                return uploadToOss(file, normalizeFolder(appProperties.getOss().getPhotosFolder(), "photos/"));
+            } catch (Exception e) {
+                System.err.println("OSS photo upload failed, fallback to local storage: " + e.getMessage());
+                return uploadToLocal(file, "uploads/photos/");
+            }
         } else {
             return uploadToLocal(file, "uploads/photos/");
         }

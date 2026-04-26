@@ -20,7 +20,7 @@
         placeholder="请输入你遇到的问题或建议"
       />
       <van-field v-model="contact" label="联系方式" placeholder="手机号/微信（选填）" />
-      <van-button block type="primary" round @click="submit">提交反馈</van-button>
+      <van-button block type="primary" round :loading="submitting" @click="submit">提交反馈</van-button>
     </div>
   </div>
 </template>
@@ -29,29 +29,33 @@
 import { ref } from 'vue'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
+import { submitFeedback } from '@/api/feedback.js'
 
 const content = ref('')
 const contact = ref('')
+const submitting = ref(false)
 
-function submit() {
+async function submit() {
   const text = content.value.trim()
   if (!text) {
     showToast({ type: 'fail', message: '请先填写反馈内容' })
     return
   }
 
-  const key = 'fellowship-feedback-records'
-  const records = JSON.parse(localStorage.getItem(key) || '[]')
-  records.unshift({
-    content: text,
-    contact: contact.value.trim(),
-    createdAt: Date.now()
-  })
-  localStorage.setItem(key, JSON.stringify(records.slice(0, 30)))
-
-  content.value = ''
-  contact.value = ''
-  showToast({ type: 'success', message: '反馈已提交，感谢支持' })
+  submitting.value = true
+  try {
+    await submitFeedback({
+      content: text,
+      contact: contact.value.trim()
+    })
+    content.value = ''
+    contact.value = ''
+    showToast({ type: 'success', message: '反馈已提交，感谢支持' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '提交失败，请稍后重试' })
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 

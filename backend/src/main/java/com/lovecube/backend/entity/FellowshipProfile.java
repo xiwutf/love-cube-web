@@ -52,6 +52,42 @@ public class FellowshipProfile {
     @Column(name = "tags", columnDefinition = "TEXT")
     private String tags;
 
+    @Column(name = "identity_role", length = 32)
+    private String identityRole; // self | guardian_son | guardian_daughter
+
+    @Column(name = "guardian_role", length = 32)
+    private String guardianRole; // father | mother | family
+
+    @Column(name = "child_gender", length = 16)
+    private String childGender;
+
+    @Column(name = "child_age")
+    private Integer childAge;
+
+    @Column(name = "child_height")
+    private Integer childHeight;
+
+    @Column(name = "child_education", length = 64)
+    private String childEducation;
+
+    @Column(name = "child_job", length = 64)
+    private String childJob;
+
+    @Column(name = "child_city", length = 64)
+    private String childCity;
+
+    @Column(name = "child_house_car_status", length = 128)
+    private String childHouseCarStatus;
+
+    @Column(name = "child_marriage_intention", length = 500)
+    private String childMarriageIntention;
+
+    @Column(name = "child_partner_requirements", columnDefinition = "TEXT")
+    private String childPartnerRequirements;
+
+    @Column(name = "guardian_contact_visible")
+    private Boolean guardianContactVisible;
+
     @Column(name = "profile_status", nullable = false, length = 16)
     private String profileStatus;
 
@@ -69,6 +105,9 @@ public class FellowshipProfile {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.identityRole == null || this.identityRole.isBlank()) {
+            this.identityRole = "self";
+        }
         if (this.profileStatus == null || this.profileStatus.isBlank()) {
             this.profileStatus = "INCOMPLETE";
         }

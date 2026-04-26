@@ -53,7 +53,8 @@ const stats = ref({
   totalUsers: 0,
   totalAnnouncements: 0,
   pendingVerifications: 0,
-  pendingReports: 0
+  pendingReports: 0,
+  pendingFeedbacks: 0
 })
 
 const kpiCards = computed(() => [
@@ -84,6 +85,13 @@ const kpiCards = computed(() => [
     tip: '建议优先处理高风险内容',
     to: '/admin/reports',
     alert: stats.value.pendingReports > 0
+  },
+  {
+    label: '待反馈处理',
+    value: stats.value.pendingFeedbacks,
+    tip: '用户建议与问题待确认',
+    to: '/admin/feedbacks',
+    alert: stats.value.pendingFeedbacks > 0
   }
 ])
 
@@ -93,7 +101,8 @@ const quickCards = [
   { title: '活动管理', desc: '管理活动状态和详情', to: '/admin/events' },
   { title: '用户管理', desc: '调整用户角色与状态', to: '/admin/users' },
   { title: '邀请记录', desc: '查看邀请关系与来源', to: '/admin/invites' },
-  { title: '认证审核', desc: '处理实名认证申请', to: '/admin/verifications' }
+  { title: '认证审核', desc: '处理实名认证申请', to: '/admin/verifications' },
+  { title: '用户反馈', desc: '跟进用户问题与产品建议', to: '/admin/feedbacks' }
 ]
 
 async function load() {
@@ -118,7 +127,7 @@ onMounted(load)
 
 .admin-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
 }
 
@@ -189,7 +198,7 @@ onMounted(load)
 .admin-quick-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -211,16 +220,6 @@ onMounted(load)
   line-height: 1.6;
   color: #667892;
   flex: 1;
-}
-
-@media (max-width: 1200px) {
-  .admin-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .admin-quick-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 767px) {

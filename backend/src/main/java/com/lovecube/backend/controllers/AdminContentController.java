@@ -4,12 +4,14 @@ import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
+import com.lovecube.backend.entity.UserFeedback;
 import com.lovecube.backend.entity.VerificationRequest;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
+import com.lovecube.backend.repository.UserFeedbackRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
@@ -40,6 +42,7 @@ public class AdminContentController {
     private final UserRepository userRepository;
     private final VerificationRequestRepository verificationRequestRepository;
     private final ReportRecordRepository reportRecordRepository;
+    private final UserFeedbackRepository userFeedbackRepository;
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
 
@@ -50,6 +53,7 @@ public class AdminContentController {
             UserRepository userRepository,
             VerificationRequestRepository verificationRequestRepository,
             ReportRecordRepository reportRecordRepository,
+            UserFeedbackRepository userFeedbackRepository,
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService
     ) {
@@ -59,6 +63,7 @@ public class AdminContentController {
         this.userRepository = userRepository;
         this.verificationRequestRepository = verificationRequestRepository;
         this.reportRecordRepository = reportRecordRepository;
+        this.userFeedbackRepository = userFeedbackRepository;
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
     }
@@ -258,6 +263,12 @@ public class AdminContentController {
         return reportRecordRepository.findAll();
     }
 
+    @GetMapping("/feedbacks")
+    public List<UserFeedback> listFeedbacks(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        adminAuthService.requireAdmin(authHeader);
+        return userFeedbackRepository.findAllByOrderByCreatedAtDesc();
+    }
+
     @PostMapping("/reports")
     public ReportRecord saveReport(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -292,6 +303,29 @@ public class AdminContentController {
             record.setNote(String.valueOf(payload.get("note")));
         }
         return reportRecordRepository.save(record);
+    }
+
+    @PatchMapping("/feedbacks/{id}")
+    public UserFeedback updateFeedback(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable String id,
+            @RequestBody Map<String, Object> payload
+    ) {
+        adminAuthService.requireAdmin(authHeader);
+        UserFeedback record = userFeedbackRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "反馈记录不存在"));
+
+        if (payload.containsKey("status")) {
+            String status = String.valueOf(payload.get("status")).trim().toLowerCase();
+            if (!Set.of("pending", "processing", "resolved").contains(status)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status 必须为 pending/processing/resolved");
+            }
+            record.setStatus(status);
+        }
+        if (payload.containsKey("adminNote")) {
+            record.setAdminNote(String.valueOf(payload.get("adminNote")));
+        }
+        return userFeedbackRepository.save(record);
     }
 
     @DeleteMapping("/announcements/{id}")
@@ -395,12 +429,14 @@ public class AdminContentController {
                 .filter(v -> "pending".equals(v.getStatus())).count();
         long pendingReports = reportRecordRepository.findAll().stream()
                 .filter(r -> !"resolved".equals(r.getStatus())).count();
+        long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", totalUsers);
         stats.put("totalAnnouncements", totalAnnouncements);
         stats.put("pendingVerifications", pendingVerifications);
         stats.put("pendingReports", pendingReports);
+        stats.put("pendingFeedbacks", pendingFeedbacks);
         return stats;
     }
 

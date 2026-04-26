@@ -44,16 +44,17 @@ export function useImageUpload() {
 
   /**
    * 多图选择上传，返回 URL 数组
-   * @param {number} max 最多几张
+   * @param {number | undefined} max 可选限制；不传则按用户选择数量上传
    */
-  function pickMultipleAndUpload(max = 9) {
+  function pickMultipleAndUpload(max) {
     return new Promise((resolve, reject) => {
       const input = document.createElement('input')
       input.type     = 'file'
       input.accept   = 'image/*'
       input.multiple = true
       input.onchange = async () => {
-        const files = Array.from(input.files || []).slice(0, max)
+        const selected = Array.from(input.files || [])
+        const files = Number.isFinite(max) && max > 0 ? selected.slice(0, max) : selected
         if (!files.length) { reject(new Error('未选择文件')); return }
         uploading.value = true
         try {

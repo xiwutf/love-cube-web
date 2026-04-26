@@ -5,7 +5,7 @@
         <h3>我的生活照</h3>
         <p>真实生活照更受欢迎</p>
       </div>
-      <span class="count">{{ photos.length }}/9</span>
+      <span class="count">{{ photos.length }}张</span>
     </div>
 
     <div class="grid">
@@ -18,8 +18,6 @@
       </div>
 
       <button
-        v-for="i in Math.max(0, 9 - photos.length)"
-        :key="`empty-${i}`"
         type="button"
         class="photo-item empty-item"
         @click="$emit('upload-photo')"

@@ -75,6 +75,15 @@ export function updateReport(id, payload) {
   return request.patch(`/admin/reports/${id}`, payload)
 }
 
+// Feedbacks
+export function getFeedbacks() {
+  return request.get('/admin/feedbacks')
+}
+
+export function updateFeedback(id, payload) {
+  return request.patch(`/admin/feedbacks/${id}`, payload)
+}
+
 // Invites
 export function getInvites(params = {}) {
   return request.get('/admin/invites', { params })

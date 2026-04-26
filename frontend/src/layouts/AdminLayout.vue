@@ -50,7 +50,8 @@ const navItems = [
   { to: '/admin/users', label: '用户管理', icon: '◌' },
   { to: '/admin/invites', label: '邀请记录', icon: '◐' },
   { to: '/admin/verifications', label: '认证审核', icon: '◑' },
-  { to: '/admin/reports', label: '举报处理', icon: '◒' }
+  { to: '/admin/reports', label: '举报处理', icon: '◒' },
+  { to: '/admin/feedbacks', label: '用户反馈', icon: '◓' }
 ]
 
 const sectionMap = {
@@ -61,7 +62,8 @@ const sectionMap = {
   '/admin/users': '用户管理',
   '/admin/invites': '邀请记录',
   '/admin/verifications': '认证审核',
-  '/admin/reports': '举报处理'
+  '/admin/reports': '举报处理',
+  '/admin/feedbacks': '用户反馈'
 }
 
 const currentSection = computed(() => sectionMap[route.path] || '管理中心')

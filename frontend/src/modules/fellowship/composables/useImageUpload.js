@@ -27,14 +27,15 @@ export function useImageUpload() {
     })
   }
 
-  function pickMultipleAndUpload(max = 9) {
+  function pickMultipleAndUpload(max) {
     return new Promise((resolve, reject) => {
       const input = document.createElement('input')
       input.type     = 'file'
       input.accept   = 'image/*'
       input.multiple = true
       input.onchange = async () => {
-        const files = Array.from(input.files || []).slice(0, max)
+        const selected = Array.from(input.files || [])
+        const files = Number.isFinite(max) && max > 0 ? selected.slice(0, max) : selected
         if (!files.length) { reject(new Error('未选择文件')); return }
         uploading.value = true
         try {

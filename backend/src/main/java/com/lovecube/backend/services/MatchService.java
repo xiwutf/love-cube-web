@@ -2,6 +2,7 @@ package com.lovecube.backend.services;
 
 import com.lovecube.backend.models.MatchRecord;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.repository.FellowshipProfileRepository;
 import com.lovecube.backend.repository.MatchRecordRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
@@ -31,6 +32,9 @@ public class MatchService
 
     @Autowired
     private UserInteractionRepository userInteractionRepository;
+
+    @Autowired
+    private FellowshipProfileRepository fellowshipProfileRepository;
 
     @Transactional
     public List<User> findMatches(Long userId, Integer minAge, Integer maxAge, Integer gender, String location) {
@@ -136,21 +140,34 @@ public class MatchService
     }
 
     /**
-     * 获取推荐列表：排除自己和已操作过（like/superlike/skip）的用户
+     * 获取推荐列表：排除自己、已操作用户和家长账号
      */
     public List<User> getAllUsers(Long currentUserId, Integer gender) {
         List<Long> actedIds = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
+        List<Long> guardianIds = getGuardianUserIds();
 
         if (gender != null) {
             return userRepository.findByGenderAndUseridNot(gender, currentUserId)
                 .stream()
                 .filter(u -> !actedIds.contains(u.getUserid()))
+                .filter(u -> !guardianIds.contains(u.getUserid()))
                 .collect(Collectors.toList());
         }
         return userRepository.findByUseridNot(currentUserId)
             .stream()
             .filter(u -> !actedIds.contains(u.getUserid()))
+            .filter(u -> !guardianIds.contains(u.getUserid()))
             .collect(Collectors.toList());
+    }
+
+    private List<Long> getGuardianUserIds() {
+        try {
+            return fellowshipProfileRepository.findUserIdsByIdentityRoleIn(
+                    List.of("guardian_son", "guardian_daughter"));
+        } catch (Exception e) {
+            logger.warn("获取家长账号列表失败（忽略，不影响匹配）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
     }
 
     /**

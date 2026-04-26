@@ -36,7 +36,8 @@ const routes = [
       { path: 'users', component: () => import('@/pages/admin/UsersAdminPage.vue') },
       { path: 'invites', component: () => import('@/pages/admin/InvitesAdminPage.vue') },
       { path: 'verifications', component: () => import('@/pages/admin/VerificationsAdminPage.vue') },
-      { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') }
+      { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') },
+      { path: 'feedbacks', component: () => import('@/pages/admin/FeedbacksAdminPage.vue') }
     ]
   },
   {

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class FellowshipProfileService {
@@ -67,6 +68,10 @@ public class FellowshipProfileService {
     public FellowshipProfile updateMyProfile(User user, Map<String, Object> payload) {
         FellowshipProfile profile = getMyProfile(user);
 
+        // identity role (defaults to "self" if absent or blank)
+        String identityRole = getString(payload.get("identityRole"), profile.getIdentityRole());
+        profile.setIdentityRole((identityRole == null || identityRole.isBlank()) ? "self" : identityRole);
+
         profile.setNickname(getString(payload.get("nickname"), profile.getNickname()));
         profile.setGender(normalizeGender(getString(payload.get("gender"), profile.getGender())));
         profile.setBirthYear(getInteger(payload.get("birthYear"), profile.getBirthYear()));
@@ -78,6 +83,22 @@ public class FellowshipProfileService {
         profile.setIntention(getString(payload.get("intention"), profile.getIntention()));
         profile.setAvatarUrl(getString(payload.get("avatarUrl"), profile.getAvatarUrl()));
         profile.setTags(normalizeTags(payload.get("tags"), profile.getTags()));
+
+        // Guardian-specific fields
+        profile.setGuardianRole(getString(payload.get("guardianRole"), profile.getGuardianRole()));
+        profile.setChildGender(getString(payload.get("childGender"), profile.getChildGender()));
+        profile.setChildAge(getInteger(payload.get("childAge"), profile.getChildAge()));
+        profile.setChildHeight(getInteger(payload.get("childHeight"), profile.getChildHeight()));
+        profile.setChildEducation(getString(payload.get("childEducation"), profile.getChildEducation()));
+        profile.setChildJob(getString(payload.get("childJob"), profile.getChildJob()));
+        profile.setChildCity(getString(payload.get("childCity"), profile.getChildCity()));
+        profile.setChildHouseCarStatus(getString(payload.get("childHouseCarStatus"), profile.getChildHouseCarStatus()));
+        profile.setChildMarriageIntention(getString(payload.get("childMarriageIntention"), profile.getChildMarriageIntention()));
+        profile.setChildPartnerRequirements(getString(payload.get("childPartnerRequirements"), profile.getChildPartnerRequirements()));
+        if (payload.containsKey("guardianContactVisible")) {
+            Object gcv = payload.get("guardianContactVisible");
+            profile.setGuardianContactVisible(gcv == null ? null : Boolean.parseBoolean(String.valueOf(gcv)));
+        }
 
         if (profile.getBirthYear() != null) {
             int year = LocalDate.now().getYear();
@@ -116,6 +137,18 @@ public class FellowshipProfileService {
         res.put("intention", safe(profile.getIntention()));
         res.put("avatarUrl", safe(profile.getAvatarUrl()));
         res.put("tags", safe(profile.getTags()));
+        res.put("identityRole", profile.getIdentityRole() == null ? "self" : profile.getIdentityRole());
+        res.put("guardianRole", safe(profile.getGuardianRole()));
+        res.put("childGender", safe(profile.getChildGender()));
+        res.put("childAge", profile.getChildAge());
+        res.put("childHeight", profile.getChildHeight());
+        res.put("childEducation", safe(profile.getChildEducation()));
+        res.put("childJob", safe(profile.getChildJob()));
+        res.put("childCity", safe(profile.getChildCity()));
+        res.put("childHouseCarStatus", safe(profile.getChildHouseCarStatus()));
+        res.put("childMarriageIntention", safe(profile.getChildMarriageIntention()));
+        res.put("childPartnerRequirements", safe(profile.getChildPartnerRequirements()));
+        res.put("guardianContactVisible", profile.getGuardianContactVisible() == null ? true : profile.getGuardianContactVisible());
         res.put("profileStatus", profile.getProfileStatus());
         res.put("reviewStatus", profile.getReviewStatus());
         res.put("createdAt", profile.getCreatedAt());
@@ -125,27 +158,52 @@ public class FellowshipProfileService {
 
     public Map<String, Object> calculateCompletion(FellowshipProfile profile) {
         List<String> missing = new ArrayList<>();
-        checkMissing(missing, "nickname", profile.getNickname());
-        checkMissing(missing, "gender", profile.getGender());
-        if (profile.getBirthYear() == null) missing.add("birthYear");
-        checkMissing(missing, "city", profile.getCity());
-        checkMissing(missing, "occupation", profile.getOccupation());
-        checkMissing(missing, "education", profile.getEducation());
-        if (profile.getHeight() == null) missing.add("height");
-        checkMissing(missing, "bio", profile.getBio());
-        checkMissing(missing, "intention", profile.getIntention());
-        checkMissing(missing, "avatarUrl", profile.getAvatarUrl());
+        int total;
 
-        int total = 10;
+        boolean isGuardian = profile.getIdentityRole() != null && !profile.getIdentityRole().equals("self");
+
+        if (isGuardian) {
+            // Guardian completion: check child info + guardian identity
+            checkMissing(missing, "nickname", profile.getNickname());
+            checkMissing(missing, "guardianRole", profile.getGuardianRole());
+            checkMissing(missing, "childGender", profile.getChildGender());
+            if (profile.getChildAge() == null) missing.add("childAge");
+            checkMissing(missing, "childCity", profile.getChildCity());
+            checkMissing(missing, "childJob", profile.getChildJob());
+            checkMissing(missing, "childEducation", profile.getChildEducation());
+            checkMissing(missing, "childMarriageIntention", profile.getChildMarriageIntention());
+            checkMissing(missing, "childPartnerRequirements", profile.getChildPartnerRequirements());
+            total = 9;
+        } else {
+            // Self completion: check personal fields
+            checkMissing(missing, "nickname", profile.getNickname());
+            checkMissing(missing, "gender", profile.getGender());
+            if (profile.getBirthYear() == null) missing.add("birthYear");
+            checkMissing(missing, "city", profile.getCity());
+            checkMissing(missing, "occupation", profile.getOccupation());
+            checkMissing(missing, "education", profile.getEducation());
+            if (profile.getHeight() == null) missing.add("height");
+            checkMissing(missing, "bio", profile.getBio());
+            checkMissing(missing, "intention", profile.getIntention());
+            checkMissing(missing, "avatarUrl", profile.getAvatarUrl());
+            total = 10;
+        }
+
         int filled = total - missing.size();
         int percent = Math.max(0, Math.min(100, (int) Math.round(filled * 100.0 / total)));
-        boolean completed = missing.isEmpty();
 
         Map<String, Object> res = new LinkedHashMap<>();
-        res.put("completed", completed);
+        res.put("completed", missing.isEmpty());
         res.put("percent", percent);
         res.put("missingFields", missing);
+        res.put("identityRole", profile.getIdentityRole() == null ? "self" : profile.getIdentityRole());
         return res;
+    }
+
+    public List<Map<String, Object>> listGuardianProfiles() {
+        List<FellowshipProfile> profiles = fellowshipProfileRepository.findByIdentityRoleIn(
+                List.of("guardian_son", "guardian_daughter"));
+        return profiles.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     private void syncUserTable(User user, FellowshipProfile profile) {

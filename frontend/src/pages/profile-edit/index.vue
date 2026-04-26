@@ -49,14 +49,14 @@
       </van-cell-group>
 
       <!-- 生活照 -->
-      <van-cell-group inset title="生活照（最多9张）" class="photos-group">
+      <van-cell-group inset title="生活照（可持续添加）" class="photos-group">
         <div class="photos-grid">
           <div v-for="(src, i) in form.photos" :key="i" class="photo-item">
             <van-image :src="toFullUrl(src)" width="100%" height="90" fit="cover" radius="6"
                        @click="previewPhoto(i)" />
             <van-icon name="cross" class="photo-delete" @click.stop="removePhoto(i)" />
           </div>
-          <div v-if="form.photos.length < 9" class="photo-add" @click="handlePickPhotos">
+          <div class="photo-add" @click="handlePickPhotos">
             <van-loading v-if="uploading" size="20" />
             <van-icon v-else name="plus" size="28" color="#ccc" />
           </div>
@@ -184,10 +184,8 @@ async function handlePickAvatar() {
 }
 
 async function handlePickPhotos() {
-  if (form.photos.length >= 9) return
   try {
-    const max  = 9 - form.photos.length
-    const urls = await pickMultipleAndUpload(max)
+    const urls = await pickMultipleAndUpload()
     form.photos.push(...urls)
     isDirty.value = true
   } catch (e) {

@@ -50,7 +50,7 @@
     <AppTabBar />
 
     <input ref="avatarInput" type="file" accept="image/*" class="hidden-input" @change="onAvatarSelected" />
-    <input ref="photoInput" type="file" accept="image/*" class="hidden-input" @change="onPhotoSelected" />
+    <input ref="photoInput" type="file" accept="image/*" multiple class="hidden-input" @change="onPhotoSelected" />
   </div>
 </template>
 
@@ -135,7 +135,7 @@ async function loadPageData() {
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
     if (photosRes.status === 'fulfilled') {
       const photos = Array.isArray(photosRes.value?.photos) ? photosRes.value.photos : []
-      photoList.value = photos.slice(0, 9).map((url, idx) => ({ id: `${idx}-${url}`, url }))
+      photoList.value = photos.map((url, idx) => ({ id: `${idx}-${url}`, url }))
     }
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '个人中心加载失败' })
@@ -147,10 +147,6 @@ function chooseAvatar() {
 }
 
 function choosePhoto() {
-  if (photoList.value.length >= 9) {
-    showToast('最多上传 9 张生活照')
-    return
-  }
   photoInput.value?.click()
 }
 
@@ -175,17 +171,19 @@ async function onAvatarSelected(event) {
 }
 
 async function onPhotoSelected(event) {
-  const file = event.target.files?.[0]
+  const files = Array.from(event.target.files || [])
   event.target.value = ''
-  if (!file) return
+  if (!files.length) return
   try {
-    const uploadRes = await uploadFellowshipPhoto(file)
-    const url = parseUploadUrl(uploadRes)
-    if (!url) throw new Error('照片上传返回为空')
-    const next = [url, ...photoList.value.map((p) => p.url)].slice(0, 9)
+    const uploadResults = await Promise.all(files.map((file) => uploadFellowshipPhoto(file)))
+    const uploadedUrls = uploadResults
+      .map(parseUploadUrl)
+      .filter((url) => !!url)
+    if (!uploadedUrls.length) throw new Error('照片上传返回为空')
+    const next = [...uploadedUrls, ...photoList.value.map((p) => p.url)]
     await saveFellowshipPhotos(next)
     photoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
-    showToast({ type: 'success', message: '照片上传成功' })
+    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张` })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '照片上传失败' })
   }

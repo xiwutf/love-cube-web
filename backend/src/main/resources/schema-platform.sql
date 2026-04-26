@@ -60,6 +60,21 @@ CREATE TABLE IF NOT EXISTS reports (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_feedback (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    username VARCHAR(128) NULL,
+    contact VARCHAR(128) NULL,
+    content VARCHAR(1000) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    admin_note VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_feedback_user_id (user_id),
+    INDEX idx_feedback_status (status),
+    INDEX idx_feedback_created_at (created_at)
+);
+
 INSERT INTO announcements (id, title, summary, content, status, publish_date)
 SELECT 'safety-upgrade-20260410', '平台安全策略升级公告', '新增异常登录提醒与账号保护说明，提升账号安全性。',
        '为进一步提升平台账户安全，我们已上线异常登录提醒与登录设备管理功能。', 'published', '2026-04-10 09:00:00'

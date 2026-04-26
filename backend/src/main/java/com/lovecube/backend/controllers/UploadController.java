@@ -203,10 +203,6 @@ public class UploadController
             return ResponseEntity.badRequest().body("没有选择文件");
         }
 
-        if (files.length > 9) {
-            return ResponseEntity.badRequest().body("最多只能上传9张照片");
-        }
-
         List<String> uploadedUrls = new ArrayList<>();
         List<String> failedFiles = new ArrayList<>();
 
@@ -271,10 +267,6 @@ public class UploadController
             
             if (photoUrls == null) {
                 return ResponseEntity.badRequest().body("照片列表不能为空");
-            }
-
-            if (photoUrls.size() > 9) {
-                return ResponseEntity.badRequest().body("最多只能保存9张照片");
             }
 
             for (String url : photoUrls) {
