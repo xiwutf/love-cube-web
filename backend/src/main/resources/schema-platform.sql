@@ -76,34 +76,34 @@ CREATE TABLE IF NOT EXISTS user_feedback (
 );
 
 INSERT INTO announcements (id, title, summary, content, status, publish_date)
-SELECT 'safety-upgrade-20260410', '平台安全策略升级公告', '新增异常登录提醒与账号保护说明，提升账号安全性。',
-       '为进一步提升平台账户安全，我们已上线异常登录提醒与登录设备管理功能。', 'published', '2026-04-10 09:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM announcements WHERE id = 'safety-upgrade-20260410');
+VALUES ('safety-upgrade-20260410', '平台安全策略升级公告', '新增异常登录提醒与账号保护说明，提升账号安全性。',
+        '为进一步提升平台账户安全，我们已上线异常登录提醒与登录设备管理功能。', 'published', '2026-04-10 09:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO announcements (id, title, summary, content, status, publish_date)
-SELECT 'review-rule-20260405', '联谊资料审核规范更新', '优化资料审核与匹配推荐规则，保障互动质量。',
-       '本次更新主要针对资料完整度、头像真实性与个人描述规范。', 'published', '2026-04-05 10:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM announcements WHERE id = 'review-rule-20260405');
+VALUES ('review-rule-20260405', '联谊资料审核规范更新', '优化资料审核与匹配推荐规则，保障互动质量。',
+        '本次更新主要针对资料完整度、头像真实性与个人描述规范。', 'published', '2026-04-05 10:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO announcements (id, title, summary, content, status, publish_date)
-SELECT 'event-preview-20260328', '五一主题活动预告', '开放线上专题活动报名，支持站内消息通知。',
-       '五一期间将上线系列主题活动，包含线上破冰、兴趣讨论与线下报名。', 'published', '2026-03-28 15:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM announcements WHERE id = 'event-preview-20260328');
+VALUES ('event-preview-20260328', '五一主题活动预告', '开放线上专题活动报名，支持站内消息通知。',
+        '五一期间将上线系列主题活动，包含线上破冰、兴趣讨论与线下报名。', 'published', '2026-03-28 15:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO articles (id, tag, title, summary, content, status, publish_date)
-SELECT 'profile-quality-guide', '平台资讯', '如何完善个人资料，提高匹配成功率',
-       '从头像、签名、兴趣标签三个维度给出可执行建议。', '完善资料是提高匹配质量的第一步。', 'published', '2026-04-21 09:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM articles WHERE id = 'profile-quality-guide');
+VALUES ('profile-quality-guide', '平台资讯', '如何完善个人资料，提高匹配成功率',
+        '从头像、签名、兴趣标签三个维度给出可执行建议。', '完善资料是提高匹配质量的第一步。', 'published', '2026-04-21 09:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO articles (id, tag, title, summary, content, status, publish_date)
-SELECT 'platform-to-fellowship-path', '使用指南', '从平台官网到联谊模块的完整路径',
-       '介绍两层架构下的访问方式与核心页面导航。', '平台官网用于内容展示和运营信息发布，联谊模块用于互动与聊天。', 'published', '2026-04-20 09:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM articles WHERE id = 'platform-to-fellowship-path');
+VALUES ('platform-to-fellowship-path', '使用指南', '从平台官网到联谊模块的完整路径',
+        '介绍两层架构下的访问方式与核心页面导航。', '平台官网用于内容展示和运营信息发布，联谊模块用于互动与聊天。', 'published', '2026-04-20 09:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO articles (id, tag, title, summary, content, status, publish_date)
-SELECT 'communication-best-practice', '社区建议', '高质量沟通的五条实践建议',
-       '帮助用户在聊天中更高效建立真实连接。', '高质量沟通建议包括尊重表达、适度自我介绍等。', 'published', '2026-04-19 09:00:00'
-WHERE NOT EXISTS (SELECT 1 FROM articles WHERE id = 'communication-best-practice');
+VALUES ('communication-best-practice', '社区建议', '高质量沟通的五条实践建议',
+        '帮助用户在聊天中更高效建立真实连接。', '高质量沟通建议包括尊重表达、适度自我介绍等。', 'published', '2026-04-19 09:00:00')
+ON DUPLICATE KEY UPDATE id = id;
 
 INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status)
 VALUES ('online-icebreak-night', '线上破冰夜', '语音连麦与主题互动环节，适合新用户快速加入。',
