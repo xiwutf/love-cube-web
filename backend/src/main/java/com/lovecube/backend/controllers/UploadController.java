@@ -2,61 +2,70 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.config.AppProperties;
 import com.lovecube.backend.models.User;
-import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.FileStorageService;
-import com.lovecube.backend.utils.JwtUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.lovecube.backend.services.UnifiedProfileService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/upload")
-public class UploadController
-{
-    @Autowired
-    private AppProperties appProperties;
-    
-    @Autowired
-    private UserRepository userRepository;
+public class UploadController {
+    private final AppProperties appProperties;
+    private final FileStorageService fileStorageService;
+    private final UnifiedProfileService unifiedProfileService;
 
-    @Autowired
-    private FileStorageService fileStorageService;
-    
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final String IMAGES_DIR = "uploads/images/";
+    public UploadController(
+            AppProperties appProperties,
+            FileStorageService fileStorageService,
+            UnifiedProfileService unifiedProfileService
+    ) {
+        this.appProperties = appProperties;
+        this.fileStorageService = fileStorageService;
+        this.unifiedProfileService = unifiedProfileService;
+    }
 
-    /** 通用图片上传，前端 H5 统一调用此接口 */
     @PostMapping("/image")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("文件为空");
         }
         try {
-            String originalFilename = file.getOriginalFilename();
-            String ext = originalFilename != null && originalFilename.contains(".")
-                ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                : ".jpg";
+            String ext = resolveSafeImageExtension(file);
             if (!isValidImageExtension(ext)) {
                 return ResponseEntity.badRequest().body("不支持的文件类型");
             }
-            String filename = UUID.randomUUID().toString() + ext;
-            String savePath = System.getProperty("user.dir") + "/" + IMAGES_DIR;
-            File dir = new File(savePath);
-            if (!dir.exists()) dir.mkdirs();
-            file.transferTo(new File(dir, filename));
-            String url = appProperties.getBaseUrl() + "/uploads/images/" + filename;
+            String url = fileStorageService.uploadPhoto(file);
             return ResponseEntity.ok(Map.of("url", url));
         } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "上传失败: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "上传失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> uploadVerifyPhoto(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        try {
+            unifiedProfileService.requireCurrentUser(authHeader);
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("文件为空");
+            }
+            String ext = resolveSafeImageExtension(file);
+            if (!isValidImageExtension(ext)) {
+                return ResponseEntity.badRequest().body("不支持的文件类型，请上传 jpg/jpeg/png");
+            }
+            String url = fileStorageService.uploadVerifyPhoto(file);
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "上传失败: " + e.getMessage()));
         }
     }
 
@@ -65,315 +74,157 @@ public class UploadController
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("文件为空");
         }
-
         try {
             String ext = resolveSafeImageExtension(file);
             if (!isValidImageExtension(ext)) {
-                return ResponseEntity.badRequest().body("不支持的文件类型，请上传jpg、jpeg、png、gif格式的图片");
+                return ResponseEntity.badRequest().body("不支持的文件类型，请上传 jpg/jpeg/png/gif");
             }
             String avatarUrl = fileStorageService.uploadAvatar(file);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("url", avatarUrl);
-            return ResponseEntity.ok(result);
-
+            return ResponseEntity.ok(Map.of("url", avatarUrl));
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "上传失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "上传失败: " + e.getMessage()));
         }
     }
 
     @PutMapping("/me")
-    public ResponseEntity<?> updateUserInfo(@RequestHeader("Authorization") String authHeader,
-                                            @RequestBody Map<String, Object> updates) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
+    public ResponseEntity<?> updateUserInfo(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> updates
+    ) {
+        try {
+            User user = unifiedProfileService.requireCurrentUser(authHeader);
+            unifiedProfileService.updateLegacyProfile(user, updates);
+            return ResponseEntity.ok("资料更新成功");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("资料更新失败: " + e.getMessage());
         }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-        
-        User user = userRepository.findByOpenid(openid);
-
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
-        if (updates.containsKey("nickname")) {
-            user.setUsername((String) updates.get("nickname"));
-        }
-        if (updates.containsKey("gender")) {
-            String genderStr = (String) updates.get("gender");
-            if ("男".equals(genderStr)) user.setGender(1);
-            else if ("女".equals(genderStr)) user.setGender(2);
-            else user.setGender(0);
-        }
-        if (updates.containsKey("location")) {
-            user.setLocation((String) updates.get("location"));
-        }
-        if (updates.containsKey("age")) {
-            Object ageObj = updates.get("age");
-            if (ageObj instanceof Integer) {
-                user.setAge((Integer) ageObj);
-            } else if (ageObj instanceof String) {
-                user.setAge(Integer.parseInt((String) ageObj));
-            }
-        }
-        if (updates.containsKey("profilePhoto")) {
-            user.setProfilePhoto((String) updates.get("profilePhoto"));
-        }
-
-        userRepository.save(user);
-        return ResponseEntity.ok("资料更新成功");
     }
 
-    /**
-     * 上传生活照片
-     */
     @PostMapping("/photos")
-    public ResponseEntity<?> uploadPhoto(@RequestParam("file") MultipartFile file,
-                                        @RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
-        }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("文件为空");
-        }
-
+    public ResponseEntity<?> uploadPhoto(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String authHeader
+    ) {
         try {
-            String ext = resolveSafeImageExtension(file);
-            
-            // 验证文件类型
-            if (!isValidImageExtension(ext)) {
-                return ResponseEntity.badRequest().body("不支持的文件类型，请上传jpg、jpeg、png、gif格式的图片");
+            unifiedProfileService.requireCurrentUser(authHeader);
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("文件为空");
             }
-            
+            String ext = resolveSafeImageExtension(file);
+            if (!isValidImageExtension(ext)) {
+                return ResponseEntity.badRequest().body("不支持的文件类型，请上传 jpg/jpeg/png/gif");
+            }
             String photoUrl = fileStorageService.uploadPhoto(file);
+            return ResponseEntity.ok(Map.of("url", photoUrl, "message", "照片上传成功"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "上传失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/photos/batch")
+    public ResponseEntity<?> uploadPhotos(
+            @RequestParam("files") MultipartFile[] files,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        try {
+            unifiedProfileService.requireCurrentUser(authHeader);
+            if (files == null || files.length == 0) {
+                return ResponseEntity.badRequest().body("没有选择文件");
+            }
+
+            List<String> uploadedUrls = new ArrayList<>();
+            List<String> failedFiles = new ArrayList<>();
+            for (MultipartFile file : files) {
+                if (file.isEmpty()) continue;
+                try {
+                    String ext = resolveSafeImageExtension(file);
+                    if (!isValidImageExtension(ext)) {
+                        failedFiles.add(displayName(file) + " (不支持的文件类型)");
+                        continue;
+                    }
+                    uploadedUrls.add(fileStorageService.uploadPhoto(file));
+                } catch (Exception e) {
+                    failedFiles.add(displayName(file) + " (上传失败: " + e.getMessage() + ")");
+                }
+            }
 
             Map<String, Object> result = new HashMap<>();
-            result.put("url", photoUrl);
-            result.put("message", "照片上传成功");
+            result.put("uploadedUrls", uploadedUrls);
+            result.put("uploadedCount", uploadedUrls.size());
+            result.put("failedFiles", failedFiles);
+            result.put("failedCount", failedFiles.size());
+            if (!uploadedUrls.isEmpty()) {
+                result.put("message", "成功上传 " + uploadedUrls.size() + " 张照片");
+            }
             return ResponseEntity.ok(result);
-
-        } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "上传失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 
-    /**
-     * 批量上传生活照片
-     */
-    @PostMapping("/photos/batch")
-    public ResponseEntity<?> uploadPhotos(@RequestParam("files") MultipartFile[] files,
-                                         @RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
-        }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
-        if (files == null || files.length == 0) {
-            return ResponseEntity.badRequest().body("没有选择文件");
-        }
-
-        List<String> uploadedUrls = new ArrayList<>();
-        List<String> failedFiles = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) {
-                continue;
-            }
-
-            try {
-                String ext = resolveSafeImageExtension(file);
-                
-                if (!isValidImageExtension(ext)) {
-                    failedFiles.add(displayName(file) + " (不支持的文件类型)");
-                    continue;
-                }
-                
-                String photoUrl = fileStorageService.uploadPhoto(file);
-                uploadedUrls.add(photoUrl);
-
-            } catch (Exception e) {
-                failedFiles.add(displayName(file) + " (上传失败: " + e.getMessage() + ")");
-            }
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("uploadedUrls", uploadedUrls);
-        result.put("uploadedCount", uploadedUrls.size());
-        result.put("failedFiles", failedFiles);
-        result.put("failedCount", failedFiles.size());
-        
-        if (uploadedUrls.size() > 0) {
-            result.put("message", "成功上传 " + uploadedUrls.size() + " 张照片");
-        }
-        
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 保存用户生活照片到用户资料
-     */
     @PostMapping("/photos/save")
-    public ResponseEntity<?> saveUserPhotos(@RequestBody Map<String, Object> request,
-                                           @RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
-        }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
+    public ResponseEntity<?> saveUserPhotos(
+            @RequestBody Map<String, Object> request,
+            @RequestHeader("Authorization") String authHeader
+    ) {
         try {
+            User user = unifiedProfileService.requireCurrentUser(authHeader);
             @SuppressWarnings("unchecked")
             List<String> photoUrls = (List<String>) request.get("photos");
-            
             if (photoUrls == null) {
                 return ResponseEntity.badRequest().body("照片列表不能为空");
             }
-
             for (String url : photoUrls) {
                 if (!isValidPhotoUrl(url)) {
-                    return ResponseEntity.badRequest().body("包含无效的照片URL: " + url);
+                    return ResponseEntity.badRequest().body("包含无效的照片 URL: " + url);
                 }
             }
-
-            String photosJson = objectMapper.writeValueAsString(photoUrls);
-            user.setPhotos(photosJson);
-            userRepository.save(user);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("message", "生活照片保存成功");
-            result.put("photosCount", photoUrls.size());
-            return ResponseEntity.ok(result);
-
+            unifiedProfileService.replaceUserPhotos(user.getUserid(), photoUrls);
+            return ResponseEntity.ok(Map.of("message", "生活照片保存成功", "photosCount", photoUrls.size()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "保存失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "保存失败: " + e.getMessage()));
         }
     }
 
-    /**
-     * 删除生活照片
-     */
     @DeleteMapping("/photos")
-    public ResponseEntity<?> deletePhoto(@RequestParam String photoUrl,
-                                        @RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
-        }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
+    public ResponseEntity<?> deletePhoto(
+            @RequestParam String photoUrl,
+            @RequestHeader("Authorization") String authHeader
+    ) {
         try {
-            // 获取用户当前的照片列表
-            List<String> currentPhotos = parsePhotosJson(user.getPhotos());
-            
-            if (!currentPhotos.contains(photoUrl)) {
+            User user = unifiedProfileService.requireCurrentUser(authHeader);
+            List<String> current = new ArrayList<>(unifiedProfileService.getUserPhotos(user.getUserid()));
+            if (!current.contains(photoUrl)) {
                 return ResponseEntity.badRequest().body("照片不存在于用户资料中");
             }
-
-            // 从列表中移除照片
-            currentPhotos.remove(photoUrl);
-            
-            // 更新用户资料
-            String photosJson = objectMapper.writeValueAsString(currentPhotos);
-            user.setPhotos(photosJson);
-            userRepository.save(user);
-
-            // 尝试删除存储中的实际文件（OSS 或本地）
+            current.remove(photoUrl);
+            unifiedProfileService.replaceUserPhotos(user.getUserid(), current);
             fileStorageService.deleteFile(photoUrl);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("message", "照片删除成功");
-            result.put("remainingPhotosCount", currentPhotos.size());
-            return ResponseEntity.ok(result);
-
+            return ResponseEntity.ok(Map.of("message", "照片删除成功", "remainingPhotosCount", current.size()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", "删除失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "删除失败: " + e.getMessage()));
         }
     }
 
-    /**
-     * 获取用户的生活照片列表
-     */
     @GetMapping("/photos")
     public ResponseEntity<?> getUserPhotos(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
+        try {
+            User user = unifiedProfileService.requireCurrentUser(authHeader);
+            List<String> photos = unifiedProfileService.getUserPhotos(user.getUserid());
+            return ResponseEntity.ok(Map.of("photos", photos, "photosCount", photos.size()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
-        }
-
-        List<String> photos = parsePhotosJson(user.getPhotos());
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("photos", photos);
-        result.put("photosCount", photos.size());
-        return ResponseEntity.ok(result);
     }
 
-    /**
-     * 存储诊断：用于快速确认当前是否启用 OSS 及关键配置状态（不返回密钥）
-     */
     @GetMapping("/storage-status")
     public ResponseEntity<?> getStorageStatus() {
         AppProperties.Oss oss = appProperties.getOss();
@@ -401,28 +252,17 @@ public class UploadController
 
         List<String> warnings = new ArrayList<>();
         if (ossEnabled) {
-            if (oss == null || oss.getEndpoint() == null || oss.getEndpoint().isBlank()) {
-                warnings.add("OSS endpoint 未配置");
-            }
-            if (oss == null || oss.getBucketName() == null || oss.getBucketName().isBlank()) {
-                warnings.add("OSS bucket-name 未配置");
-            }
-            if (oss == null || oss.getAccessKeyId() == null || oss.getAccessKeyId().isBlank()) {
-                warnings.add("OSS access-key-id 未配置");
-            }
-            if (oss == null || oss.getAccessKeySecret() == null || oss.getAccessKeySecret().isBlank()) {
-                warnings.add("OSS access-key-secret 未配置");
-            }
+            if (oss == null || oss.getEndpoint() == null || oss.getEndpoint().isBlank()) warnings.add("OSS endpoint 未配置");
+            if (oss == null || oss.getBucketName() == null || oss.getBucketName().isBlank()) warnings.add("OSS bucket-name 未配置");
+            if (oss == null || oss.getAccessKeyId() == null || oss.getAccessKeyId().isBlank()) warnings.add("OSS access-key-id 未配置");
+            if (oss == null || oss.getAccessKeySecret() == null || oss.getAccessKeySecret().isBlank()) warnings.add("OSS access-key-secret 未配置");
         }
         result.put("warnings", warnings);
-
         return ResponseEntity.ok(result);
     }
 
-    // 工具方法
     private boolean isValidImageExtension(String extension) {
-        String[] validExtensions = {".jpg", ".jpeg", ".png", ".gif", ".JPG", ".JPEG", ".PNG", ".GIF"};
-        return Arrays.asList(validExtensions).contains(extension);
+        return Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".JPG", ".JPEG", ".PNG", ".GIF").contains(extension);
     }
 
     private String resolveSafeImageExtension(MultipartFile file) {
@@ -444,25 +284,17 @@ public class UploadController
 
     private String displayName(MultipartFile file) {
         String name = file.getOriginalFilename();
-        if (name == null || name.isBlank()) return "未命名文件";
-        return name;
+        return (name == null || name.isBlank()) ? "未命名文件" : name;
     }
 
     private boolean isValidPhotoUrl(String url) {
-        if (url == null || url.isBlank()) {
-            return false;
-        }
-
+        if (url == null || url.isBlank()) return false;
         String trimmed = url.trim();
         String localPrefix = trimTrailingSlash(appProperties.getBaseUrl()) + appProperties.getPhotosPath();
-        if (trimmed.startsWith(localPrefix)) {
-            return true;
-        }
+        if (trimmed.startsWith(localPrefix)) return true;
 
         AppProperties.Oss oss = appProperties.getOss();
-        if (!oss.isEnabled()) {
-            return false;
-        }
+        if (oss == null || !oss.isEnabled()) return false;
 
         String photosFolder = normalizeFolder(oss.getPhotosFolder(), "photos/");
         String cdnDomain = trimTrailingSlash(oss.getCdnDomain());
@@ -470,23 +302,18 @@ public class UploadController
             if (!cdnDomain.startsWith("http://") && !cdnDomain.startsWith("https://")) {
                 cdnDomain = "https://" + cdnDomain;
             }
-            String cdnPrefix = cdnDomain + "/" + photosFolder;
-            if (trimmed.startsWith(cdnPrefix)) {
-                return true;
-            }
+            if (trimmed.startsWith(cdnDomain + "/" + photosFolder)) return true;
         }
 
         String endpoint = trimTrailingSlash(oss.getEndpoint());
         if (oss.getBucketName() != null && !oss.getBucketName().isBlank() && endpoint != null && !endpoint.isBlank()) {
-            String ossPrefix = "https://" + oss.getBucketName() + "." + endpoint + "/" + photosFolder;
-            return trimmed.startsWith(ossPrefix);
+            return trimmed.startsWith("https://" + oss.getBucketName() + "." + endpoint + "/" + photosFolder);
         }
         return false;
     }
 
     private String normalizeFolder(String folder, String fallback) {
-        String normalized = folder;
-        if (normalized == null || normalized.isBlank()) normalized = fallback;
+        String normalized = (folder == null || folder.isBlank()) ? fallback : folder;
         return normalized.replaceAll("^/+", "").replaceAll("/+$", "") + "/";
     }
 
@@ -494,17 +321,4 @@ public class UploadController
         if (value == null) return "";
         return value.replaceAll("/+$", "");
     }
-
-    private List<String> parsePhotosJson(String photosJson) {
-        if (photosJson == null || photosJson.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        try {
-            return objectMapper.readValue(photosJson, new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-            System.err.println("解析照片JSON失败: " + e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
 }

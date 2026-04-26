@@ -2,7 +2,7 @@
   <div class="chat-page">
     <NavBar :title="partnerName">
       <template #right>
-        <van-icon name="ellipsis" size="22" color="#666" />
+        <van-icon name="ellipsis" size="22" color="#666" @click="showChatMenu" />
       </template>
     </NavBar>
 
@@ -55,6 +55,8 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { showToast } from 'vant'
+import { showActionSheet } from '@/utils/vantActionSheet.js'
 import NavBar from '@/components/NavBar.vue'
 import { useWebSocket } from '@/composables/useWebSocket.js'
 import { getChatHistory, markChatRead } from '@/api/chat.js'
@@ -63,6 +65,7 @@ import { formatTime } from '@/utils/format.js'
 import { storage } from '@/utils/storage.js'
 import request from '@/api/request.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
+import { useReport } from '@/composables/useReport.js'
 
 const route       = useRoute()
 const receiverId  = route.params.receiverId
@@ -79,7 +82,8 @@ const historyLoading = ref(true)
 const historyMessages = ref([])
 
 // WebSocket
-const { messages: wsMessages, status: wsStatus, connect, send } = useWebSocket(myId)
+const { messages: wsMessages, errors: wsErrors, status: wsStatus, connect, send } = useWebSocket(myId)
+const { openReport } = useReport()
 const inputText  = ref('')
 const msgListRef = ref(null)
 
@@ -135,6 +139,17 @@ onMounted(async () => {
 // 新消息到来自动滚动
 watch(allMessages, () => nextTick(scrollToBottom))
 
+// 服务端错误（如被拉黑）
+watch(wsErrors, (errs) => {
+  const last = errs[errs.length - 1]
+  if (!last) return
+  if (last.code === 'BLOCKED') {
+    showToast({ message: '无法发送消息：双方关系受限', type: 'fail', duration: 3000 })
+  } else {
+    showToast({ message: last.message || '发送失败', type: 'fail' })
+  }
+}, { deep: true })
+
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
@@ -146,6 +161,19 @@ function handleSend() {
 function scrollToBottom() {
   const el = msgListRef.value
   if (el) el.scrollTop = el.scrollHeight
+}
+
+async function showChatMenu() {
+  try {
+    const action = await showActionSheet({
+      actions: [{ name: '举报该用户', color: '#ee0a24' }],
+    })
+    if (action.name === '举报该用户') {
+      await openReport({ targetType: 'USER', targetUserId: receiverId })
+    }
+  } catch {
+    // dismissed
+  }
 }
 
 // 相邻消息时间差 > 5 分钟则显示时间分割线

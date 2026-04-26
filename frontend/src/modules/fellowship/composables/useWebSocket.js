@@ -11,6 +11,7 @@ const BASE_DELAY_MS   = 1_000
 
 export function useWebSocket(userId) {
   const messages       = ref([])
+  const errors         = ref([])
   const status         = ref('closed')
   const reconnectCount = ref(0)
 
@@ -34,7 +35,11 @@ export function useWebSocket(userId) {
     ws.onmessage = ({ data }) => {
       try {
         const msg = JSON.parse(data)
-        if (msg.type === 'pong') return
+        if (msg.type === 'pong' || msg.type === 'sent_confirm') return
+        if (msg.type === 'error') {
+          errors.value.push(msg)
+          return
+        }
         messages.value.push(normalizeMsg(msg))
       } catch {
         // non-JSON message
@@ -109,5 +114,5 @@ export function useWebSocket(userId) {
 
   onUnmounted(disconnect)
 
-  return { messages, status, reconnectCount, connect, send, disconnect }
+  return { messages, errors, status, reconnectCount, connect, send, disconnect }
 }

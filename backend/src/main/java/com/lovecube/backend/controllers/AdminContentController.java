@@ -5,6 +5,7 @@ import com.lovecube.backend.entity.Article;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
 import com.lovecube.backend.entity.UserFeedback;
+import com.lovecube.backend.entity.UserVerification;
 import com.lovecube.backend.entity.VerificationRequest;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
@@ -13,9 +14,11 @@ import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserFeedbackRepository;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,10 +44,12 @@ public class AdminContentController {
     private final PlatformEventRepository platformEventRepository;
     private final UserRepository userRepository;
     private final VerificationRequestRepository verificationRequestRepository;
+    private final UserVerificationRepository userVerificationRepository;
     private final ReportRecordRepository reportRecordRepository;
     private final UserFeedbackRepository userFeedbackRepository;
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
+    private final NotificationService notificationService;
 
     public AdminContentController(
             AnnouncementRepository announcementRepository,
@@ -52,20 +57,24 @@ public class AdminContentController {
             PlatformEventRepository platformEventRepository,
             UserRepository userRepository,
             VerificationRequestRepository verificationRequestRepository,
+            UserVerificationRepository userVerificationRepository,
             ReportRecordRepository reportRecordRepository,
             UserFeedbackRepository userFeedbackRepository,
             AdminAuthService adminAuthService,
-            FellowshipInviteService fellowshipInviteService
+            FellowshipInviteService fellowshipInviteService,
+            NotificationService notificationService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
         this.platformEventRepository = platformEventRepository;
         this.userRepository = userRepository;
         this.verificationRequestRepository = verificationRequestRepository;
+        this.userVerificationRepository = userVerificationRepository;
         this.reportRecordRepository = reportRecordRepository;
         this.userFeedbackRepository = userFeedbackRepository;
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/announcements")
@@ -237,9 +246,9 @@ public class AdminContentController {
     }
 
     @GetMapping("/verifications")
-    public List<VerificationRequest> listVerifications(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public List<UserVerification> listVerifications(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         adminAuthService.requireAdmin(authHeader);
-        return verificationRequestRepository.findAll();
+        return userVerificationRepository.findAllByOrderBySubmittedAtDesc();
     }
 
     @PostMapping("/verifications")
@@ -308,6 +317,80 @@ public class AdminContentController {
         return reportRecordRepository.save(record);
     }
 
+    @PatchMapping("/reports/{id}/review")
+    public Map<String, Object> reviewReport(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable String id,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User admin = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isAdmin(admin)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
+        }
+        ReportRecord record = reportRecordRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "举报记录不存在"));
+
+        String action = String.valueOf(payload.getOrDefault("action", "")).trim().toLowerCase();
+        String note   = payload.containsKey("note") ? String.valueOf(payload.get("note")) : null;
+
+        switch (action) {
+            case "reviewed" -> record.setStatus("REVIEWED");
+            case "rejected" -> record.setStatus("REJECTED");
+            case "banned" -> {
+                record.setStatus("BANNED");
+                if (record.getTargetUserId() != null) {
+                    userRepository.findById(record.getTargetUserId()).ifPresent(target -> {
+                        target.setUserStatus("DISABLED");
+                        userRepository.save(target);
+                    });
+                }
+            }
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "action 必须为 reviewed / rejected / banned");
+        }
+
+        record.setReviewedAt(LocalDateTime.now());
+        record.setReviewedBy(admin.getUserid());
+        if (note != null && !note.isBlank()) record.setNote(note);
+        reportRecordRepository.save(record);
+
+        // 通知举报人处理结果
+        if (record.getReporterId() != null) {
+            String notifContent = switch (action) {
+                case "reviewed" -> "你举报的用户经核实已被处理，感谢你的反馈。";
+                case "rejected" -> "你的举报经核实不符合规范，已予以驳回。";
+                case "banned"   -> "你举报的用户经核实已被封禁，感谢你维护社区环境。";
+                default         -> "你的举报已处理。";
+            };
+            try {
+                notificationService.send(record.getReporterId(), "REPORT_HANDLED",
+                    "举报处理结果", notifContent, "REPORT", record.getId());
+            } catch (Exception ignored) {}
+        }
+
+        // 封禁时通知被封禁用户
+        if ("banned".equals(action) && record.getTargetUserId() != null) {
+            try {
+                notificationService.send(record.getTargetUserId(), "BANNED",
+                    "账号已被封禁", "你的账号因违反平台规范已被封禁，如有异议请联系客服。",
+                    null, null);
+            } catch (Exception ignored) {}
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", record.getId());
+        result.put("status", record.getStatus());
+        result.put("reviewedAt", record.getReviewedAt());
+        result.put("reviewedBy", record.getReviewedBy());
+        result.put("message", switch (action) {
+            case "reviewed" -> "举报已标记为已审核";
+            case "rejected" -> "举报已驳回";
+            case "banned"   -> "用户已封禁，举报已处理";
+            default -> "处理完成";
+        });
+        return result;
+    }
+
     @PatchMapping("/feedbacks/{id}")
     public UserFeedback updateFeedback(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -362,28 +445,59 @@ public class AdminContentController {
     }
 
     @PatchMapping("/verifications/{id}/review")
-    public VerificationRequest reviewVerification(
+    public UserVerification reviewVerification(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable String id,
+            @PathVariable Long id,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
-        VerificationRequest record = verificationRequestRepository.findById(id).orElseThrow(() ->
+        User admin = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isAdmin(admin)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
+        }
+        UserVerification record = userVerificationRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "认证记录不存在"));
-        String action = String.valueOf(payload.getOrDefault("action", ""));
+
+        String action = String.valueOf(payload.getOrDefault("action", "")).trim().toLowerCase();
+        String reason = payload.containsKey("reason") ? String.valueOf(payload.get("reason")) : null;
+
         if ("approve".equals(action)) {
             record.setStatus("approved");
             record.setReviewedAt(LocalDateTime.now());
+            record.setReviewerId(admin.getUserid());
         } else if ("reject".equals(action)) {
             record.setStatus("rejected");
             record.setReviewedAt(LocalDateTime.now());
-            if (payload.containsKey("reason")) {
-                record.setRejectReason(String.valueOf(payload.get("reason")));
-            }
+            record.setReviewerId(admin.getUserid());
+            if (reason != null && !reason.isBlank()) record.setRejectReason(reason);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "action 必须为 approve/reject");
         }
-        return verificationRequestRepository.save(record);
+        userVerificationRepository.save(record);
+
+        // Notify user of result
+        if (record.getUserId() != null) {
+            String typeLabel = switch (record.getVerifyType() == null ? "" : record.getVerifyType()) {
+                case "PHOTO"    -> "真人头像";
+                case "IDCARD"   -> "身份证";
+                default          -> "实名";
+            };
+            try {
+                if ("approve".equals(action)) {
+                    notificationService.send(record.getUserId(), "SYSTEM",
+                        "认证审核通过",
+                        typeLabel + "认证已审核通过，你的认证标识已生效。",
+                        "USER", String.valueOf(record.getUserId()));
+                } else {
+                    String rejectMsg = (reason != null && !reason.isBlank())
+                        ? reason : "资料不符合要求，请修改后重新提交。";
+                    notificationService.send(record.getUserId(), "SYSTEM",
+                        "认证审核未通过",
+                        typeLabel + "认证未通过：" + rejectMsg,
+                        "USER", String.valueOf(record.getUserId()));
+                }
+            } catch (Exception ignored) {}
+        }
+        return record;
     }
 
     @PutMapping("/users/{userId}/status")
@@ -455,7 +569,8 @@ public class AdminContentController {
                 .count();
         long totalAnnouncements = announcementRepository.count();
         long pendingVerifications = verificationRequestRepository.findAll().stream()
-                .filter(v -> "pending".equals(v.getStatus())).count();
+                .filter(v -> "pending".equals(v.getStatus())).count()
+                + userVerificationRepository.countByStatus("pending");
         long pendingReports = reportRecordRepository.findAll().stream()
                 .filter(r -> !"resolved".equals(r.getStatus())).count();
         long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");

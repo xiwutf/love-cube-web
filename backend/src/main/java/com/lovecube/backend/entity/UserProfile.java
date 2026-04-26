@@ -13,16 +13,19 @@ public class UserProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", unique = true)
+    private Long userId;
+
+    @Column
     private String nickname;
 
-    @Column(nullable = false)
+    @Column
     private String avatar;
 
-    @Column(nullable = false)
+    @Column
     private Integer age;
 
-    @Column(nullable = false)
+    @Column
     private String gender;
 
     @Column

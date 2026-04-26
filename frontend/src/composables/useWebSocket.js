@@ -15,8 +15,9 @@ const HEARTBEAT_MS    = 30_000
 const BASE_DELAY_MS   = 1_000
 
 export function useWebSocket(userId) {
-  const messages      = ref([])   // 渲染用消息列表
-  const status        = ref('closed')  // closed | connecting | open | error
+  const messages       = ref([])   // 渲染用消息列表
+  const errors         = ref([])   // 服务端推送的错误事件
+  const status         = ref('closed')  // closed | connecting | open | error
   const reconnectCount = ref(0)
 
   let ws             = null
@@ -39,7 +40,11 @@ export function useWebSocket(userId) {
     ws.onmessage = ({ data }) => {
       try {
         const msg = JSON.parse(data)
-        if (msg.type === 'pong') return  // 心跳响应，忽略
+        if (msg.type === 'pong' || msg.type === 'sent_confirm') return
+        if (msg.type === 'error') {
+          errors.value.push(msg)
+          return
+        }
         messages.value.push(normalizeMsg(msg))
       } catch {
         // 非 JSON 消息，忽略
@@ -115,5 +120,5 @@ export function useWebSocket(userId) {
 
   onUnmounted(disconnect)
 
-  return { messages, status, reconnectCount, connect, send, disconnect }
+  return { messages, errors, status, reconnectCount, connect, send, disconnect }
 }

@@ -1,14 +1,38 @@
 <template>
   <div class="blacklist-page">
     <NavBar title="黑名单" />
-    <section class="content">
+
+    <div v-if="loading" class="page-loading">
+      <van-loading type="spinner" color="#FF6B8A" />
+    </div>
+
+    <section v-else class="content">
       <template v-if="list.length">
-        <article v-for="item in list" :key="item.userId" class="row">
-          <div>
-            <p class="name">{{ item.nickname || `用户${item.userId}` }}</p>
-            <p class="meta">ID {{ item.userId }}</p>
+        <article v-for="item in list" :key="item.blockedUserId" class="row">
+          <div class="user-info">
+            <van-image
+              v-if="item.avatar"
+              round width="40" height="40"
+              :src="item.avatar" fit="cover"
+              class="avatar"
+            />
+            <div class="avatar-fallback" v-else>
+              {{ (item.nickname || '?')[0] }}
+            </div>
+            <div>
+              <p class="name">{{ item.nickname || `用户${item.blockedUserId}` }}</p>
+              <p class="meta">ID {{ item.blockedUserId }}</p>
+            </div>
           </div>
-          <van-button size="small" plain type="primary" @click="remove(item.userId)">解除拉黑</van-button>
+          <van-button
+            size="small"
+            plain
+            type="primary"
+            :loading="removing === item.blockedUserId"
+            @click="remove(item.blockedUserId)"
+          >
+            解除拉黑
+          </van-button>
         </article>
       </template>
       <van-empty v-else description="黑名单为空" />
@@ -17,25 +41,36 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
+import { getMyBlacklist, unblockUser } from '@/api/fellowship.js'
 
-const KEY = 'fellowship-blacklist'
-const list = ref(load())
+const loading  = ref(true)
+const removing = ref(null)
+const list     = ref([])
 
-function load() {
+onMounted(async () => {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || '[]')
+    list.value = await getMyBlacklist()
   } catch {
-    return []
+    showToast({ message: '加载失败', type: 'fail' })
+  } finally {
+    loading.value = false
   }
-}
+})
 
-function remove(userId) {
-  list.value = list.value.filter((item) => String(item.userId) !== String(userId))
-  localStorage.setItem(KEY, JSON.stringify(list.value))
-  showToast({ type: 'success', message: '已解除' })
+async function remove(userId) {
+  removing.value = userId
+  try {
+    await unblockUser(userId)
+    list.value = list.value.filter(item => item.blockedUserId !== userId)
+    showToast({ type: 'success', message: '已解除拉黑' })
+  } catch {
+    showToast({ message: '操作失败，请重试', type: 'fail' })
+  } finally {
+    removing.value = null
+  }
 }
 </script>
 
@@ -43,6 +78,12 @@ function remove(userId) {
 .blacklist-page {
   min-height: 100vh;
   background: #f7f9fc;
+}
+
+.page-loading {
+  display: flex;
+  justify-content: center;
+  padding-top: 80px;
 }
 
 .content {
@@ -59,6 +100,28 @@ function remove(userId) {
   margin-bottom: 10px;
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar { flex-shrink: 0; }
+
+.avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF6B8A, #FFB3C1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 .name {
   margin: 0;
   font-size: 15px;
@@ -71,4 +134,3 @@ function remove(userId) {
   color: #9ca3af;
 }
 </style>
-

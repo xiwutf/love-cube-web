@@ -20,7 +20,9 @@ request.interceptors.response.use(
     if (status === 401) {
       storage.remove('token')
       storage.remove('userId')
-      setTimeout(() => { window.location.hash = '#/fellowship/login' }, 100)
+      const currentHash = window.location.hash?.replace(/^#/, '') || '/'
+      const encoded = encodeURIComponent(currentHash)
+      setTimeout(() => { window.location.hash = `#/fellowship/login?redirect=${encoded}` }, 100)
     }
     return Promise.reject(new Error(message))
   }

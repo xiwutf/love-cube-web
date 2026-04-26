@@ -17,6 +17,10 @@
 
     <div class="card-info">
       <h3 class="card-name">{{ user.nickname }} <span class="card-age">{{ user.age }}</span></h3>
+      <div class="card-badges" v-if="user.photoVerified || user.realnameVerified">
+        <span v-if="user.photoVerified" class="card-badge">📷 真人</span>
+        <span v-if="user.realnameVerified" class="card-badge">🪪 实名</span>
+      </div>
       <p class="card-meta">{{ user.location }} · {{ user.occupation }}</p>
     </div>
   </div>
@@ -138,5 +142,11 @@ defineExpose({
 }
 .card-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
 .card-age  { font-size: 18px; font-weight: 400; margin-left: 8px; }
+.card-badges { display: flex; gap: 5px; margin-bottom: 4px; }
+.card-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 6px;
+  border-radius: 20px; background: rgba(255,255,255,.25);
+  color: #fff; backdrop-filter: blur(4px);
+}
 .card-meta { font-size: 13px; opacity: .85; }
 </style>

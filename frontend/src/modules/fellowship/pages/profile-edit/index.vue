@@ -91,6 +91,7 @@
 </template>
 
 <script setup>
+// DEPRECATED: legacy module copy retained for compatibility; do not add new feature work here.
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showImagePreview } from 'vant'

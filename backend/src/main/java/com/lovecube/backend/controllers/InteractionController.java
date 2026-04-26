@@ -2,6 +2,7 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.UserInteractionService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +19,12 @@ public class InteractionController {
     
     @Autowired
     private UserInteractionService interactionService;
-    
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
     
     /**
      * 点赞用户
@@ -48,6 +52,18 @@ public class InteractionController {
                 // 如果没有点赞，则点赞
                 interactionService.likeUser(currentUser.getUserid(), userId);
                 boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
+
+                String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
+                try {
+                    notificationService.send(userId, "LIKE", "有人喜欢你",
+                        senderName + " 喜欢了你", "USER", String.valueOf(currentUser.getUserid()));
+                    if (matched) {
+                        notificationService.send(userId, "LIKE", "你们配对成功！",
+                            "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
+                            String.valueOf(currentUser.getUserid()));
+                    }
+                } catch (Exception ignored) {}
+
                 java.util.Map<String, Object> likeResult = new java.util.HashMap<>();
                 likeResult.put("message", "点赞成功");
                 likeResult.put("isLiked", true);

@@ -52,7 +52,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast, showImagePreview, showActionSheet } from 'vant'
+import { showToast, showImagePreview } from 'vant'
+import { showActionSheet } from '@/utils/vantActionSheet.js'
 import AppTabBar from '@f/components/AppTabBar.vue'
 import { getDynamics, likeDynamic, unlikeDynamic, deleteDynamic } from '@f/api/dynamic.js'
 import { formatTime } from '@f/utils/format.js'

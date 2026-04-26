@@ -32,3 +32,28 @@ export function submitFellowshipReport(payload) {
   return request.post('/fellowship/reports', payload)
 }
 
+export function submitReport(payload) {
+  return request.post('/reports', payload)
+}
+
+export function getMyReports() {
+  return request.get('/reports/my')
+}
+
+// Blacklist
+export function getMyBlacklist() {
+  return request.get('/blacklist')
+}
+
+export function blockUser(userId, reason = '') {
+  return request.post(`/blacklist/${userId}`, { reason })
+}
+
+export function unblockUser(userId) {
+  return request.delete(`/blacklist/${userId}`)
+}
+
+export function getBlockStatus(userId) {
+  return request.get(`/blacklist/status/${userId}`)
+}
+

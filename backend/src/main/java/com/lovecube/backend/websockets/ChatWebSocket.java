@@ -3,7 +3,9 @@ package com.lovecube.backend.websockets;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lovecube.backend.models.ChatMessage;
+import com.lovecube.backend.services.BlacklistService;
 import com.lovecube.backend.services.ChatMessageService;
+import com.lovecube.backend.services.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,12 @@ public class ChatWebSocket extends TextWebSocketHandler {
 
     @Autowired
     private ChatMessageService chatMessageService;
+
+    @Autowired
+    private BlacklistService blacklistService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -93,7 +101,19 @@ public class ChatWebSocket extends TextWebSocketHandler {
                 }
                 
                 logger.info("解析消息成功: senderId={}, receiverId={}, content={}", senderId, receiverId, content);
-                
+
+                // 黑名单检查
+                if (blacklistService.isBlocked(senderId, receiverId)) {
+                    String errorResponse = objectMapper.writeValueAsString(Map.of(
+                        "type", "error",
+                        "code", "BLOCKED",
+                        "message", "无法发送消息：用户关系受限",
+                        "timestamp", System.currentTimeMillis()
+                    ));
+                    session.sendMessage(new TextMessage(errorResponse));
+                    return;
+                }
+
                 // 创建聊天消息对象
                 ChatMessage chatMessage = new ChatMessage();
                 chatMessage.setSenderId(senderId);
@@ -126,6 +146,10 @@ public class ChatWebSocket extends TextWebSocketHandler {
                     logger.info("消息已发送给接收者用户 {}", receiverId);
                 } else {
                     logger.info("接收者用户 {} 不在线，消息已存储", receiverId);
+                    try {
+                        notificationService.send(receiverId, "MESSAGE", "收到新消息",
+                            "你有一条新的私信", "USER", String.valueOf(senderId));
+                    } catch (Exception ignored) {}
                 }
                 
                 // 向发送者发送成功确认（不包含消息内容，避免重复显示）

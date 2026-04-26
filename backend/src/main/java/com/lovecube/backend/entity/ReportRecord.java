@@ -24,11 +24,26 @@ public class ReportRecord {
     @Column(name = "report_type")
     private String reportType;
 
+    @Column(name = "target_type", length = 32)
+    private String targetType;
+
+    @Column(name = "target_id", length = 64)
+    private String targetId;
+
+    @Column(name = "reason_type", length = 64)
+    private String reasonType;
+
     private String content;
 
     private String status;
 
     private String note;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

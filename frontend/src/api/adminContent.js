@@ -92,3 +92,7 @@ export function updateFeedback(id, payload) {
 export function getInvites(params = {}) {
   return request.get('/admin/invites', { params })
 }
+
+export function reviewReport(id, action, note = '') {
+  return request.patch(`/admin/reports/${id}/review`, { action, note })
+}

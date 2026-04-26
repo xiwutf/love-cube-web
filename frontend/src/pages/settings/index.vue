@@ -7,6 +7,10 @@
       <van-cell title="退出登录" is-link @click="handleLogout" title-class="danger-text" />
     </van-cell-group>
 
+    <van-cell-group inset title="隐私" class="group">
+      <van-cell title="黑名单" is-link @click="router.push('/fellowship/blacklist')" />
+    </van-cell-group>
+
     <van-cell-group inset title="存储" class="group">
       <van-cell title="清理缓存" is-link :value="cacheSize" @click="handleClearCache" />
     </van-cell-group>

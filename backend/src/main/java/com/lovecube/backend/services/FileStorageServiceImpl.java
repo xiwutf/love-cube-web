@@ -50,6 +50,20 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
     
     @Override
+    public String uploadVerifyPhoto(MultipartFile file) throws IOException {
+        if (appProperties.getOss().isEnabled()) {
+            try {
+                return uploadToOss(file, normalizeFolder(appProperties.getOss().getVerifyFolder(), "verify/"));
+            } catch (Exception e) {
+                System.err.println("OSS verify upload failed, fallback to local: " + e.getMessage());
+                return uploadToLocal(file, "uploads/verify/");
+            }
+        } else {
+            return uploadToLocal(file, "uploads/verify/");
+        }
+    }
+
+    @Override
     public boolean deleteFile(String fileUrl) {
         if (appProperties.getOss().isEnabled()) {
             return deleteFromOss(fileUrl);

@@ -24,6 +24,7 @@ public class AppProperties {
         private String cdnDomain; // CDN域名
         private String avatarFolder = "avatars/"; // 头像文件夹
         private String photosFolder = "photos/"; // 生活照文件夹
+        private String verifyFolder = "verify/"; // 认证照片文件夹
         private boolean enabled = false; // 是否启用OSS
     }
 }

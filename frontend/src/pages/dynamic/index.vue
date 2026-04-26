@@ -51,14 +51,17 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showImagePreview, showConfirmDialog } from 'vant'
+import { showActionSheet } from '@/utils/vantActionSheet.js'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getDynamics, likeDynamic, unlikeDynamic, deleteDynamic } from '@/api/dynamic.js'
 import { formatTime } from '@/utils/format.js'
 import { getAvatar, toFullUrl } from '@/utils/image.js'
 import { storage } from '@/utils/storage.js'
+import { useReport } from '@/composables/useReport.js'
 
 const router = useRouter()
 const myId = storage.get('userId')
+const { openReport } = useReport()
 const list = ref([])
 const loading = ref(false)
 const noMore = ref(false)
@@ -107,26 +110,35 @@ function previewImgs(imgs, startIndex) {
   showImagePreview({ images: imgs.map(toFullUrl), startPosition: startIndex })
 }
 
-function showMenu(item) {
+async function showMenu(item) {
   const isMine = String(item.userId) === String(myId)
 
-  if (!isMine) {
-    showToast({ message: '已收到举报，将尽快核查', type: 'success' })
-    return
-  }
-
-  showConfirmDialog({
-    title: '删除动态',
-    message: '确认删除这条动态吗？'
-  }).then(async () => {
+  if (isMine) {
     try {
+      await showConfirmDialog({ title: '删除动态', message: '确认删除这条动态吗？' })
       await deleteDynamic(item.id)
       list.value = list.value.filter((d) => d.id !== item.id)
       showToast({ message: '已删除', type: 'success' })
     } catch (e) {
-      showToast({ message: e.message || '删除失败', type: 'fail' })
+      if (e?.message) showToast({ message: e.message, type: 'fail' })
     }
-  }).catch(() => {})
+    return
+  }
+
+  try {
+    const action = await showActionSheet({
+      actions: [{ name: '举报该动态', color: '#ee0a24' }],
+    })
+    if (action.name === '举报该动态') {
+      await openReport({
+        targetType: 'DYNAMIC',
+        targetId: String(item.id),
+        targetUserId: item.userId,
+      })
+    }
+  } catch {
+    // dismissed
+  }
 }
 </script>
 

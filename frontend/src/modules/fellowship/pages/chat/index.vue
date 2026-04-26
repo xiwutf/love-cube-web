@@ -50,6 +50,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { showToast } from 'vant'
 import NavBar from '@f/components/NavBar.vue'
 import { useWebSocket } from '@f/composables/useWebSocket.js'
 import { getChatHistory, markChatRead } from '@f/api/chat.js'
@@ -71,7 +72,7 @@ const myAvatar      = ref(DEFAULT_AVATAR)
 const historyLoading  = ref(true)
 const historyMessages = ref([])
 
-const { messages: wsMessages, status: wsStatus, connect, send } = useWebSocket(myId)
+const { messages: wsMessages, errors: wsErrors, status: wsStatus, connect, send } = useWebSocket(myId)
 const inputText  = ref('')
 const msgListRef = ref(null)
 
@@ -122,6 +123,16 @@ onMounted(async () => {
 })
 
 watch(allMessages, () => nextTick(scrollToBottom))
+
+watch(wsErrors, (errs) => {
+  const last = errs[errs.length - 1]
+  if (!last) return
+  if (last.code === 'BLOCKED') {
+    showToast({ message: '无法发送消息：双方关系受限', type: 'fail', duration: 3000 })
+  } else {
+    showToast({ message: last.message || '发送失败', type: 'fail' })
+  }
+}, { deep: true })
 
 function handleSend() {
   const text = inputText.value.trim()

@@ -97,6 +97,8 @@
 </template>
 
 <script setup>
+// DEPRECATED: legacy profile editor for compatibility.
+// Preferred route: /fellowship/profile/edit (fellowship dedicated profile editor).
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog, showImagePreview } from 'vant'

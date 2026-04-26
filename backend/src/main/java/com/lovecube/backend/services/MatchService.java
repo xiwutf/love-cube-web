@@ -36,6 +36,9 @@ public class MatchService
     @Autowired
     private FellowshipProfileRepository fellowshipProfileRepository;
 
+    @Autowired
+    private BlacklistService blacklistService;
+
     @Transactional
     public List<User> findMatches(Long userId, Integer minAge, Integer maxAge, Integer gender, String location) {
         logger.info("开始查找匹配 - userId: {}, minAge: {}, maxAge: {}, gender: {}, location: {}", 
@@ -57,6 +60,7 @@ public class MatchService
         // 构建查询条件
         List<User> potentialMatches = userRepository.findAll().stream()
             .filter(user -> !user.getUserid().equals(userId))
+            .filter(user -> !"DISABLED".equalsIgnoreCase(user.getUserStatus()))
             .filter(user -> minAge == null || user.getAge() >= minAge)
             .filter(user -> maxAge == null || user.getAge() <= maxAge)
             .filter(user -> gender == null || user.getGender().equals(gender))
@@ -143,21 +147,35 @@ public class MatchService
      * 获取推荐列表：排除自己、已操作用户和家长账号
      */
     public List<User> getAllUsers(Long currentUserId, Integer gender) {
-        List<Long> actedIds = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
+        List<Long> actedIds    = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
         List<Long> guardianIds = getGuardianUserIds();
+        List<Long> blacklistIds = getBlacklistIds(currentUserId);
 
         if (gender != null) {
             return userRepository.findByGenderAndUseridNot(gender, currentUserId)
                 .stream()
+                .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
                 .filter(u -> !actedIds.contains(u.getUserid()))
                 .filter(u -> !guardianIds.contains(u.getUserid()))
+                .filter(u -> !blacklistIds.contains(u.getUserid()))
                 .collect(Collectors.toList());
         }
         return userRepository.findByUseridNot(currentUserId)
             .stream()
+            .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
             .filter(u -> !actedIds.contains(u.getUserid()))
             .filter(u -> !guardianIds.contains(u.getUserid()))
+            .filter(u -> !blacklistIds.contains(u.getUserid()))
             .collect(Collectors.toList());
+    }
+
+    private List<Long> getBlacklistIds(Long userId) {
+        try {
+            return blacklistService.getBlockedAndBlockerIds(userId);
+        } catch (Exception e) {
+            logger.warn("获取黑名单失败（忽略，不影响匹配）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
     }
 
     private List<Long> getGuardianUserIds() {
