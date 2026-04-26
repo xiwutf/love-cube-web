@@ -26,6 +26,8 @@ public class FellowshipProfileController {
             return ResponseEntity.ok(fellowshipProfileService.toResponse(profile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "获取资料失败: " + e.getMessage()));
         }
     }
 
@@ -40,6 +42,8 @@ public class FellowshipProfileController {
             return ResponseEntity.ok(fellowshipProfileService.toResponse(profile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "更新资料失败: " + e.getMessage()));
         }
     }
 
@@ -50,6 +54,8 @@ public class FellowshipProfileController {
             return ResponseEntity.ok(fellowshipProfileService.getCompletion(currentUser));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "获取完整度失败: " + e.getMessage()));
         }
     }
 }

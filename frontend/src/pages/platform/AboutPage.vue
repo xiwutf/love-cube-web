@@ -1,36 +1,37 @@
 <template>
-  <section class="platform-page">
-    <section class="platform-card platform-soft-card">
+  <section class="platform-page module-page">
+    <section class="platform-card module-hero">
       <p class="platform-kicker">About Platform</p>
-      <h1 class="platform-title">关于我们</h1>
-      <p class="platform-subtitle">Love Cube 采用“平台官网 + 联谊子应用”双层架构，兼顾信息展示与移动端互动体验。</p>
+      <h1 class="platform-title">关于 Love Cube 平台</h1>
+      <p class="platform-subtitle">
+        Love Cube 是一个多元连接平台，联谊交友只是其中一个模块。平台整体围绕内容、活动、社交和服务构建。
+      </p>
     </section>
 
-    <div class="platform-grid-3">
-      <article class="platform-card">
-        <h3 class="platform-heading">平台定位</h3>
-        <p class="platform-text">平台官网负责公告、资讯与活动发布，为用户提供可信入口与规则说明。</p>
+    <section class="module-grid module-grid-3">
+      <article class="platform-card module-card">
+        <h3 class="module-card-title">平台定位</h3>
+        <p class="module-card-desc">打造“内容 + 活动 + 关系连接”的综合型平台，不局限于单一场景。</p>
       </article>
-      <article class="platform-card">
-        <h3 class="platform-heading">联谊模块</h3>
-        <p class="platform-text">联谊功能统一在 <code>/fellowship/*</code>，保留原移动端 UI，不影响官网视觉语言。</p>
+      <article class="platform-card module-card">
+        <h3 class="module-card-title">模块体系</h3>
+        <p class="module-card-desc">包含平台动态、精选内容、活动中心、联谊模块、账号中心和治理系统。</p>
       </article>
-      <article class="platform-card">
-        <h3 class="platform-heading">运营原则</h3>
-        <p class="platform-text">坚持真实、尊重、安全，强调双向同意沟通与用户隐私保护。</p>
+      <article class="platform-card module-card">
+        <h3 class="module-card-title">运营目标</h3>
+        <p class="module-card-desc">通过可信信息、持续活动与高质量内容，提升用户活跃和长期留存。</p>
       </article>
-    </div>
+    </section>
 
-    <div class="platform-actions">
-      <router-link to="/fellowship-intro" class="platform-btn platform-btn-primary">先看联谊介绍，再进入模块</router-link>
-    </div>
+    <section class="platform-card module-block">
+      <h2 class="platform-section-title">平台模块导航</h2>
+      <div class="module-chip-row">
+        <router-link class="module-chip" to="/announcements">平台动态</router-link>
+        <router-link class="module-chip" to="/articles">精选内容</router-link>
+        <router-link class="module-chip" to="/events">活动中心</router-link>
+        <router-link class="module-chip" to="/fellowship-intro">联谊介绍</router-link>
+        <router-link class="module-chip" to="/account">账号中心</router-link>
+      </div>
+    </section>
   </section>
 </template>
-
-<style scoped>
-code {
-  background: #f1f5f9;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-</style>

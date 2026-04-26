@@ -1,19 +1,26 @@
 <template>
-  <section class="platform-page">
-    <router-link to="/events" class="platform-backlink">← 返回活动列表</router-link>
+  <section class="platform-page module-page">
+    <div class="detail-nav-row">
+      <router-link to="/events" class="platform-backlink">返回活动列表</router-link>
+      <router-link to="/fellowship-intro" class="platform-link">查看联谊介绍</router-link>
+    </div>
 
-    <article v-if="item" class="platform-card platform-block">
-      <p class="platform-meta">{{ formatDate(item.eventTime, true) }} · {{ item.location }}</p>
-      <h1 class="platform-title">{{ item.title }}</h1>
-      <p class="platform-subtitle">{{ item.summary }}</p>
-      <p class="platform-text">{{ item.content }}</p>
-      <p class="platform-text">当前报名人数：{{ item.signupCount || 0 }}</p>
+    <article v-if="item" class="platform-card detail-article">
+      <p class="module-card-meta">
+        活动时间：{{ formatDate(item.eventTime || item.time, true) }} · 地点：{{ item.location || '待定' }}
+      </p>
+      <h1 class="detail-title">{{ item.title || '未命名活动' }}</h1>
+      <p class="detail-lead">{{ item.summary || '暂无活动说明' }}</p>
+      <div class="detail-body">
+        <p>{{ item.content || '暂无活动详情。' }}</p>
+        <div class="detail-stat">当前报名：{{ item.signupCount || 0 }} 人</div>
+      </div>
     </article>
 
-    <div v-else class="platform-card platform-empty">
-      <h2 class="platform-heading">未找到活动</h2>
-      <p class="platform-text">该活动可能已下线，或链接无效。</p>
-    </div>
+    <article v-else class="platform-card module-empty">
+      <h3 class="platform-heading">活动不存在</h3>
+      <p class="platform-text">该活动可能已下线或链接错误，请返回活动中心查看。</p>
+    </article>
   </section>
 </template>
 

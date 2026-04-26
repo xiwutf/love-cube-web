@@ -2,6 +2,7 @@ package com.lovecube.backend.services;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.lovecube.backend.config.AppProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -102,6 +103,8 @@ public class FileStorageServiceImpl implements FileStorageService {
                     inputStream
             );
             client.putObject(putObjectRequest);
+            // Ensure uploaded images can be rendered directly by browsers.
+            client.setObjectAcl(ossConfig.getBucketName(), objectKey, CannedAccessControlList.PublicRead);
         } finally {
             client.shutdown();
         }

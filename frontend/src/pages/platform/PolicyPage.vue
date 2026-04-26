@@ -1,21 +1,25 @@
 <template>
-  <section class="platform-page">
-    <router-link to="/about" class="platform-backlink">← 返回关于我们</router-link>
+  <section class="platform-page module-page">
+    <div class="detail-nav-row">
+      <router-link to="/about" class="platform-backlink">返回关于我们</router-link>
+      <router-link to="/account" class="platform-link">前往账号中心</router-link>
+    </div>
 
-    <article v-if="item" class="platform-card platform-block">
+    <article v-if="item" class="platform-card detail-article">
       <p class="platform-kicker">Policy</p>
-      <h1 class="platform-title">{{ item.title }}</h1>
-      <p class="platform-subtitle">{{ item.intro }}</p>
-      <section v-for="section in item.sections" :key="section.heading" class="platform-block">
+      <h1 class="detail-title">{{ item.title }}</h1>
+      <p class="detail-lead">{{ item.intro }}</p>
+
+      <section v-for="section in item.sections" :key="section.heading" class="policy-section">
         <h3 class="platform-heading">{{ section.heading }}</h3>
         <p class="platform-text">{{ section.text }}</p>
       </section>
     </article>
 
-    <div v-else class="platform-card platform-empty">
-      <h2 class="platform-heading">未找到页面</h2>
-      <p class="platform-text">请从 Footer 重新进入协议说明页面。</p>
-    </div>
+    <article v-else class="platform-card module-empty">
+      <h3 class="platform-heading">政策内容不存在</h3>
+      <p class="platform-text">请从关于我们页重新进入，或联系平台管理员。</p>
+    </article>
   </section>
 </template>
 

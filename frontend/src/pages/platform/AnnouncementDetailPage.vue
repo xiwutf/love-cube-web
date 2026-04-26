@@ -1,18 +1,23 @@
 <template>
-  <section class="platform-page">
-    <router-link to="/announcements" class="platform-backlink">← 返回公告列表</router-link>
+  <section class="platform-page module-page">
+    <div class="detail-nav-row">
+      <router-link to="/announcements" class="platform-backlink">返回公告列表</router-link>
+      <router-link to="/articles" class="platform-link">查看精选内容</router-link>
+    </div>
 
-    <article v-if="item" class="platform-card platform-block">
-      <p class="platform-meta">{{ formatDate(item.publishDate) }}</p>
-      <h1 class="platform-title">{{ item.title }}</h1>
-      <p class="platform-subtitle">{{ item.summary }}</p>
-      <p class="platform-text">{{ item.content }}</p>
+    <article v-if="item" class="platform-card detail-article">
+      <p class="module-card-meta">发布时间：{{ formatDate(item.publishDate || item.date) }}</p>
+      <h1 class="detail-title">{{ item.title || '未命名公告' }}</h1>
+      <p class="detail-lead">{{ item.summary || '暂无摘要信息' }}</p>
+      <div class="detail-body">
+        <p>{{ item.content || '暂无正文内容。' }}</p>
+      </div>
     </article>
 
-    <div v-else class="platform-card platform-empty">
-      <h2 class="platform-heading">未找到公告</h2>
-      <p class="platform-text">该公告可能已下线，或链接无效。</p>
-    </div>
+    <article v-else class="platform-card module-empty">
+      <h3 class="platform-heading">公告不存在</h3>
+      <p class="platform-text">可能已下线或链接有误，请返回公告列表查看。</p>
+    </article>
   </section>
 </template>
 
@@ -26,7 +31,7 @@ const item = ref(null)
 
 function formatDate(value) {
   if (!value) return ''
-  return String(value).replace('T', ' ').slice(0, 10)
+  return String(value).replace('T', ' ').slice(0, 16)
 }
 
 onMounted(async () => {
