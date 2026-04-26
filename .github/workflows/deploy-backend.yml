@@ -110,13 +110,19 @@ jobs:
               --spring.config.location=file:/opt/lovecube-api/application.yml \
               > "$APP_LOG" 2>&1 &
 
-            sleep 10
-
-            echo "[deploy] Check port 8090"
-            if ! ss -ltnp | grep -q ":8090"; then
-              echo "[deploy] ERROR: 8090 is not listening"
-              echo "[deploy] Last 120 lines of app.log:"
-              tail -n 120 "$APP_LOG" || true
+            echo "[deploy] Wait for port 8090 to be ready (max 120s)"
+            READY=0
+            for i in $(seq 1 24); do
+              if ss -ltnp | grep -q ":8090"; then
+                READY=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "$READY" -ne 1 ]; then
+              echo "[deploy] ERROR: 8090 is not listening after 120s"
+              echo "[deploy] Last 160 lines of app.log:"
+              tail -n 160 "$APP_LOG" || true
               exit 1
             fi
 
