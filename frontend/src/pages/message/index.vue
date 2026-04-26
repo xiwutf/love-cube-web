@@ -1,90 +1,109 @@
 <template>
   <div class="message-page">
-    <div class="top-bar">
-      <span class="top-title">消息</span>
-    </div>
+    <!-- Top bar -->
+    <header class="msg-header">
+      <span class="msg-header-title">消息</span>
+      <van-badge v-if="msgStore.totalUnread" :content="msgStore.totalUnread" max="99" class="msg-header-badge" />
+    </header>
 
-    <van-tabs v-model:active="activeTab" color="#FF6B8A" title-active-color="#FF6B8A" sticky offset-top="48">
-      <!-- Tab1: 聊天 -->
+    <van-tabs
+      v-model:active="activeTab"
+      color="#FF5F84"
+      title-active-color="#FF5F84"
+      title-inactive-color="#8898aa"
+      sticky
+      offset-top="52"
+      :border="false"
+      class="msg-tabs"
+    >
+      <!-- 聊天 -->
       <van-tab title="聊天" :badge="msgStore.unreadChat || ''">
         <van-pull-refresh v-model="refreshingChat" @refresh="loadChat">
-          <van-list v-model:loading="loadingChat" :finished="true" finished-text="">
-            <van-swipe-cell v-for="item in chatList" :key="item.userId">
-              <div class="chat-item" @click="goChat(item)">
-                <van-image round width="46" height="46" :src="item.avatar" fit="cover">
-                  <template #error>
-                    <div class="avatar-fallback sm">{{ (item.nickname || '?')[0] }}</div>
-                  </template>
-                </van-image>
-                <div class="chat-info">
-                  <div class="chat-top">
-                    <span class="chat-name">{{ item.nickname }}</span>
-                    <span class="chat-time">{{ formatTime(item.lastTime) }}</span>
+          <div class="tab-content">
+            <van-list v-model:loading="loadingChat" :finished="true" finished-text="">
+              <van-swipe-cell v-for="item in chatList" :key="item.userId" class="chat-cell">
+                <div class="chat-item" @click="goChat(item)">
+                  <div class="chat-avatar-wrap">
+                    <van-image round width="50" height="50" :src="item.avatar" fit="cover">
+                      <template #error>
+                        <div class="avatar-fb">{{ (item.nickname || '?')[0] }}</div>
+                      </template>
+                    </van-image>
+                    <span v-if="item.unread" class="unread-dot">{{ item.unread > 99 ? '99+' : item.unread }}</span>
                   </div>
-                  <div class="chat-bottom">
-                    <span class="chat-last">{{ item.lastMessage }}</span>
-                    <van-badge v-if="item.unread" :content="item.unread" max="99" />
+                  <div class="chat-info">
+                    <div class="chat-row">
+                      <span class="chat-name">{{ item.nickname }}</span>
+                      <span class="chat-time">{{ formatTime(item.lastTime) }}</span>
+                    </div>
+                    <p class="chat-last">{{ item.lastMessage || '暂无消息' }}</p>
                   </div>
                 </div>
-              </div>
-              <template #right>
-                <van-button
-                  square
-                  type="danger"
-                  text="删除"
-                  style="height: 100%"
-                  @click="handleDeleteChat(item)"
-                />
-              </template>
-            </van-swipe-cell>
-            <van-empty v-if="!loadingChat && !chatList.length" description="暂无聊天" image-size="80" />
-          </van-list>
+                <template #right>
+                  <van-button square type="danger" text="删除" style="height: 100%" @click="handleDeleteChat(item)" />
+                </template>
+              </van-swipe-cell>
+              <van-empty v-if="!loadingChat && !chatList.length" description="暂无聊天" image-size="70" />
+            </van-list>
+          </div>
         </van-pull-refresh>
       </van-tab>
 
-      <!-- Tab2: 互动 -->
+      <!-- 互动 -->
       <van-tab title="互动" :badge="msgStore.unreadInteract || ''">
         <van-pull-refresh v-model="refreshingInteract" @refresh="loadInteract">
-          <van-list v-model:loading="loadingInteract" :finished="true" finished-text="">
-            <div v-for="item in interactList" :key="item.id" class="interact-item">
-              <van-image round width="42" height="42" :src="getAvatar(item.fromUser)" fit="cover">
-                <template #error>
-                  <div class="avatar-fallback sm">{{ (item.fromUser?.nickname || '?')[0] }}</div>
-                </template>
-              </van-image>
-              <div class="interact-info">
-                <p class="interact-name">{{ item.fromUser?.nickname || '用户' }}
-                  <span class="interact-action">{{ interactLabel(item.type) }}</span>
-                </p>
-                <p class="interact-time">{{ formatTime(item.createdAt) }}</p>
+          <div class="tab-content">
+            <van-list v-model:loading="loadingInteract" :finished="true" finished-text="">
+              <div v-for="item in interactList" :key="item.id" class="interact-item">
+                <van-image round width="46" height="46" :src="getAvatar(item.fromUser)" fit="cover">
+                  <template #error>
+                    <div class="avatar-fb size46">{{ (item.fromUser?.nickname || '?')[0] }}</div>
+                  </template>
+                </van-image>
+                <div class="interact-info">
+                  <p class="interact-name">
+                    {{ item.fromUser?.nickname || '用户' }}
+                    <span class="interact-action">{{ interactLabel(item.type) }}</span>
+                  </p>
+                  <p class="interact-time">{{ formatTime(item.createdAt) }}</p>
+                </div>
+                <div class="interact-type-icon">{{ interactIcon(item.type) }}</div>
               </div>
-            </div>
-            <van-empty v-if="!loadingInteract && !interactList.length" description="暂无互动消息" image-size="80" />
-          </van-list>
+              <van-empty v-if="!loadingInteract && !interactList.length" description="暂无互动消息" image-size="70" />
+            </van-list>
+          </div>
         </van-pull-refresh>
       </van-tab>
 
-      <!-- Tab3: 访客 -->
+      <!-- 访客 -->
       <van-tab title="访客" :badge="msgStore.unreadVisitor || ''">
         <van-pull-refresh v-model="refreshingVisitor" @refresh="loadVisitor">
-          <van-list v-model:loading="loadingVisitor" :finished="true" finished-text="">
-            <div v-for="item in visitorList" :key="item.id" class="chat-item"
-                 @click="router.push(`/user-profile/${item.visitorId}`)">
-              <van-image round width="46" height="46" :src="getAvatar(item.visitor)" fit="cover">
-                <template #error>
-                  <div class="avatar-fallback sm">{{ (item.visitor?.nickname || '?')[0] }}</div>
-                </template>
-              </van-image>
-              <div class="chat-info">
-                <div class="chat-top">
-                  <span class="chat-name">{{ item.visitor?.nickname || '神秘访客' }}</span>
-                  <span class="chat-time">{{ formatTime(item.visitTime) }}</span>
+          <div class="tab-content">
+            <van-list v-model:loading="loadingVisitor" :finished="true" finished-text="">
+              <div
+                v-for="item in visitorList"
+                :key="item.id"
+                class="chat-item visitor-item"
+                @click="router.push(`/fellowship/user-profile/${item.visitorId}`)"
+              >
+                <div class="chat-avatar-wrap">
+                  <van-image round width="50" height="50" :src="getAvatar(item.visitor)" fit="cover">
+                    <template #error>
+                      <div class="avatar-fb">{{ (item.visitor?.nickname || '?')[0] }}</div>
+                    </template>
+                  </van-image>
                 </div>
-                <p class="chat-last">来看了你的主页</p>
+                <div class="chat-info">
+                  <div class="chat-row">
+                    <span class="chat-name">{{ item.visitor?.nickname || '神秘访客' }}</span>
+                    <span class="chat-time">{{ formatTime(item.visitTime) }}</span>
+                  </div>
+                  <p class="chat-last visitor-label">👀 来看了你的主页</p>
+                </div>
               </div>
-            </div>
-            <van-empty v-if="!loadingVisitor && !visitorList.length" description="暂无访客" image-size="80" />
-          </van-list>
+              <van-empty v-if="!loadingVisitor && !visitorList.length" description="暂无访客" image-size="70" />
+            </van-list>
+          </div>
         </van-pull-refresh>
       </van-tab>
     </van-tabs>
@@ -112,11 +131,9 @@ const router    = useRouter()
 const msgStore  = useMessageStore()
 const userStore = useUserStore()
 
-// Tab 索引映射
 const TAB_MAP = { chat: 0, interact: 1, visitor: 2 }
 const activeTab = ref(TAB_MAP[route.query.tab] ?? 0)
 
-// 聊天列表
 const chatList      = ref([])
 const loadingChat   = ref(false)
 const refreshingChat = ref(false)
@@ -139,7 +156,6 @@ async function loadChat() {
   }
 }
 
-// 互动列表
 const interactList      = ref([])
 const loadingInteract   = ref(false)
 const refreshingInteract = ref(false)
@@ -157,7 +173,6 @@ async function loadInteract() {
   }
 }
 
-// 访客列表
 const visitorList      = ref([])
 const loadingVisitor   = ref(false)
 const refreshingVisitor = ref(false)
@@ -175,7 +190,6 @@ async function loadVisitor() {
   }
 }
 
-// 拉取未读数
 async function fetchUnread() {
   try {
     const data = await getUnreadCount()
@@ -187,7 +201,6 @@ async function fetchUnread() {
   } catch {}
 }
 
-// 切换 tab 时按需加载
 watch(activeTab, (tab) => {
   if (tab === 0 && !chatList.value.length)    loadChat()
   if (tab === 1 && !interactList.value.length) loadInteract()
@@ -200,7 +213,7 @@ onMounted(async () => {
 })
 
 function goChat(item) {
-  router.push(`/chat/${item.userId}`)
+  router.push(`/fellowship/chat/${item.userId}`)
 }
 
 async function handleDeleteChat(item) {
@@ -222,41 +235,197 @@ function interactLabel(type) {
   const map = { like: '喜欢了你', follow: '关注了你', greet: '向你打了招呼', match: '和你配对成功' }
   return map[type] || '与你互动'
 }
+
+function interactIcon(type) {
+  const map = { like: '❤️', follow: '⭐', greet: '👋', match: '🎉' }
+  return map[type] || '💬'
+}
 </script>
 
 <style scoped>
-.message-page { min-height: 100vh; background: #f8f8f8; padding-bottom: 60px; }
-
-.top-bar {
-  display: flex; align-items: center; height: 48px; padding: 0 16px;
-  background: #fff; position: sticky; top: 0; z-index: 100;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+/* ── Page ── */
+.message-page {
+  min-height: 100vh;
+  background: #f4f6fb;
+  padding-bottom: 72px;
 }
-.top-title { font-size: 18px; font-weight: 700; color: #333; }
+
+/* ── Header ── */
+.msg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 16px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 0 #f0f2f8;
+}
+.msg-header-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a2236;
+  letter-spacing: -0.01em;
+}
+.msg-header-badge {
+  flex-shrink: 0;
+}
+
+/* ── Tabs ── */
+.msg-tabs :deep(.van-tabs__wrap) {
+  background: #fff;
+  box-shadow: 0 1px 0 #f0f2f8;
+}
+.msg-tabs :deep(.van-tabs__nav) {
+  background: transparent;
+  padding: 0 4px;
+}
+.msg-tabs :deep(.van-tab) {
+  font-size: 14px;
+  font-weight: 600;
+}
+.msg-tabs :deep(.van-tabs__line) {
+  height: 3px;
+  border-radius: 2px;
+  width: 24px !important;
+}
+
+/* ── Tab content ── */
+.tab-content {
+  background: #fff;
+  min-height: 200px;
+}
+
+/* ── Chat items ── */
+.chat-cell :deep(.van-swipe-cell__wrapper) {
+  background: #fff;
+}
 
 .chat-item {
-  display: flex; gap: 12px; align-items: center;
-  padding: 12px 16px; background: #fff; border-bottom: 1px solid #f5f5f5; cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  cursor: pointer;
+  border-bottom: 1px solid #f4f6fb;
+  transition: background 0.1s;
 }
-.chat-info  { flex: 1; overflow: hidden; }
-.chat-top   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.chat-name  { font-size: 15px; font-weight: 500; color: #333; }
-.chat-time  { font-size: 11px; color: #bbb; }
-.chat-bottom { display: flex; justify-content: space-between; align-items: center; }
-.chat-last  { font-size: 13px; color: #999; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%; }
+.chat-item:active {
+  background: #fafbfc;
+}
 
+.chat-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.unread-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: #FF5F84;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+}
+
+.chat-info {
+  flex: 1;
+  min-width: 0;
+}
+.chat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.chat-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2236;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+.chat-time {
+  font-size: 11px;
+  color: #c0cad8;
+  flex-shrink: 0;
+}
+.chat-last {
+  font-size: 13px;
+  color: #8898aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.visitor-label {
+  color: #a0abbe;
+}
+
+/* ── Interact items ── */
 .interact-item {
-  display: flex; gap: 12px; align-items: center;
-  padding: 12px 16px; background: #fff; border-bottom: 1px solid #f5f5f5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f4f6fb;
 }
-.interact-info  { flex: 1; }
-.interact-name  { font-size: 14px; font-weight: 500; color: #333; }
-.interact-action { font-weight: 400; color: #FF6B8A; margin-left: 4px; }
-.interact-time  { font-size: 11px; color: #bbb; margin-top: 4px; }
+.interact-info {
+  flex: 1;
+  min-width: 0;
+}
+.interact-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2236;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.interact-action {
+  font-weight: 400;
+  color: #FF5F84;
+  margin-left: 4px;
+}
+.interact-time {
+  font-size: 12px;
+  color: #c0cad8;
+  margin-top: 4px;
+}
+.interact-type-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
 
-.avatar-fallback {
-  border-radius: 50%; background: linear-gradient(135deg, #FF6B8A, #FFB3C1);
-  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700;
+/* ── Avatar fallback ── */
+.avatar-fb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF5F84, #FFB3C4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
 }
-.avatar-fallback.sm { width: 46px; height: 46px; font-size: 16px; }
+.avatar-fb.size46 {
+  width: 46px;
+  height: 46px;
+  font-size: 16px;
+}
 </style>

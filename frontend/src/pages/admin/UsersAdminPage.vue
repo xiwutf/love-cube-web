@@ -1,10 +1,8 @@
-﻿<template>
+<template>
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">用户管理</h1>
-      <p class="platform-subtitle">
-        展示数据库中的真实用户列表（按注册时间倒序）。
-      </p>
+      <p class="platform-subtitle">展示用户列表并支持角色与状态管理。</p>
     </section>
 
     <section class="platform-card" style="margin-top: 12px;">
@@ -30,7 +28,7 @@
             <td>{{ item.phone || '无手机号' }}</td>
             <td>
               <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
-                <option v-for="opt in allowedRoleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </td>
             <td>{{ item.verificationStatus || 'none' }}</td>
@@ -65,7 +63,7 @@
         <p class="admin-row-meta">{{ item.phone || '无手机号' }}</p>
         <div class="admin-row-role">
           <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
-            <option v-for="opt in allowedRoleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
           <button
             class="admin-btn"
@@ -90,23 +88,20 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
-import { getAdminUsers, updateAdminUserRole } from '@/api/adminContent.js'
+import { getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/api/adminContent.js'
 import { useUserStore } from '@/stores/user.js'
 
 const loading = ref(false)
 const users = ref([])
 const savingRoleUserId = ref(null)
 const userStore = useUserStore()
+
 const roleOptions = [
   { value: 'user', label: '普通用户' },
-  { value: 'admin', label: '管理员' },
-  { value: 'super_admin', label: '超级管理员' },
-  { value: 'root', label: 'Root' }
+  { value: 'admin', label: '管理员' }
 ]
-const rootRoleOptions = roleOptions
-const adminRoleOptions = roleOptions.filter((item) => item.value === 'user' || item.value === 'admin')
+
 const currentAdminRole = computed(() => normalizeRole(userStore.syncCurrentUser()?.role || 'user'))
-const allowedRoleOptions = computed(() => (currentAdminRole.value === 'root' ? rootRoleOptions : adminRoleOptions))
 
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
@@ -124,19 +119,12 @@ function normalizeUsers(rows) {
 
 function normalizeRole(value) {
   const role = String(value || '').trim().toLowerCase()
-  if (role === 'admin' || role === 'super_admin' || role === 'root') return role
-  return 'user'
-}
-
-function isHighPrivilegeRole(value) {
-  const role = normalizeRole(value)
-  return role === 'root' || role === 'super_admin'
+  return role === 'admin' ? 'admin' : 'user'
 }
 
 function canEditRole(item) {
   if (!item?.userId) return false
-  if (currentAdminRole.value === 'root') return true
-  return !isHighPrivilegeRole(item.role)
+  return currentAdminRole.value === 'admin'
 }
 
 async function loadUsers() {
@@ -158,8 +146,14 @@ function formatDate(value) {
   return d.toLocaleString('zh-CN', { hour12: false })
 }
 
-function setStatus(_item, _status) {
-  showToast({ type: 'fail', message: '封禁状态接口待接入（当前仅展示真实用户）' })
+async function setStatus(item, status) {
+  try {
+    const result = await updateAdminUserStatus(item.userId, status)
+    item.status = result.status
+    showToast({ type: 'success', message: result.message || '状态已更新' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '操作失败' })
+  }
 }
 
 async function saveRole(item) {
@@ -168,11 +162,11 @@ async function saveRole(item) {
     return
   }
   if (!canEditRole(item)) {
-    showToast({ type: 'fail', message: '仅 ROOT 可修改 ROOT/SUPER_ADMIN 角色' })
+    showToast({ type: 'fail', message: '当前账号无法修改角色' })
     return
   }
-  if (currentAdminRole.value !== 'root' && !['user', 'admin'].includes(item.role)) {
-    showToast({ type: 'fail', message: '普通管理员仅可设置 USER/ADMIN' })
+  if (!['user', 'admin'].includes(item.role)) {
+    showToast({ type: 'fail', message: '仅可设置 USER/ADMIN' })
     return
   }
   try {

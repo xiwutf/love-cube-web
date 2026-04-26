@@ -8,14 +8,17 @@
         <input v-model="draft.title" class="admin-input" placeholder="活动名称" />
         <input v-model="draft.time" class="admin-input" placeholder="时间" />
         <input v-model="draft.location" class="admin-input" placeholder="地点" />
-        <button type="button" class="admin-btn primary" @click="create">新增活动</button>
+        <button type="button" class="admin-btn primary" :disabled="saving" @click="create">新增活动</button>
       </div>
       <textarea v-model="draft.content" class="admin-textarea admin-desktop-only" placeholder="活动详情" />
 
       <p class="admin-mobile-note admin-mobile-only">手机端仅支持查看活动状态和报名人数，编辑发布请在 PC 端完成。</p>
     </section>
 
-    <section class="admin-table-wrap admin-desktop-only">
+    <div v-if="loading" class="admin-loading">加载中…</div>
+    <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">重试</button></div>
+
+    <section v-else class="admin-table-wrap admin-desktop-only">
       <table class="admin-table">
         <thead>
           <tr>
@@ -29,7 +32,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in state.events" :key="item.id">
+          <tr v-for="item in items" :key="item.id">
             <td>{{ item.title }}</td>
             <td>{{ item.time }}<br />{{ item.location }}</td>
             <td>{{ item.signupCount || 0 }}</td>
@@ -38,56 +41,119 @@
             <td><textarea v-model="item.content" class="admin-textarea" /></td>
             <td>
               <div class="admin-cell-actions">
-                <button class="admin-btn" type="button" @click="save(item)">保存</button>
-                <button class="admin-btn" type="button" @click="toggle(item)">{{ item.status === 'published' ? '下架' : '发布' }}</button>
-                <span class="admin-row-meta">{{ item.updatedAt }}</span>
+                <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
+                <button class="admin-btn" type="button" :disabled="saving" @click="toggle(item)">{{ item.status === 'published' ? '下架' : '发布' }}</button>
+                <button class="admin-btn danger" type="button" :disabled="saving" @click="remove(item)">删除</button>
+                <span class="admin-row-meta">{{ formatDate(item.updatedAt) }}</span>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
+      <van-empty v-if="!items.length" description="暂无活动" />
     </section>
 
-    <div class="admin-list admin-mobile-only">
-      <article v-for="item in state.events" :key="item.id" class="admin-row">
+    <div v-if="!loading && !error" class="admin-list admin-mobile-only">
+      <article v-for="item in items" :key="item.id" class="admin-row">
         <div class="admin-row-head">
           <strong>{{ item.title }}</strong>
           <span class="admin-tag" :class="item.status">{{ item.status }}</span>
         </div>
         <p class="admin-row-meta">{{ item.time }} · {{ item.location }}</p>
         <p class="admin-row-meta">报名人数 {{ item.signupCount || 0 }}</p>
-        <p class="admin-row-meta">更新于 {{ item.updatedAt }}</p>
+        <p class="admin-row-meta">更新于 {{ formatDate(item.updatedAt) }}</p>
       </article>
+      <van-empty v-if="!items.length" description="暂无活动" />
     </div>
   </section>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
-import { usePlatformState } from '@/mock/platformState.js'
+import { getEvents, saveEvent, deleteEvent } from '@/api/adminContent.js'
 
-const { state, createContent, updateContent, toggleContentStatus } = usePlatformState()
+const loading = ref(true)
+const saving = ref(false)
+const error = ref('')
+const items = ref([])
 const draft = reactive({ title: '', summary: '', content: '', time: '', location: '', signupCount: 0 })
 
-function create() {
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    items.value = await getEvents()
+  } catch (e) {
+    error.value = e.message || '加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function create() {
   if (!draft.title || !draft.time) return
-  createContent('events', { ...draft })
-  draft.title = ''
-  draft.summary = ''
-  draft.content = ''
-  draft.time = ''
-  draft.location = ''
-  showToast({ message: '活动已创建', type: 'success' })
+  saving.value = true
+  try {
+    const created = await saveEvent({ ...draft, status: 'draft' })
+    items.value.unshift(created)
+    draft.title = ''
+    draft.summary = ''
+    draft.content = ''
+    draft.time = ''
+    draft.location = ''
+    showToast({ message: '活动已创建', type: 'success' })
+  } catch (e) {
+    showToast({ message: e.message || '创建失败', type: 'fail' })
+  } finally {
+    saving.value = false
+  }
 }
 
-function save(item) {
-  updateContent('events', item)
-  showToast({ message: '活动已保存', type: 'success' })
+async function save(item) {
+  saving.value = true
+  try {
+    const updated = await saveEvent({ ...item })
+    Object.assign(item, updated)
+    showToast({ message: '活动已保存', type: 'success' })
+  } catch (e) {
+    showToast({ message: e.message || '保存失败', type: 'fail' })
+  } finally {
+    saving.value = false
+  }
 }
 
-function toggle(item) {
-  toggleContentStatus('events', item.id)
-  showToast({ message: '状态已更新', type: 'success' })
+async function toggle(item) {
+  saving.value = true
+  try {
+    const newStatus = item.status === 'published' ? 'draft' : 'published'
+    const updated = await saveEvent({ ...item, status: newStatus })
+    Object.assign(item, updated)
+    showToast({ message: '状态已更新', type: 'success' })
+  } catch (e) {
+    showToast({ message: e.message || '更新失败', type: 'fail' })
+  } finally {
+    saving.value = false
+  }
 }
+
+async function remove(item) {
+  saving.value = true
+  try {
+    await deleteEvent(item.id)
+    items.value = items.value.filter(i => i.id !== item.id)
+    showToast({ message: '活动已删除', type: 'success' })
+  } catch (e) {
+    showToast({ message: e.message || '删除失败', type: 'fail' })
+  } finally {
+    saving.value = false
+  }
+}
+
+function formatDate(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN', { hour12: false })
+}
+
+onMounted(load)
 </script>

@@ -19,7 +19,6 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 public class AuthController {
     private static final Set<String> BOOTSTRAP_ADMIN_PHONES = Set.of(
-            "13800000000",
             "15030251407"
     );
 

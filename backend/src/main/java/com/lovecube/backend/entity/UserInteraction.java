@@ -107,7 +107,8 @@ public class UserInteraction {
         COMMENT("评论"),
         FOLLOW("关注"),
         GIFT("礼物"),
-        SUPER_LIKE("超级点赞");
+        SUPER_LIKE("超级点赞"),
+        SKIP("跳过");
         
         private final String description;
         

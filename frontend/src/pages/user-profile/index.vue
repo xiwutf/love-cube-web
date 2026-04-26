@@ -47,7 +47,9 @@
       </div>
 
       <div class="actions">
-        <van-button round plain type="primary" icon="like-o" @click="handleLike">喜欢</van-button>
+        <van-button round :plain="!liked" type="primary" icon="like-o" :disabled="liked" @click="handleLike">
+          {{ liked ? '已喜欢' : '喜欢' }}
+        </van-button>
         <van-button round type="primary" icon="chat-o" @click="handleChat">打招呼</van-button>
       </div>
     </template>
@@ -61,7 +63,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showImagePreview, showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
-import { likeUser } from '@/api/match.js'
+import { likeUser, getLikeStatus } from '@/api/match.js'
 import { fetchFellowshipUserDetail } from '@/api/fellowship.js'
 import { toFullUrl } from '@/utils/image.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
@@ -75,8 +77,12 @@ const liked = ref(false)
 
 onMounted(async () => {
   try {
-    const data = await fetchFellowshipUserDetail(route.params.id)
-    user.value = normalizeUser(data)
+    const [detail, status] = await Promise.allSettled([
+      fetchFellowshipUserDetail(route.params.id),
+      getLikeStatus(route.params.id)
+    ])
+    if (detail.status === 'fulfilled') user.value = normalizeUser(detail.value)
+    if (status.status === 'fulfilled') liked.value = !!status.value?.isLiked
   } catch {
     showToast({ message: '加载失败', type: 'fail' })
   } finally {

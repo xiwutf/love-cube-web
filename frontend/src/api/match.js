@@ -19,11 +19,23 @@ export async function likeUser(userId) {
 }
 
 export async function superlikeUser(userId) {
-  return request.post(`/interactions/like/${userId}`)
+  return request.post(`/interactions/superlike/${userId}`)
 }
 
-export async function dislikeUser() {
-  return { interested: false, matched: false }
+export async function dislikeUser(userId) {
+  try {
+    return await request.post(`/interactions/dislike/${userId}`)
+  } catch {
+    return { skipped: true, matched: false }
+  }
+}
+
+export async function getLikeStatus(userId) {
+  try {
+    return await request.get(`/interactions/like-status/${userId}`)
+  } catch {
+    return { isLiked: false }
+  }
 }
 
 export async function filterMatches(data = {}) {

@@ -3,6 +3,7 @@ package com.lovecube.backend.services;
 import com.lovecube.backend.models.MatchRecord;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.MatchRecordRepository;
+import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.utils.JwtUtil;
 import org.slf4j.Logger;
@@ -27,6 +28,9 @@ public class MatchService
 
     @Autowired
     private MatchRecordRepository matchRecordRepository;
+
+    @Autowired
+    private UserInteractionRepository userInteractionRepository;
 
     @Transactional
     public List<User> findMatches(Long userId, Integer minAge, Integer maxAge, Integer gender, String location) {
@@ -71,27 +75,20 @@ public class MatchService
         }
 
 
-        // 计算匹配分数并创建匹配记录
-        List<MatchRecord> newMatchRecords = new ArrayList<>();
+        // 仅为新用户创建匹配记录（跳过已存在的，避免重复写入）
         try {
-            newMatchRecords = potentialMatches.stream()
-                    .map(user -> {
-                        MatchRecord record = new MatchRecord();
-                        record.setUserId(userId);
-                        record.setMatchedUserId(user.getUserid());
-                        record.setMatchScore(calculateMatchScore(currentUser, user));
-                        return record;
-                    })
-                    .collect(Collectors.toList());
-
-            // 保存匹配记录
-            if (!newMatchRecords.isEmpty()) {
-                matchRecordRepository.saveAll(newMatchRecords);
-                logger.info("成功保存 {} 条匹配记录", newMatchRecords.size());
+            for (User user : potentialMatches) {
+                boolean exists = !matchRecordRepository
+                    .findByUserIdAndMatchedUserId(userId, user.getUserid()).isEmpty();
+                if (exists) continue;
+                MatchRecord record = new MatchRecord();
+                record.setUserId(userId);
+                record.setMatchedUserId(user.getUserid());
+                record.setMatchScore(calculateMatchScore(currentUser, user));
+                matchRecordRepository.save(record);
             }
         } catch (Exception e) {
-            logger.error("保存匹配记录失败", e);
-            throw new RuntimeException("保存匹配记录失败: " + e.getMessage());
+            logger.warn("保存匹配记录部分失败（忽略，不影响返回结果）: {}", e.getMessage());
         }
 
         return potentialMatches;
@@ -139,13 +136,21 @@ public class MatchService
     }
 
     /**
-     * 获取所有用户列表（除了当前用户）
+     * 获取推荐列表：排除自己和已操作过（like/superlike/skip）的用户
      */
     public List<User> getAllUsers(Long currentUserId, Integer gender) {
+        List<Long> actedIds = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
+
         if (gender != null) {
-            return userRepository.findByGenderAndUseridNot(gender, currentUserId);
+            return userRepository.findByGenderAndUseridNot(gender, currentUserId)
+                .stream()
+                .filter(u -> !actedIds.contains(u.getUserid()))
+                .collect(Collectors.toList());
         }
-        return userRepository.findByUseridNot(currentUserId);
+        return userRepository.findByUseridNot(currentUserId)
+            .stream()
+            .filter(u -> !actedIds.contains(u.getUserid()))
+            .collect(Collectors.toList());
     }
 
     /**

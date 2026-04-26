@@ -1,36 +1,54 @@
-﻿<template>
+<template>
   <div class="search-page">
-    <div class="search-bar">
+    <!-- Search bar -->
+    <div class="search-header">
       <van-search
         v-model="keyword"
         placeholder="搜索用户昵称"
         show-action
+        shape="round"
+        background="transparent"
         @search="doSearch"
         @input="onInput"
         @cancel="onCancel"
       />
     </div>
 
-    <van-list v-model:loading="loading" :finished="noMore" finished-text="没有更多了" @load="loadMore">
-      <UserCard
-        v-for="u in list"
-        :key="u.userId"
-        :user="u"
-        @click="router.push(`/fellowship/user-profile/${u.userId}`)"
-      />
+    <!-- Empty / discovery state -->
+    <div v-if="!keyword && !list.length && !loading" class="discover-state">
+      <div class="discover-hint">
+        <div class="discover-icon">🔍</div>
+        <p class="discover-title">探索新朋友</p>
+        <p class="discover-desc">输入昵称，找到你感兴趣的人</p>
+      </div>
+      <div class="hot-tags">
+        <span class="hot-tag">五象新区</span>
+        <span class="hot-tag">在校学生</span>
+        <span class="hot-tag">职场新人</span>
+        <span class="hot-tag">爱运动</span>
+        <span class="hot-tag">爱旅行</span>
+        <span class="hot-tag">摄影爱好</span>
+      </div>
+    </div>
 
-      <van-empty
-        v-if="!loading && !keyword && !list.length"
-        description="输入昵称开始搜索"
-        image-size="80"
-      />
-
-      <van-empty
-        v-else-if="!loading && searched && !list.length"
-        description="未找到相关用户"
-        image-size="80"
-      />
-    </van-list>
+    <!-- Results -->
+    <div v-else class="results-wrap">
+      <van-list v-model:loading="loading" :finished="noMore" finished-text="没有更多了" @load="loadMore">
+        <div class="result-list">
+          <UserCard
+            v-for="u in list"
+            :key="u.userId"
+            :user="u"
+            @click="router.push(`/fellowship/user-profile/${u.userId}`)"
+          />
+        </div>
+        <van-empty
+          v-if="!loading && searched && !list.length"
+          description="未找到相关用户"
+          image-size="70"
+        />
+      </van-list>
+    </div>
 
     <AppTabBar />
   </div>
@@ -109,6 +127,88 @@ function loadMore() {
 </script>
 
 <style scoped>
-.search-page { min-height: 100vh; background: #f8f8f8; padding-bottom: 60px; }
-.search-bar  { position: sticky; top: 0; z-index: 10; background: #fff; }
+.search-page {
+  min-height: 100vh;
+  background: #f4f6fb;
+  padding-bottom: 72px;
+}
+
+/* ── Search header ── */
+.search-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fff;
+  padding: 8px 4px 6px;
+  box-shadow: 0 1px 0 #f0f2f8;
+}
+
+/* ── Discovery state ── */
+.discover-state {
+  padding: 40px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.discover-hint {
+  text-align: center;
+}
+.discover-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+.discover-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2236;
+  letter-spacing: -0.01em;
+}
+.discover-desc {
+  font-size: 13px;
+  color: #8898aa;
+  margin-top: 6px;
+}
+
+.hot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.hot-tag {
+  padding: 6px 14px;
+  background: #fff;
+  border: 1px solid #f0d4dd;
+  border-radius: 999px;
+  font-size: 13px;
+  color: #FF5F84;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hot-tag:active {
+  background: #fff0f4;
+}
+
+/* ── Results ── */
+.results-wrap {
+  background: #fff;
+  margin: 12px 0 0;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.user-card) {
+  border-bottom: 1px solid #f4f6fb;
+  padding: 12px 16px;
+}
+:deep(.user-card:last-child) {
+  border-bottom: none;
+}
 </style>

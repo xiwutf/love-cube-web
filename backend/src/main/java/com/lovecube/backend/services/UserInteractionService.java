@@ -157,8 +157,38 @@ public class UserInteractionService {
     }
 
     public UserInteraction superLikeUser(Long fromUserId, Long toUserId) {
-        return createInteraction(fromUserId, toUserId, UserInteraction.InteractionType.SUPER_LIKE,
-            UserInteraction.TargetType.PROFILE, toUserId, null);
+        // 幂等：已 superlike 则不重复创建
+        boolean alreadySuperLiked = interactionRepository.existsByFromUserIdAndToUserIdAndInteractionType(
+            fromUserId, toUserId, UserInteraction.InteractionType.SUPER_LIKE);
+        if (alreadySuperLiked) return null;
+        UserInteraction interaction = new UserInteraction();
+        interaction.setFromUserId(fromUserId);
+        interaction.setToUserId(toUserId);
+        interaction.setInteractionType(UserInteraction.InteractionType.SUPER_LIKE);
+        interaction.setTargetType(UserInteraction.TargetType.PROFILE);
+        interaction.setTargetId(toUserId);
+        return interactionRepository.save(interaction);
+    }
+
+    public void skipUser(Long fromUserId, Long toUserId) {
+        boolean alreadySkipped = interactionRepository.existsByFromUserIdAndToUserIdAndInteractionType(
+            fromUserId, toUserId, UserInteraction.InteractionType.SKIP);
+        if (alreadySkipped) return;
+        UserInteraction interaction = new UserInteraction();
+        interaction.setFromUserId(fromUserId);
+        interaction.setToUserId(toUserId);
+        interaction.setInteractionType(UserInteraction.InteractionType.SKIP);
+        interaction.setTargetType(UserInteraction.TargetType.USER);
+        interactionRepository.save(interaction);
+    }
+
+    public boolean checkMutualLike(Long userId, Long targetUserId) {
+        return interactionRepository.existsByFromUserIdAndToUserIdAndInteractionTypeAndTargetId(
+            targetUserId, userId, UserInteraction.InteractionType.LIKE, userId);
+    }
+
+    public List<Long> getActedUserIds(Long userId) {
+        return interactionRepository.findActedUserIdsByFromUserId(userId);
     }
 
     public UserInteraction sendGift(Long fromUserId, Long toUserId, Long giftId, Integer giftCount, String message) {

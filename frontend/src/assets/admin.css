@@ -50,6 +50,37 @@
   color: #fff;
 }
 
+.admin-btn.danger {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.admin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-loading {
+  margin-top: 24px;
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.admin-error {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fef2f2;
+  border-radius: 10px;
+  color: #b91c1c;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .admin-list {
   margin-top: 12px;
   display: grid;

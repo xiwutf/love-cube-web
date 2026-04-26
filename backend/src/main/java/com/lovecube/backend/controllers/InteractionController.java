@@ -47,10 +47,13 @@ public class InteractionController {
             } else {
                 // 如果没有点赞，则点赞
                 interactionService.likeUser(currentUser.getUserid(), userId);
-                return ResponseEntity.ok(Map.of(
-                    "message", "点赞成功",
-                    "isLiked", true
-                ));
+                boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
+                java.util.Map<String, Object> likeResult = new java.util.HashMap<>();
+                likeResult.put("message", "点赞成功");
+                likeResult.put("isLiked", true);
+                likeResult.put("matched", matched);
+                likeResult.put("matchedUserId", matched ? userId : null);
+                return ResponseEntity.ok(likeResult);
             }
             
         } catch (Exception e) {
@@ -95,6 +98,74 @@ public class InteractionController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "操作失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 跳过用户（不感兴趣）
+     */
+    @PostMapping("/dislike/{userId}")
+    public ResponseEntity<?> dislikeUser(@PathVariable Long userId,
+                                         @RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "用户认证失败"));
+            }
+            interactionService.skipUser(currentUser.getUserid(), userId);
+            return ResponseEntity.ok(Map.of("message", "已跳过", "skipped", true, "matched", false));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "操作失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 超级喜欢用户
+     */
+    @PostMapping("/superlike/{userId}")
+    public ResponseEntity<?> superlikeUser(@PathVariable Long userId,
+                                           @RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "用户认证失败"));
+            }
+            interactionService.superLikeUser(currentUser.getUserid(), userId);
+            boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("message", "超级喜欢成功");
+            result.put("isLiked", true);
+            result.put("matched", matched);
+            result.put("matchedUserId", matched ? userId : null);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "操作失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 查询当前用户是否已喜欢某用户
+     */
+    @GetMapping("/like-status/{userId}")
+    public ResponseEntity<?> getLikeStatus(@PathVariable Long userId,
+                                            @RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "用户认证失败"));
+            }
+            boolean isLiked = interactionService.isLiked(currentUser.getUserid(), userId, userId);
+            return ResponseEntity.ok(Map.of("isLiked", isLiked));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "查询失败"));
         }
     }
 

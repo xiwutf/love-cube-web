@@ -1,5 +1,6 @@
 import request from './request.js'
 
+// Users
 export function getAdminUsers() {
   return request.get('/admin/users')
 }
@@ -8,3 +9,73 @@ export function updateAdminUserRole(userId, role) {
   return request.put(`/admin/users/${userId}/role`, { role })
 }
 
+export function updateAdminUserStatus(userId, status) {
+  return request.put(`/admin/users/${userId}/status`, { status })
+}
+
+// Stats
+export function getAdminStats() {
+  return request.get('/admin/stats')
+}
+
+// Announcements
+export function getAnnouncements() {
+  return request.get('/admin/announcements')
+}
+
+export function saveAnnouncement(payload) {
+  return request.post('/admin/announcements', payload)
+}
+
+export function deleteAnnouncement(id) {
+  return request.delete(`/admin/announcements/${id}`)
+}
+
+// Articles
+export function getArticles() {
+  return request.get('/admin/articles')
+}
+
+export function saveArticle(payload) {
+  return request.post('/admin/articles', payload)
+}
+
+export function deleteArticle(id) {
+  return request.delete(`/admin/articles/${id}`)
+}
+
+// Events
+export function getEvents() {
+  return request.get('/admin/events')
+}
+
+export function saveEvent(payload) {
+  return request.post('/admin/events', payload)
+}
+
+export function deleteEvent(id) {
+  return request.delete(`/admin/events/${id}`)
+}
+
+// Verifications
+export function getVerifications() {
+  return request.get('/admin/verifications')
+}
+
+export function reviewVerification(id, action, reason) {
+  return request.patch(`/admin/verifications/${id}/review`, { action, reason })
+}
+
+// Reports
+export function getReports() {
+  return request.get('/admin/reports')
+}
+
+export function updateReport(id, payload) {
+  return request.patch(`/admin/reports/${id}`, payload)
+}
+
+// Invites
+export function getInvites(params = {}) {
+  return request.get('/admin/invites', { params })
+}

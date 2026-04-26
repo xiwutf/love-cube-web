@@ -1,40 +1,51 @@
 <template>
   <div class="me-page">
-    <header class="top-bar">
-      <h1>个人中心</h1>
-      <div class="actions">
-        <van-icon name="ellipsis" size="20" @click="onMore" />
-        <van-icon name="setting-o" size="20" @click="router.push('/fellowship/settings')" />
+    <!-- Header -->
+    <header class="me-header">
+      <h1 class="me-header-title">个人中心</h1>
+      <div class="me-header-actions">
+        <button class="me-icon-btn" @click="onMore">
+          <van-icon name="ellipsis" size="18" />
+        </button>
+        <button class="me-icon-btn" @click="router.push('/fellowship/settings')">
+          <van-icon name="setting-o" size="18" />
+        </button>
       </div>
     </header>
 
-    <UserCard
-      :avatar="profile.avatarUrl"
-      :nickname="profile.nickname || userInfo?.username || ''"
-      :user-id="userInfo?.userId || userInfo?.id || ''"
-      :age="profile.age"
-      :city="profile.city"
-      :verified="profile.reviewStatus || profile.verified"
-      :online="true"
-      @avatar-click="chooseAvatar"
-      @edit="router.push('/fellowship/profile/edit')"
-    />
+    <!-- Decorative background strip -->
+    <div class="me-bg-strip" />
 
-    <ProfileProgress
-      :percent="completion.percent || profile.profileCompletion || 0"
-      :missing-fields="completion.missingFields || []"
-      @improve="router.push('/fellowship/profile/edit')"
-    />
+    <!-- Content -->
+    <div class="me-content">
+      <UserCard
+        :avatar="profile.avatarUrl"
+        :nickname="profile.nickname || userInfo?.username || ''"
+        :user-id="userInfo?.userId || userInfo?.id || ''"
+        :age="profile.age"
+        :city="profile.city"
+        :verified="profile.reviewStatus || profile.verified"
+        :online="true"
+        @avatar-click="chooseAvatar"
+        @edit="router.push('/fellowship/profile/edit')"
+      />
 
-    <PhotoWall
-      :photos="photoList"
-      @upload-photo="choosePhoto"
-      @delete-photo="removePhoto"
-      @set-primary="setPrimaryPhoto"
-    />
+      <ProfileProgress
+        :percent="completion.percent || profile.profileCompletion || 0"
+        :missing-fields="completion.missingFields || []"
+        @improve="router.push('/fellowship/profile/edit')"
+      />
 
-    <QuickGrid :items="quickItems" @action="onQuickAction" />
-    <SettingsList :items="settingItems" @action="onSettingAction" />
+      <PhotoWall
+        :photos="photoList"
+        @upload-photo="choosePhoto"
+        @delete-photo="removePhoto"
+        @set-primary="setPrimaryPhoto"
+      />
+
+      <QuickGrid :items="quickItems" @action="onQuickAction" />
+      <SettingsList :items="settingItems" @action="onSettingAction" />
+    </div>
 
     <AppTabBar />
 
@@ -246,28 +257,67 @@ onMounted(loadPageData)
 <style scoped>
 .me-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff8fb 0%, #f7f9fc 28%, #f6f8fb 100%);
-  padding: 12px 12px 84px;
+  background: #f4f6fb;
+  padding-bottom: 84px;
+  position: relative;
 }
 
-.top-bar {
-  margin-bottom: 10px;
+/* ── Header ── */
+.me-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 16px;
+  height: 52px;
+  background: #fff;
+  box-shadow: 0 1px 0 #f0f2f8;
 }
-
-.top-bar h1 {
+.me-header-title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a2236;
+  letter-spacing: -0.01em;
+}
+.me-header-actions {
+  display: flex;
+  gap: 4px;
+}
+.me-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f8f9fd;
+  color: #5b6b8a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.me-icon-btn:active {
+  background: #eef1f8;
 }
 
-.actions {
+/* Decorative strip behind the card hero */
+.me-bg-strip {
+  height: 80px;
+  background: linear-gradient(135deg, #FF5F84 0%, #FF8FAA 100%);
+  margin-top: -1px;
+}
+
+/* ── Content ── */
+.me-content {
+  position: relative;
+  margin-top: -40px;
+  padding: 0 12px;
   display: flex;
-  gap: 14px;
-  color: #374151;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .hidden-input {

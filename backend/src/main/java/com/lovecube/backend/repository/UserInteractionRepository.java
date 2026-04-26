@@ -90,6 +90,13 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     Long countByToUserIdAndInteractionType(Long toUserId, UserInteraction.InteractionType interactionType);
     
     /**
+     * 获取当前用户已操作过的目标用户 ID（like/superlike/skip），用于过滤推荐列表
+     */
+    @Query("SELECT DISTINCT ui.toUserId FROM UserInteraction ui WHERE ui.fromUserId = :userId " +
+           "AND ui.interactionType IN ('LIKE', 'SUPER_LIKE', 'SKIP')")
+    List<Long> findActedUserIdsByFromUserId(@Param("userId") Long userId);
+
+    /**
      * 批量标记互动为已读
      */
     @Modifying
