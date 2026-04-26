@@ -1,8 +1,15 @@
 app:
   # 服务器基础URL配置 - 需要更改时请同时更新 frontend/global-config.js
-  base-url: http://192.168.1.158:8090/admin
+  base-url: http://localhost:8090/admin
   avatar-path: /uploads/avatar/
   photos-path: /uploads/photos/
-  # OSS配置（开发环境暂时禁用）
+  # OSS配置（开发环境：通过环境变量控制，避免明文密钥入库）
   oss:
-    enabled: false 
+    enabled: ${OSS_ENABLED:true}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+    endpoint: ${OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+    bucket-name: ${OSS_BUCKET_NAME:love-cube-files}
+    cdn-domain: ${OSS_CDN_DOMAIN:}
+    avatar-folder: ${OSS_AVATAR_FOLDER:avatars/}
+    photos-folder: ${OSS_PHOTOS_FOLDER:photos/}

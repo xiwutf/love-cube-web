@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.config.AppProperties;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.services.FileStorageService;
 import com.lovecube.backend.utils.JwtUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/upload")
@@ -26,10 +26,11 @@ public class UploadController
     
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final String AVATAR_DIR = "uploads/avatar/";
-    private final String PHOTOS_DIR = "uploads/photos/";
     private final String IMAGES_DIR = "uploads/images/";
 
     /** 通用图片上传，前端 H5 统一调用此接口 */
@@ -66,24 +67,17 @@ public class UploadController
         }
 
         try {
-            String originalFilename = file.getOriginalFilename();
-            String ext = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String filename = UUID.randomUUID().toString() + ext;
-
-            String savePath = System.getProperty("user.dir") + "/uploads/avatar/";
-            File dir = new File(savePath);
-            if (!dir.exists()) dir.mkdirs();
-
-            File dest = new File(dir, filename);
-            file.transferTo(dest);
-
-            String avatarUrl = appProperties.getBaseUrl() + appProperties.getAvatarPath() + filename;
+            String ext = resolveSafeImageExtension(file);
+            if (!isValidImageExtension(ext)) {
+                return ResponseEntity.badRequest().body("不支持的文件类型，请上传jpg、jpeg、png、gif格式的图片");
+            }
+            String avatarUrl = fileStorageService.uploadAvatar(file);
 
             Map<String, Object> result = new HashMap<>();
             result.put("url", avatarUrl);
             return ResponseEntity.ok(result);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "上传失败: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
@@ -163,30 +157,21 @@ public class UploadController
         }
 
         try {
-            String originalFilename = file.getOriginalFilename();
-            String ext = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String ext = resolveSafeImageExtension(file);
             
             // 验证文件类型
             if (!isValidImageExtension(ext)) {
                 return ResponseEntity.badRequest().body("不支持的文件类型，请上传jpg、jpeg、png、gif格式的图片");
             }
             
-            String filename = UUID.randomUUID().toString() + ext;
-            String savePath = System.getProperty("user.dir") + "/" + PHOTOS_DIR;
-            File dir = new File(savePath);
-            if (!dir.exists()) dir.mkdirs();
-
-            File dest = new File(dir, filename);
-            file.transferTo(dest);
-
-            String photoUrl = appProperties.getBaseUrl() + appProperties.getPhotosPath() + filename;
+            String photoUrl = fileStorageService.uploadPhoto(file);
 
             Map<String, Object> result = new HashMap<>();
             result.put("url", photoUrl);
             result.put("message", "照片上传成功");
             return ResponseEntity.ok(result);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "上传失败: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
@@ -231,27 +216,18 @@ public class UploadController
             }
 
             try {
-                String originalFilename = file.getOriginalFilename();
-                String ext = originalFilename.substring(originalFilename.lastIndexOf("."));
+                String ext = resolveSafeImageExtension(file);
                 
                 if (!isValidImageExtension(ext)) {
-                    failedFiles.add(originalFilename + " (不支持的文件类型)");
+                    failedFiles.add(displayName(file) + " (不支持的文件类型)");
                     continue;
                 }
                 
-                String filename = UUID.randomUUID().toString() + ext;
-                String savePath = System.getProperty("user.dir") + "/" + PHOTOS_DIR;
-                File dir = new File(savePath);
-                if (!dir.exists()) dir.mkdirs();
-
-                File dest = new File(dir, filename);
-                file.transferTo(dest);
-
-                String photoUrl = appProperties.getBaseUrl() + appProperties.getPhotosPath() + filename;
+                String photoUrl = fileStorageService.uploadPhoto(file);
                 uploadedUrls.add(photoUrl);
 
-            } catch (IOException e) {
-                failedFiles.add(file.getOriginalFilename() + " (上传失败: " + e.getMessage() + ")");
+            } catch (Exception e) {
+                failedFiles.add(displayName(file) + " (上传失败: " + e.getMessage() + ")");
             }
         }
 
@@ -301,10 +277,8 @@ public class UploadController
                 return ResponseEntity.badRequest().body("最多只能保存9张照片");
             }
 
-            // 验证所有URL都是本服务器的照片
-            String baseUrl = appProperties.getBaseUrl() + appProperties.getPhotosPath();
             for (String url : photoUrls) {
-                if (!url.startsWith(baseUrl)) {
+                if (!isValidPhotoUrl(url)) {
                     return ResponseEntity.badRequest().body("包含无效的照片URL: " + url);
                 }
             }
@@ -362,21 +336,8 @@ public class UploadController
             user.setPhotos(photosJson);
             userRepository.save(user);
 
-            // 删除物理文件
-            try {
-                String baseUrl = appProperties.getBaseUrl() + appProperties.getPhotosPath();
-                if (photoUrl.startsWith(baseUrl)) {
-                    String filename = photoUrl.substring(baseUrl.length());
-                    String filePath = System.getProperty("user.dir") + "/" + PHOTOS_DIR + filename;
-                    File file = new File(filePath);
-                    if (file.exists()) {
-                        file.delete();
-                    }
-                }
-            } catch (Exception e) {
-                // 文件删除失败不影响数据库操作
-                System.err.println("删除物理文件失败: " + e.getMessage());
-            }
+            // 尝试删除存储中的实际文件（OSS 或本地）
+            fileStorageService.deleteFile(photoUrl);
 
             Map<String, Object> result = new HashMap<>();
             result.put("message", "照片删除成功");
@@ -418,10 +379,128 @@ public class UploadController
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 存储诊断：用于快速确认当前是否启用 OSS 及关键配置状态（不返回密钥）
+     */
+    @GetMapping("/storage-status")
+    public ResponseEntity<?> getStorageStatus() {
+        AppProperties.Oss oss = appProperties.getOss();
+        boolean ossEnabled = oss != null && oss.isEnabled();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("mode", ossEnabled ? "oss" : "local");
+        result.put("ossEnabled", ossEnabled);
+
+        Map<String, Object> appCfg = new HashMap<>();
+        appCfg.put("baseUrl", appProperties.getBaseUrl());
+        appCfg.put("avatarPath", appProperties.getAvatarPath());
+        appCfg.put("photosPath", appProperties.getPhotosPath());
+        result.put("app", appCfg);
+
+        Map<String, Object> ossCfg = new HashMap<>();
+        ossCfg.put("endpoint", oss == null ? "" : oss.getEndpoint());
+        ossCfg.put("bucketName", oss == null ? "" : oss.getBucketName());
+        ossCfg.put("cdnDomain", oss == null ? "" : oss.getCdnDomain());
+        ossCfg.put("avatarFolder", oss == null ? "" : oss.getAvatarFolder());
+        ossCfg.put("photosFolder", oss == null ? "" : oss.getPhotosFolder());
+        ossCfg.put("accessKeyIdConfigured", oss != null && oss.getAccessKeyId() != null && !oss.getAccessKeyId().isBlank());
+        ossCfg.put("accessKeySecretConfigured", oss != null && oss.getAccessKeySecret() != null && !oss.getAccessKeySecret().isBlank());
+        result.put("oss", ossCfg);
+
+        List<String> warnings = new ArrayList<>();
+        if (ossEnabled) {
+            if (oss == null || oss.getEndpoint() == null || oss.getEndpoint().isBlank()) {
+                warnings.add("OSS endpoint 未配置");
+            }
+            if (oss == null || oss.getBucketName() == null || oss.getBucketName().isBlank()) {
+                warnings.add("OSS bucket-name 未配置");
+            }
+            if (oss == null || oss.getAccessKeyId() == null || oss.getAccessKeyId().isBlank()) {
+                warnings.add("OSS access-key-id 未配置");
+            }
+            if (oss == null || oss.getAccessKeySecret() == null || oss.getAccessKeySecret().isBlank()) {
+                warnings.add("OSS access-key-secret 未配置");
+            }
+        }
+        result.put("warnings", warnings);
+
+        return ResponseEntity.ok(result);
+    }
+
     // 工具方法
     private boolean isValidImageExtension(String extension) {
         String[] validExtensions = {".jpg", ".jpeg", ".png", ".gif", ".JPG", ".JPEG", ".PNG", ".GIF"};
         return Arrays.asList(validExtensions).contains(extension);
+    }
+
+    private String resolveSafeImageExtension(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename != null) {
+            int idx = originalFilename.lastIndexOf(".");
+            if (idx >= 0 && idx < originalFilename.length() - 1) {
+                return originalFilename.substring(idx);
+            }
+        }
+        String contentType = file.getContentType();
+        if (contentType != null) {
+            if (contentType.contains("png")) return ".png";
+            if (contentType.contains("gif")) return ".gif";
+            if (contentType.contains("jpeg") || contentType.contains("jpg")) return ".jpg";
+        }
+        return ".jpg";
+    }
+
+    private String displayName(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        if (name == null || name.isBlank()) return "未命名文件";
+        return name;
+    }
+
+    private boolean isValidPhotoUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
+
+        String trimmed = url.trim();
+        String localPrefix = trimTrailingSlash(appProperties.getBaseUrl()) + appProperties.getPhotosPath();
+        if (trimmed.startsWith(localPrefix)) {
+            return true;
+        }
+
+        AppProperties.Oss oss = appProperties.getOss();
+        if (!oss.isEnabled()) {
+            return false;
+        }
+
+        String photosFolder = normalizeFolder(oss.getPhotosFolder(), "photos/");
+        String cdnDomain = trimTrailingSlash(oss.getCdnDomain());
+        if (cdnDomain != null && !cdnDomain.isBlank()) {
+            if (!cdnDomain.startsWith("http://") && !cdnDomain.startsWith("https://")) {
+                cdnDomain = "https://" + cdnDomain;
+            }
+            String cdnPrefix = cdnDomain + "/" + photosFolder;
+            if (trimmed.startsWith(cdnPrefix)) {
+                return true;
+            }
+        }
+
+        String endpoint = trimTrailingSlash(oss.getEndpoint());
+        if (oss.getBucketName() != null && !oss.getBucketName().isBlank() && endpoint != null && !endpoint.isBlank()) {
+            String ossPrefix = "https://" + oss.getBucketName() + "." + endpoint + "/" + photosFolder;
+            return trimmed.startsWith(ossPrefix);
+        }
+        return false;
+    }
+
+    private String normalizeFolder(String folder, String fallback) {
+        String normalized = folder;
+        if (normalized == null || normalized.isBlank()) normalized = fallback;
+        return normalized.replaceAll("^/+", "").replaceAll("/+$", "") + "/";
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null) return "";
+        return value.replaceAll("/+$", "");
     }
 
     private List<String> parsePhotosJson(String photosJson) {

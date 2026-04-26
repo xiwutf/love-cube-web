@@ -19,27 +19,15 @@ function toFormData(file) {
 }
 
 export async function uploadFellowshipAvatar(file) {
-  try {
-    return await request.post('/fellowship/profile/avatar', toFormData(file), {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  } catch {
-    return request.post('/upload/avatar', toFormData(file), {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  }
+  return request.post('/upload/avatar', toFormData(file), {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 }
 
 export async function uploadFellowshipPhoto(file) {
-  try {
-    return await request.post('/fellowship/profile/photos', toFormData(file), {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  } catch {
-    return request.post('/upload/photos', toFormData(file), {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-  }
+  return request.post('/upload/photos', toFormData(file), {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 }
 
 export async function deleteFellowshipPhoto(photoIdOrUrl) {

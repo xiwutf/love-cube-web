@@ -94,6 +94,12 @@ jobs:
             echo "[deploy] Deployed jar -> $TARGET_JAR"
 
             echo "[deploy] Start backend"
+            export OSS_ENABLED='${{ secrets.OSS_ENABLED }}'
+            export OSS_ACCESS_KEY_ID='${{ secrets.OSS_ACCESS_KEY_ID }}'
+            export OSS_ACCESS_KEY_SECRET='${{ secrets.OSS_ACCESS_KEY_SECRET }}'
+            export OSS_ENDPOINT='${{ secrets.OSS_ENDPOINT }}'
+            export OSS_BUCKET_NAME='${{ secrets.OSS_BUCKET_NAME }}'
+            export OSS_CDN_DOMAIN='${{ secrets.OSS_CDN_DOMAIN }}'
             nohup java -jar "$TARGET_JAR" \
               --spring.config.location=file:/opt/lovecube-api/application.yml \
               > "$APP_LOG" 2>&1 &
