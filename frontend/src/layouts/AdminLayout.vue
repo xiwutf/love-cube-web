@@ -26,7 +26,10 @@
           <p class="admin-main-kicker">Admin Workspace</p>
           <h1 class="admin-main-title">{{ currentSection }}</h1>
         </div>
-        <router-link to="/" class="admin-home-link">打开平台官网</router-link>
+        <div class="admin-main-actions">
+          <RouteBackButton v-if="route.path !== '/admin'" class="admin-route-back" />
+          <router-link to="/" class="admin-home-link">打开平台官网</router-link>
+        </div>
       </header>
 
       <section class="admin-main-content">
@@ -39,6 +42,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import RouteBackButton from '@/components/RouteBackButton.vue'
 
 const route = useRoute()
 
@@ -52,7 +56,8 @@ const navItems = [
   { to: '/admin/verifications', label: '认证审核', icon: '◑' },
   { to: '/admin/reports', label: '举报处理', icon: '◒' },
   { to: '/admin/feedbacks', label: '用户反馈', icon: '◓' },
-  { to: '/admin/modules', label: '模块管理', icon: '◇' }
+  { to: '/admin/modules', label: '模块管理', icon: '◇' },
+  { to: '/admin/home-config', label: '首页配置', icon: '◆' }
 ]
 
 const sectionMap = {
@@ -65,7 +70,8 @@ const sectionMap = {
   '/admin/verifications': '认证审核',
   '/admin/reports': '举报处理',
   '/admin/feedbacks': '用户反馈',
-  '/admin/modules': '模块管理'
+  '/admin/modules': '模块管理',
+  '/admin/home-config': '首页配置'
 }
 
 const currentSection = computed(() => sectionMap[route.path] || '管理中心')
@@ -78,158 +84,193 @@ const todayText = computed(() =>
 .admin-layout {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 276px 1fr;
-  background:
-    radial-gradient(circle at 100% 0, rgba(255, 89, 125, 0.08), transparent 42%),
-    linear-gradient(180deg, #f7f9fd 0%, #f1f5f9 100%);
+  grid-template-columns: 264px 1fr;
+  background: #f1f5f9;
 }
 
 .admin-sidebar {
-  padding: 22px 16px;
+  padding: 20px 14px;
   border-right: 1px solid #e2e8f0;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  background: #fff;
   position: sticky;
   top: 0;
   height: 100vh;
+  overflow-y: auto;
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 10px;
 }
 
 .admin-brand {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   text-decoration: none;
-  color: #131f35;
-  letter-spacing: 0.01em;
+  color: #0f172a;
+  letter-spacing: .01em;
 }
 
 .admin-sub {
-  font-size: 13px;
-  color: #66758f;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .admin-sidebar-card {
-  margin-top: 8px;
-  border-radius: 14px;
+  margin-top: 4px;
+  border-radius: 12px;
   padding: 12px;
-  border: 1px solid #e9eef7;
-  background:
-    linear-gradient(150deg, rgba(255, 92, 129, 0.1), rgba(255, 255, 255, 0.98) 45%),
-    #fff;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .admin-sidebar-card-label {
   margin: 0;
   font-size: 11px;
-  color: #9aa6ba;
+  color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: .08em;
+  font-weight: 700;
 }
 
 .admin-sidebar-card-value {
   margin: 8px 0 2px;
-  font-size: 18px;
-  color: #1a2a44;
+  font-size: 17px;
+  color: #0f172a;
   font-weight: 700;
 }
 
 .admin-sidebar-card-meta {
   margin: 0;
-  font-size: 12px;
-  color: #7f8ca3;
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 .admin-nav {
-  margin-top: 2px;
+  margin-top: 4px;
   display: grid;
-  gap: 6px;
+  gap: 3px;
 }
 
 .admin-nav a,
 .back-home {
   text-decoration: none;
-  color: #394963;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-weight: 700;
+  color: #475569;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-weight: 600;
   font-size: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: transform 0.18s ease, background-color 0.2s ease, color 0.2s ease;
+  transition: all .18s ease;
 }
 
-.admin-nav a:hover,
-.back-home:hover {
-  background: #fff5f8;
-  transform: translateX(2px);
+.admin-nav a:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .nav-icon {
-  color: #ff5f84;
+  color: #94a3b8;
   font-size: 12px;
+  flex-shrink: 0;
 }
 
 .admin-nav a.router-link-exact-active {
-  background: linear-gradient(135deg, #ffe8ee, #fff4f7);
-  color: #ce3f64;
-  box-shadow: inset 0 0 0 1px #ffd4df;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
+.admin-nav a.router-link-exact-active .nav-icon {
+  color: #2563eb;
 }
 
 .back-home {
-  margin-top: 10px;
-  color: #d9486d;
-  background: #fff6f9;
+  margin-top: 12px;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 10px;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.back-home:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e3a8a;
 }
 
 .admin-main {
   min-height: 100vh;
-  padding: 20px;
+  padding: 20px 24px;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .admin-main-header {
-  border: 1px solid #e4eaf4;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 100% 0, rgba(255, 95, 132, 0.16), transparent 48%),
-    #fff;
-  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
 }
 
 .admin-main-kicker {
   margin: 0;
-  color: #8895a9;
+  color: #94a3b8;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.11em;
+  letter-spacing: .12em;
   font-weight: 700;
 }
 
 .admin-main-title {
   margin: 6px 0 0;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.15;
-  color: #122039;
-  letter-spacing: 0.01em;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .admin-home-link {
   text-decoration: none;
-  color: #d9486d;
+  color: #2563eb;
   font-weight: 700;
-  border: 1px solid #ffd3de;
-  background: #fff6f9;
-  border-radius: 999px;
-  padding: 10px 14px;
+  font-size: 13px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  transition: all .18s ease;
+}
+
+.admin-main-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-route-back {
+  box-shadow: none;
+}
+
+.admin-route-back:hover {
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.admin-home-link:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e3a8a;
 }
 
 .admin-main-content {
@@ -248,8 +289,8 @@ const todayText = computed(() =>
     height: auto;
     border-right: 0;
     border-bottom: 1px solid #e2e8f0;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px 12px;
   }
 
   .admin-sidebar-card {
@@ -257,7 +298,7 @@ const todayText = computed(() =>
   }
 
   .admin-brand {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .admin-sub {
@@ -266,16 +307,15 @@ const todayText = computed(() =>
 
   .admin-nav {
     margin-top: 0;
-    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
   }
 
   .admin-nav a,
   .back-home {
     justify-content: center;
     font-size: 12px;
-    padding: 8px 6px;
+    padding: 7px 6px;
   }
 
   .nav-icon {
@@ -283,12 +323,12 @@ const todayText = computed(() =>
   }
 
   .admin-main {
-    padding: 12px 10px 16px;
-    gap: 10px;
+    padding: 12px 14px 20px;
+    gap: 12px;
   }
 
   .admin-main-header {
-    padding: 12px;
+    padding: 12px 14px;
     border-radius: 12px;
   }
 
@@ -298,7 +338,7 @@ const todayText = computed(() =>
 
   .admin-home-link {
     font-size: 12px;
-    padding: 8px 10px;
+    padding: 7px 10px;
   }
 }
 
@@ -310,6 +350,12 @@ const todayText = computed(() =>
   .admin-main-header {
     align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .admin-main-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

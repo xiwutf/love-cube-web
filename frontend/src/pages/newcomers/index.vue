@@ -54,7 +54,7 @@ async function onRefresh() {
 }
 
 function goProfile(id) {
-  router.push(`/user-profile/${id}`)
+  router.push(`/fellowship/user-profile/${id}`)
 }
 </script>
 

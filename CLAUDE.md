@@ -54,7 +54,7 @@ mvnw.cmd spring-boot:run   # Dev server on port 8090 (Windows)
 
 **Auth**: JWT-based stateless auth (jjwt HS256, 10-day expiry). `SecurityConfig` handles token validation; `AuthController` provides H5 login/register endpoints that differ from the original WeChat login flow.
 
-**Data**: Spring Data JPA with Hibernate against Aliyun RDS MySQL (`ddl-auto: none` — schema is pre-created, no migrations). MyBatis is also available for custom queries.
+**Data**: Spring Data JPA with Hibernate against Aliyun RDS MySQL (`ddl-auto: none`). Schema is managed by **Flyway** (`db/migration/V*.sql`, baseline V13); `schema-platform.sql` exists for reference but is NOT auto-executed (`sql.init.mode: never`). MyBatis is also available for custom queries.
 
 **WebSocket**: Spring WebSocket endpoint at `/admin/ws/chat/{userId}` for real-time chat.
 

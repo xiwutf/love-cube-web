@@ -23,3 +23,7 @@ export function fetchEvents(params = { status: 'published' }) {
 export function fetchEventDetail(id) {
   return request.get(`/events/${id}`)
 }
+
+export function fetchHomeConfig() {
+  return request.get('/home/config')
+}

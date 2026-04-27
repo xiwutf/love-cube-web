@@ -1,66 +1,81 @@
-:root {
-  --platform-primary: #ff5f84;
-  --platform-primary-dark: #e84f73;
-  --platform-ink: #0f172a;
-  --platform-ink-soft: #475569;
-  --platform-border: #e2e8f0;
-  --platform-bg: #f6f8fb;
-  --platform-radius-card: 18px;
-  --platform-radius-btn: 999px;
-  --platform-shadow-card: 0 14px 36px rgba(15, 23, 42, 0.06);
-  --platform-shadow-card-hover: 0 20px 44px rgba(15, 23, 42, 0.12);
-  --platform-shadow-btn: 0 14px 26px rgba(255, 95, 132, 0.24);
+/* ============================================================
+   LOVE CUBE — Platform Utility Classes
+   For: front-end platform pages (/articles /events /account…)
+   NOT for: homepage (self-contained) | admin (admin.css)
+   ============================================================ */
+
+/* ── Containers ─────────────────────────────────────────── */
+
+/* Full platform pages (modules, lists) */
+.platform-page {
+  max-width: 1600px;
+  width: calc(100% - 48px);
+  margin: 40px auto 80px;
+}
+
+/* Wide layout variant used by homepage-like platform pages */
+.platform-page-fluid {
+  max-width: none;
+  width: calc(100% - 48px);
+  margin: 12px auto 30px;
+}
+
+/* Detail / reading pages (article, event, announcement) */
+.platform-page-detail {
+  max-width: 1320px;
+  width: calc(100% - 48px);
+  margin: 40px auto 80px;
 }
 
 .platform-container {
+  max-width: 1600px;
   width: calc(100% - 48px);
   margin: 0 auto;
 }
 
-.platform-page {
-  width: calc(100% - 48px);
-  margin: 32px auto 72px;
+.platform-block {
+  margin-top: 28px;
 }
 
-.platform-block {
-  margin-top: 24px;
-}
+/* ── Cards ──────────────────────────────────────────────── */
 
 .platform-card {
-  background: #fff;
-  border: 1px solid var(--platform-border);
-  border-radius: var(--platform-radius-card);
-  box-shadow: var(--platform-shadow-card);
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-sm);
   padding: 24px;
 }
 
 .platform-soft-card {
   background:
-    radial-gradient(circle at 90% 12%, rgba(255, 95, 132, 0.13) 0, rgba(255, 95, 132, 0) 48%),
-    linear-gradient(160deg, #fff3f7 0%, #ffffff 56%);
+    radial-gradient(circle at 90% 12%, rgba(37,99,235,.07) 0, transparent 48%),
+    linear-gradient(160deg, #f0f6ff 0%, #ffffff 56%);
 }
+
+/* ── Typography ─────────────────────────────────────────── */
 
 .platform-kicker {
   margin: 0;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.11em;
-  color: var(--platform-primary);
+  letter-spacing: .13em;
+  color: var(--lc-blue);
 }
 
 .platform-title {
   margin-top: 10px;
-  color: var(--platform-ink);
+  color: var(--lc-text);
   font-size: clamp(32px, 4.4vw, 56px);
   font-weight: 800;
   line-height: 1.12;
-  letter-spacing: -0.01em;
+  letter-spacing: -.01em;
 }
 
 .platform-subtitle {
   margin-top: 14px;
-  color: var(--platform-ink-soft);
+  color: var(--lc-muted);
   line-height: 1.8;
   max-width: 78ch;
   font-size: clamp(15px, 1.2vw, 18px);
@@ -74,24 +89,48 @@
 }
 
 .platform-section-title {
-  color: var(--platform-ink);
+  color: var(--lc-text);
   font-size: clamp(24px, 2.2vw, 30px);
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -.01em;
 }
+
+.platform-heading {
+  margin-top: 10px;
+  color: var(--lc-text);
+  font-size: clamp(20px, 1.6vw, 24px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.platform-text {
+  margin-top: 10px;
+  color: var(--lc-muted);
+  line-height: 1.78;
+}
+
+.platform-meta {
+  margin: 0;
+  color: var(--lc-subtle);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+/* ── Grids ──────────────────────────────────────────────── */
 
 .platform-grid-3 {
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .platform-grid-2 {
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .platform-list {
@@ -100,40 +139,34 @@
   gap: 14px;
 }
 
+/* ── Links / Interactions ───────────────────────────────── */
+
 .platform-item-link {
   display: block;
   text-decoration: none;
   color: inherit;
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  transition: var(--lc-transition);
 }
 
 .platform-item-link:hover {
-  border-color: #ffc6d4;
-  box-shadow: var(--platform-shadow-card-hover);
-  transform: translateY(-2px);
+  border-color: var(--lc-blue-border);
+  box-shadow: var(--lc-shadow);
+  transform: translateY(-3px);
 }
 
-.platform-meta {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 12px;
+.platform-link {
+  text-decoration: none;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  color: var(--lc-blue);
 }
 
-.platform-heading {
-  margin-top: 10px;
-  color: var(--platform-ink);
-  font-size: clamp(20px, 1.6vw, 24px);
+.platform-backlink {
+  text-decoration: none;
   font-weight: 700;
-  line-height: 1.35;
+  color: var(--lc-blue);
 }
 
-.platform-text {
-  margin-top: 10px;
-  color: var(--platform-ink-soft);
-  line-height: 1.78;
-}
+/* ── Buttons ─────────────────────────────────────────────── */
 
 .platform-actions {
   margin-top: 20px;
@@ -142,78 +175,80 @@
   gap: 12px;
 }
 
-.platform-btn,
-.platform-link {
-  text-decoration: none;
-  font-weight: 700;
-}
-
 .platform-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--platform-radius-btn);
-  padding: 12px 20px;
-  min-height: 46px;
+  border-radius: var(--lc-radius-sm);
+  padding: 0 22px;
+  height: 46px;
   font-size: 14px;
-  border: 1px solid transparent;
-  transition: transform 0.18s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition: var(--lc-transition);
+  cursor: pointer;
 }
 
 .platform-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .platform-btn-primary {
-  background: linear-gradient(135deg, var(--platform-primary), var(--platform-primary-dark));
+  background: linear-gradient(135deg, var(--lc-blue-mid), var(--lc-blue));
   color: #fff;
-  box-shadow: var(--platform-shadow-btn);
+  box-shadow: var(--lc-shadow-blue);
 }
 
 .platform-btn-primary:hover {
-  box-shadow: 0 18px 30px rgba(232, 79, 115, 0.32);
+  box-shadow: 0 12px 32px rgba(37,99,235,.34);
 }
 
 .platform-btn-ghost {
-  border-color: #ffd0db;
-  color: var(--platform-primary-dark);
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue-dark);
   background: #fff;
 }
 
 .platform-btn-ghost:hover {
-  border-color: #ffb1c5;
-  background: #fff8fb;
+  border-color: var(--lc-blue);
+  background: var(--lc-blue-light);
 }
 
-.platform-link {
-  color: var(--platform-primary);
+.platform-btn-danger {
+  border-color: #FECACA;
+  color: var(--lc-red);
+  background: #fff;
 }
 
-.platform-backlink {
-  text-decoration: none;
-  color: var(--platform-primary);
-  font-weight: 700;
+.platform-btn-danger:hover {
+  background: var(--lc-red-light);
+  border-color: #FCA5A5;
 }
+
+/* ── Empty state ─────────────────────────────────────────── */
 
 .platform-empty {
   margin-top: 16px;
 }
 
+/* ── Module page layout ──────────────────────────────────── */
+
 .module-page {
   display: grid;
-  gap: 14px;
+  gap: 20px;
 }
 
 .module-hero {
   background:
-    radial-gradient(circle at 88% 8%, rgba(255, 95, 132, 0.16) 0, rgba(255, 95, 132, 0) 48%),
-    linear-gradient(165deg, #ffffff 0%, #fff6f9 58%, #ffffff 100%);
+    radial-gradient(circle at 88% 8%, rgba(37,99,235,.10) 0, transparent 48%),
+    linear-gradient(165deg, #ffffff 0%, #f0f6ff 58%, #ffffff 100%);
 }
 
 .module-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .module-grid-3 {
@@ -221,54 +256,54 @@
 }
 
 .module-card {
-  padding: 20px;
-  border-radius: 16px;
+  padding: 24px;
+  border-radius: var(--lc-radius);
 }
 
 .module-card-link {
   text-decoration: none;
   color: inherit;
   display: block;
-  transition: transform 0.2s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  transition: var(--lc-transition);
 }
 
 .module-card-link:hover {
   transform: translateY(-3px);
-  border-color: #ffc2d2;
-  box-shadow: var(--platform-shadow-card-hover);
+  border-color: var(--lc-blue-border);
+  box-shadow: var(--lc-shadow);
 }
 
 .module-card-meta {
   margin: 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-weight: 700;
 }
 
 .module-card-title {
   margin: 10px 0 0;
   font-size: 22px;
-  color: #10203a;
+  color: var(--lc-text);
   line-height: 1.35;
 }
 
 .module-card-desc {
   margin: 8px 0 0;
-  color: #52627b;
+  color: var(--lc-muted);
   line-height: 1.7;
 }
 
 .module-card-caption {
   margin: 10px 0 0;
   font-size: 13px;
-  color: #6d7f98;
+  color: var(--lc-muted);
 }
 
 .module-card-action {
   margin: 12px 0 0;
   font-size: 13px;
   font-weight: 700;
-  color: var(--platform-primary-dark);
+  color: var(--lc-blue);
 }
 
 .module-block {
@@ -284,24 +319,27 @@
 
 .module-chip {
   text-decoration: none;
-  color: #334155;
-  border: 1px solid #e2e8f0;
+  color: var(--lc-muted);
+  border: 1px solid var(--lc-border);
   background: #fff;
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 8px 16px;
   font-size: 13px;
   font-weight: 700;
+  transition: var(--lc-transition);
 }
 
 .module-chip:hover {
-  border-color: #ffc2d2;
-  color: var(--platform-primary-dark);
-  background: #fff6f9;
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
 }
 
 .module-empty {
   grid-column: 1 / -1;
 }
+
+/* ── Detail page ─────────────────────────────────────────── */
 
 .detail-nav-row {
   display: flex;
@@ -312,25 +350,25 @@
 }
 
 .detail-article {
-  padding: 28px;
+  padding: 32px;
 }
 
 .detail-title {
   margin: 8px 0 0;
   font-size: clamp(30px, 4vw, 44px);
-  color: #0f172a;
+  color: var(--lc-text);
   line-height: 1.18;
 }
 
 .detail-lead {
   margin: 12px 0 0;
-  color: #52627b;
+  color: var(--lc-muted);
   font-size: 18px;
-  line-height: 1.75;
+  line-height: 1.8;
 }
 
 .detail-body {
-  margin-top: 20px;
+  margin-top: 24px;
   color: #334155;
   font-size: 16px;
   line-height: 1.9;
@@ -340,11 +378,11 @@
   margin-top: 14px;
   display: inline-flex;
   align-items: center;
-  background: #fff1f5;
-  border: 1px solid #ffd4df;
-  color: #be4467;
+  background: var(--lc-blue-light);
+  border: 1px solid var(--lc-blue-border);
+  color: var(--lc-blue-dark);
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 7px 14px;
   font-size: 13px;
   font-weight: 700;
 }
@@ -352,26 +390,28 @@
 .detail-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
-  gap: 14px;
+  gap: 20px;
 }
 
 .detail-aside,
 .detail-content {
-  padding: 22px;
+  padding: 24px;
 }
+
+/* ── Account / Form ──────────────────────────────────────── */
 
 .account-form-grid {
   margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .account-label {
   display: grid;
   gap: 6px;
   font-size: 13px;
-  color: #5f7088;
+  color: var(--lc-muted);
   font-weight: 700;
 }
 
@@ -382,17 +422,26 @@
 .policy-section {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid #edf2f8;
+  border-top: 1px solid var(--lc-border);
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .platform-container,
-  .platform-page {
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .platform-page,
+  .platform-page-detail,
+  .platform-container {
     width: calc(100% - 32px);
   }
 
-  .platform-page {
-    margin: 28px auto 56px;
+  .platform-page-fluid {
+    width: calc(100% - 32px);
+    margin: 12px auto 28px;
+  }
+
+  .platform-page,
+  .platform-page-detail {
+    margin: 32px auto 56px;
   }
 
   .platform-grid-3 {
@@ -410,48 +459,50 @@
 }
 
 @media (max-width: 767px) {
-  .platform-container,
-  .platform-page {
+  .platform-page,
+  .platform-page-detail,
+  .platform-container {
     width: calc(100% - 24px);
   }
 
-  .platform-page {
-    margin: 16px auto 30px;
+  .platform-page-fluid {
+    width: calc(100% - 24px);
+    margin: 8px auto 24px;
+  }
+
+  .platform-page,
+  .platform-page-detail {
+    margin: 20px auto 40px;
   }
 
   .platform-block {
-    margin-top: 14px;
+    margin-top: 16px;
   }
 
   .platform-card {
     border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-    padding: 16px;
+    padding: 18px;
   }
 
   .platform-title {
-    font-size: 30px;
-    line-height: 1.18;
+    font-size: 28px;
+    line-height: 1.2;
   }
 
   .platform-subtitle,
   .platform-text {
-    line-height: 1.65;
     font-size: 14px;
-  }
-
-  .platform-section-head {
-    align-items: flex-end;
+    line-height: 1.7;
   }
 
   .platform-section-title {
-    font-size: 21px;
+    font-size: 20px;
   }
 
   .platform-grid-3,
   .platform-grid-2 {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 
   .platform-heading {
@@ -463,20 +514,19 @@
   }
 
   .platform-btn {
-    min-height: 48px;
+    height: 48px;
     width: 100%;
-    padding: 12px 16px;
     font-size: 15px;
   }
 
   .module-grid,
   .module-grid-3 {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 
   .module-card {
-    padding: 16px;
+    padding: 18px;
   }
 
   .module-card-title {
@@ -484,17 +534,16 @@
   }
 
   .detail-article {
-    padding: 18px;
+    padding: 20px;
   }
 
   .detail-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .detail-lead,
   .detail-body {
-    font-size: 14px;
-    line-height: 1.72;
+    font-size: 15px;
   }
 
   .account-form-grid {

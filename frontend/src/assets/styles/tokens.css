@@ -1,21 +1,109 @@
-:root {
-  --color-primary: #ff6b8a;
-  --color-primary-light: #ffe8ee;
-  --color-text: #333333;
-  --color-text-secondary: #888888;
-  --color-border: #f0f0f0;
-  --color-bg: #f8f8f8;
-  --color-white: #ffffff;
+/* ============================================================
+   LOVE CUBE — Design Token System
+   Platform primary: Blue #2563EB
+   Fellowship accent: Pink #EC4899 (fellowship only)
+   ============================================================ */
 
-  --platform-primary: #ff5f84;
-  --platform-primary-dark: #e84f73;
-  --platform-ink: #0f172a;
-  --platform-ink-soft: #475569;
-  --platform-border: #e2e8f0;
-  --platform-bg: #f6f8fb;
-  --platform-radius-card: 18px;
-  --platform-radius-btn: 999px;
-  --platform-shadow-card: 0 14px 36px rgba(15, 23, 42, 0.06);
-  --platform-shadow-card-hover: 0 20px 44px rgba(15, 23, 42, 0.12);
-  --platform-shadow-btn: 0 14px 26px rgba(255, 95, 132, 0.24);
+:root {
+  /* ── Brand Blue (platform primary) ─────────────────────── */
+  --lc-blue:            #2563EB;
+  --lc-blue-dark:       #1E3A8A;
+  --lc-blue-mid:        #1D4ED8;
+  --lc-blue-light:      #EFF6FF;
+  --lc-blue-border:     #BFDBFE;
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --lc-text:            #0F172A;
+  --lc-muted:           #475569;
+  --lc-subtle:          #94A3B8;
+
+  /* ── Surface ────────────────────────────────────────────── */
+  --lc-surface:         #FFFFFF;
+  --lc-bg:              #F8FAFC;
+  --lc-soft:            #F1F5F9;
+  --lc-border:          #E2E8F0;
+
+  /* ── Fellowship accent (sparingly) ─────────────────────── */
+  --lc-pink:            #EC4899;
+  --lc-pink-light:      #FCE7F3;
+  --lc-pink-border:     #FBCFE8;
+
+  /* ── Status ─────────────────────────────────────────────── */
+  --lc-green:           #16A34A;
+  --lc-green-light:     #DCFCE7;
+  --lc-red:             #DC2626;
+  --lc-red-light:       #FEF2F2;
+  --lc-amber:           #D97706;
+  --lc-amber-light:     #FEF3C7;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --lc-radius-lg:       20px;
+  --lc-radius:          16px;
+  --lc-radius-sm:       10px;
+  --lc-radius-xs:       6px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --lc-shadow-sm:       0 4px 20px rgba(15,23,42,.06);
+  --lc-shadow:          0 10px 30px rgba(15,23,42,.10);
+  --lc-shadow-lg:       0 20px 48px rgba(15,23,42,.14);
+  --lc-shadow-blue:     0 8px 24px rgba(37,99,235,.22);
+
+  /* ── Spacing scale ──────────────────────────────────────── */
+  --lc-space-1:         4px;
+  --lc-space-2:         8px;
+  --lc-space-3:         12px;
+  --lc-space-4:         16px;
+  --lc-space-5:         20px;
+  --lc-space-6:         24px;
+  --lc-space-8:         32px;
+  --lc-space-10:        40px;
+  --lc-space-12:        48px;
+  --lc-space-16:        64px;
+  --lc-space-20:        80px;
+
+  /* ── Typography scale ────────────────────────────────────── */
+  --lc-text-xs:         11px;
+  --lc-text-sm:         13px;
+  --lc-text-base:       14px;
+  --lc-text-md:         16px;
+  --lc-text-lg:         18px;
+  --lc-text-xl:         20px;
+
+  /* ── Z-index ─────────────────────────────────────────────── */
+  --lc-z-dropdown:      100;
+  --lc-z-sticky:        200;
+  --lc-z-overlay:       300;
+  --lc-z-modal:         400;
+  --lc-z-toast:         500;
+
+  /* ── Transition ─────────────────────────────────────────── */
+  --lc-transition:      all .25s ease;
+
+  /* ─────────────────────────────────────────────────────────
+     LEGACY platform tokens — remapped to new blue system
+     (Used by platform.css / admin.css utility classes)
+     ───────────────────────────────────────────────────────── */
+  --platform-primary:           #2563EB;
+  --platform-primary-dark:      #1E3A8A;
+  --platform-ink:               #0F172A;
+  --platform-ink-soft:          #475569;
+  --platform-border:            #E2E8F0;
+  --platform-bg:                #F8FAFC;
+  --platform-radius-card:       16px;
+  --platform-radius-btn:        10px;
+  --platform-shadow-card:       0 4px 20px rgba(15,23,42,.06);
+  --platform-shadow-card-hover: 0 10px 30px rgba(15,23,42,.10);
+  --platform-shadow-btn:        0 8px 24px rgba(37,99,235,.22);
+
+  /* ─────────────────────────────────────────────────────────
+     FELLOWSHIP / VANT tokens — pink social accent
+     Kept separate so fellowship mobile UI stays warm
+     ───────────────────────────────────────────────────────── */
+  --color-primary:        #EC4899;
+  --color-primary-light:  #FCE7F3;
+  --color-text:           #0F172A;
+  --color-text-secondary: #475569;
+  --color-border:         #E2E8F0;
+  --color-bg:             #F8FAFC;
+  --color-white:          #FFFFFF;
 }

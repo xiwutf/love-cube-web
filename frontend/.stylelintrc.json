@@ -1,0 +1,22 @@
+{
+  "extends": ["stylelint-config-recommended-vue"],
+  "rules": {
+    "color-named": "never",
+    "color-no-invalid-hex": true,
+    "no-descending-specificity": null,
+    "declaration-property-value-disallowed-list": {
+      "color":            ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "background-color": ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "border-color":     ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "fill":             ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"]
+    }
+  },
+  "overrides": [
+    {
+      "files": ["src/assets/styles/*.css"],
+      "rules": {
+        "declaration-property-value-disallowed-list": null
+      }
+    }
+  ]
+}

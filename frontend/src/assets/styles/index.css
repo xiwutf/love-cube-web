@@ -1,6 +1,14 @@
-@import './tokens.css';
-@import './base.css';
-@import './vant-theme.css';
-@import './fellowship.css';
-@import './platform.css';
-@import './admin.css';
+/* ── Foundation ─────────────────────────────────────────── */
+@import './tokens.css';      /* design tokens — all vars live here */
+@import './base.css';        /* reset + html/body/app */
+
+/* ── Atoms ───────────────────────────────────────────────── */
+@import './utilities.css';   /* u-* single-purpose helpers */
+
+/* ── UI library overrides ────────────────────────────────── */
+@import './vant-theme.css';  /* Vant 4 color overrides (fellowship) */
+
+/* ── Layer-specific utilities ────────────────────────────── */
+@import './fellowship.css';  /* fellowship mobile shell */
+@import './platform.css';    /* platform page utility classes */
+@import './admin.css';       /* admin page utility classes */

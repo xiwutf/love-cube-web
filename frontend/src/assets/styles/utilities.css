@@ -1,0 +1,78 @@
+/* ============================================================
+   LOVE CUBE — Utility Atoms
+   Single-purpose helpers shared across platform, admin, fellowship.
+   Pick from here first; add here if genuinely reusable.
+   ============================================================ */
+
+/* ── Display ─────────────────────────────────────────────── */
+.u-flex         { display: flex; }
+.u-flex-col     { display: flex; flex-direction: column; }
+.u-inline-flex  { display: inline-flex; }
+.u-grid         { display: grid; }
+.u-block        { display: block; }
+.u-hidden       { display: none; }
+
+/* ── Flex alignment ──────────────────────────────────────── */
+.u-items-start   { align-items: flex-start; }
+.u-items-center  { align-items: center; }
+.u-items-end     { align-items: flex-end; }
+.u-justify-start { justify-content: flex-start; }
+.u-justify-center{ justify-content: center; }
+.u-justify-end   { justify-content: flex-end; }
+.u-justify-between { justify-content: space-between; }
+.u-flex-wrap     { flex-wrap: wrap; }
+.u-flex-1        { flex: 1; }
+.u-shrink-0      { flex-shrink: 0; }
+
+/* ── Gap ─────────────────────────────────────────────────── */
+.u-gap-1  { gap: var(--lc-space-1); }
+.u-gap-2  { gap: var(--lc-space-2); }
+.u-gap-3  { gap: var(--lc-space-3); }
+.u-gap-4  { gap: var(--lc-space-4); }
+.u-gap-5  { gap: var(--lc-space-5); }
+.u-gap-6  { gap: var(--lc-space-6); }
+
+/* ── Margin top ──────────────────────────────────────────── */
+.u-mt-0  { margin-top: 0; }
+.u-mt-1  { margin-top: var(--lc-space-1); }
+.u-mt-2  { margin-top: var(--lc-space-2); }
+.u-mt-3  { margin-top: var(--lc-space-3); }
+.u-mt-4  { margin-top: var(--lc-space-4); }
+.u-mt-5  { margin-top: var(--lc-space-5); }
+.u-mt-6  { margin-top: var(--lc-space-6); }
+.u-mt-8  { margin-top: var(--lc-space-8); }
+.u-mt-10 { margin-top: var(--lc-space-10); }
+
+/* ── Text ─────────────────────────────────────────────────── */
+.u-text-xs     { font-size: var(--lc-text-xs); }
+.u-text-sm     { font-size: var(--lc-text-sm); }
+.u-text-base   { font-size: var(--lc-text-base); }
+.u-text-md     { font-size: var(--lc-text-md); }
+.u-text-lg     { font-size: var(--lc-text-lg); }
+.u-text-center { text-align: center; }
+.u-text-right  { text-align: right; }
+.u-font-bold   { font-weight: 700; }
+.u-font-800    { font-weight: 800; }
+.u-truncate    { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Color shortcuts ─────────────────────────────────────── */
+.u-color-blue   { color: var(--lc-blue); }
+.u-color-muted  { color: var(--lc-muted); }
+.u-color-subtle { color: var(--lc-subtle); }
+.u-color-red    { color: var(--lc-red); }
+.u-color-green  { color: var(--lc-green); }
+
+/* ── Width / overflow ────────────────────────────────────── */
+.u-w-full      { width: 100%; }
+.u-min-w-0     { min-width: 0; }
+.u-overflow-hidden { overflow: hidden; }
+
+/* ── Cursor / interaction ────────────────────────────────── */
+.u-pointer     { cursor: pointer; }
+.u-no-select   { user-select: none; }
+
+/* ── Rounded ─────────────────────────────────────────────── */
+.u-round       { border-radius: 999px; }
+.u-rounded-sm  { border-radius: var(--lc-radius-xs); }
+.u-rounded     { border-radius: var(--lc-radius-sm); }
+.u-rounded-lg  { border-radius: var(--lc-radius); }

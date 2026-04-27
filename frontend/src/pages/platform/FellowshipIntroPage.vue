@@ -70,12 +70,12 @@
 
 .intro-hero {
   position: relative;
-  min-height: 560px;
+  min-height: 590px;
   border-radius: 30px;
   overflow: hidden;
-  border: 1px solid #f1d7e1;
-  box-shadow: 0 24px 52px rgba(15, 23, 42, 0.12);
-  background: #f9e5ed;
+  border: 1px solid var(--lc-pink-border);
+  box-shadow: var(--lc-shadow-lg);
+  background: var(--lc-pink-light);
 }
 
 .intro-hero-bg {
@@ -93,13 +93,13 @@
 .intro-hero-overlay {
   position: relative;
   z-index: 2;
-  padding: 52px 48px 58px;
-  max-width: 640px;
+  padding: 52px 48px 190px;
+  max-width: 610px;
 }
 
 .intro-kicker {
   margin: 0;
-  color: #ff4f83;
+  color: var(--lc-pink);
   font-size: 12px;
   letter-spacing: 0.14em;
   font-weight: 700;
@@ -108,25 +108,27 @@
 
 .intro-title {
   margin-top: 14px;
-  font-size: clamp(58px, 5vw, 84px);
+  font-size: clamp(52px, 4.4vw, 72px);
   line-height: 1.08;
   letter-spacing: 0;
-  color: #1f2538;
+  color: var(--lc-text);
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-weight: 900;
 }
 
 .intro-subtitle {
   margin-top: 16px;
-  font-size: 19px;
-  line-height: 1.65;
-  color: #21293f;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--lc-text);
   max-width: 28ch;
   font-weight: 600;
 }
 
 .intro-actions {
-  margin-top: 30px;
+  position: relative;
+  z-index: 3;
+  margin-top: 24px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -146,29 +148,30 @@
 }
 
 .intro-btn-primary {
-  color: #fff;
+  color: var(--lc-surface);
   background: linear-gradient(135deg, #ff5f84, #e84f73);
   box-shadow: 0 12px 24px rgba(255, 95, 132, 0.34);
 }
 
 .intro-btn-ghost {
   background: rgba(255, 255, 255, 0.96);
-  border-color: #f3c9d6;
-  color: #364053;
+  border-color: var(--lc-pink-border);
+  color: var(--lc-text);
 }
 
 .intro-btn-rule {
   background: rgba(37, 99, 235, 0.92);
-  color: #fff;
+  color: var(--lc-surface);
 }
 
 .intro-slogan-side {
+  --_c: rgba(255, 255, 255, 0.96);
   position: absolute;
   z-index: 2;
   right: 56px;
   top: 64px;
   text-align: right;
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--_c);
   font-size: 48px;
   font-family: 'KaiTi', 'STKaiti', serif;
   font-weight: 500;
@@ -182,31 +185,32 @@
   z-index: 2;
   left: 32px;
   right: 32px;
-  bottom: 24px;
+  bottom: 22px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .intro-badge {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.58);
   border-radius: 14px;
-  border: 1px solid #f4dbe4;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(5px);
   padding: 14px 16px;
 }
 
 .intro-badge strong {
   display: block;
   font-size: 24px;
-  color: #1f2a44;
+  color: var(--lc-text);
 }
 
 .intro-badge span {
   display: block;
   margin-top: 6px;
   font-size: 14px;
-  color: #5f6a80;
+  color: var(--lc-muted);
 }
 
 .intro-feature-section {
@@ -217,10 +221,10 @@
 }
 
 .intro-feature-card {
-  background: #fff;
-  border: 1px solid #f2d7e1;
-  border-radius: 16px;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-pink-border);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-sm);
   padding: 18px 16px 20px;
 }
 
@@ -230,8 +234,8 @@
   border-radius: 10px;
   display: grid;
   place-items: center;
-  color: #ff4f83;
-  background: #ffe8ef;
+  color: var(--lc-pink);
+  background: var(--lc-pink-light);
   font-size: 13px;
   font-weight: 800;
 }
@@ -239,7 +243,7 @@
 .intro-feature-title {
   margin-top: 8px;
   font-size: 28px;
-  color: #1f2a44;
+  color: var(--lc-text);
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -247,7 +251,7 @@
 .intro-feature-text {
   margin-top: 8px;
   font-size: 16px;
-  color: #5d687f;
+  color: var(--lc-muted);
   line-height: 1.5;
 }
 

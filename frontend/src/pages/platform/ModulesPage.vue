@@ -159,13 +159,16 @@ const modules = [
 }
 
 .mp-hero {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 84px 0 72px;
+  background: linear-gradient(140deg, #f9fbff 0%, #eef3ff 55%, #e9efff 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-top: 0;
+  padding: 22px 0 18px;
+  box-shadow: none;
 }
 
 .mp-kicker {
-  margin: 0 0 14px;
+  margin: 0 0 6px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -174,24 +177,24 @@ const modules = [
 }
 
 .mp-title {
-  margin: 0 0 16px;
-  font-size: clamp(42px, 5vw, 64px);
-  font-weight: 900;
+  margin: 0 0 6px;
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 800;
   color: var(--text);
   letter-spacing: 0;
-  line-height: 1.08;
+  line-height: 1.14;
 }
 
 .mp-sub {
   margin: 0;
-  font-size: 18px;
+  font-size: 14px;
   color: var(--text-3);
-  line-height: 1.75;
+  line-height: 1.6;
   max-width: 720px;
 }
 
 .mp-body {
-  padding: 84px 0;
+  padding: 16px 0 56px;
 }
 
 .mp-grid {
@@ -260,8 +263,8 @@ const modules = [
 }
 
 .mp-name {
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 19px;
+  font-weight: 800;
   color: var(--text);
   margin: 0;
   letter-spacing: 0;
@@ -314,7 +317,7 @@ const modules = [
 }
 .mp-note-link:hover { text-decoration: underline; }
 
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .mc { width: calc(100% - 32px); }
   .mp-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -327,11 +330,16 @@ const modules = [
 
 @media (max-width: 767px) {
   .mc { width: calc(100% - 24px); }
-  .mp-hero { padding: 56px 0 48px; }
-  .mp-title { font-size: clamp(36px, 11vw, 52px); }
-  .mp-sub { font-size: 16px; line-height: 1.72; }
-  .mp-body { padding: 56px 0; }
+  .mp-hero {
+    margin-top: 0;
+    border-radius: 10px;
+    padding: 16px 0 14px;
+  }
+  .mp-title { font-size: clamp(22px, 8vw, 30px); }
+  .mp-sub { font-size: 13px; line-height: 1.55; }
+  .mp-body { padding: 12px 0 40px; }
   .mp-grid { grid-template-columns: 1fr; gap: 14px; }
   .mp-card { padding: 24px; min-height: auto; }
+  .mp-name { font-size: 17px; }
 }
 </style>

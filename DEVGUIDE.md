@@ -35,8 +35,9 @@
 |------|--------------|------------|
 | 路由前缀 | `/` | `/fellowship/` |
 | 布局 | 全宽 PlatformLayout | max 480px FellowshipLayout |
-| UI 库 | 纯 CSS | Vant 4 |
+| UI 库 | 纯 CSS（.platform-* 工具类） | Vant 4 |
 | 全局样式 | `assets/styles/platform.css` | `assets/styles/fellowship.css` |
+| 共用基础 | `assets/styles/tokens.css`（变量）+ `utilities.css`（u-* 原子类） | 同左 |
 | 组件目录 | `src/components/` | `src/components/fellowship/` |
 
 ---
@@ -158,25 +159,113 @@ async function load() {
 
 ### 3.6 样式规范
 
+#### 样式池结构
+
+所有全局样式集中在 `frontend/src/assets/styles/`，由 `index.css` 统一引入：
+
+```
+assets/styles/
+  index.css        → 入口，按顺序 @import 以下所有文件
+  tokens.css       → 所有 CSS 变量（颜色、间距、字号、阴影、圆角、z-index）
+  base.css         → 全局 reset + html/body/#app
+  utilities.css    → u-* 原子工具类（flex、gap、margin-top、文字、圆角等）
+  vant-theme.css   → Vant 4 组件颜色覆盖
+  fellowship.css   → 交友层移动端壳 (.fellowship-shell / .fellowship-layout)
+  platform.css     → 平台层工具类（.platform-* / .module-* / .detail-*）
+  admin.css        → 管理后台工具类（.admin-* 表格/按钮/标签/表单）
+```
+
+#### 工作流：先查池，再定义，再使用
+
+```
+需要某个样式
+  ↓
+1. 查 tokens.css — 有对应 CSS 变量吗？（--lc-blue / --lc-space-4 / --lc-shadow …）
+  ↓ 有 → 直接 var(--lc-*)
+2. 查 utilities.css — 有对应原子类吗？（u-flex / u-mt-4 / u-truncate …）
+  ↓ 有 → 直接用 class
+3. 查层级文件 — 有对应组合类吗？（.platform-card / .admin-btn / .module-grid …）
+  ↓ 有 → 直接用 class
+4. 都没有 → 在对应文件中定义后再使用（token → tokens.css，原子 → utilities.css，
+            平台组合 → platform.css，管理组合 → admin.css），禁止直接写魔法值
+```
+
+#### UI 库
+
+| 层 | 使用 |
+|----|------|
+| 交友层（H5） | **Vant 4**（已配置，直接用 `<van-*>` 组件） |
+| 平台层（桌面） | 纯 CSS 工具类（`.platform-*`） |
+| 管理后台 | 纯 CSS 工具类（`.admin-*`） |
+
+#### 使用示例
+
 ```vue
+<template>
+  <!-- ✅ 正确：用池里的类 -->
+  <div class="platform-card u-flex u-gap-4">
+    <h2 class="platform-section-title">标题</h2>
+    <button class="platform-btn platform-btn-primary">操作</button>
+  </div>
+
+  <!-- ✅ 正确：scoped 内只写无法复用的布局细节，颜色用 token -->
+  <div class="banner">内容</div>
+</template>
+
 <style scoped>
-/* 所有样式必须 scoped，禁止全局样式污染 */
-/* 交友层使用 Vant 变量覆盖（:deep() 或 CSS 变量） */
-/* 平台层使用 platform.css 里的 .platform-* 类 */
-/* 颜色不要硬编码，使用变量 */
+.banner {
+  background: linear-gradient(135deg, var(--lc-blue-mid), var(--lc-blue));
+  border-radius: var(--lc-radius-lg);
+  padding: var(--lc-space-8);
+}
 </style>
 ```
 
-**交友层主色：**
-```css
---primary: #FF5F84;
---primary-light: #FFB3C4;
---bg: #f4f6fb;
---text: #1a2236;
---text-secondary: #8898aa;
+#### 禁止行为
+
+```vue
+<style scoped>
+/* ❌ 硬编码颜色 */
+color: #2563EB;          /* 改为 var(--lc-blue) */
+background: #F8FAFC;     /* 改为 var(--lc-bg) */
+
+/* ❌ 硬编码间距魔法值 */
+margin-top: 20px;        /* 改为 var(--lc-space-5) 或 class="u-mt-5" */
+gap: 16px;               /* 改为 var(--lc-space-4) 或 class="u-gap-4" */
+
+/* ❌ 没有 scoped（全局污染） */
+</style>
+
+<!-- ❌ 引入 Tailwind 或其他未集成的 CSS 框架 -->
 ```
 
-**禁用 Tailwind**（项目未引入）。平台层无 Vant。
+#### Token 速查
+
+```css
+/* 颜色 */
+--lc-blue / --lc-blue-mid / --lc-blue-dark / --lc-blue-light / --lc-blue-border
+--lc-text / --lc-muted / --lc-subtle
+--lc-surface / --lc-bg / --lc-soft / --lc-border
+--lc-green / --lc-red / --lc-amber（及各自 -light 变体）
+--lc-pink / --lc-pink-light（仅交友层）
+
+/* 间距（4 的倍数） */
+--lc-space-1(4px) / -2(8px) / -3(12px) / -4(16px) / -5(20px)
+--lc-space-6(24px) / -8(32px) / -10(40px) / -12(48px) / -20(80px)
+
+/* 字号 */
+--lc-text-xs(11px) / -sm(13px) / -base(14px) / -md(16px) / -lg(18px) / -xl(20px)
+
+/* 圆角 */
+--lc-radius-xs(6px) / -sm(10px) / -（16px）/ -lg(20px)
+
+/* 阴影 */
+--lc-shadow-sm / --lc-shadow / --lc-shadow-lg / --lc-shadow-blue
+
+/* 其他 */
+--lc-transition   /* all .25s ease */
+--lc-z-dropdown / -sticky / -overlay / -modal / -toast
+```
 
 ### 3.7 路由跳转
 
@@ -392,37 +481,31 @@ if (currentUser == null) {
 ### 6.1 核心原则
 
 - `ddl-auto: none` — Hibernate **不自动建表/改表**
-- 所有 schema 变更通过 SQL 脚本管理
-- 每次启动，`schema-platform.sql` 会被执行（幂等脚本）
+- `sql.init.mode: never` — `schema-platform.sql` **不会在启动时自动执行**，仅作历史参考
+- 所有 schema 变更通过 **Flyway 迁移文件**管理，每次启动自动执行未跑过的版本
+- Flyway 基线版本为 V13（已存在的生产库以此为起点）
 
 ### 6.2 新增字段 / 新建表
 
-**在 `backend/src/main/resources/schema-platform.sql` 末尾追加，使用幂等写法：**
+**在 `backend/src/main/resources/db/migration/` 下新建迁移文件，命名规则：`V{下一个版本号}__{简短描述}.sql`**
 
 ```sql
--- 新建表 — IF NOT EXISTS
-CREATE TABLE IF NOT EXISTS your_table (
+-- 示例：V17__add_user_tags.sql
+
+-- 新建表
+CREATE TABLE IF NOT EXISTS user_tags (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    tag VARCHAR(64) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id)
 );
 
--- 新增列 — 检查是否已存在
-SET @db = DATABASE();
-SET @sql = (
-    SELECT IF(COUNT(*) = 0,
-        'ALTER TABLE your_table ADD COLUMN new_column VARCHAR(64) NULL',
-        'SELECT 1')
-    FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'your_table' AND COLUMN_NAME = 'new_column'
-);
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- 新增列（Flyway 文件只运行一次，直接写 ALTER TABLE 即可）
+ALTER TABLE users ADD COLUMN tag_ids VARCHAR(255) NULL;
 ```
 
-**Flyway 迁移文件**（可选，用于版本追踪）：`backend/src/main/resources/db/migration/V{n}__{描述}.sql`
+> Flyway 迁移文件只执行一次，**不需要幂等写法**（IF NOT EXISTS / 条件 ALTER）。如果迁移失败需回滚，删除 `flyway_schema_history` 中对应记录后修正文件再重启。
 
 ### 6.3 现有主要表
 
@@ -610,7 +693,7 @@ public void createRecord(Long userId, Long targetId) {
 | 陷阱 | 说明 |
 |------|------|
 | 直接改表结构 | `ddl-auto: none`，Hibernate 不自动修改，需手写 SQL |
-| 非幂等 SQL | schema 脚本每次启动执行，必须用 `IF NOT EXISTS` / 条件 ALTER |
+| 修改已执行的 Flyway 文件 | Flyway 会校验 checksum，改已执行文件会报错；应新建下一个版本号的文件 |
 | 两张 fellowship 资料表 | `fellowship_profile`（新，用这个）和 `fellowship_profiles`（旧，逐步废弃） |
 | EnumType.ORDINAL | 枚举必须用 `@Enumerated(EnumType.STRING)`，不用 ORDINAL（数字随枚举顺序变化而错乱） |
 
@@ -622,7 +705,7 @@ public void createRecord(Long userId, Long targetId) {
 
 - [ ] 确认功能属于**平台层**还是**交友层**
 - [ ] 在此手册中查找是否有现成 API 可复用（见 5.3）
-- [ ] 确认需要新建哪些表/字段，在 `schema-platform.sql` 中预添加（幂等 SQL）
+- [ ] 确认需要新建哪些表/字段，新建 Flyway 迁移文件 `db/migration/V{N}__{描述}.sql`
 
 ### 前端
 
@@ -630,7 +713,8 @@ public void createRecord(Long userId, Long targetId) {
 - [ ] 路由在 `router/index.js` 中注册，需要认证的加 `...auth`
 - [ ] API 文件放在 `src/api/`，用 `request.js` 封装，不硬编码 URL
 - [ ] 交友层跳转用 `/fellowship/` 前缀
-- [ ] 所有 style `scoped`，无 Tailwind
+- [ ] 所有 style `scoped`，无 Tailwind；颜色/间距用 `var(--lc-*)` 变量，不硬编码
+- [ ] 样式优先从池中选取（tokens → utilities → platform/admin 类），新增通用样式写入对应池文件
 - [ ] 列表用 `van-list` + `van-pull-refresh` 实现分页和下拉刷新
 - [ ] 操作失败有 `showToast` 提示
 - [ ] 涉及 like/skip 等操作：调真实接口，处理 `matched` 返回值
@@ -655,7 +739,7 @@ public void createRecord(Long userId, Long targetId) {
 - [ ] 无遗留 `console.log`
 - [ ] 无硬编码的用户 ID / token / URL
 - [ ] 无本地模拟的假接口（`return { matched: false }` 类）
-- [ ] `schema-platform.sql` 的 SQL 变更是幂等的
+- [ ] 已新建 Flyway 迁移文件，文件名版本号不重复，未修改已执行文件
 
 ---
 

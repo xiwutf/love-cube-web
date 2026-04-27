@@ -170,6 +170,7 @@ onMounted(load)
 </script>
 
 <style scoped>
+
 .dashboard-page {
   display: grid;
   gap: 16px;
@@ -196,7 +197,7 @@ onMounted(load)
 
 .group-kicker {
   margin: 0 0 6px;
-  color: #2563eb;
+  color: var(--lc-blue);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -205,14 +206,14 @@ onMounted(load)
 
 .group-head h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 20px;
   font-weight: 900;
 }
 
 .group-link {
   flex-shrink: 0;
-  color: #1e40af;
+  color: var(--lc-blue-dark);
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
@@ -227,42 +228,42 @@ onMounted(load)
 .metric-card {
   min-height: 128px;
   padding: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lc-border);
   border-radius: 14px;
-  background: #fbfdff;
+  background: var(--lc-surface);
 }
 
 .metric-card.alert {
-  border-color: #fecdd3;
-  background: #fff8fa;
+  border-color: var(--lc-pink-border);
+  background: var(--lc-pink-light);
 }
 
 .metric-label {
   margin: 0;
-  color: #64748b;
+  color: var(--lc-muted);
   font-size: 13px;
   font-weight: 800;
 }
 
 .metric-value {
   margin: 10px 0 6px;
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 32px;
   line-height: 1;
   font-weight: 900;
 }
 
 .metric-value.loading {
-  color: #cbd5e1;
+  color: var(--lc-border);
 }
 
 .metric-card.alert .metric-value {
-  color: #e11d48;
+  color: var(--lc-red);
 }
 
 .metric-desc {
   margin: 0;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 12px;
   line-height: 1.55;
 }
@@ -279,18 +280,18 @@ onMounted(load)
   gap: 12px;
   min-height: 84px;
   padding: 14px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lc-border);
   border-radius: 14px;
   color: inherit;
   text-decoration: none;
-  background: #fff;
-  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background: var(--lc-surface);
+  transition: var(--lc-transition);
 }
 
 .quick-card:hover {
   transform: translateY(-2px);
-  border-color: #c7d2fe;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  border-color: var(--lc-blue-border);
+  box-shadow: var(--lc-shadow);
 }
 
 .quick-dot {
@@ -302,7 +303,7 @@ onMounted(load)
 
 .quick-card strong {
   display: block;
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 15px;
   font-weight: 900;
 }
@@ -310,17 +311,17 @@ onMounted(load)
 .quick-card em {
   display: block;
   margin-top: 4px;
-  color: #64748b;
+  color: var(--lc-muted);
   font-size: 12px;
   line-height: 1.4;
   font-style: normal;
 }
 
-.tone-blue { background: #2563eb; }
-.tone-green { background: #059669; }
+.tone-blue   { background: var(--lc-blue); }
+.tone-green  { background: #059669; }
 .tone-purple { background: #7c3aed; }
-.tone-red { background: #e11d48; }
-.tone-cyan { background: #0891b2; }
+.tone-red    { background: var(--lc-red); }
+.tone-cyan   { background: #0891b2; }
 
 @media (max-width: 1180px) {
   .dashboard-groups {

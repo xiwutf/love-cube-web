@@ -33,11 +33,11 @@
       <span class="cover-tip">支持 jpg/png/webp，建议小于 5MB</span>
     </div>
 
-    <button type="button" class="cover-advanced-toggle" @click="advancedOpen = !advancedOpen">
+    <button v-if="allowManualInput" type="button" class="cover-advanced-toggle" @click="advancedOpen = !advancedOpen">
       {{ advancedOpen ? '收起手动 URL 输入' : '高级：手动输入 URL' }}
     </button>
 
-    <div v-if="advancedOpen" class="cover-advanced">
+    <div v-if="allowManualInput && advancedOpen" class="cover-advanced">
       <input
         :value="modelValue || ''"
         class="admin-input"
@@ -66,6 +66,10 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  allowManualInput: {
+    type: Boolean,
+    default: true
   }
 })
 

@@ -6,6 +6,7 @@ import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
+import com.lovecube.backend.services.HomeConfigService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
@@ -19,15 +20,18 @@ public class PlatformContentController {
     private final AnnouncementRepository announcementRepository;
     private final ArticleRepository articleRepository;
     private final PlatformEventRepository platformEventRepository;
+    private final HomeConfigService homeConfigService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
             ArticleRepository articleRepository,
-            PlatformEventRepository platformEventRepository
+            PlatformEventRepository platformEventRepository,
+            HomeConfigService homeConfigService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
         this.platformEventRepository = platformEventRepository;
+        this.homeConfigService = homeConfigService;
     }
 
     @GetMapping("/announcements")
@@ -91,6 +95,11 @@ public class PlatformContentController {
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         platformEventRepository.save(item);
         return item;
+    }
+
+    @GetMapping("/home/config")
+    public Map<String, Object> getHomeConfig() {
+        return homeConfigService.getPublicHomeConfig();
     }
 
     @GetMapping("/admin/reserved")

@@ -239,14 +239,8 @@ function handleLogout() {
 </script>
 
 <style scoped>
+
 .module-page {
-  --platform-primary: #2563eb;
-  --platform-primary-dark: #1e40af;
-  --platform-border: #e5e7eb;
-  --platform-radius-card: 16px;
-  --platform-radius-btn: 8px;
-  --platform-shadow-card: 0 14px 36px rgba(15, 23, 42, 0.06);
-  --platform-shadow-btn: 0 12px 26px rgba(37, 99, 235, 0.22);
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
   gap: 18px;
@@ -267,15 +261,15 @@ function handleLogout() {
 }
 
 .platform-card {
-  border-color: var(--platform-border);
-  border-radius: var(--platform-radius-card);
-  box-shadow: var(--platform-shadow-card);
+  border-color: var(--lc-border);
+  border-radius: var(--lc-radius);
+  box-shadow: var(--lc-shadow-sm);
   padding: 24px;
 }
 
 .platform-btn-primary {
-  background: var(--platform-primary);
-  box-shadow: var(--platform-shadow-btn);
+  background: var(--lc-blue);
+  box-shadow: var(--lc-shadow-blue);
 }
 
 .ac-profile-card {
@@ -299,15 +293,15 @@ function handleLogout() {
   height: 76px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #dbeafe;
+  border: 3px solid var(--lc-blue-border);
 }
 
 .ac-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2563eb;
-  color: #fff;
+  background: var(--lc-blue);
+  color: var(--lc-surface);
   font-size: 26px;
   font-weight: 900;
 }
@@ -316,13 +310,13 @@ function handleLogout() {
   margin: 0 0 4px;
   font-size: 24px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .ac-phone {
   margin: 0 0 10px;
   font-size: 14px;
-  color: #64748b;
+  color: var(--lc-muted);
 }
 
 .ac-badges {
@@ -339,44 +333,45 @@ function handleLogout() {
 }
 
 .ac-badge--admin {
-  background: #ffe4e6;
-  color: #be123c;
+  background: var(--lc-red-light);
+  color: var(--lc-red);
 }
 
 .ac-badge--user {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
 }
 
 .ac-badge--verified {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--lc-green-light);
+  color: var(--lc-green);
 }
 
 .ac-badge--pending {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
 }
 
 .ac-badge--unverified {
-  background: #f1f5f9;
-  color: #94a3b8;
+  background: var(--lc-soft);
+  color: var(--lc-subtle);
 }
 
 .ac-badge--achievement {
+  --_c: #6d28d9;
   background: #ede9fe;
-  color: #6d28d9;
+  color: var(--_c);
 }
 
 .ac-badge--banned {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--lc-red-light);
+  color: var(--lc-red);
 }
 
 .ac-admin-btn {
   min-height: 44px;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--lc-radius-sm);
   font-size: 14px;
 }
 
@@ -392,13 +387,13 @@ function handleLogout() {
   margin: 0;
   font-size: 18px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .ac-sec-link {
   font-size: 13px;
   font-weight: 700;
-  color: var(--platform-primary-dark);
+  color: var(--lc-blue-dark);
   text-decoration: none;
 }
 
@@ -410,24 +405,24 @@ function handleLogout() {
 
 .ac-advice-item {
   display: block;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   padding: 14px;
   text-decoration: none;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .ac-advice-title {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #111827;
+  color: var(--lc-text);
 }
 
 .ac-advice-desc {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--lc-muted);
   line-height: 1.6;
 }
 
@@ -444,11 +439,11 @@ function handleLogout() {
   gap: 10px;
   min-height: 120px;
   padding: 16px 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .ac-mod-icon {
@@ -463,7 +458,7 @@ function handleLogout() {
 .ac-mod-name {
   font-size: 14px;
   font-weight: 700;
-  color: #374151;
+  color: var(--lc-text);
 }
 
 .ac-two-col {
@@ -484,25 +479,25 @@ function handleLogout() {
   align-items: center;
   gap: 6px;
   padding: 16px 10px;
-  background: #f8fafc;
+  background: var(--lc-bg);
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--lc-border);
 }
 
 .ac-msg-num {
   font-size: 28px;
   font-weight: 900;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   line-height: 1;
 }
 
 .ac-msg-num--has {
-  color: var(--platform-primary);
+  color: var(--lc-blue);
 }
 
 .ac-msg-label {
   font-size: 12px;
-  color: #64748b;
+  color: var(--lc-muted);
 }
 
 .ac-verify-item {
@@ -510,7 +505,7 @@ function handleLogout() {
   align-items: center;
   justify-content: space-between;
   padding: 13px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--lc-soft);
 }
 
 .ac-verify-item:last-child {
@@ -519,7 +514,7 @@ function handleLogout() {
 
 .ac-verify-label {
   font-size: 14px;
-  color: #374151;
+  color: var(--lc-text);
   font-weight: 600;
 }
 
@@ -531,29 +526,29 @@ function handleLogout() {
 }
 
 .ac-vstatus--ok {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--lc-green-light);
+  color: var(--lc-green);
 }
 
 .ac-vstatus--pending {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
 }
 
 .ac-vstatus--fail {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--lc-red-light);
+  color: var(--lc-red);
 }
 
 .ac-vstatus--none {
-  background: #f1f5f9;
-  color: #94a3b8;
+  background: var(--lc-soft);
+  color: var(--lc-subtle);
 }
 
 .ac-verify-hint {
   margin: 10px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
 .ac-logout-card {
@@ -563,12 +558,12 @@ function handleLogout() {
 .ac-logout-btn {
   width: 100%;
   min-height: 44px;
-  border: 1px solid #fecdd3;
-  background: #fff8fa;
-  color: #e11d48;
+  border: 1px solid var(--lc-pink-border);
+  background: var(--lc-pink-light);
+  color: var(--lc-red);
   font-size: 15px;
   font-weight: 800;
-  border-radius: 8px;
+  border-radius: var(--lc-radius-sm);
 }
 
 @media (max-width: 1023px) {

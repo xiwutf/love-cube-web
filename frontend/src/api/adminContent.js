@@ -96,3 +96,12 @@ export function getInvites(params = {}) {
 export function reviewReport(id, action, note = '') {
   return request.patch(`/admin/reports/${id}/review`, { action, note })
 }
+
+// Home config
+export function getAdminHomeConfig() {
+  return request.get('/admin/home-config')
+}
+
+export function saveAdminHomeConfig(payload) {
+  return request.put('/admin/home-config', payload)
+}

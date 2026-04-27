@@ -1,11 +1,10 @@
-DEPRECATED MODULE NOTICE
+# 已废弃模块
 
-This `frontend/src/modules/fellowship` tree is kept only for backward compatibility and historical reference.
+`frontend/src/modules/fellowship/` 目录已废弃，仅保留供历史参考。
 
-Active production routes are currently wired to `frontend/src/pages/*` and `frontend/src/components/*`.
+**禁止在此目录下添加任何新业务逻辑或新页面。**
 
-Do not add new business logic to this module tree in phase 2.
-Any profile-related changes should be implemented in:
-- `frontend/src/pages/fellowship/profile/*`
-- `frontend/src/pages/fellowship/MePage.vue`
-- `frontend/src/pages/profile-edit/index.vue` (legacy-compatible bridge only)
+当前生产路由指向：
+- 页面：`frontend/src/pages/{功能}/index.vue`
+- 组件：`frontend/src/components/fellowship/`
+- API：`frontend/src/api/`

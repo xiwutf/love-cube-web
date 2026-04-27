@@ -43,6 +43,8 @@
       </div>
     </header>
 
+    <RouteBackButton v-if="route.path !== '/'" class="platform-route-back" />
+
     <main class="platform-main">
       <router-view />
     </main>
@@ -111,6 +113,7 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
+import RouteBackButton from '@/components/RouteBackButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -294,6 +297,18 @@ function handleLogout() {
   min-height: calc(100vh - 68px - 212px);
 }
 
+.platform-route-back {
+  position: fixed;
+  left: 24px;
+  top: 84px;
+  z-index: 95;
+}
+
+.platform-route-back:hover {
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue);
+}
+
 .mobile-quick-nav {
   display: none;
 }
@@ -429,6 +444,11 @@ function handleLogout() {
   .platform-main {
     min-height: calc(100vh - 64px - 58px);
     padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+
+  .platform-route-back {
+    left: 12px;
+    top: 76px;
   }
 
   .mobile-quick-nav {

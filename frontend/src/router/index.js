@@ -39,7 +39,8 @@ const routes = [
       { path: 'verifications', component: () => import('@/pages/admin/VerificationsAdminPage.vue') },
       { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') },
       { path: 'feedbacks', component: () => import('@/pages/admin/FeedbacksAdminPage.vue') },
-      { path: 'modules', component: () => import('@/pages/admin/ModulesAdminPage.vue') }
+      { path: 'modules', component: () => import('@/pages/admin/ModulesAdminPage.vue') },
+      { path: 'home-config', component: () => import('@/pages/admin/HomeConfigAdminPage.vue') }
     ]
   },
   {

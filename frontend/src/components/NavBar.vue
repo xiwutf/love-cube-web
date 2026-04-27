@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 
 const props = defineProps({
   title: { type: String, default: '' },
@@ -19,15 +19,11 @@ const props = defineProps({
   to:    { type: String, default: '' },   // 指定返回路径（可选）
 })
 
-const router = useRouter()
+const { goBack } = useBackNavigation()
 
 function handleBack() {
   if (!props.back) return
-  if (props.to) {
-    router.push(props.to)
-  } else {
-    router.back()
-  }
+  goBack(props.to)
 }
 </script>
 

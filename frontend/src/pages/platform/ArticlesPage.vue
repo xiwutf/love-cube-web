@@ -1,5 +1,5 @@
 <template>
-  <section class="platform-page module-page">
+  <section class="platform-page platform-page-fluid module-page">
     <section class="platform-card module-hero">
       <p class="platform-kicker">Featured Content</p>
       <h1 class="platform-title">精选内容资讯</h1>

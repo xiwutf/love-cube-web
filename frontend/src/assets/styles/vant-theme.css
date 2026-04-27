@@ -1,5 +1,6 @@
+/* Vant component theme — follows fellowship pink accent */
 :root {
-  --van-primary-color: var(--color-primary);
-  --van-button-primary-background: var(--color-primary);
-  --van-button-primary-border-color: var(--color-primary);
+  --van-primary-color:                  var(--color-primary);
+  --van-button-primary-background:      var(--color-primary);
+  --van-button-primary-border-color:    var(--color-primary);
 }

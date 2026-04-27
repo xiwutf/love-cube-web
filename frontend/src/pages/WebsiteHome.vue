@@ -1,228 +1,327 @@
 ﻿<template>
   <div class="home-wrap">
-    <section class="hero-section">
-      <div class="hc hero-grid">
-        <div class="hero-copy">
-          <p class="eyebrow">LOVE CUBE PLATFORM</p>
-          <h1>Love Cube 多功能连接平台</h1>
-          <p class="hero-subtitle">
-            从联谊交友、活动参与、内容资讯到更多本地服务，逐步连接真实的人、信息与服务。
-          </p>
-          <div class="hero-actions">
-            <router-link to="/modules" class="btn btn-primary">立即体验平台</router-link>
-            <router-link to="/fellowship" class="btn btn-secondary">进入联谊交友</router-link>
-          </div>
-          <p class="hero-guidance">
-            当前重点开放：联谊交友模块，支持资料认证、私信互动、举报治理。
-          </p>
-        </div>
 
-        <div class="hero-panel">
-          <p class="panel-label">平台当前能力</p>
-          <div class="hero-tags">
-            <div v-for="item in heroTags" :key="item.title" class="hero-tag">
-              <span class="tag-dot" :style="{ background: item.color }"></span>
-              <div>
-                <strong>{{ item.title }}</strong>
-                <span>{{ item.desc }}</span>
-              </div>
+    <!-- ===== 01 HERO ===== -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-inner">
+          <div class="hero-text">
+            <p class="eyebrow">LOVE CUBE PLATFORM</p>
+            <h1>Love Cube<br>多功能连接平台</h1>
+            <p class="hero-lead">
+              聚合内容资讯、活动服务、社交连接、本地服务与 AI 工具能力，为不同场景提供统一入口。
+            </p>
+            <div class="hero-actions">
+              <router-link to="/modules" class="btn btn-primary">进入模块中心</router-link>
+              <router-link to="/articles" class="btn btn-ghost">查看平台动态</router-link>
             </div>
+            <ul class="hero-checks">
+              <li v-for="v in heroChecks" :key="v">
+                <span class="check-mark">✓</span>{{ v }}
+              </li>
+            </ul>
+          </div>
+          <div class="hero-visual">
+            <img
+              :src="heroImage"
+              alt="Love Cube 首页主视觉"
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+              @error="onMediaError"
+            >
           </div>
         </div>
       </div>
     </section>
 
+    <!-- ===== 02 MODULE MATRIX ===== -->
     <section class="section">
-      <div class="hc feature-card">
-        <div class="feature-main">
-          <p class="eyebrow">CURRENT FOCUS</p>
-          <h2>当前重点：联谊交友</h2>
-          <p>
-            以真实资料、认证审核、私信互动和举报治理为基础，提供更可靠的联谊体验。
-          </p>
-          <router-link to="/fellowship" class="btn btn-primary">进入联谊模块</router-link>
-        </div>
-        <div class="feature-points">
-          <div v-for="item in fellowshipCapabilities" :key="item.title" class="mini-card">
-            <span class="icon-box" :style="{ color: item.color, background: item.bg }">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                <path :d="item.path" />
-              </svg>
-            </span>
-            <strong>{{ item.title }}</strong>
+      <div class="container">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">PRODUCT MATRIX</p>
+            <h2>平台模块</h2>
+            <p class="section-sub">已开放与规划中的核心能力模块</p>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section-muted">
-      <div class="hc">
-        <SectionHead
-          title="平台模块"
-          desc="当前首页保留核心入口，帮助新用户快速理解并开始体验。"
-        />
-        <div class="module-grid">
+          <router-link to="/modules" class="text-link">查看全部 →</router-link>
+        </header>
+        <div class="modules-grid">
           <component
             :is="item.to ? 'router-link' : 'div'"
             v-for="item in platformModules"
             :key="item.title"
             :to="item.to || undefined"
             class="module-card"
-            :class="{ 'module-card--planned': item.status === 'planned' }"
+            :class="{ planned: item.status === 'planned' }"
           >
-            <span class="icon-box" :style="{ color: item.color, background: item.bg }">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                <path :d="item.path" />
-              </svg>
-            </span>
+            <div class="module-icon" :class="item.tone">{{ item.icon }}</div>
             <h3>{{ item.title }}</h3>
             <p>{{ item.desc }}</p>
-            <span class="module-cta">{{ item.status === 'planned' ? '敬请期待' : '立即进入' }}</span>
+            <div class="module-footer">
+              <span class="status-tag" :class="item.status === 'active' ? 'tag-active' : 'tag-planned'">
+                {{ item.status === 'active' ? '已开放' : '规划中' }}
+              </span>
+              <span class="module-cta">{{ item.status === 'active' ? '立即进入 →' : '查看规划 →' }}</span>
+            </div>
           </component>
-        </div>
-        <div class="section-action">
-          <router-link to="/modules" class="text-link">查看全部模块</router-link>
         </div>
       </div>
     </section>
 
+    <!-- ===== 03 CAPABILITY SYSTEM ===== -->
+    <section class="section bg-soft">
+      <div class="container">
+        <header class="section-head centered">
+          <p class="eyebrow">PLATFORM CAPABILITY</p>
+          <h2>平台基础能力</h2>
+          <p class="section-sub">面向长期运营的基础能力沉淀，支持模块持续扩展与统一治理。</p>
+        </header>
+        <div class="cap-grid">
+          <article v-for="item in capabilities" :key="item.title" class="cap-card">
+            <div class="cap-icon">{{ item.icon }}</div>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.desc }}</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 04 FELLOWSHIP FOCUS ===== -->
     <section class="section">
-      <div class="hc">
-        <SectionHead
-          title="平台最新动态"
-          desc="公告、资讯和活动合并呈现，减少信息分散。"
-        />
-        <div class="updates-card">
-          <div class="tabs" role="tablist" aria-label="平台最新动态">
+      <div class="container">
+        <div class="fellowship-panel">
+          <div class="fellowship-text">
+            <p class="eyebrow eyebrow-pink">CURRENT PRIORITY</p>
+            <h2>当前重点完善<br>联谊交友</h2>
+            <p class="panel-lead">
+              已接入资料认证、互动私信、举报黑名单、通知提醒等能力，持续优化真实、安全、高质量连接体验。
+            </p>
+            <ul class="feature-list">
+              <li>资料展示、实名认证与个人安全边界</li>
+              <li>匹配推荐、会话沟通与消息提醒</li>
+              <li>举报拉黑、内容审核与平台治理</li>
+            </ul>
+            <div class="panel-actions">
+              <router-link to="/fellowship" class="btn btn-primary">进入联谊模块</router-link>
+              <router-link to="/fellowship-intro" class="btn btn-ghost">了解联谊规则</router-link>
+            </div>
+          </div>
+          <div class="fellowship-visual">
+            <img
+              :src="moduleFellowshipImage"
+              alt="联谊交友"
+              loading="lazy"
+              decoding="async"
+              @error="onMediaError"
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 05 LATEST UPDATES ===== -->
+    <section class="section">
+      <div class="container">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">UPDATES</p>
+            <h2>平台最新动态</h2>
+            <p class="section-sub">公告、资讯与活动，按类型快速获取。</p>
+          </div>
+          <div class="tabs" role="tablist" aria-label="动态类型">
             <button
               v-for="tab in updateTabs"
               :key="tab.key"
               type="button"
               class="tab-btn"
-              :class="{ active: activeTab === tab.key }"
-              @click="activeTab = tab.key"
-            >
-              {{ tab.label }}
-            </button>
+              :class="{ active: activeUpdateTab === tab.key }"
+              @click="activeUpdateTab = tab.key"
+            >{{ tab.label }}</button>
           </div>
-
-          <div class="updates-list">
-            <component
-              :is="item.to ? 'router-link' : 'div'"
-              v-for="item in activeUpdates"
-              :key="item.key"
-              :to="item.to || undefined"
-              class="update-row"
-              :class="{ 'update-row--empty': !item.to }"
-            >
-              <span class="update-date">{{ item.date }}</span>
-              <div class="update-body">
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.summary }}</p>
+        </header>
+        <div class="updates-grid">
+          <component
+            :is="item.to ? 'router-link' : 'article'"
+            v-for="item in activeUpdates.slice(0, 3)"
+            :key="item.key"
+            :to="item.to || undefined"
+            class="update-card"
+          >
+            <div v-if="item.cover" class="update-thumb">
+              <img :src="item.cover" :alt="item.title" loading="lazy" decoding="async" @error="onMediaError">
+            </div>
+            <div class="update-body">
+              <div class="update-meta">
+                <span>{{ item.category }}</span>
+                <span>{{ item.date }}</span>
               </div>
-            </component>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.summary }}</p>
+            </div>
+            <span class="update-tag">{{ item.tag }}</span>
+          </component>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 06 VALUE ENDORSEMENT ===== -->
+    <section class="section bg-soft">
+      <div class="container">
+        <div class="stats-row">
+          <div v-for="stat in platformStats" :key="stat.label" class="stat-item">
+            <strong class="stat-value">{{ stat.value }}</strong>
+            <span class="stat-label">{{ stat.label }}</span>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section section-muted">
-      <div class="hc">
-        <SectionHead
-          title="平台基础能力"
-          desc="为联谊、活动、内容和后续本地服务提供统一底座。"
-        />
-        <div class="capability-grid">
-          <div v-for="item in platformCapabilities" :key="item.title" class="capability-card">
-            <span class="icon-box" :style="{ color: item.color, background: item.bg }">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                <path :d="item.path" />
-              </svg>
-            </span>
-            <h3>{{ item.title }}</h3>
-            <p>{{ item.desc }}</p>
+    <!-- ===== 07 CTA ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="cta-banner" :style="ctaBgStyle">
+          <div class="cta-mask"></div>
+          <div class="cta-inner">
+            <p class="eyebrow eyebrow-dim">START WITH LOVE CUBE</p>
+            <h2>从一个入口开始<br>连接更多场景</h2>
+            <p>模块、内容、活动、消息和用户体系统一承载，让平台从单点功能走向持续运营。</p>
+            <div class="cta-actions">
+              <router-link to="/modules" class="btn btn-white">进入模块中心</router-link>
+              <router-link to="/account" class="btn btn-outline-white">进入个人中心</router-link>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="cta-section">
-      <div class="hc cta-card">
-        <div>
-          <p class="eyebrow">NEXT STEP</p>
-          <h2>从一个模块开始，逐步扩展成平台</h2>
-        </div>
-        <div class="cta-actions">
-          <router-link to="/modules" class="btn btn-primary">进入模块中心</router-link>
-          <router-link to="/account" class="btn btn-secondary btn-secondary-dark">进入个人中心</router-link>
-        </div>
-        <div class="cta-foot">
-          <router-link to="/login">已有账号？立即登录</router-link>
-          <router-link to="/login">新用户？3分钟完成注册</router-link>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, defineComponent, h, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchAnnouncements, fetchArticles, fetchEvents } from '@/api/platformContent.js'
+import heroImage from '@/assets/首页首屏右侧大图.png'
+import moduleFellowshipImage from '@/assets/联谊专区.png'
+import moduleEventsImage from '@/assets/活动模块.png'
+import moduleArticlesImage from '@/assets/公告模块卡片.png'
+import ctaBackgroundImage from '@/assets/底部横幅 CTA.png'
 
 const announcements = ref([])
 const articles = ref([])
 const events = ref([])
-const activeTab = ref('announcements')
+const activeUpdateTab = ref('announcements')
 
-const SectionHead = defineComponent({
-  name: 'SectionHead',
-  props: {
-    title: { type: String, required: true },
-    desc: { type: String, required: true }
-  },
-  setup(props) {
-    return () => h('div', { class: 'section-head' }, [
-      h('h2', props.title),
-      h('p', props.desc)
-    ])
-  }
-})
+const heroChecks = ['多模块入口', '统一账号体系', '持续扩展能力']
+
+const platformModules = [
+  { title: '联谊交友', desc: '资料认证、互动私信、匹配推荐与安全治理。', to: '/fellowship', status: 'active', icon: '联', tone: 'tone-blue' },
+  { title: '活动中心', desc: '承载主题活动、线下信息、报名入口与活动动态。', to: '/events', status: 'active', icon: '活', tone: 'tone-cyan' },
+  { title: '内容资讯', desc: '沉淀平台文章、精选资讯和长期可读内容。', to: '/articles', status: 'active', icon: '文', tone: 'tone-green' },
+  { title: '公告通知', desc: '发布平台规则、版本说明、重要通知和运营公告。', to: '/announcements', status: 'active', icon: '告', tone: 'tone-amber' },
+  { title: '本地服务', desc: '规划招聘、二手车、生活服务等本地化场景入口。', to: '', status: 'planned', icon: '服', tone: 'tone-violet' },
+  { title: 'AI 工具', desc: '规划智能助手、效率工具、内容生成和辅助决策能力。', to: '', status: 'planned', icon: 'AI', tone: 'tone-rose' }
+]
+
+const capabilities = [
+  { title: '统一账号体系', desc: '账号、资料、权限与认证状态统一管理，跨模块通用。', icon: '账' },
+  { title: '消息通知中心', desc: '面向互动、公告与系统提醒的通知基础设施。', icon: '消' },
+  { title: '内容运营能力', desc: '文章、公告、专题内容按发布状态沉淀，支持运营节奏。', icon: '内' },
+  { title: '治理与风控', desc: '围绕举报、黑名单和规则说明建立平台安全秩序。', icon: '治' }
+]
+
+const platformStats = [
+  { value: '4+', label: '已开放核心模块' },
+  { value: '多类', label: '内容与活动场景' },
+  { value: '统一', label: '账号与体验入口' },
+  { value: '持续', label: '迭代升级中' }
+]
+
+const updateTabs = [
+  { key: 'announcements', label: '公告' },
+  { key: 'articles', label: '资讯' },
+  { key: 'events', label: '活动' }
+]
 
 function formatDate(value) {
   if (!value) return '暂无日期'
   return String(value).replace('T', ' ').slice(0, 10)
 }
 
-function normalizeList(list, type) {
-  const emptyText = {
-    announcements: '暂无公告',
-    articles: '暂无资讯',
-    events: '暂无活动'
-  }
+function createFallbackRows(category, tag, cover = '') {
+  return [
+    {
+      key: `empty-${category}-1`,
+      title: `${category}内容更新中`,
+      summary: '平台内容会在发布后展示在这里，方便用户快速了解最新进展。',
+      date: '--', category, tag, cover, to: ''
+    },
+    {
+      key: `empty-${category}-2`,
+      title: '更多平台动态即将发布',
+      summary: '后续将围绕模块进展、运营活动和服务说明持续补充。',
+      date: '--', category, tag: '预告', cover: '', to: ''
+    },
+    {
+      key: `empty-${category}-3`,
+      title: '平台持续迭代更新',
+      summary: '保持关注以获取最新平台动态与功能升级信息。',
+      date: '--', category, tag: '进行中', cover: '', to: ''
+    }
+  ]
+}
 
-  const pathMap = {
-    announcements: 'announcements',
-    articles: 'articles',
-    events: 'events'
-  }
-
-  const source = list.slice(0, 3).map((item) => ({
-    key: `${type}-${item.id}`,
-    title: item.title || emptyText[type],
-    summary: item.summary || item.description || item.location || '更多内容请进入详情查看。',
-    date: formatDate(item.publishDate || item.date || item.time || item.startTime),
-    to: `/${pathMap[type]}/${item.id}`
+const updateGroups = computed(() => {
+  const announcementRows = (announcements.value || []).slice(0, 3).map((item) => ({
+    key: `announcement-${item.id}`,
+    title: item.title || '平台公告',
+    summary: item.summary || item.description || '重要平台信息请进入详情查看。',
+    date: formatDate(item.publishDate || item.createdAt),
+    category: '公告',
+    tag: item.status === 'published' ? '已发布' : '通知',
+    cover: item.coverUrl || item.cover || '',
+    to: item.id ? `/announcements/${item.id}` : ''
   }))
 
-  if (source.length) return source
+  const articleRows = (articles.value || []).slice(0, 3).map((item, index) => ({
+    key: `article-${item.id}`,
+    title: item.title || '平台资讯',
+    summary: item.summary || item.description || '内容更新后将在这里展示。',
+    date: formatDate(item.publishDate || item.createdAt),
+    category: '资讯',
+    tag: '精选',
+    cover: item.coverUrl || item.cover || (index === 0 ? moduleArticlesImage : ''),
+    to: item.id ? `/articles/${item.id}` : ''
+  }))
 
-  return [{
-    key: `${type}-empty`,
-    title: emptyText[type],
-    summary: '内容更新后将在这里展示。',
-    date: '--',
-    to: ''
-  }]
+  const eventRows = (events.value || []).slice(0, 3).map((item, index) => ({
+    key: `event-${item.id}`,
+    title: item.title || '平台活动',
+    summary: item.summary || item.description || item.location || '更多活动内容请进入详情查看。',
+    date: formatDate(item.publishDate || item.date || item.time || item.startTime),
+    category: '活动',
+    tag: item.location || '活动',
+    cover: item.coverUrl || item.cover || (index === 0 ? moduleEventsImage : ''),
+    to: item.id ? `/events/${item.id}` : ''
+  }))
+
+  return {
+    announcements: announcementRows.length ? announcementRows : createFallbackRows('公告', '通知'),
+    articles: articleRows.length ? articleRows : createFallbackRows('资讯', '精选', moduleArticlesImage),
+    events: eventRows.length ? eventRows : createFallbackRows('活动', '报名', moduleEventsImage)
+  }
+})
+
+const activeUpdates = computed(() => updateGroups.value[activeUpdateTab.value] || [])
+
+const ctaBgStyle = {
+  backgroundImage: `url(${ctaBackgroundImage})`,
+  backgroundSize: 'cover',
+  backgroundPosition: 'center'
+}
+
+function onMediaError(event) {
+  if (event?.target?.classList) event.target.classList.add('is-hidden')
 }
 
 onMounted(async () => {
@@ -231,642 +330,732 @@ onMounted(async () => {
     fetchArticles({ status: 'published' }),
     fetchEvents({ status: 'published' })
   ])
-
   if (ann.status === 'fulfilled') announcements.value = ann.value || []
   if (art.status === 'fulfilled') articles.value = art.value || []
   if (ev.status === 'fulfilled') events.value = ev.value || []
 })
-
-const updateTabs = [
-  { key: 'announcements', label: '公告' },
-  { key: 'articles', label: '资讯' },
-  { key: 'events', label: '活动' }
-]
-
-const activeUpdates = computed(() => {
-  const map = {
-    announcements: normalizeList(announcements.value, 'announcements'),
-    articles: normalizeList(articles.value, 'articles'),
-    events: normalizeList(events.value, 'events')
-  }
-  return map[activeTab.value]
-})
-
-const PATHS = {
-  heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
-  calendar: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
-  bell: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z',
-  article: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z',
-  shield: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z',
-  message: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',
-  person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-  spark: 'M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5z'
-}
-
-const heroTags = [
-  { title: '联谊交友', desc: '当前重点模块', color: '#f45b7a' },
-  { title: '活动内容', desc: '运营信息入口', color: '#2563eb' },
-  { title: '平台治理', desc: '认证与安全机制', color: '#059669' }
-]
-
-const fellowshipCapabilities = [
-  { title: '资料认证', path: PATHS.person, color: '#7c3aed', bg: '#f5f3ff' },
-  { title: '智能匹配', path: PATHS.spark, color: '#2563eb', bg: '#eff6ff' },
-  { title: '私信互动', path: PATHS.message, color: '#f45b7a', bg: '#fff1f4' },
-  { title: '举报黑名单', path: PATHS.shield, color: '#059669', bg: '#ecfdf5' }
-]
-
-const platformModules = [
-  { title: '联谊交友', desc: '真实资料、匹配互动与安全治理。', to: '/fellowship', path: PATHS.heart, color: '#f45b7a', bg: '#fff1f4', status: 'active' },
-  { title: '活动中心', desc: '活动发布、报名参与和现场连接。', to: '/events', path: PATHS.calendar, color: '#2563eb', bg: '#eff6ff', status: 'active' },
-  { title: '内容资讯', desc: '精选文章、使用指南与平台内容。', to: '/articles', path: PATHS.article, color: '#059669', bg: '#ecfdf5', status: 'active' },
-  { title: '公告通知', desc: '平台公告、规则说明和重要通知。', to: '/announcements', path: PATHS.bell, color: '#0891b2', bg: '#ecfeff', status: 'active' }
-]
-
-const platformCapabilities = [
-  { title: '统一账号体系', desc: '统一登录、个人资料和跨模块账号能力。', path: PATHS.person, color: '#7c3aed', bg: '#f5f3ff' },
-  { title: '内容与活动运营', desc: '支持公告、文章、活动等运营内容统一发布。', path: PATHS.article, color: '#059669', bg: '#ecfdf5' },
-  { title: '通知与消息中心', desc: '承接站内通知、私信互动和重要消息提醒。', path: PATHS.message, color: '#2563eb', bg: '#eff6ff' },
-  { title: '举报、黑名单与认证治理', desc: '用认证审核和治理机制维护平台秩序。', path: PATHS.shield, color: '#f45b7a', bg: '#fff1f4' }
-]
 </script>
 
 <style scoped>
+/* ===== TOKENS ===== */
 .home-wrap {
-  --primary: #1677ff;
-  --primary-dark: #0f5ad6;
-  --accent: #36cfc9;
-  --bg: #f3f6fb;
-  --card: #ffffff;
-  --border: #d9e1ec;
-  --text: #0f1f3d;
-  --muted: #556987;
-  --muted-light: #8da1bf;
-  --radius-card: 10px;
-  --radius-tile: 8px;
-  --shadow-card: 0 12px 28px rgba(9, 24, 48, 0.06);
-  --shadow-card-hover: 0 18px 36px rgba(9, 24, 48, 0.12);
-  background: var(--bg);
-  color: var(--text);
+  --c-text:       #0f172a;
+  --c-muted:      #64748b;
+  --c-soft:       #f1f5f9;
+  --c-border:     #e2e8f0;
+  --c-blue:       #2563eb;
+  --c-blue-dark:  #1e3a8a;
+  --c-pink:       #ec4899;
+  --c-green:      #16a34a;
+  --shadow-sm:    0 1px 3px rgba(15,23,42,.06), 0 4px 12px rgba(15,23,42,.04);
+  --shadow-md:    0 4px 16px rgba(15,23,42,.08), 0 12px 32px rgba(15,23,42,.06);
+  --shadow-lg:    0 8px 32px rgba(15,23,42,.10), 0 24px 48px rgba(15,23,42,.07);
+  --radius:       16px;
+  --radius-sm:    10px;
+  color: var(--c-text);
+  background: #f8fafc;
 }
 
-.hc {
+/* ===== CONTAINER ===== */
+.container {
   width: calc(100% - 48px);
-  max-width: none;
   margin: 0 auto;
 }
 
+/* ===== SECTION ===== */
 .section {
   padding: 72px 0;
 }
 
-.section-muted {
-  background: #f8fbff;
-  border-block: 1px solid var(--border);
+.bg-soft {
+  background: var(--c-soft);
 }
 
+/* ===== SECTION HEAD ===== */
 .section-head {
-  max-width: 700px;
-  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 48px;
 }
 
-.section-head h2,
-.feature-main h2,
-.cta-card h2 {
-  margin: 0;
-  font-size: clamp(28px, 3vw, 42px);
-  line-height: 1.18;
-  font-weight: 900;
-  letter-spacing: 0;
+.section-head.centered {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.section-head p,
-.feature-main p {
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.8;
+.section-head h2 {
+  margin: 8px 0 0;
+  font-size: clamp(32px, 2.8vw, 40px);
+  font-weight: 800;
+  line-height: 1.15;
 }
 
+.section-sub {
+  margin: 10px 0 0;
+  font-size: 16px;
+  color: var(--c-muted);
+  line-height: 1.7;
+}
+
+/* ===== EYEBROW ===== */
 .eyebrow {
-  margin: 0 0 14px;
-  color: #6ea8ff;
+  display: block;
+  margin: 0;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: .18em;
+  color: var(--c-blue);
 }
 
+.eyebrow-pink { color: var(--c-pink); }
+.eyebrow-dim  { color: rgba(255,255,255,.65); }
+
+/* ===== BUTTONS ===== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 50px;
+  height: 48px;
   padding: 0 28px;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: 800;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
   text-decoration: none;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
 
-.btn:hover {
-  transform: translateY(-1px);
-}
+.btn:hover { transform: translateY(-2px); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #1b8bff);
   color: #fff;
-  box-shadow: 0 10px 24px rgba(22, 119, 255, 0.28);
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  box-shadow: 0 8px 24px rgba(37,99,235,.28);
+}
+.btn-primary:hover { box-shadow: 0 12px 32px rgba(37,99,235,.38); }
+
+.btn-ghost {
+  color: var(--c-blue-dark);
+  background: #fff;
+  border-color: #bfd2f6;
+}
+.btn-ghost:hover { border-color: var(--c-blue); }
+
+.btn-white {
+  color: var(--c-blue-dark);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,.14);
 }
 
-.btn-secondary {
-  background: #ffffff;
-  border: 1px solid #c7d3e4;
-  color: #1b3354;
+.btn-outline-white {
+  color: #fff;
+  background: transparent;
+  border-color: rgba(255,255,255,.55);
 }
-
-.btn-secondary-dark {
-  background: #ffffff;
-  border-color: #c7d3e4;
-  color: #1b3354;
-}
+.btn-outline-white:hover { background: rgba(255,255,255,.1); }
 
 .text-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 20px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  color: #0f5ad6;
-  background: #f7fbff;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.hero-section {
-  margin: 18px clamp(12px, 2vw, 28px) 0;
-  border-radius: 18px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 84% 18%, rgba(22, 119, 255, 0.18), transparent 34%),
-    radial-gradient(circle at 96% 10%, rgba(244, 91, 122, 0.14), transparent 30%),
-    linear-gradient(140deg, #f7faff 0%, #eef5ff 55%, #eaf2ff 100%);
-  border: 1px solid #d8e4f5;
-  padding: 88px 0 84px;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(360px, 460px);
-  gap: 72px;
-  align-items: center;
-}
-
-.hero-copy h1 {
-  max-width: 760px;
-  margin: 0;
-  font-size: clamp(42px, 5.6vw, 74px);
-  line-height: 1.08;
-  font-weight: 900;
-  letter-spacing: 0;
-  color: #12274a;
-  text-wrap: balance;
-}
-
-.hero-subtitle {
-  max-width: 660px;
-  margin: 24px 0 0;
-  color: #3b567e;
-  font-size: 20px;
-  line-height: 1.85;
-}
-
-.hero-guidance {
-  margin: 16px 0 0;
-  color: #2a5a9b;
-  font-size: 15px;
-  line-height: 1.6;
+  flex-shrink: 0;
+  color: var(--c-blue);
+  font-size: 14px;
   font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-.hero-actions,
-.cta-actions {
+/* ===== 01 HERO ===== */
+.hero {
+  background: linear-gradient(145deg, #eff6ff 0%, #f8fafc 50%, #eef4ff 100%);
+  padding: 88px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  align-items: center;
+  gap: 72px;
+  min-height: 480px;
+}
+
+.hero-text h1 {
+  margin: 14px 0 0;
+  font-size: clamp(48px, 5vw, 72px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+
+.hero-lead {
+  margin: 20px 0 0;
+  font-size: 18px;
+  color: #334e73;
+  line-height: 1.85;
+  max-width: 560px;
+}
+
+.hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 34px;
+  gap: 12px;
+  margin-top: 32px;
 }
 
-.hero-panel,
-.feature-card,
-.updates-card,
-.cta-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
-
-.hero-panel {
-  padding: 28px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid #d3e0f2;
-  backdrop-filter: blur(6px);
-}
-
-.panel-label {
-  margin: 0 0 18px;
-  color: #4d6488;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.hero-tags {
-  display: grid;
-  gap: 14px;
-}
-
-.hero-tag {
+.hero-checks {
   display: flex;
-  gap: 14px;
-  align-items: center;
-  min-height: 78px;
-  padding: 18px;
-  border: 1px solid #d7e4f6;
-  border-radius: var(--radius-tile);
-  background: rgba(246, 250, 255, 0.9);
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.tag-dot {
-  width: 10px;
-  height: 10px;
+.hero-checks li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.check-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  flex: 0 0 auto;
-}
-
-.hero-tag strong,
-.mini-card strong {
-  display: block;
-  font-size: 18px;
+  background: #dcfce7;
+  color: var(--c-green);
+  font-size: 12px;
   font-weight: 900;
+  flex-shrink: 0;
 }
 
-.hero-tag span:not(.tag-dot) {
-  display: block;
-  margin-top: 4px;
-  color: #5b7195;
-  font-size: 14px;
-}
-
-.hero-tag strong {
-  color: #12274a;
-}
-
-.feature-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 48px;
-  align-items: center;
-  padding: 48px;
-}
-
-.feature-points,
-.module-grid,
-.capability-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.feature-points {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.mini-card,
-.module-card,
-.capability-card {
+.hero-visual {
+  border-radius: var(--radius);
+  border: 1px solid #d9e5f7;
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-tile);
-  padding: 22px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 400px;
 }
 
-.mini-card {
-  min-height: 142px;
+.hero-visual img {
+  width: 100%;
+  max-height: 580px;
+  object-fit: contain;
 }
 
-.icon-box {
+/* ===== 02 MODULES GRID ===== */
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.module-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 24px 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  min-height: 220px;
+}
+
+.module-card:hover {
+  transform: translateY(-4px);
+  border-color: #93c5fd;
+  box-shadow: var(--shadow-md);
+}
+
+.module-card.planned {
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.module-card.planned:hover { opacity: 1; }
+
+.module-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 48px;
   height: 48px;
-  margin-bottom: 18px;
   border-radius: 12px;
-}
-
-.module-card,
-.capability-card {
-  min-height: 220px;
-  color: inherit;
-  text-decoration: none;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-}
-
-.module-card:hover {
-  transform: translateY(-2px);
-  border-color: #9fc4ff;
-  box-shadow: var(--shadow-card-hover);
-}
-
-.module-card--planned {
-  opacity: 0.78;
-}
-
-.module-card h3,
-.capability-card h3 {
-  margin: 0 0 10px;
-  font-size: 20px;
   font-weight: 900;
+  font-size: 16px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
 }
 
-.module-card p,
-.capability-card p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.75;
-}
+.tone-blue   { color: #1d4ed8; background: #dbeafe; }
+.tone-cyan   { color: #047481; background: #cffafe; }
+.tone-green  { color: #166534; background: #dcfce7; }
+.tone-amber  { color: #92400e; background: #fef3c7; }
+.tone-violet { color: #6d28d9; background: #ede9fe; }
+.tone-rose   { color: #be123c; background: #ffe4e6; }
 
-.module-cta {
-  display: inline-flex;
-  margin-top: 14px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #0f5ad6;
-}
-
-.module-card--planned .module-cta {
-  color: #64748b;
-}
-
-.section-action {
-  display: flex;
-  justify-content: center;
-  margin-top: 30px;
-}
-
-.updates-card {
-  overflow: hidden;
-  background: #fff;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  padding: 18px;
-  border-bottom: 1px solid var(--border);
-  background: #f7fbff;
-}
-
-.tab-btn {
-  min-width: 86px;
-  min-height: 40px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.tab-btn.active {
-  background: #fff;
-  color: #0f5ad6;
-  border-color: #bfd7ff;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-}
-
-.updates-list {
-  padding: 8px 34px 12px;
-}
-
-.update-row {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 24px;
-  padding: 24px 0;
-  color: inherit;
-  text-decoration: none;
-  border-bottom: 1px solid var(--border);
-}
-
-.update-row:last-child {
-  border-bottom: 0;
-}
-
-.update-row:not(.update-row--empty):hover h3 {
-  color: var(--primary);
-}
-
-.update-date {
-  color: var(--muted-light);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.update-body h3 {
+.module-card h3 {
   margin: 0 0 8px;
-  font-size: 18px;
-  line-height: 1.45;
-  font-weight: 900;
-  transition: color 0.16s ease;
+  font-size: 20px;
+  font-weight: 700;
 }
 
-.update-body p {
-  display: -webkit-box;
+.module-card p {
   margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.7;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  font-size: 14px;
+  color: var(--c-muted);
+  line-height: 1.75;
+  flex: 1;
 }
 
-.cta-section {
-  margin: 18px clamp(12px, 2vw, 28px) 24px;
-  border-radius: 18px;
-  overflow: hidden;
-  padding: 72px 0;
-  background: linear-gradient(135deg, #edf4ff 0%, #f6f8ff 60%, #fff5f7 100%);
-  border: 1px solid #d8e4f5;
-}
-
-.cta-card {
+.module-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 32px;
-  padding: 46px 48px;
-  background: rgba(255, 255, 255, 0.86);
-  border-color: #d4e0f1;
+  margin-top: 20px;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tag-active  { background: #dbeafe; color: #1e40af; }
+.tag-planned { background: #f1f5f9; color: #64748b; }
+
+.module-cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-blue);
+}
+
+.module-card.planned .module-cta { color: var(--c-muted); }
+
+/* ===== 03 CAPABILITY ===== */
+.cap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.cap-card {
+  padding: 28px 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.cap-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: var(--c-blue);
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 18px;
+}
+
+.cap-card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cap-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-muted);
+  line-height: 1.75;
+}
+
+/* ===== 04 FELLOWSHIP PANEL ===== */
+.fellowship-panel {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  background: #fff;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.fellowship-text {
+  padding: 56px 52px;
+}
+
+.fellowship-text h2 {
+  margin: 14px 0 0;
+  font-size: clamp(30px, 2.6vw, 44px);
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.panel-lead {
+  margin: 18px 0 0;
+  font-size: 16px;
+  color: var(--c-muted);
+  line-height: 1.85;
+  max-width: 520px;
+}
+
+.feature-list {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.feature-list li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.feature-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-pink);
+}
+
+.panel-actions {
+  display: flex;
   flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
 }
 
-.cta-card h2 {
-  color: #12274a;
+.fellowship-visual {
+  background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+  display: flex;
+  align-items: stretch;
 }
 
-.cta-card .eyebrow {
-  color: #5f7ca6;
+.fellowship-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  min-height: 380px;
+}
+
+/* ===== 05 UPDATES ===== */
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  height: 36px;
+  min-width: 68px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.tab-btn.active {
+  color: #fff;
+  background: var(--c-blue);
+}
+
+.updates-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.update-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.update-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.update-thumb {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--c-soft);
+  flex-shrink: 0;
+}
+
+.update-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.update-body {
+  flex: 1;
+  padding: 20px 20px 0;
+}
+
+.update-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.update-body h3 {
+  margin: 10px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.update-body p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-muted);
+  line-height: 1.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.update-tag {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 16px 20px 20px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ===== 06 STATS ===== */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--c-border);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  overflow: hidden;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 44px 24px;
+  background: #fff;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--c-blue);
+  letter-spacing: -.02em;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--c-muted);
+  font-weight: 600;
+}
+
+/* ===== 07 CTA ===== */
+.cta-banner {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+}
+
+.cta-mask {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(10,25,60,.82) 0%, rgba(29,78,216,.56) 100%);
+}
+
+.cta-inner {
+  position: relative;
+  z-index: 1;
+  padding: 64px 72px;
+  max-width: 780px;
+}
+
+.cta-inner h2 {
+  margin: 14px 0 0;
+  font-size: clamp(32px, 3vw, 50px);
+  font-weight: 900;
+  line-height: 1.15;
+  color: #fff;
+}
+
+.cta-inner p {
+  margin: 18px 0 0;
+  font-size: 16px;
+  color: rgba(255,255,255,.82);
+  line-height: 1.8;
 }
 
 .cta-actions {
-  margin-top: 0;
-  flex: 0 0 auto;
-}
-
-.cta-foot {
-  width: 100%;
   display: flex;
-  gap: 18px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  gap: 12px;
+  margin-top: 36px;
 }
 
-.cta-foot a {
-  color: #5f7393;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-}
+/* ===== UTIL ===== */
+.is-hidden { display: none; }
 
-.cta-foot a:hover {
-  color: #e84f73;
-}
-
-@media (max-width: 1199px) {
-  .hc {
-    width: calc(100% - 32px);
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1280px) {
+  .cap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .module-grid,
-  .capability-grid {
+  .stats-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .hero-grid,
-  .feature-card {
-    grid-template-columns: 1fr;
-    gap: 36px;
+@media (max-width: 1100px) {
+  .modules-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .hero-panel {
-    max-width: 620px;
-    padding: 22px;
+  .hero-inner {
+    gap: 48px;
   }
 }
 
-@media (min-width: 1360px) {
-  .feature-card {
-    padding: 54px;
+@media (max-width: 960px) {
+  .container {
+    width: calc(100% - 32px);
   }
-
-  .module-grid,
-  .capability-grid {
-    gap: 22px;
-  }
-}
-
-@media (max-width: 767px) {
-  .hc {
-    width: calc(100% - 24px);
-  }
-
-  .hero-section {
-    margin: 12px 12px 0;
-    padding: 58px 0 52px;
-  }
-
-  .section,
-  .cta-section {
-    padding: 56px 0;
-  }
-
-  .cta-section {
-    margin: 12px 12px 16px;
-  }
-
-  .hero-copy h1 {
-    font-size: clamp(36px, 11vw, 52px);
-  }
-
-  .hero-subtitle,
-  .section-head p,
-  .feature-main p {
-    font-size: 16px;
-  }
-
-  .hero-actions,
-  .cta-actions {
-    flex-direction: column;
-  }
-
-  .btn,
-  .text-link {
-    width: 100%;
-  }
-
-  .feature-card,
-  .hero-panel,
-  .cta-card {
-    padding: 24px;
-  }
-
-  .feature-points,
-  .module-grid,
-  .capability-grid {
+  .hero-inner {
     grid-template-columns: 1fr;
-  }
-
-  .mini-card,
-  .module-card,
-  .capability-card {
     min-height: auto;
   }
-
-  .tabs {
-    padding: 12px;
+  .hero-lead {
+    max-width: 100%;
   }
-
-  .tab-btn {
-    flex: 1;
-    min-width: 0;
+  .hero-visual {
+    min-height: 280px;
   }
-
-  .updates-list {
-    padding: 0 18px;
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 36px;
   }
-
-  .update-row {
+  .fellowship-panel {
     grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 20px 0;
   }
+  .fellowship-visual {
+    order: -1;
+  }
+  .fellowship-visual img {
+    min-height: 260px;
+  }
+  .updates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
-  .cta-card {
-    align-items: stretch;
+@media (max-width: 640px) {
+  .container {
+    width: calc(100% - 24px);
+  }
+  .section {
+    padding: 48px 0;
+  }
+  .hero {
+    padding: 52px 0;
+  }
+  .hero-text h1 {
+    font-size: clamp(38px, 10vw, 54px);
+  }
+  .hero-lead {
+    font-size: 16px;
+  }
+  .hero-checks {
+    gap: 10px 20px;
+  }
+  .modules-grid,
+  .cap-grid,
+  .updates-grid {
+    grid-template-columns: 1fr;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fellowship-text {
+    padding: 36px 28px;
+  }
+  .cta-inner {
+    padding: 44px 28px;
+  }
+  .cta-actions,
+  .hero-actions,
+  .panel-actions {
     flex-direction: column;
   }
-
-  .cta-foot {
-    flex-direction: column;
-    gap: 10px;
+  .btn {
+    width: 100%;
   }
 }
 </style>

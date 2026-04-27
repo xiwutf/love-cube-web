@@ -21,6 +21,7 @@ import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.HomeConfigService;
 import com.lovecube.backend.services.NotificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -56,6 +57,7 @@ public class AdminContentController {
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
     private final NotificationService notificationService;
+    private final HomeConfigService homeConfigService;
 
     public AdminContentController(
             AnnouncementRepository announcementRepository,
@@ -70,7 +72,8 @@ public class AdminContentController {
             ChatMessageRepository chatMessageRepository,
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            HomeConfigService homeConfigService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -85,6 +88,22 @@ public class AdminContentController {
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
         this.notificationService = notificationService;
+        this.homeConfigService = homeConfigService;
+    }
+
+    @GetMapping("/home-config")
+    public Map<String, Object> getHomeConfig(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        adminAuthService.requireAdmin(authHeader);
+        return homeConfigService.getAdminHomeConfig();
+    }
+
+    @PutMapping("/home-config")
+    public Map<String, Object> saveHomeConfig(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        adminAuthService.requireAdmin(authHeader);
+        return homeConfigService.saveAdminHomeConfig(payload);
     }
 
     @GetMapping("/announcements")

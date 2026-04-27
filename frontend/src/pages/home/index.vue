@@ -43,8 +43,8 @@
 
       <div class="banner-wrap">
         <van-swipe :autoplay="3000" indicator-color="#ff5f84" class="banner-swipe">
-          <van-swipe-item v-for="item in displayBanners" :key="item.id">
-            <img :src="item.imageUrl || item.image_url || item.imgUrl" class="banner-img" alt="banner" @error="onImgError" />
+          <van-swipe-item v-for="(item, index) in displayBanners" :key="item.id">
+            <img :src="item.imageUrl" class="banner-img" alt="banner" @error="onImgError($event, index)" />
           </van-swipe-item>
           <van-swipe-item v-if="!displayBanners.length">
             <div class="banner-fallback">
@@ -154,7 +154,16 @@ const localBanners = [
   { id: 'local-banner-3', imageUrl: banner3 }
 ]
 
-const displayBanners = computed(() => (banners.value.length ? banners.value : localBanners))
+const remoteBanners = computed(() => {
+  return banners.value
+    .map((item, index) => ({
+      id: item?.id || `remote-banner-${index}`,
+      imageUrl: resolveBannerImage(item)
+    }))
+    .filter((item) => item.imageUrl)
+})
+
+const displayBanners = computed(() => (remoteBanners.value.length ? remoteBanners.value : localBanners))
 
 const showProfileReminder = computed(() => {
   if (!completion.value) return false
@@ -192,8 +201,34 @@ onMounted(async () => {
   }
 })
 
-function onImgError(event) {
-  event.target.style.display = 'none'
+function resolveBannerImage(item) {
+  if (!item) return ''
+  if (typeof item === 'string') return item
+  return (
+    item.imageUrl ||
+    item.image_url ||
+    item.imgUrl ||
+    item.img_url ||
+    item.image ||
+    item.url ||
+    item.coverUrl ||
+    item.cover_url ||
+    item.cover ||
+    item.picUrl ||
+    item.pic_url ||
+    ''
+  )
+}
+
+function onImgError(event, index) {
+  const img = event.target
+  const fallback = localBanners[index % localBanners.length]?.imageUrl
+  if (fallback && img.dataset.fallbackApplied !== 'true') {
+    img.dataset.fallbackApplied = 'true'
+    img.src = fallback
+    return
+  }
+  img.style.display = 'none'
 }
 </script>
 
