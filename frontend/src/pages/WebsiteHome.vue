@@ -359,6 +359,7 @@ onMounted(async () => {
 /* ===== CONTAINER ===== */
 .container {
   width: calc(100% - 48px);
+  max-width: 1680px;
   margin: 0 auto;
 }
 
@@ -476,9 +477,9 @@ onMounted(async () => {
 
 .hero-inner {
   display: grid;
-  grid-template-columns: 55fr 45fr;
+  grid-template-columns: minmax(460px, 560px) minmax(0, 1fr);
   align-items: center;
-  gap: 72px;
+  gap: 64px;
   min-height: 480px;
 }
 
