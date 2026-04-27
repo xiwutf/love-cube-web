@@ -223,7 +223,7 @@ const menuItems = [
   { key: 'match', title: '我的匹配', sub: '12人与你匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
   { key: 'visitor', title: '谁看过我', sub: '今日+3', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
   { key: 'likes', title: '喜欢我的人', sub: '8人戳了你', icon: 'good-job', to: '/fellowship/my-likes', theme: 'yellow' },
-  { key: 'chat', title: '我的聊天', sub: '12条未读', icon: 'chat', to: '/fellowship/messages', theme: 'purple' },
+  { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
   { key: 'signup', title: '我的报名', sub: '3个活动报名中', icon: 'calendar', to: '/fellowship/messages?tab=event', theme: 'green' },
   { key: 'collect', title: '我的收藏', sub: '18人被收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
   { key: 'blacklist', title: '黑名单', sub: '1人已加入', icon: 'shield', to: '/fellowship/blacklist', theme: 'indigo' },
