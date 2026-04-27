@@ -31,33 +31,66 @@ public class PlatformContentController {
     }
 
     @GetMapping("/announcements")
-    public List<Announcement> listAnnouncements(@RequestParam(defaultValue = "published") String status) {
-        return announcementRepository.findByStatusOrderByPublishDateDesc(status);
+    public List<Announcement> listAnnouncements(
+            @RequestParam(defaultValue = "published") String status,
+            @RequestParam(required = false) String category
+    ) {
+        List<Announcement> items = announcementRepository.findByStatusPinnedFirst(status);
+        if (category != null && !category.isBlank()) {
+            items = items.stream().filter(a -> category.equals(a.getCategory())).toList();
+        }
+        return items;
     }
 
     @GetMapping("/announcements/{id}")
     public Announcement getAnnouncement(@PathVariable String id) {
-        return announcementRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "公告不存在"));
+        Announcement item = announcementRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "公告不存在"));
+        item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
+        announcementRepository.save(item);
+        return item;
     }
 
     @GetMapping("/articles")
-    public List<Article> listArticles(@RequestParam(defaultValue = "published") String status) {
-        return articleRepository.findByStatusOrderByPublishDateDesc(status);
+    public List<Article> listArticles(
+            @RequestParam(defaultValue = "published") String status,
+            @RequestParam(required = false) String category
+    ) {
+        List<Article> items = articleRepository.findByStatusPinnedFirst(status);
+        if (category != null && !category.isBlank()) {
+            items = items.stream().filter(a -> category.equals(a.getCategory())).toList();
+        }
+        return items;
     }
 
     @GetMapping("/articles/{id}")
     public Article getArticle(@PathVariable String id) {
-        return articleRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "资讯不存在"));
+        Article item = articleRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "资讯不存在"));
+        item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
+        articleRepository.save(item);
+        return item;
     }
 
     @GetMapping("/events")
-    public List<PlatformEvent> listEvents(@RequestParam(defaultValue = "published") String status) {
-        return platformEventRepository.findByStatusOrderByEventTimeDesc(status);
+    public List<PlatformEvent> listEvents(
+            @RequestParam(defaultValue = "published") String status,
+            @RequestParam(required = false) String category
+    ) {
+        List<PlatformEvent> items = platformEventRepository.findByStatusPinnedFirst(status);
+        if (category != null && !category.isBlank()) {
+            items = items.stream().filter(e -> category.equals(e.getCategory())).toList();
+        }
+        return items;
     }
 
     @GetMapping("/events/{id}")
     public PlatformEvent getEvent(@PathVariable String id) {
-        return platformEventRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        PlatformEvent item = platformEventRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
+        platformEventRepository.save(item);
+        return item;
     }
 
     @GetMapping("/admin/reserved")

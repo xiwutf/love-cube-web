@@ -88,6 +88,10 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      * 获取用户收到的点赞数量
      */
     Long countByToUserIdAndInteractionType(Long toUserId, UserInteraction.InteractionType interactionType);
+
+    Long countByInteractionTypeAndCreatedAtGreaterThanEqual(
+        UserInteraction.InteractionType interactionType,
+        LocalDateTime createdAt);
     
     /**
      * 获取当前用户已操作过的目标用户 ID（like/superlike/skip），用于过滤推荐列表

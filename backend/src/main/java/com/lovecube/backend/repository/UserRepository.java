@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -60,4 +61,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByInviteCode(String inviteCode);
 
     List<User> findByInvitedByUserIdOrderByCreatedAtDesc(Long invitedByUserId);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime createdAt);
+
+    long countByUserStatusIgnoreCase(String userStatus);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
+    long countVisibleUsers(@Param("hiddenPhone") String hiddenPhone);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :createdAt AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
+    long countVisibleUsersCreatedSince(@Param("createdAt") LocalDateTime createdAt, @Param("hiddenPhone") String hiddenPhone);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE LOWER(COALESCE(u.userStatus, '')) = LOWER(:userStatus) AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
+    long countVisibleUsersByStatus(@Param("userStatus") String userStatus, @Param("hiddenPhone") String hiddenPhone);
 }

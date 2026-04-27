@@ -14,6 +14,8 @@ import java.util.List;
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long>
 {
+    long countByTimestampGreaterThanEqual(Long timestamp);
+
     @Query("SELECT m FROM ChatMessage m WHERE " +
            "(m.senderId = :userId1 AND m.receiverId = :userId2) OR " +
            "(m.senderId = :userId2 AND m.receiverId = :userId1) " +

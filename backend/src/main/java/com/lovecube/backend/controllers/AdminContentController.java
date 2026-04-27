@@ -4,15 +4,18 @@ import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
+import com.lovecube.backend.entity.UserInteraction;
 import com.lovecube.backend.entity.UserFeedback;
 import com.lovecube.backend.entity.UserVerification;
 import com.lovecube.backend.entity.VerificationRequest;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
+import com.lovecube.backend.repository.ChatMessageRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserFeedbackRepository;
+import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
@@ -38,6 +41,7 @@ public class AdminContentController {
     private static final Set<String> ALLOWED_ROLES = Set.of("USER", "ADMIN", "SUPER_ADMIN", "ROOT");
     private static final Set<String> ADMIN_MANAGEABLE_ROLES = Set.of("USER", "ADMIN");
     private static final Set<String> HIGH_PRIVILEGE_ROLES = Set.of("SUPER_ADMIN", "ROOT");
+    private static final String HIDDEN_SUPER_ADMIN_PHONE = "15030251407";
 
     private final AnnouncementRepository announcementRepository;
     private final ArticleRepository articleRepository;
@@ -47,6 +51,8 @@ public class AdminContentController {
     private final UserVerificationRepository userVerificationRepository;
     private final ReportRecordRepository reportRecordRepository;
     private final UserFeedbackRepository userFeedbackRepository;
+    private final UserInteractionRepository userInteractionRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
     private final NotificationService notificationService;
@@ -60,6 +66,8 @@ public class AdminContentController {
             UserVerificationRepository userVerificationRepository,
             ReportRecordRepository reportRecordRepository,
             UserFeedbackRepository userFeedbackRepository,
+            UserInteractionRepository userInteractionRepository,
+            ChatMessageRepository chatMessageRepository,
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService,
             NotificationService notificationService
@@ -72,6 +80,8 @@ public class AdminContentController {
         this.userVerificationRepository = userVerificationRepository;
         this.reportRecordRepository = reportRecordRepository;
         this.userFeedbackRepository = userFeedbackRepository;
+        this.userInteractionRepository = userInteractionRepository;
+        this.chatMessageRepository = chatMessageRepository;
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
         this.notificationService = notificationService;
@@ -562,25 +572,89 @@ public class AdminContentController {
         }
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
 
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime sevenDaysStart = LocalDate.now().minusDays(6).atStartOfDay();
+        long todayStartMillis = java.sql.Timestamp.valueOf(todayStart).getTime();
+
         long totalUsers = hiddenSuperAdminOperator
                 ? userRepository.count()
-                : userRepository.findAll().stream()
-                .filter(user -> !adminAuthService.isHiddenSuperAdmin(user))
-                .count();
+                : userRepository.countVisibleUsers(HIDDEN_SUPER_ADMIN_PHONE);
+        long todayNewUsers = hiddenSuperAdminOperator
+                ? userRepository.countByCreatedAtGreaterThanEqual(todayStart)
+                : userRepository.countVisibleUsersCreatedSince(todayStart, HIDDEN_SUPER_ADMIN_PHONE);
+        long sevenDayNewUsers = hiddenSuperAdminOperator
+                ? userRepository.countByCreatedAtGreaterThanEqual(sevenDaysStart)
+                : userRepository.countVisibleUsersCreatedSince(sevenDaysStart, HIDDEN_SUPER_ADMIN_PHONE);
+        long bannedUsers = hiddenSuperAdminOperator
+                ? userRepository.countByUserStatusIgnoreCase("DISABLED")
+                : userRepository.countVisibleUsersByStatus("DISABLED", HIDDEN_SUPER_ADMIN_PHONE);
+
         long totalAnnouncements = announcementRepository.count();
-        long pendingVerifications = verificationRequestRepository.findAll().stream()
-                .filter(v -> "pending".equals(v.getStatus())).count()
+        long totalArticles = articleRepository.count();
+        long totalEvents = platformEventRepository.count();
+        long pinnedContent = announcementRepository.countByPinnedTrue()
+                + articleRepository.countByPinnedTrue()
+                + platformEventRepository.countByPinnedTrue();
+        long recommendedContent = announcementRepository.countByRecommendedTrue()
+                + articleRepository.countByRecommendedTrue()
+                + platformEventRepository.countByRecommendedTrue();
+
+        long todayLikes = userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqual(
+                UserInteraction.InteractionType.LIKE, todayStart)
+                + userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqual(
+                UserInteraction.InteractionType.SUPER_LIKE, todayStart);
+        long todayMessages = chatMessageRepository.countByTimestampGreaterThanEqual(todayStartMillis);
+        long pendingVerifications = verificationRequestRepository.countByStatusIgnoreCase("pending")
                 + userVerificationRepository.countByStatus("pending");
-        long pendingReports = reportRecordRepository.findAll().stream()
-                .filter(r -> !"resolved".equals(r.getStatus())).count();
+        long pendingReports = reportRecordRepository.countByStatusIgnoreCase("pending");
         long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");
+        long todayReports = reportRecordRepository.countByCreatedAtGreaterThanEqual(todayStart);
+        long handledReports = reportRecordRepository.countHandledReports();
+        long pendingTasks = pendingVerifications + pendingReports + pendingFeedbacks;
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalUsers", totalUsers);
+        stats.put("todayNewUsers", todayNewUsers);
+        stats.put("sevenDayNewUsers", sevenDayNewUsers);
+        stats.put("bannedUsers", bannedUsers);
         stats.put("totalAnnouncements", totalAnnouncements);
+        stats.put("totalArticles", totalArticles);
+        stats.put("totalEvents", totalEvents);
+        stats.put("pinnedContent", pinnedContent);
+        stats.put("recommendedContent", recommendedContent);
+        stats.put("todayLikes", todayLikes);
+        stats.put("todayMessages", todayMessages);
         stats.put("pendingVerifications", pendingVerifications);
         stats.put("pendingReports", pendingReports);
         stats.put("pendingFeedbacks", pendingFeedbacks);
+        stats.put("todayReports", todayReports);
+        stats.put("handledReports", handledReports);
+        stats.put("pendingTasks", pendingTasks);
+        stats.put("userData", Map.of(
+                "totalUsers", totalUsers,
+                "todayNewUsers", todayNewUsers,
+                "sevenDayNewUsers", sevenDayNewUsers,
+                "bannedUsers", bannedUsers
+        ));
+        stats.put("contentData", Map.of(
+                "totalAnnouncements", totalAnnouncements,
+                "totalArticles", totalArticles,
+                "totalEvents", totalEvents,
+                "pinnedContent", pinnedContent,
+                "recommendedContent", recommendedContent
+        ));
+        stats.put("fellowshipData", Map.of(
+                "todayLikes", todayLikes,
+                "todayMessages", todayMessages,
+                "pendingVerifications", pendingVerifications,
+                "pendingReports", pendingReports
+        ));
+        stats.put("governanceData", Map.of(
+                "todayReports", todayReports,
+                "handledReports", handledReports,
+                "bannedUsers", bannedUsers,
+                "pendingTasks", pendingTasks
+        ));
         return stats;
     }
 

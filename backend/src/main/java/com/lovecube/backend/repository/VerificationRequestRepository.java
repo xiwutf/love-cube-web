@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface VerificationRequestRepository extends JpaRepository<VerificationRequest, String> {
     List<VerificationRequest> findByUserIdOrderBySubmittedAtDesc(Long userId);
+
+    long countByStatusIgnoreCase(String status);
 }

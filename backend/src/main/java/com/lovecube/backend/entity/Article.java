@@ -32,6 +32,18 @@ public class Article {
     @Column(name = "publish_date")
     private LocalDateTime publishDate;
 
+    private String category;
+
+    @Column(name = "cover_url", length = 512)
+    private String coverUrl;
+
+    private Boolean pinned;
+
+    private Boolean recommended;
+
+    @Column(name = "view_count")
+    private Integer viewCount;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
