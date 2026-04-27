@@ -27,11 +27,20 @@
           <div class="profile-info">
             <div class="name-row">
               <h2 class="nickname">{{ displayName }}</h2>
-              <span class="verified-badge">V</span>
-              <span class="vip-pill">VIP</span>
+              <button class="verified-badge" :class="verificationLevel" type="button" @click="router.push('/fellowship/verify')">
+                <span class="verified-mark">V</span>
+                <span>{{ verificationLabel }}</span>
+              </button>
+              <button class="vip-medal" type="button" @click="router.push('/fellowship/vip')">
+                <span class="vip-crown">VIP</span>
+                <span>尊享</span>
+              </button>
             </div>
             <p class="base-info">{{ displayAge }}岁 · {{ displayCity }} · {{ displayJob }}</p>
             <p class="intro">{{ displayIntro }}</p>
+            <div class="identity-strip" @click="router.push('/fellowship/verify')">
+              <span v-for="item in identityPerks" :key="item">{{ item }}</span>
+            </div>
             <div class="tags-row">
               <span class="tag-chip">{{ profileMeta[0] }}</span>
               <span class="tag-chip">{{ profileMeta[1] }}</span>
@@ -42,6 +51,10 @@
           </div>
 
           <button class="edit-link" @click="router.push('/fellowship/profile/edit')">编辑资料</button>
+          <div class="premium-seal" @click="router.push('/fellowship/vip')">
+            <span>LOVE</span>
+            <strong>PREMIUM</strong>
+          </div>
           <div class="heart-glow" />
         </div>
       </section>
@@ -126,11 +139,12 @@
       </section>
 
       <section class="vip-banner" @click="router.push('/fellowship/vip')">
-        <div>
-          <p class="vip-title">开通会员 · 解锁更多特权</p>
-          <span class="vip-sub">查看谁喜欢我，无限次可聊天等</span>
+        <div class="vip-banner-main">
+          <span class="vip-banner-kicker">Love Cube Premium</span>
+          <p class="vip-title">开通会员 · 让优质身份被优先看见</p>
+          <span class="vip-sub">专属金标、优先曝光、访客解锁、喜欢我的人一键查看</span>
         </div>
-        <button>去开通</button>
+        <button type="button">升级身份</button>
       </section>
     </main>
 
@@ -184,6 +198,17 @@ const displayCity = computed(() => profile.value.city || '保定市')
 const displayJob = computed(() => profile.value.job || '产品经理')
 const displayIntro = computed(() => profile.value.bio || '认真生活、真诚交友，期待遇见对的人。')
 const displayPhotos = computed(() => photoList.value.slice(0, 4))
+const verificationStatus = computed(() => userInfo.value?.verificationStatus || profile.value.reviewStatus || 'none')
+const verificationLabel = computed(() => {
+  if (verificationStatus.value === 'approved') return '真人已核验'
+  if (verificationStatus.value === 'pending') return '认证审核中'
+  return '待认证'
+})
+const verificationLevel = computed(() => {
+  if (verificationStatus.value === 'approved') return 'is-approved'
+  if (verificationStatus.value === 'pending') return 'is-pending'
+  return 'is-none'
+})
 const profileMeta = computed(() => [
   profile.value.height ? `${profile.value.height}cm` : '178cm',
   profile.value.weight ? `${profile.value.weight}kg` : '68kg',
@@ -191,6 +216,8 @@ const profileMeta = computed(() => [
   profile.value.houseStatus || '有房',
   profile.value.smokeStatus || '不抽烟'
 ])
+
+const identityPerks = ['真人核验', '资料可信', '优先推荐']
 
 const menuItems = [
   { key: 'match', title: '我的匹配', sub: '12人与你匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
@@ -431,8 +458,8 @@ onMounted(loadPageData)
 .name-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding-right: 72px;
+  gap: 6px;
+  padding-right: 96px;
 }
 
 .nickname {
@@ -448,24 +475,66 @@ onMounted(loadPageData)
 }
 
 .verified-badge {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #518dff;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2774ff 0%, #5a8cff 46%, #9ac1ff 100%);
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  padding: 2px 7px 2px 3px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 3px;
+  box-shadow: 0 5px 12px rgba(52, 112, 255, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.52);
+  position: relative;
+  z-index: 2;
 }
 
-.vip-pill {
-  border-radius: 10px;
-  background: rgba(250, 202, 112, 0.28);
-  color: #9a6a1b;
-  padding: 1px 8px;
-  font-size: 11px;
+.verified-badge.is-pending {
+  background: linear-gradient(135deg, #d99b28 0%, #f8c660 100%);
+  box-shadow: 0 5px 12px rgba(217, 151, 33, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.verified-badge.is-none {
+  background: linear-gradient(135deg, #9aa2b6 0%, #c2c8d6 100%);
+  box-shadow: 0 5px 12px rgba(112, 123, 150, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.verified-mark {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.vip-medal {
+  border: 1px solid rgba(122, 83, 20, 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 222, 0.42)),
+    linear-gradient(135deg, #fff2bd 0%, #f4c466 47%, #d6942e 100%);
+  color: #6b4210;
+  padding: 2px 8px;
+  font-size: 10px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 6px 16px rgba(208, 145, 45, 0.24), inset 0 1px 1px rgba(255, 255, 255, 0.66);
+  position: relative;
+  z-index: 2;
+}
+
+.vip-crown {
+  color: #4c2d0a;
+  font-weight: 900;
+  letter-spacing: 0.4px;
 }
 
 .base-info,
@@ -477,6 +546,29 @@ onMounted(loadPageData)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.identity-strip {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 204, 224, 0.72);
+  padding: 3px 5px;
+  box-shadow: 0 4px 12px rgba(255, 97, 159, 0.08);
+  position: relative;
+  z-index: 2;
+}
+
+.identity-strip span {
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff 0%, #fff4f9 100%);
+  color: #c24174;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
 }
 
 .tags-row {
@@ -516,6 +608,37 @@ onMounted(loadPageData)
   border-radius: 14px;
   opacity: 1;
   pointer-events: none;
+}
+
+.premium-seal {
+  position: absolute;
+  right: 13px;
+  bottom: 12px;
+  width: 82px;
+  height: 38px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(135deg, rgba(40, 27, 15, 0.92) 0%, rgba(96, 61, 21, 0.9) 46%, rgba(220, 156, 55, 0.9) 100%);
+  color: #ffe8b3;
+  border: 1px solid rgba(255, 228, 178, 0.48);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 22px rgba(119, 73, 20, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  z-index: 1;
+}
+
+.premium-seal span {
+  font-size: 9px;
+  letter-spacing: 1.4px;
+}
+
+.premium-seal strong {
+  margin-top: 1px;
+  font-size: 11px;
+  letter-spacing: 0.7px;
 }
 
 .heart-glow::before,
@@ -852,37 +975,80 @@ onMounted(loadPageData)
 }
 
 .vip-banner {
-  border-radius: 12px;
-  background: linear-gradient(90deg, #ff4a80 0%, #ff5aa0 100%);
-  padding: 10px 14px;
-  color: #fff;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 90% 18%, rgba(255, 229, 166, 0.34) 0, rgba(255, 229, 166, 0) 28%),
+    linear-gradient(118deg, #18111f 0%, #3b2134 45%, #b6752b 100%);
+  padding: 13px 14px;
+  color: #fff4cf;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255, 225, 167, 0.28);
+  box-shadow: 0 10px 28px rgba(64, 33, 19, 0.16);
+  overflow: hidden;
+  position: relative;
+}
+
+.vip-banner::after {
+  content: '';
+  position: absolute;
+  right: -16px;
+  top: -28px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 242, 196, 0.2), rgba(255, 242, 196, 0));
+}
+
+.vip-banner-main {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.vip-banner-kicker {
+  display: inline-flex;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: rgba(255, 232, 179, 0.14);
+  border: 1px solid rgba(255, 232, 179, 0.24);
+  color: #ffe4a6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  padding: 2px 7px;
 }
 
 .vip-title {
   margin: 0;
-  font-size: 21px;
-  line-height: 1;
+  font-size: 19px;
+  line-height: 1.08;
   font-weight: 700;
+  color: #fff7dd;
 }
 
 .vip-sub {
   display: block;
-  margin-top: 1px;
-  font-size: 12px;
-  opacity: 0.9;
+  margin-top: 5px;
+  font-size: 11px;
+  color: rgba(255, 241, 208, 0.78);
+  line-height: 1.35;
 }
 
 .vip-banner button {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
   border: none;
-  border-radius: 16px;
-  background: #ffd8e9;
-  color: #d93d7a;
-  font-size: 15px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fff4c7 0%, #f0c06b 50%, #d58a2b 100%);
+  color: #3a250d;
+  font-size: 13px;
   font-weight: 700;
-  padding: 5px 14px;
+  padding: 8px 12px;
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.68);
 }
 
 .hidden-input {

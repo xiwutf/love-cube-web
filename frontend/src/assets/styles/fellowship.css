@@ -1,7 +1,7 @@
 .fellowship-shell {
   width: 100%;
-  max-width: 100%;
-  margin: 0;
+  max-width: 480px;
+  margin: 0 auto;
   background: var(--color-white);
   min-height: 100vh;
   position: relative;
@@ -37,7 +37,6 @@
 
 @media (min-width: 768px) {
   .fellowship-shell {
-    max-width: 480px;
     margin: 16px auto;
     border: 1px solid #eceff3;
     border-radius: 22px;
