@@ -72,7 +72,7 @@ async function handleSignup() {
 
   try {
     const result = await signupEvent(item.value.id)
-    item.value.signupCount = result.signupCount ? item.value.signupCount
+    item.value.signupCount = result.signupCount ?? item.value.signupCount
     signedUp.value = true
     signupMessage.value = result.message || '报名成功'
   } catch (error) {

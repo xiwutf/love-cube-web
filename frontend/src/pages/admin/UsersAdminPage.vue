@@ -115,13 +115,13 @@ const currentAdminRole = computed(() => normalizeRole(userStore.syncCurrentUser(
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
     .map((item) => ({
-      userId: item.userId ? item.id,
-      username: item.username ? '',
-      phone: item.phone ? '',
-      role: normalizeRole(item.role ? 'user'),
-      verificationStatus: item.verificationStatus ? 'none',
-      status: item.status ? 'active',
-      createdAt: item.createdAt ? null,
+      userId: item.userId ?? item.id ?? null,
+      username: item.username || '',
+      phone: item.phone || '',
+      role: normalizeRole(item.role || 'user'),
+      verificationStatus: item.verificationStatus || 'none',
+      status: item.status || 'active',
+      createdAt: item.createdAt || null,
       canForceDelete: !!item.canForceDelete
     }))
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())

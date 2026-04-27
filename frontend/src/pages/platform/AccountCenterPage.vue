@@ -116,12 +116,12 @@ onMounted(async () => {
     getUserStatsCached()
   ])
   if (notifRes.status === 'fulfilled') {
-    unreadCount.value = Number(notifRes.value?.count ? notifRes.value?.unreadCount ? 0)
+    unreadCount.value = Number(notifRes.value?.count ?? notifRes.value?.unreadCount ?? 0)
   }
   if (statsRes.status === 'fulfilled' && statsRes.value) {
-    myContentCount.value = Number(statsRes.value.contentCount ? 0)
-    myEventCount.value = Number(statsRes.value.eventCount ? 0)
-    myFavoriteCount.value = Number(statsRes.value.favoriteCount ? 0)
+    myContentCount.value = Number(statsRes.value.contentCount ?? 0)
+    myEventCount.value = Number(statsRes.value.eventCount ?? 0)
+    myFavoriteCount.value = Number(statsRes.value.favoriteCount ?? 0)
   }
 })
 </script>

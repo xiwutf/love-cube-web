@@ -215,7 +215,7 @@ function normalizeModule(item, index) {
     icon: moduleIconByKey[item.moduleKey] || fallback.icon || ICONS.article,
     iconBg: tone.iconBg || fallback.iconBg || '#eff6ff',
     color: tone.color || fallback.color || '#1f4fd8',
-    sort: Number.isFinite(Number(item.sortOrder ? item.sort)) ? Number(item.sortOrder ? item.sort) : index + 1
+    sort: Number.isFinite(Number(item.sortOrder ?? item.sort)) ? Number(item.sortOrder ?? item.sort) : index + 1
   }
 }
 
@@ -232,8 +232,8 @@ onMounted(async () => {
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     const s = statsRes.value
     stats.value = [
-      { value: String(s.totalModules ? '--'), label: '开放模块' },
-      { value: String(s.activeModules ? '--'), label: '使用中' }
+      { value: String(s.totalModules ?? '--'), label: '开放模块' },
+      { value: String(s.activeModules ?? '--'), label: '使用中' }
     ]
   }
 })

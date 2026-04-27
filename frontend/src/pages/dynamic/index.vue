@@ -34,7 +34,7 @@
           <div class="dynamic-footer">
             <div class="like-btn" :class="{ liked: item.isLiked }" @click="toggleLike(item)">
               <van-icon :name="item.isLiked ? 'like' : 'like-o'" />
-              <span>{{ item.likeCount ? 0 }}</span>
+              <span>{{ item.likeCount || 0 }}</span>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ async function load() {
   loading.value = true
   try {
     const data = await getDynamics(page, PAGE_SIZE)
-    const items = Array.isArray(data) ? data : (data?.list ? data?.content ? [])
+    const items = Array.isArray(data) ? data : (data?.list || data?.content || [])
     list.value.push(...items)
     if (items.length < PAGE_SIZE) noMore.value = true
     else page++
@@ -100,11 +100,11 @@ async function toggleLike(item) {
     if (item.isLiked) {
       await unlikeDynamic(item.id)
       item.isLiked = false
-      item.likeCount = Math.max(0, (item.likeCount ? 1) - 1)
+      item.likeCount = Math.max(0, (item.likeCount || 0) - 1)
     } else {
       await likeDynamic(item.id)
       item.isLiked = true
-      item.likeCount = (item.likeCount ? 0) + 1
+      item.likeCount = (item.likeCount || 0) + 1
     }
   } catch (e) {
     showToast({ message: e.message || '操作失败', type: 'fail' })
