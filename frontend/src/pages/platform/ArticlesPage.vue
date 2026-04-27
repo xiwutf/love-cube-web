@@ -39,7 +39,7 @@
             <div class="article-cover">
               <img :src="featuredLead.coverUrl" :alt="featuredLead.title" loading="lazy" />
               <span class="article-label label-hot">置顶</span>
-              <span class="article-label label-category">{{ featuredLead.category }}</span>
+              <span class="article-label label-category">{{ featuredLead.sourceLabel }}</span>
             </div>
             <div class="article-body">
               <h2>{{ featuredLead.title }}</h2>
@@ -61,7 +61,7 @@
           >
             <div class="article-cover">
               <img :src="item.coverUrl" :alt="item.title" loading="lazy" />
-              <span class="article-label" :class="item.labelClass">{{ item.category }}</span>
+              <span class="article-label" :class="item.labelClass">{{ item.sourceLabel }}</span>
             </div>
             <div class="article-body">
               <h3>{{ item.title }}</h3>
@@ -84,7 +84,7 @@
           >
             <div class="article-cover">
               <img :src="item.coverUrl" :alt="item.title" loading="lazy" />
-              <span class="article-label" :class="item.labelClass">{{ item.category }}</span>
+              <span class="article-label" :class="item.labelClass">{{ item.sourceLabel }}</span>
             </div>
             <div class="article-body">
               <h3>{{ item.title }}</h3>
@@ -137,7 +137,7 @@
           <div>
             <h2>分享你的故事</h2>
             <p>记录生活、分享美好，结识更多有趣的人</p>
-            <router-link to="/fellowship/dynamic">立即分享</router-link>
+            <router-link to="/articles">进入内容中心</router-link>
           </div>
           <img :src="shareImage" alt="" loading="lazy" />
         </section>
@@ -185,21 +185,20 @@ const page = ref(1)
 
 const categories = [
   { label: '全部', value: 'all' },
-  { label: '联谊社交', value: '联谊社交' },
-  { label: '情感心理', value: '情感心理' },
+  { label: '平台资讯', value: '平台资讯' },
   { label: '活动指南', value: '活动指南' },
-  { label: '生活方式', value: '生活方式' },
-  { label: '城市探索', value: '城市探索' },
+  { label: '活动中心', value: '活动中心' },
   { label: '平台攻略', value: '平台攻略' },
-  { label: 'AI工具', value: 'AI工具' }
+  { label: 'AI工具', value: 'AI工具' },
+  { label: '本地服务', value: '本地服务' }
 ]
 
 const fallbackArticles = [
   {
     id: 'social-icebreaker',
-    title: '如何在联谊活动中快速打破陌生感？',
-    summary: '3个简单有效的社交技巧，帮助你轻松开启话题，结识新朋友',
-    category: '联谊社交',
+    title: '平台账号安全升级指南',
+    summary: '从登录保护、通知设置到密码策略，三步提升账号安全。',
+    category: '平台资讯',
     author: 'Love Cube官方',
     reads: '2.4k',
     likes: 128,
@@ -209,7 +208,7 @@ const fallbackArticles = [
   },
   {
     id: 'may-event-guide',
-    title: '五一主题联谊活动全攻略',
+    title: '五一平台活动参与指南',
     summary: '活动亮点、报名方式、注意事项一文看懂',
     category: '活动指南',
     author: '活动小助手',
@@ -221,9 +220,9 @@ const fallbackArticles = [
   },
   {
     id: 'healthy-relationship',
-    title: '建立健康关系的5个关键要素',
-    summary: '心理学视角解析亲密关系经营之道',
-    category: '情感心理',
+    title: '内容互动礼仪与社区规范',
+    summary: '帮助你在平台内高质量表达与互动，减少沟通误解。',
+    category: '平台资讯',
     author: '心语心理',
     reads: '1.3k',
     likes: 136,
@@ -233,9 +232,9 @@ const fallbackArticles = [
   },
   {
     id: 'city-cafe-map',
-    title: '城市里的治愈角落推荐',
-    summary: '8个适合约会和放松的宝藏地点',
-    category: '生活方式',
+    title: '城市生活服务精选清单',
+    summary: '覆盖餐饮、运动、学习等场景的一站式服务推荐。',
+    category: '本地服务',
     author: '生活探索家',
     reads: '1.2k',
     likes: 74,
@@ -258,7 +257,7 @@ const fallbackArticles = [
   {
     id: 'ai-social-helper',
     title: 'AI 助手：你的社交好帮手',
-    summary: '智能匹配、话题推荐、破冰神器',
+    summary: '内容推荐、话题建议、表达辅助',
     category: 'AI工具',
     author: 'AI小智',
     reads: '1.6k',
@@ -269,9 +268,9 @@ const fallbackArticles = [
   },
   {
     id: 'weekend-city-plan',
-    title: '本周城市热门打卡地',
-    summary: '发现城市新玩法，记录美好生活',
-    category: '城市探索',
+    title: '本周活动中心热门主题',
+    summary: '快速了解近期平台活动中心最受关注的专题。',
+    category: '活动中心',
     author: '城市向导',
     reads: '1.9k',
     likes: 95,
@@ -306,6 +305,7 @@ const normalizedItems = computed(() => allItems.value.map((item, index) => {
     title: item.title || fallback.title,
     summary: item.summary || fallback.summary,
     category,
+    sourceLabel: sourceLabelByCategory(category),
     author: item.authorName || item.author || fallback.author,
     reads: formatCount(item.viewCount || item.views || fallback.reads),
     likes: item.likeCount || item.likes || fallback.likes,
@@ -364,15 +364,26 @@ function formatDate(value) {
 
 function labelClass(category) {
   const map = {
-    联谊社交: 'label-social',
-    情感心理: 'label-psychology',
+    平台资讯: 'label-platform',
     活动指南: 'label-event',
-    生活方式: 'label-life',
-    城市探索: 'label-city',
+    活动中心: 'label-event',
     平台攻略: 'label-platform',
-    AI工具: 'label-ai'
+    AI工具: 'label-ai',
+    本地服务: 'label-life'
   }
   return map[category] || 'label-platform'
+}
+
+function sourceLabelByCategory(category) {
+  const mapping = {
+    平台资讯: '[平台资讯]',
+    活动指南: '[活动中心]',
+    活动中心: '[活动中心]',
+    平台攻略: '[平台资讯]',
+    AI工具: '[AI工具]',
+    本地服务: '[本地服务]'
+  }
+  return mapping[category] || '[平台资讯]'
 }
 
 onMounted(async () => {

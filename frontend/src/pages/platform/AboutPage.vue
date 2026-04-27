@@ -15,7 +15,7 @@
       </article>
       <article class="platform-card module-card">
         <h3 class="module-card-title">模块体系</h3>
-        <p class="module-card-desc">包含平台动态、精选内容、活动中心、联谊模块、账号中心和治理系统。</p>
+        <p class="module-card-desc">包含平台动态、精选内容、活动中心、联谊模块、平台个人中心和治理系统。</p>
       </article>
       <article class="platform-card module-card">
         <h3 class="module-card-title">运营目标</h3>
@@ -30,7 +30,7 @@
         <router-link class="module-chip" to="/articles">精选内容</router-link>
         <router-link class="module-chip" to="/events">活动中心</router-link>
         <router-link class="module-chip" to="/fellowship-intro">联谊介绍</router-link>
-        <router-link class="module-chip" to="/account">账号中心</router-link>
+        <router-link class="module-chip" to="/me">平台个人中心</router-link>
       </div>
     </section>
   </section>

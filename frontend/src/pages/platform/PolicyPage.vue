@@ -2,7 +2,7 @@
   <section class="platform-page module-page">
     <div class="detail-nav-row">
       <router-link to="/about" class="platform-backlink">返回关于我们</router-link>
-      <router-link to="/account" class="platform-link">前往账号中心</router-link>
+      <router-link to="/me" class="platform-link">前往平台个人中心</router-link>
     </div>
 
     <article v-if="item" class="platform-card detail-article">

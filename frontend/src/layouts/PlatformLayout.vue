@@ -34,13 +34,13 @@
               <span aria-hidden="true">✎</span>
               签到
             </router-link>
-            <router-link to="/fellowship/messages" class="nav-action nav-action-message">
+            <router-link to="/messages" class="nav-action nav-action-message">
               <span aria-hidden="true">💬</span>
-              消息
+              平台消息
               <i v-if="messageBadge" class="message-badge">{{ messageBadge }}</i>
             </router-link>
             <template v-if="userStore.isLoggedIn">
-              <router-link to="/account" class="login-entry">{{ userStore.userInfo?.username || '我的账号' }}</router-link>
+              <router-link to="/me" class="login-entry">{{ userStore.userInfo?.username || '平台个人中心' }}</router-link>
               <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
             </template>
             <template v-else>
@@ -120,8 +120,8 @@
           {{ item.label }}
         </router-link>
         <router-link to="/events" @click="menuOpen = false">签到</router-link>
-        <router-link to="/fellowship/messages" @click="menuOpen = false">消息中心</router-link>
-        <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">我的账号</router-link>
+        <router-link to="/messages" @click="menuOpen = false">平台消息中心</router-link>
+        <router-link v-if="userStore.isLoggedIn" to="/me" @click="menuOpen = false">平台个人中心</router-link>
         <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link>
         <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录 / 注册</router-link>
         <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button>
@@ -149,7 +149,7 @@ const navItems = [
   { to: '/modules', label: '缘说中心' },
   { to: '/announcements', label: '平台动态' },
   { to: '/articles', label: '精选内容' },
-  { to: '/events', label: '互动' },
+  { to: '/events', label: '活动' },
   { to: '/fellowship-intro', label: '联谊介绍' }
 ]
 
@@ -466,10 +466,11 @@ onBeforeUnmount(() => {
 }
 
 .platform-route-back {
-  position: fixed;
-  left: 24px;
-  top: 96px;
-  z-index: 95;
+  position: sticky;
+  top: 86px;
+  z-index: 60;
+  margin: 8px 0 0 12px;
+  width: fit-content;
 }
 
 .platform-route-back:hover {
@@ -674,8 +675,8 @@ onBeforeUnmount(() => {
   }
 
   .platform-route-back {
-    left: 12px;
-    top: 88px;
+    top: 78px;
+    margin: 6px 0 0 10px;
   }
 
   .mobile-quick-nav {

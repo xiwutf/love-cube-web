@@ -3,7 +3,7 @@
     <NavBar title="设置" />
 
     <van-cell-group inset title="账号" class="group">
-      <van-cell title="账号中心" is-link @click="router.push('/account')" />
+      <van-cell title="平台个人中心" is-link @click="router.push('/me')" />
       <van-cell title="退出登录" is-link @click="handleLogout" title-class="danger-text" />
     </van-cell-group>
 

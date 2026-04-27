@@ -9,6 +9,17 @@
         <router-link to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
       </div>
       <p class="hint">新用户建议先完善资料并完成真人认证，推荐效果会更好。</p>
+
+      <div class="quick-grid">
+        <router-link to="/fellowship/discover" class="quick-item">推荐对象</router-link>
+        <router-link to="/fellowship/messages?tab=interact" class="quick-item">打招呼消息</router-link>
+        <router-link to="/fellowship/messages?tab=visitor" class="quick-item">谁看过我</router-link>
+        <router-link to="/fellowship/my-likes" class="quick-item">我的喜欢</router-link>
+        <router-link to="/fellowship/preferences" class="quick-item">择偶条件</router-link>
+        <router-link to="/fellowship/verify" class="quick-item">真人/实名认证</router-link>
+        <router-link to="/fellowship/blacklist" class="quick-item">黑名单</router-link>
+        <router-link to="/fellowship/profile/edit" class="quick-item">生活照管理</router-link>
+      </div>
     </div>
     <div class="footer-link">
       <router-link to="/">返回平台首页</router-link>
@@ -109,6 +120,28 @@ if (storage.get('token')) {
   margin: 16px 0 0;
   font-size: 13px;
   color: #64748b;
+}
+
+.quick-grid {
+  width: 100%;
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-item {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #ffd5df;
+  background: #fff;
+  color: #d94870;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .footer-link {

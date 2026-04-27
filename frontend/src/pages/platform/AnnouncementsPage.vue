@@ -76,7 +76,7 @@
               <p>{{ item.summary || '暂无摘要信息' }}</p>
               <div class="announcement-tags">
                 <span>{{ formatViews(item.viewCount) }} 阅读</span>
-                <span>{{ item.category || '平台公告' }}</span>
+                <span>{{ sourceLabel(item.category) }}</span>
               </div>
             </div>
             <div class="announcement-visual" aria-hidden="true">
@@ -88,7 +88,7 @@
 
           <article v-if="!loading && !filteredList.length" class="empty-state">
             <h3>暂无公告</h3>
-            <p>当前没有匹配的公告内容，换个分类或关键词看看。</p>
+            <p>当前没有符合条件的公告内容，换个分类或关键词看看。</p>
           </article>
         </section>
 
@@ -130,8 +130,8 @@
         <section class="notify-card">
           <div>
             <h3>想第一时间获取动态？</h3>
-            <p>开启消息通知，不错过任何重要更新。</p>
-            <router-link to="/account">去设置</router-link>
+            <p>开启平台通知，不错过任何重要更新。</p>
+            <router-link to="/me">去设置</router-link>
           </div>
           <span aria-hidden="true">✉</span>
         </section>
@@ -167,7 +167,7 @@ const fallbackAnnouncements = [
     id: 'review-rule-20260405',
     date: '2026-04-05 10:00',
     title: '联谊资料审核规范更新',
-    summary: '优化资料审核与匹配推荐规则，新增实名认证项，保障互动质量，提升匹配准确度。',
+    summary: '优化资料审核与内容推荐规则，新增实名认证项，保障互动质量，提升推荐质量。',
     category: '功能更新',
     recommended: true,
     viewCount: 856
@@ -176,7 +176,7 @@ const fallbackAnnouncements = [
     id: 'event-preview-20260328',
     date: '2026-03-28 15:00',
     title: '五一主题活动预告',
-    summary: '开放线上专题活动报名，支持站内消息通知与一键参与，赢取专属奖励。',
+    summary: '开放线上专题活动报名，支持站内通知与一键参与，赢取专属奖励。',
     category: '活动通知',
     viewCount: 2368
   },
@@ -244,7 +244,7 @@ const heroStats = computed(() => [
   { label: '公告总数', value: normalizedItems.value.length, icon: '告', tone: 'blue' },
   { label: '本月更新', value: latestMonthCount.value, icon: '日', tone: 'violet' },
   { label: '总阅读', value: formatViews(totalViews.value), icon: '读', tone: 'cyan' },
-  { label: '消息触达', value: '98%', icon: '达', tone: 'orange' }
+  { label: '通知触达', value: '98%', icon: '达', tone: 'orange' }
 ])
 
 const categoryCards = computed(() => {
@@ -309,6 +309,14 @@ function getTone(category = '') {
   if (category.includes('安全')) return 'green'
   if (category.includes('规则')) return 'violet'
   return 'pink'
+}
+
+function sourceLabel(category = '') {
+  if (String(category).includes('活动')) return '[活动中心]'
+  if (String(category).includes('功能')) return '[平台资讯]'
+  if (String(category).includes('安全')) return '[平台资讯]'
+  if (String(category).includes('规则')) return '[平台资讯]'
+  return '[平台资讯]'
 }
 
 onMounted(async () => {

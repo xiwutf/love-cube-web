@@ -105,6 +105,7 @@
               <div class="activity-cover">
                 <img :src="item.coverUrl" :alt="item.title" loading="lazy">
                 <span class="cover-badge" :class="item.tone">{{ item.category }}</span>
+                <span class="cover-source">[活动中心]</span>
               </div>
               <div class="activity-body">
                 <h3>{{ item.title }}</h3>
@@ -122,7 +123,7 @@
             </router-link>
 
             <article v-if="!loading && !visibleList.length" class="empty-card">
-              <h3>暂无匹配活动</h3>
+              <h3>暂无符合条件的活动</h3>
               <p>换一个筛选条件试试，新的活动也会持续补充。</p>
             </article>
           </div>
@@ -818,6 +819,18 @@ onMounted(async () => {
   padding: 4px 10px;
   font-size: var(--lc-text-xs);
   font-weight: 900;
+}
+
+.cover-source {
+  position: absolute;
+  right: var(--lc-space-3);
+  top: var(--lc-space-3);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #d97706;
+  background: rgba(255, 247, 237, 0.92);
 }
 
 .activity-body {

@@ -80,6 +80,7 @@
               @error="onMediaError"
             >
             <span class="news-badge">{{ featuredUpdate.tag }}</span>
+            <span class="news-source">{{ featuredUpdate.sourceLabel }}</span>
             <h3>{{ featuredUpdate.title }}</h3>
             <p>{{ featuredUpdate.summary }}</p>
             <small>{{ featuredUpdate.date }} · {{ featuredUpdate.reads }}</small>
@@ -94,7 +95,7 @@
               <span class="news-row-icon" :class="item.tone">{{ item.short }}</span>
               <span>
                 <strong>{{ item.title }}</strong>
-                <small>{{ item.category }} · {{ item.date }} · {{ item.reads }}</small>
+                <small>{{ item.sourceLabel }} · {{ item.date }} · {{ item.reads }}</small>
               </span>
             </router-link>
           </div>
@@ -103,19 +104,19 @@
 
       <div class="content-panel">
         <div class="panel-head">
-          <h2>动态推荐</h2>
-          <router-link to="/fellowship/discover">查看更多 →</router-link>
+          <h2>模块推荐</h2>
+          <router-link to="/modules">查看更多 →</router-link>
         </div>
         <div class="people-grid">
-          <article v-for="person in peopleCards" :key="person.name" class="person-card">
-            <div class="person-photo" :class="person.tone">
-              <span>{{ person.avatar }}</span>
+          <article v-for="module in moduleCards" :key="module.title" class="person-card">
+            <div class="person-photo" :class="module.tone">
+              <span>{{ module.icon }}</span>
               <i></i>
             </div>
-            <strong>{{ person.name }}</strong>
-            <small>{{ person.meta }}</small>
-            <p>{{ person.desc }}</p>
-            <router-link to="/fellowship/discover">打招呼</router-link>
+            <strong>{{ module.title }}</strong>
+            <small>{{ module.meta }}</small>
+            <p>{{ module.desc }}</p>
+            <router-link :to="module.to">{{ module.actionText }}</router-link>
           </article>
         </div>
       </div>
@@ -217,19 +218,19 @@ const platformModules = computed(() => {
 const heroMetrics = [
   { label: '今日活跃', value: '2,345 人', tone: 'line-blue' },
   { label: '在线用户', value: '1,234 人', tone: 'line-green' },
-  { label: '成功配对', value: '3,456 对', tone: 'line-orange' }
+  { label: '活动报名', value: '3,456 人次', tone: 'line-orange' }
 ]
 
-const peopleCards = [
-  { name: '小雨同学', avatar: '雨', meta: '24岁 · 市场运营', desc: '期待遇见有趣的你', tone: 'tone-pink' },
-  { name: '阳光男孩', avatar: '阳', meta: '26岁 · 程序员', desc: '热爱生活，热爱运动', tone: 'tone-blue' },
-  { name: '甜心小姐', avatar: '甜', meta: '23岁 · 设计师', desc: '喜欢旅行和摄影', tone: 'tone-pink' },
-  { name: '风之子', avatar: '风', meta: '27岁 · 自由职业', desc: '寻找志同道合的朋友', tone: 'tone-blue' }
+const moduleCards = [
+  { title: '联谊模块', icon: '联', meta: '交友业务专区', desc: '进入联谊专区处理资料、互动与消息。', tone: 'tone-pink', to: '/fellowship', actionText: '进入模块' },
+  { title: '内容资讯', icon: '文', meta: '内容中心', desc: '查看平台精选内容与运营资讯。', tone: 'tone-blue', to: '/articles', actionText: '查看内容' },
+  { title: '活动中心', icon: '活', meta: '线上线下活动', desc: '浏览近期活动并完成报名。', tone: 'tone-orange', to: '/events', actionText: '查看活动' },
+  { title: '模块中心', icon: '模', meta: '统一入口', desc: '从模块中心进入更多平台能力。', tone: 'tone-violet', to: '/modules', actionText: '前往模块' }
 ]
 
 const platformStats = [
   { icon: '人', value: '125,678+', label: '注册用户', delta: '较昨日 +2.5%', tone: 'tone-blue' },
-  { icon: '❤', value: '23,456+', label: '成功配对', delta: '较昨日 +3.2%', tone: 'tone-pink' },
+  { icon: '活', value: '23,456+', label: '活动报名', delta: '较昨日 +3.2%', tone: 'tone-pink' },
   { icon: '聊', value: '89,123+', label: '动态发布', delta: '较昨日 +1.8%', tone: 'tone-violet' },
   { icon: '眼', value: '456,789+', label: '内容浏览', delta: '较昨日 +4.3%', tone: 'tone-purple' },
   { icon: '楼', value: '128+', label: '合作商家', delta: '较昨日 +2.1%', tone: 'tone-green' },
@@ -243,6 +244,7 @@ const allUpdates = computed(() => {
       title: item.title || '平台资讯',
       summary: item.summary || item.description || '更多精彩内容正在持续更新。',
       category: item.category || '平台资讯',
+      sourceLabel: sourceLabelByCategory(item.category || '平台资讯'),
       date: formatDate(item.publishDate || item.createdAt),
       reads: `${item.viewCount || 856}阅读`,
       tag: index === 0 ? '推荐' : '资讯',
@@ -256,6 +258,7 @@ const allUpdates = computed(() => {
       title: item.title || '平台公告',
       summary: item.summary || item.description || '重要平台信息请进入详情查看。',
       category: '平台公告',
+      sourceLabel: '[平台资讯]',
       date: formatDate(item.publishDate || item.createdAt),
       reads: `${item.viewCount || 623}阅读`,
       tag: '公告',
@@ -269,6 +272,7 @@ const allUpdates = computed(() => {
       title: item.title || '平台活动',
       summary: item.summary || item.description || '活动报名与现场服务持续开放。',
       category: '活动预告',
+      sourceLabel: '[活动中心]',
       date: formatDate(item.eventTime || item.createdAt),
       reads: `${item.viewCount || 1234}阅读`,
       tag: '活动',
@@ -285,9 +289,10 @@ const allUpdates = computed(() => {
 const fallbackUpdates = [
   {
     key: 'fallback-featured',
-    title: '周末城市单身青年联谊活动报名中',
-    summary: '一场属于你的邂逅之旅，认识新朋友，发现新生活。',
+    title: '周末城市青年主题活动报名中',
+    summary: '围绕兴趣社交与城市探索，欢迎报名参与。',
     category: '活动预告',
+    sourceLabel: '[活动中心]',
     date: '2小时前',
     reads: '1,234阅读',
     tag: '推荐',
@@ -298,9 +303,10 @@ const fallbackUpdates = [
   },
   {
     key: 'fallback-ai',
-    title: 'AI工具上新：智能匹配算法升级',
+    title: 'AI工具上新：内容推荐算法升级',
     summary: '平台公告 · 5小时前',
     category: '平台公告',
+    sourceLabel: '[平台资讯]',
     date: '5小时前',
     reads: '856阅读',
     tag: '公告',
@@ -314,6 +320,7 @@ const fallbackUpdates = [
     title: '本地优质商家推荐',
     summary: '生活服务 · 1天前',
     category: '生活服务',
+    sourceLabel: '[本地服务]',
     date: '1天前',
     reads: '623阅读',
     tag: '服务',
@@ -324,9 +331,10 @@ const fallbackUpdates = [
   },
   {
     key: 'fallback-love',
-    title: '如何在 Love Cube 找到合适的 TA',
-    summary: '交友攻略 · 2天前',
-    category: '交友攻略',
+    title: '如何在 Love Cube 高效使用平台模块',
+    summary: '平台指南 · 2天前',
+    category: '平台指南',
+    sourceLabel: '[平台资讯]',
     date: '2天前',
     reads: '1,023阅读',
     tag: '攻略',
@@ -359,6 +367,14 @@ function formatDate(value) {
   if (!value) return '刚刚'
   const text = String(value).replace('T', ' ')
   return text.length > 10 ? text.slice(0, 10) : text
+}
+
+function sourceLabelByCategory(category = '') {
+  if (String(category).includes('活动')) return '[活动中心]'
+  if (String(category).includes('AI')) return '[AI工具]'
+  if (String(category).includes('服务')) return '[本地服务]'
+  if (String(category).includes('联谊')) return '[联谊模块]'
+  return '[平台资讯]'
 }
 
 function onMediaError(event) {
@@ -781,6 +797,18 @@ onMounted(async () => {
   background: #7c3aed;
   font-size: 12px;
   font-weight: 900;
+}
+
+.news-source {
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #5b6ff7;
+  background: #eef2ff;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .news-list {

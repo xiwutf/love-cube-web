@@ -111,7 +111,7 @@ function resolveRedirect() {
   const fromStore = userStore.consumePostLoginRedirect()
   const target = fromQuery || fromStore
   if (target) return decodeURIComponent(target)
-  return route.path.startsWith('/fellowship') ? '/fellowship/discover' : '/account'
+  return route.path.startsWith('/fellowship') ? '/fellowship/discover' : '/me'
 }
 
 async function handleLogin() {

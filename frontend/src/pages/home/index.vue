@@ -10,7 +10,7 @@
       </button>
     </header>
 
-    <template>
+    <template v-if="!renderFallback">
       <div v-if="showProfileReminder" class="tip-card">
         <div class="tip-left">
           <div class="tip-icon">!</div>
@@ -64,9 +64,9 @@
           <span class="section-title">为你推荐</span>
           <span class="section-more" @click="router.push('/fellowship/match')">查看更多</span>
         </div>
-        <div v-if="recommends.length" class="rec-scroll">
+        <div v-if="safeRecommends.length" class="rec-scroll">
           <div
-            v-for="user in recommends"
+            v-for="user in safeRecommends"
             :key="user.userId || user.userid"
             class="rec-item"
             @click="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)"
@@ -102,9 +102,9 @@
           <span class="section-title">新人</span>
           <span class="section-more" @click="router.push('/fellowship/newcomers')">查看更多</span>
         </div>
-        <div v-if="newcomers.length" class="nc-list">
+        <div v-if="safeNewcomers.length" class="nc-list">
           <div
-            v-for="user in newcomers"
+            v-for="user in safeNewcomers"
             :key="user.userId || user.userid"
             class="nc-item"
             @click="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)"
@@ -126,13 +126,24 @@
         <van-empty v-else description="暂无新人，稍后再来看看" image-size="60" />
       </div>
     </template>
+    <div v-else class="section-card fallback-shell">
+      <div class="section-head">
+        <span class="section-title">首页内容加载中</span>
+      </div>
+      <div class="fallback-body">
+        <p>当前网络或数据格式异常，已切换到安全模式。</p>
+        <van-button round type="primary" size="small" color="#ff5f84" @click="router.go(0)">
+          重新加载
+        </van-button>
+      </div>
+    </div>
 
     <AppTabBar />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
@@ -151,6 +162,7 @@ const recommends = ref([])
 const newcomers = ref([])
 const completion = ref({ completed: false, percent: 0, missingFields: [] })
 const verificationStatus = ref('none')
+const renderFallback = ref(false)
 
 const localBanners = [
   { id: 'local-banner-1', imageUrl: banner1 },
@@ -169,6 +181,8 @@ const remoteBanners = computed(() => {
 })
 
 const displayBanners = computed(() => (remoteBanners.value.length ? remoteBanners.value : localBanners))
+const safeRecommends = computed(() => (Array.isArray(recommends.value) ? recommends.value : []))
+const safeNewcomers = computed(() => (Array.isArray(newcomers.value) ? newcomers.value : []))
 
 const showProfileReminder = computed(() => {
   if (!completion.value) return false
@@ -179,6 +193,12 @@ const showProfileReminder = computed(() => {
 const showVerifyReminder = computed(() => {
   const status = String(verificationStatus.value || '').toLowerCase()
   return !['approved', 'verified'].includes(status)
+})
+
+onErrorCaptured((err) => {
+  console.error('[fellowship-home] render error:', err)
+  renderFallback.value = true
+  return false
 })
 
 onMounted(async () => {
@@ -206,8 +226,9 @@ onMounted(async () => {
 
 function resolveBannerImage(item) {
   if (!item) return ''
-  if (typeof item === 'string') return item
-  return (
+  const raw = typeof item === 'string'
+    ? item
+    : (
     item.imageUrl ||
     item.image_url ||
     item.imgUrl ||
@@ -221,6 +242,37 @@ function resolveBannerImage(item) {
     item.pic_url ||
     ''
   )
+  return normalizeBannerUrl(raw)
+}
+
+function normalizeBannerUrl(rawUrl) {
+  const value = String(rawUrl || '').trim()
+  if (!value) return ''
+  if (value.startsWith('data:') || value.startsWith('blob:')) return value
+
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const toBaseUrl = (pathWithQuery = '') => {
+    if (!apiBase) return pathWithQuery
+    if (apiBase.endsWith('/admin') && pathWithQuery.startsWith('/admin/')) {
+      return `${apiBase}${pathWithQuery.slice('/admin'.length)}`
+    }
+    if (pathWithQuery.startsWith('/')) return `${apiBase}${pathWithQuery}`
+    return `${apiBase}/${pathWithQuery}`
+  }
+
+  if (value.startsWith('/')) return toBaseUrl(value)
+  if (!/^https?:\/\//i.test(value)) return toBaseUrl(value)
+
+  try {
+    const parsed = new URL(value)
+    const fullPath = `${parsed.pathname || ''}${parsed.search || ''}${parsed.hash || ''}`
+    if (fullPath.startsWith('/admin/')) {
+      return toBaseUrl(fullPath)
+    }
+    return value
+  } catch {
+    return value
+  }
 }
 
 function onImgError(event, index) {
@@ -459,6 +511,19 @@ function onImgError(event, index) {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.fallback-shell {
+  margin-top: 12px;
+}
+
+.fallback-body {
+  padding: 4px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .nc-list {

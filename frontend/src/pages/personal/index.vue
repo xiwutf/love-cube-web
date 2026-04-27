@@ -138,8 +138,8 @@ const stats = reactive({
 })
 
 const featureItems = [
-  { title: '账号中心', icon: 'manager-o', to: '/account' },
-  { title: '认证状态', icon: 'certificate', to: '/account' },
+  { title: '平台个人中心', icon: 'manager-o', to: '/me' },
+  { title: '认证状态', icon: 'certificate', to: '/me' },
   { title: '我的动态', icon: 'records', to: '/fellowship/dynamic' },
   { title: '消息中心', icon: 'chat-o', to: '/fellowship/messages' },
   { title: '我的喜欢', icon: 'like-o', to: '/fellowship/my-likes' },
