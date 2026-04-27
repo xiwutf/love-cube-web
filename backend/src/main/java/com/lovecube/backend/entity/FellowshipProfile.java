@@ -114,6 +114,9 @@ public class FellowshipProfile {
         if (this.reviewStatus == null || this.reviewStatus.isBlank()) {
             this.reviewStatus = "PENDING";
         }
+        if (this.guardianContactVisible == null) {
+            this.guardianContactVisible = true;
+        }
     }
 
     @PreUpdate

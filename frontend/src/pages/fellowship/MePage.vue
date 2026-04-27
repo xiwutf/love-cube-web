@@ -104,12 +104,20 @@
       <section class="photos-card">
         <div class="block-header">
           <h3>我的照片</h3>
-          <button class="block-link" @click="router.push('/fellowship/profile/edit')">全部照片 ></button>
+          <button class="block-link" @click="router.push('/fellowship/profile-edit')">全部照片 ></button>
         </div>
         <div class="photos-row">
           <div v-for="(photo, index) in displayPhotos" :key="photo.id || index" class="photo-item">
             <img :src="photo.url" alt="照片" />
             <span v-if="index === 0" class="main-tag">主照片</span>
+            <button
+              class="remove-photo-btn"
+              type="button"
+              :disabled="photoDeleting"
+              @click.stop="removePhoto(photo, index)"
+            >
+              删除
+            </button>
           </div>
           <button class="upload-item" @click="choosePhoto">
             <van-icon name="plus" size="22" />
@@ -158,10 +166,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { useUserStore } from '@/stores/user.js'
 import {
+  deleteFellowshipPhoto,
   getFellowshipPhotos,
   getFellowshipProfileCompletion,
   getMyFellowshipProfile,
@@ -187,6 +196,7 @@ const profile = ref({
 })
 const completion = ref({ percent: 0, missingFields: [] })
 const photoList = ref([])
+const photoDeleting = ref(false)
 const notificationCount = ref(5)
 
 const displayName = computed(() => profile.value.nickname || userInfo.value?.username || 'Love Cube 用户')
@@ -313,6 +323,33 @@ async function onPhotoSelected(event) {
     showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照片` })
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '照片上传失败' })
+  }
+}
+
+async function removePhoto(photo, index) {
+  const targetUrl = photo?.url || ''
+  if (!targetUrl || photoDeleting.value) return
+
+  try {
+    await showConfirmDialog({
+      title: '删除照片',
+      message: '删除后不可恢复，确定继续吗？',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+
+  photoDeleting.value = true
+  try {
+    await deleteFellowshipPhoto(targetUrl)
+    photoList.value = photoList.value.filter((item, itemIndex) => !(item.url === targetUrl && itemIndex === index))
+    showToast({ type: 'success', message: '照片已删除' })
+  } catch (err) {
+    showToast({ type: 'fail', message: err.message || '照片删除失败' })
+  } finally {
+    photoDeleting.value = false
   }
 }
 
@@ -887,6 +924,23 @@ onMounted(loadPageData)
   object-fit: cover;
   object-position: center top;
   filter: saturate(1.12) contrast(1.04);
+}
+
+.remove-photo-btn {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  border: none;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(255, 75, 111, 0.9);
+  box-shadow: 0 3px 8px rgba(255, 75, 111, 0.28);
+}
+
+.remove-photo-btn:disabled {
+  opacity: 0.6;
 }
 
 .main-tag {

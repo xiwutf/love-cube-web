@@ -85,6 +85,9 @@ public class FellowshipProfileMain {
         if (this.reviewStatus == null || this.reviewStatus.isBlank()) {
             this.reviewStatus = "pending";
         }
+        if (this.reportedCount == null) {
+            this.reportedCount = 0;
+        }
     }
 
     @PreUpdate

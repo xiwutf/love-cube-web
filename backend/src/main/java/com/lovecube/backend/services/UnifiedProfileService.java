@@ -175,12 +175,14 @@ public class UnifiedProfileService {
                 .orElseGet(() -> {
                     FellowshipProfileMain created = new FellowshipProfileMain();
                     created.setUserId(user.getUserid());
+                    created.setReportedCount(0);
                     return created;
                 });
         FellowshipProfile legacy = legacyFellowshipProfileRepository.findByUserId(user.getUserid())
                 .orElseGet(() -> {
                     FellowshipProfile created = new FellowshipProfile();
                     created.setUserId(user.getUserid());
+                    created.setGuardianContactVisible(true);
                     return created;
                 });
 
