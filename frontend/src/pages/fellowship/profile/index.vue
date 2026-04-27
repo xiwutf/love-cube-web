@@ -26,7 +26,7 @@
         </div>
         <van-progress :percentage="completion.percent || 0" color="#ff6b8a" stroke-width="8" />
         <p v-if="completion.missingFields?.length" class="missing">
-          缺少字段：{{ completion.missingFields.join('?) }}
+          缺少字段：{{ completion.missingFields.join('、') }}
         </p>
       </div>
 
