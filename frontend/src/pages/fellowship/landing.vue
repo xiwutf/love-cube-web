@@ -1,16 +1,17 @@
 <template>
   <div class="landing-page">
     <div class="content">
-      <div class="logo">💕</div>
-      <h1 class="title">真诚认识</h1>
-      <p class="slogan">遇见你，是最好的事</p>
+      <p class="eyebrow">Love Cube Fellowship</p>
+      <h1 class="title">更可靠的联谊交友体验</h1>
+      <p class="slogan">从完善资料到开始匹配，3 分钟即可进入互动状态。</p>
       <div class="actions">
-        <router-link to="/fellowship/login" class="btn-primary">立即加入</router-link>
-        <router-link to="/fellowship/discover" class="btn-ghost">浏览</router-link>
+        <router-link to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
+        <router-link to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
       </div>
+      <p class="hint">新用户建议先完善资料并完成真人认证，推荐效果会更好。</p>
     </div>
     <div class="footer-link">
-      <router-link to="/">→ 返回平台官网</router-link>
+      <router-link to="/">返回平台首页</router-link>
     </div>
   </div>
 </template>
@@ -33,11 +34,12 @@ if (storage.get('token')) {
   align-items: center;
   justify-content: center;
   background: linear-gradient(160deg, #fff0f3 0%, #ffffff 60%);
-  padding: 40px 24px;
+  padding: 40px 20px;
   position: relative;
 }
 
 .content {
+  width: min(100%, 520px);
   text-align: center;
   flex: 1;
   display: flex;
@@ -46,50 +48,89 @@ if (storage.get('token')) {
   justify-content: center;
 }
 
-.logo { font-size: 80px; line-height: 1; margin-bottom: 20px; }
-.title { font-size: 36px; font-weight: 800; color: #ff6b8a; letter-spacing: 4px; margin-bottom: 12px; }
-.slogan { font-size: 16px; color: #aaa; margin-bottom: 40px; }
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #e84f73;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 14px 0 10px;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 1.2;
+  font-weight: 900;
+  color: #1f2a44;
+}
+
+.slogan {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.7;
+}
 
 .actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.btn-primary,
+.btn-ghost {
+  min-height: 46px;
+  padding: 0 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 }
 
 .btn-primary {
-  display: inline-block;
-  padding: 14px 36px;
-  background: linear-gradient(135deg, #ff6b8a, #e85c7b);
+  background: #ff5f84;
   color: #fff;
-  text-decoration: none;
-  border-radius: 28px;
-  font-size: 16px;
-  font-weight: 700;
-  box-shadow: 0 4px 20px rgba(255, 107, 138, .35);
+  box-shadow: 0 10px 20px rgba(255, 95, 132, 0.25);
 }
 
 .btn-ghost {
-  display: inline-block;
-  padding: 14px 36px;
-  border: 2px solid #ff6b8a;
-  color: #ff6b8a;
-  text-decoration: none;
-  border-radius: 28px;
-  font-size: 16px;
-  font-weight: 600;
+  border: 1px solid #ffc6d4;
+  color: #d94870;
+  background: #fff;
+}
+
+.hint {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: #64748b;
 }
 
 .footer-link {
   position: absolute;
-  bottom: 32px;
+  bottom: 24px;
   font-size: 13px;
 }
 
 .footer-link a {
-  color: #bbb;
+  color: #94a3b8;
   text-decoration: none;
 }
 
-.footer-link a:hover { color: #ff6b8a; }
+@media (max-width: 767px) {
+  .actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    width: 100%;
+  }
+}
 </style>

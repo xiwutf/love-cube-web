@@ -1,42 +1,44 @@
 <template>
   <div class="platform-layout">
     <header class="platform-header">
-      <div class="nav-wrap">
-        <router-link to="/" class="brand" @click="menuOpen = false">
-          <span class="brand-logo" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-          </span>
-          <span class="brand-copy">
-            <span class="brand-text">Love Cube</span>
-            <span class="brand-tag">多元连接平台</span>
-          </span>
-        </router-link>
+      <div class="header-main">
+        <div class="nav-wrap">
+          <router-link to="/" class="brand" @click="menuOpen = false">
+            <span class="brand-logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            </span>
+            <span class="brand-copy">
+              <span class="brand-text">Love Cube</span>
+              <span class="brand-tag">多元连接平台</span>
+            </span>
+          </router-link>
 
-        <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单">
-          {{ menuOpen ? '关闭' : '菜单' }}
-        </button>
+          <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单">
+            {{ menuOpen ? '关闭' : '菜单' }}
+          </button>
 
-        <nav class="nav-links nav-links-desktop">
-          <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-          <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
-          <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
-          <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
-          <router-link to="/about" :class="{ 'is-active': isActive('/about') }">关于我们</router-link>
-          <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊介绍</router-link>
-        </nav>
+          <nav class="nav-links nav-links-desktop">
+            <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
+            <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块中心</router-link>
+            <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
+            <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
+            <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
+            <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊介绍</router-link>
+          </nav>
 
-        <div class="account-slot">
-          <template v-if="userStore.isLoggedIn">
-            <router-link to="/account" class="account-entry">{{ userStore.userInfo?.username || '我的账号' }}</router-link>
-            <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
-            <button class="logout-btn" type="button" @click="handleLogout">退出</button>
-          </template>
-          <template v-else>
-            <router-link to="/login" class="login-entry">登录</router-link>
-            <router-link to="/login" class="register-entry">立即加入</router-link>
-          </template>
+          <div class="account-slot">
+            <template v-if="userStore.isLoggedIn">
+              <router-link to="/account" class="account-entry">{{ userStore.userInfo?.username || '我的账号' }}</router-link>
+              <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
+              <button class="logout-btn" type="button" @click="handleLogout">退出</button>
+            </template>
+            <template v-else>
+              <router-link to="/login" class="login-entry">登录</router-link>
+              <router-link to="/login" class="register-entry">免费注册</router-link>
+            </template>
+          </div>
         </div>
       </div>
     </header>
@@ -47,7 +49,7 @@
 
     <nav class="mobile-quick-nav">
       <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">动态</router-link>
+      <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link>
       <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">内容</router-link>
       <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
       <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊</router-link>
@@ -55,17 +57,32 @@
 
     <footer class="platform-footer">
       <div class="footer-inner">
-        <div>
+        <div class="footer-brand">
           <p class="footer-title">Love Cube Platform</p>
-          <p>平台官网用于公告、资讯与活动发布；联谊模块用于移动端互动社交。</p>
+          <p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p>
         </div>
-        <div class="footer-links">
-          <router-link to="/policies/terms">用户协议</router-link>
-          <router-link to="/policies/privacy">隐私政策</router-link>
-          <router-link to="/policies/content-policy">内容规范</router-link>
-          <router-link to="/policies/safety">安全说明</router-link>
+        <div class="footer-cols">
+          <section class="footer-col">
+            <h4>平台</h4>
+            <router-link to="/modules">模块中心</router-link>
+            <router-link to="/announcements">平台动态</router-link>
+            <router-link to="/fellowship-intro">联谊介绍</router-link>
+          </section>
+          <section class="footer-col">
+            <h4>内容</h4>
+            <router-link to="/articles">资讯中心</router-link>
+            <router-link to="/events">活动中心</router-link>
+            <router-link to="/about">关于我们</router-link>
+          </section>
+          <section class="footer-col">
+            <h4>合规</h4>
+            <router-link to="/policies/terms">用户协议</router-link>
+            <router-link to="/policies/privacy">隐私政策</router-link>
+            <router-link to="/policies/content-policy">内容规范</router-link>
+          </section>
         </div>
       </div>
+      <div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div>
     </footer>
 
     <transition name="menu-fade">
@@ -74,6 +91,7 @@
     <transition name="menu-slide">
       <nav v-if="menuOpen" class="mobile-menu-panel">
         <router-link to="/" :class="{ 'is-active': isActive('/') }" @click="menuOpen = false">首页</router-link>
+        <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }" @click="menuOpen = false">模块中心</router-link>
         <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">平台动态</router-link>
         <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">精选内容</router-link>
         <router-link to="/events" :class="{ 'is-active': isActive('/events') }" @click="menuOpen = false">活动</router-link>
@@ -82,7 +100,7 @@
         <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">我的账号</router-link>
         <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link>
         <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录</router-link>
-        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">立即加入</router-link>
+        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">免费注册</router-link>
         <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button>
       </nav>
     </transition>
@@ -119,7 +137,7 @@ function handleLogout() {
 <style scoped>
 .platform-layout {
   min-height: 100vh;
-  background: #f5f7fb;
+  background: #f3f6fb;
   color: #111827;
 }
 
@@ -127,19 +145,27 @@ function handleLogout() {
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.nav-wrap,
+.footer-inner {
+  width: calc(100% - 48px);
+  margin: 0 auto;
+}
+
+.header-main {
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(14px);
-  background: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #d6e0ed;
 }
 
 .nav-wrap {
-  width: 100%;
-  min-height: 64px;
+  min-height: 68px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 18px;
-  padding: 0 32px;
+  gap: 24px;
 }
 
 .brand {
@@ -152,29 +178,22 @@ function handleLogout() {
 .brand-logo {
   width: 34px;
   height: 34px;
-  border-radius: 11px;
+  border-radius: 9px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(145deg, #ff6f92, #e84f73);
-  box-shadow: 0 12px 24px rgba(232, 79, 115, 0.28);
-}
-
-.brand-logo-core {
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  box-shadow: 0 10px 24px rgba(232, 79, 115, 0.24);
 }
 
 .brand-copy {
   display: inline-flex;
   flex-direction: column;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .brand-text {
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.01em;
@@ -191,19 +210,22 @@ function handleLogout() {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 22px;
 }
 
 .nav-links a {
-  color: #374151;
+  color: #334155;
   text-decoration: none;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 68px;
+  border-bottom: 2px solid transparent;
 }
 
 .nav-links a.router-link-exact-active,
 .nav-links a.is-active {
-  color: #1f4fd8;
+  color: #e84f73;
+  border-bottom-color: #e84f73;
 }
 
 .account-slot {
@@ -223,7 +245,7 @@ function handleLogout() {
   font-weight: 700;
   padding: 7px 12px;
   text-decoration: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d6e0ed;
   background: #fff;
   color: #334155;
   transition: all 0.2s ease;
@@ -234,11 +256,7 @@ function handleLogout() {
 .login-entry:hover,
 .logout-btn:hover {
   border-color: #ffd0db;
-  color: #ff5f84;
-}
-
-.admin-entry {
-  border-color: #cbd5e1;
+  color: #e84f73;
 }
 
 .login-entry,
@@ -249,31 +267,31 @@ function handleLogout() {
 
 .register-entry {
   text-decoration: none;
-  background: linear-gradient(135deg, #ff5f84, #e84f73);
+  background: linear-gradient(135deg, #ff6f92, #e84f73);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   border-radius: 999px;
   padding: 9px 14px;
-  box-shadow: 0 10px 22px rgba(255, 95, 132, 0.28);
+  box-shadow: 0 10px 22px rgba(232, 79, 115, 0.24);
 }
 
 .menu-toggle {
   display: none;
-  border: 1px solid #ffd2dc;
+  border: 1px solid #ffd0db;
   background: #fff;
   color: #e84f73;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  font-size: 18px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 700;
   align-items: center;
   justify-content: center;
 }
 
 .platform-main {
-  min-height: calc(100vh - 78px - 124px);
+  min-height: calc(100vh - 68px - 212px);
 }
 
 .mobile-quick-nav {
@@ -281,56 +299,82 @@ function handleLogout() {
 }
 
 .platform-footer {
+  margin-top: 36px;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .footer-inner {
-  width: 100%;
-  min-height: 124px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 24px;
-  font-size: 13px;
+  padding: 36px 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr);
+  gap: 30px;
   color: #64748b;
 }
 
 .footer-title {
-  font-size: 16px;
-  font-weight: 700;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
   color: #0f172a;
 }
 
-.footer-links {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+.footer-desc {
+  margin: 12px 0 0;
+  line-height: 1.8;
+  font-size: 14px;
 }
 
-.footer-links a {
+.footer-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.footer-col h4 {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.footer-col a {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
   text-decoration: none;
-  color: #475569;
+  font-size: 13px;
 }
 
-.footer-links a:hover {
-  color: #ff5f84;
+.footer-col a:hover {
+  color: #e84f73;
+}
+
+.footer-bottom {
+  border-top: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  text-align: center;
 }
 
 .mobile-logout {
   border: 1px solid #ffd8e3;
   color: #e84f73;
   background: #fff8fa;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 700;
   text-align: left;
   padding: 12px 10px;
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
+@media (min-width: 768px) and (max-width: 1199px) {
+  .nav-wrap,
+  .footer-inner {
+    width: calc(100% - 32px);
+  }
+
   .nav-wrap {
     grid-template-columns: auto 1fr;
     gap: 14px;
@@ -342,17 +386,21 @@ function handleLogout() {
     justify-content: flex-start;
   }
 
-  .fellowship-entry {
-    justify-self: start;
+  .footer-inner {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767px) {
+  .nav-wrap,
+  .footer-inner {
+    width: calc(100% - 24px);
+  }
+
   .nav-wrap {
     grid-template-columns: 1fr auto;
     min-height: 64px;
     gap: 10px;
-    padding: 0 12px;
   }
 
   .brand-logo {
@@ -362,7 +410,7 @@ function handleLogout() {
   }
 
   .brand-text {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   .brand-tag {
@@ -394,7 +442,7 @@ function handleLogout() {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     background: rgba(255, 255, 255, 0.96);
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #d6e0ed;
     backdrop-filter: blur(8px);
   }
 
@@ -410,7 +458,7 @@ function handleLogout() {
 
   .mobile-quick-nav a.router-link-exact-active,
   .mobile-quick-nav a.is-active {
-    color: #ff5f84;
+    color: #e84f73;
   }
 
   .platform-footer {
@@ -418,9 +466,13 @@ function handleLogout() {
   }
 
   .footer-inner {
-    min-height: 92px;
-    padding: 0 12px;
-    font-size: 12px;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 28px 0 18px;
+  }
+
+  .footer-cols {
+    grid-template-columns: 1fr 1fr;
   }
 
   .mobile-menu-mask {
@@ -437,7 +489,7 @@ function handleLogout() {
     right: 0;
     z-index: 101;
     background: #fff;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #d6e0ed;
     display: grid;
     padding: 12px;
     gap: 6px;
@@ -456,7 +508,7 @@ function handleLogout() {
   .mobile-menu-panel a.router-link-exact-active,
   .mobile-menu-panel a.is-active {
     background: #fff2f6;
-    color: #ff5f84;
+    color: #e84f73;
   }
 }
 
@@ -481,4 +533,3 @@ function handleLogout() {
   opacity: 0;
 }
 </style>
-

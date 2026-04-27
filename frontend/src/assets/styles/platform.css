@@ -13,13 +13,13 @@
 }
 
 .platform-container {
-  width: min(1200px, 100% - 48px);
+  width: calc(100% - 48px);
   margin: 0 auto;
 }
 
 .platform-page {
-  width: min(1200px, 100% - 48px);
-  margin: 40px auto 72px;
+  width: calc(100% - 48px);
+  margin: 32px auto 72px;
 }
 
 .platform-block {
@@ -388,7 +388,7 @@
 @media (min-width: 768px) and (max-width: 1023px) {
   .platform-container,
   .platform-page {
-    width: min(100%, 100% - 36px);
+    width: calc(100% - 32px);
   }
 
   .platform-page {

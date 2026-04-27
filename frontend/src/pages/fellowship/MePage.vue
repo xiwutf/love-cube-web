@@ -1,6 +1,5 @@
 <template>
   <div class="me-page">
-    <!-- Header -->
     <header class="me-header">
       <h1 class="me-header-title">个人中心</h1>
       <div class="me-header-actions">
@@ -13,10 +12,8 @@
       </div>
     </header>
 
-    <!-- Decorative background strip -->
     <div class="me-bg-strip" />
 
-    <!-- Content -->
     <div class="me-content">
       <UserCard
         :avatar="profile.avatarUrl"
@@ -29,6 +26,21 @@
         @avatar-click="chooseAvatar"
         @edit="router.push('/fellowship/profile/edit')"
       />
+
+      <div class="next-step-card">
+        <p class="next-step-title">下一步建议</p>
+        <div class="next-step-grid">
+          <router-link v-for="item in nextStepItems" :key="item.key" :to="item.to" class="next-step-item">
+            <p>{{ item.title }}</p>
+            <span>{{ item.desc }}</span>
+          </router-link>
+        </div>
+      </div>
+
+      <div v-if="showCertifiedBadge" class="achievement-card">
+        <p class="achievement-title">已认证成就</p>
+        <p class="achievement-desc">你已通过认证，当前账号在推荐与互动中会显示更高可信度。</p>
+      </div>
 
       <ProfileProgress
         :percent="completion.percent || profile.profileCompletion || 0"
@@ -93,6 +105,24 @@ const profile = ref({
 const completion = ref({ percent: 0, missingFields: [] })
 const photoList = ref([])
 
+const showCertifiedBadge = computed(() => {
+  const status = String(profile.value.reviewStatus || profile.value.verificationStatus || '').toLowerCase()
+  return status === 'approved' || status === 'verified'
+})
+
+const nextStepItems = computed(() => {
+  const list = []
+  if ((completion.value.percent || 0) < 80) {
+    list.push({ key: 'profile', title: '去完善资料', desc: '提升推荐效果', to: '/fellowship/profile/edit' })
+  }
+  if (!showCertifiedBadge.value) {
+    list.push({ key: 'verify', title: '去真人认证', desc: '提升信任度', to: '/fellowship/verify' })
+  }
+  list.push({ key: 'discover', title: '去查看推荐用户', desc: '开始互动', to: '/fellowship/discover' })
+  list.push({ key: 'notice', title: '查看新通知', desc: '不错过消息', to: '/fellowship/messages?tab=notification' })
+  return list.slice(0, 4)
+})
+
 const quickItems = [
   { key: 'likes', title: '我的喜欢', icon: 'like-o', to: '/fellowship/my-likes' },
   { key: 'visitor', title: '谁看过我', icon: 'eye-o', to: '/fellowship/messages?tab=visitor' },
@@ -137,8 +167,8 @@ async function loadPageData() {
       const photos = Array.isArray(photosRes.value?.photos) ? photosRes.value.photos : []
       photoList.value = photos.map((url, idx) => ({ id: `${idx}-${url}`, url }))
     }
-  } catch (e) {
-    showToast({ type: 'fail', message: e.message || '个人中心加载失败' })
+  } catch (err) {
+    showToast({ type: 'fail', message: err.message || '个人中心加载失败，请稍后重试' })
   }
 }
 
@@ -165,8 +195,8 @@ async function onAvatarSelected(event) {
     await updateMyFellowshipProfile({ avatarUrl: url })
     profile.value.avatarUrl = url
     showToast({ type: 'success', message: '头像已更新' })
-  } catch (e) {
-    showToast({ type: 'fail', message: e.message || '头像上传失败' })
+  } catch (err) {
+    showToast({ type: 'fail', message: err.message || '头像上传失败' })
   }
 }
 
@@ -176,35 +206,33 @@ async function onPhotoSelected(event) {
   if (!files.length) return
   try {
     const uploadResults = await Promise.all(files.map((file) => uploadFellowshipPhoto(file)))
-    const uploadedUrls = uploadResults
-      .map(parseUploadUrl)
-      .filter((url) => !!url)
+    const uploadedUrls = uploadResults.map(parseUploadUrl).filter(Boolean)
     if (!uploadedUrls.length) throw new Error('照片上传返回为空')
-    const next = [...uploadedUrls, ...photoList.value.map((p) => p.url)]
+    const next = [...uploadedUrls, ...photoList.value.map((item) => item.url)]
     await saveFellowshipPhotos(next)
     photoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
-    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张` })
-  } catch (e) {
-    showToast({ type: 'fail', message: e.message || '照片上传失败' })
+    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照片` })
+  } catch (err) {
+    showToast({ type: 'fail', message: err.message || '照片上传失败' })
   }
 }
 
 async function removePhoto(photo, idx) {
   try {
-    await showConfirmDialog({ title: '删除照片', message: '确认删除这张生活照吗？' })
+    await showConfirmDialog({ title: '删除照片', message: '确认删除这张照片吗？' })
   } catch {
     return
   }
   try {
     await deleteFellowshipPhoto(photo.id || photo.url)
   } catch {
-    // ignore and fallback to save list
+    // ignore and fallback save list
   }
   const next = photoList.value.filter((_, i) => i !== idx).map((item) => item.url)
   try {
     await saveFellowshipPhotos(next)
   } catch {
-    // ignore network fallback
+    // ignore
   }
   photoList.value = next.map((item, i) => ({ id: `${i}-${item}`, url: item }))
   showToast({ type: 'success', message: '已删除' })
@@ -246,7 +274,7 @@ function onSettingAction(item) {
 }
 
 function onMore() {
-  showToast('更多功能敬请期待')
+  showToast('更多功能即将开放')
 }
 
 onMounted(loadPageData)
@@ -260,7 +288,6 @@ onMounted(loadPageData)
   position: relative;
 }
 
-/* ── Header ── */
 .me-header {
   position: sticky;
   top: 0;
@@ -273,17 +300,19 @@ onMounted(loadPageData)
   background: #fff;
   box-shadow: 0 1px 0 #f0f2f8;
 }
+
 .me-header-title {
   margin: 0;
   font-size: 18px;
   font-weight: 800;
   color: #1a2236;
-  letter-spacing: -0.01em;
 }
+
 .me-header-actions {
   display: flex;
   gap: 4px;
 }
+
 .me-icon-btn {
   width: 36px;
   height: 36px;
@@ -294,21 +323,14 @@ onMounted(loadPageData)
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.me-icon-btn:active {
-  background: #eef1f8;
 }
 
-/* Decorative strip behind the card hero */
 .me-bg-strip {
   height: 80px;
-  background: linear-gradient(135deg, #FF5F84 0%, #FF8FAA 100%);
+  background: linear-gradient(135deg, #ff5f84 0%, #ff8faa 100%);
   margin-top: -1px;
 }
 
-/* ── Content ── */
 .me-content {
   position: relative;
   margin-top: -40px;
@@ -318,7 +340,66 @@ onMounted(loadPageData)
   gap: 10px;
 }
 
+.next-step-card,
+.achievement-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.next-step-title,
+.achievement-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.next-step-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.next-step-item {
+  display: block;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  text-decoration: none;
+  background: #f8fafc;
+}
+
+.next-step-item p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.next-step-item span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.achievement-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
 .hidden-input {
   display: none;
+}
+
+@media (max-width: 360px) {
+  .next-step-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

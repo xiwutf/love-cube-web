@@ -6,24 +6,20 @@
       </template>
     </NavBar>
 
-    <!-- 连接状态提示 -->
     <div v-if="wsStatus !== 'open'" class="ws-status">
       <van-loading v-if="wsStatus === 'connecting'" size="14" />
       <span>{{ statusLabel }}</span>
     </div>
 
-    <!-- 消息列表 -->
     <div class="msg-list" ref="msgListRef">
       <div v-if="historyLoading" class="page-loading">
-        <van-loading type="spinner" color="#FF6B8A" />
+        <van-loading type="spinner" color="#ff6b8a" />
       </div>
 
       <template v-for="(msg, i) in allMessages" :key="msg.id ?? i">
-        <!-- 时间分割线 -->
         <div v-if="showTimeDivider(msg, allMessages[i - 1])" class="time-divider">
           {{ formatTime(msg.timestamp) }}
         </div>
-        <!-- 消息气泡 -->
         <div class="msg-row" :class="{ self: msg.isSelf }">
           <van-image v-if="!msg.isSelf" round width="36" height="36" :src="partnerAvatar" fit="cover">
             <template #error><div class="bubble-avatar">{{ partnerName[0] }}</div></template>
@@ -38,7 +34,10 @@
       </template>
     </div>
 
-    <!-- 输入区 -->
+    <transition name="send-fade">
+      <div v-if="sendSuccessTip" class="send-tip">已发送</div>
+    </transition>
+
     <div class="input-bar">
       <van-field
         v-model="inputText"
@@ -67,45 +66,47 @@ import request from '@/api/request.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useReport } from '@/composables/useReport.js'
 
-const route       = useRoute()
-const receiverId  = route.params.receiverId
-const myId        = storage.get('userId')
+const route = useRoute()
+const receiverId = route.params.receiverId
+const myId = storage.get('userId')
 
-// 对方信息
-const partnerName   = ref('聊天')
+const partnerName = ref('聊天')
 const partnerAvatar = ref(DEFAULT_AVATAR)
-const myName        = ref('我')
-const myAvatar      = ref(DEFAULT_AVATAR)
+const myName = ref('我')
+const myAvatar = ref(DEFAULT_AVATAR)
 
-// 历史消息
 const historyLoading = ref(true)
 const historyMessages = ref([])
+const sendSuccessTip = ref(false)
+let sendTipTimer = null
 
-// WebSocket
 const { messages: wsMessages, errors: wsErrors, status: wsStatus, connect, send } = useWebSocket(myId)
 const { openReport } = useReport()
-const inputText  = ref('')
+const inputText = ref('')
 const msgListRef = ref(null)
 
-// 合并历史 + 实时消息
 const allMessages = computed(() => {
   const all = [...historyMessages.value, ...wsMessages.value]
-  // 去重（历史消息和 WS 可能重叠）
   const seen = new Set()
-  return all.filter(m => {
-    const key = m.id ?? `${m.senderId}-${m.timestamp}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  }).sort((a, b) => a.timestamp - b.timestamp)
+  return all
+    .filter((item) => {
+      const key = item.id ?? `${item.senderId}-${item.timestamp}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .sort((a, b) => a.timestamp - b.timestamp)
 })
 
 const statusLabel = computed(() => {
-  const map = { connecting: '连接中...', closed: '已断开', error: '连接失败，正在重试' }
+  const map = {
+    connecting: '连接中...',
+    closed: '连接已断开',
+    error: '连接异常，正在重试...'
+  }
   return map[wsStatus.value] ?? ''
 })
 
-// 加载历史消息和对方信息
 onMounted(async () => {
   try {
     const [hist, partner] = await Promise.allSettled([
@@ -114,19 +115,19 @@ onMounted(async () => {
     ])
     if (hist.status === 'fulfilled') {
       const msgs = Array.isArray(hist.value) ? hist.value : (hist.value?.messages ?? [])
-      historyMessages.value = msgs.map(m => ({
-        id:         m.id,
-        senderId:   m.senderId  ?? m.sender_id,
-        receiverId: m.receiverId ?? m.receiver_id,
-        content:    m.content   ?? '',
-        timestamp:  m.timestamp ?? new Date(m.createdAt).getTime(),
-        isSelf:     String(m.senderId ?? m.sender_id) === String(myId),
+      historyMessages.value = msgs.map((item) => ({
+        id: item.id,
+        senderId: item.senderId ?? item.sender_id,
+        receiverId: item.receiverId ?? item.receiver_id,
+        content: item.content ?? '',
+        timestamp: item.timestamp ?? new Date(item.createdAt).getTime(),
+        isSelf: String(item.senderId ?? item.sender_id) === String(myId)
       }))
     }
     if (partner.status === 'fulfilled') {
-      const u = normalizeUser(partner.value)
-      partnerName.value   = u.nickname
-      partnerAvatar.value = u.avatar
+      const user = normalizeUser(partner.value)
+      partnerName.value = user.nickname
+      partnerAvatar.value = user.avatar
     }
     await markChatRead(myId, receiverId)
   } finally {
@@ -136,37 +137,44 @@ onMounted(async () => {
   connect()
 })
 
-// 新消息到来自动滚动
 watch(allMessages, () => nextTick(scrollToBottom))
 
-// 服务端错误（如被拉黑）
-watch(wsErrors, (errs) => {
-  const last = errs[errs.length - 1]
-  if (!last) return
-  if (last.code === 'BLOCKED') {
-    showToast({ message: '无法发送消息：双方关系受限', type: 'fail', duration: 3000 })
-  } else {
-    showToast({ message: last.message || '发送失败', type: 'fail' })
-  }
-}, { deep: true })
+watch(
+  wsErrors,
+  (errs) => {
+    const last = errs[errs.length - 1]
+    if (!last) return
+    if (last.code === 'BLOCKED') {
+      showToast({ message: '无法发送消息：双方关系受限', type: 'fail', duration: 3000 })
+    } else {
+      showToast({ message: last.message || '发送失败，请稍后重试', type: 'fail' })
+    }
+  },
+  { deep: true }
+)
 
 function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
   send(text, receiverId)
   inputText.value = ''
+  sendSuccessTip.value = true
+  clearTimeout(sendTipTimer)
+  sendTipTimer = setTimeout(() => {
+    sendSuccessTip.value = false
+  }, 900)
   nextTick(scrollToBottom)
 }
 
 function scrollToBottom() {
-  const el = msgListRef.value
-  if (el) el.scrollTop = el.scrollHeight
+  const node = msgListRef.value
+  if (node) node.scrollTop = node.scrollHeight
 }
 
 async function showChatMenu() {
   try {
     const action = await showActionSheet({
-      actions: [{ name: '举报该用户', color: '#ee0a24' }],
+      actions: [{ name: '举报该用户', color: '#ee0a24' }]
     })
     if (action.name === '举报该用户') {
       await openReport({ targetType: 'USER', targetUserId: receiverId })
@@ -176,7 +184,6 @@ async function showChatMenu() {
   }
 }
 
-// 相邻消息时间差 > 5 分钟则显示时间分割线
 function showTimeDivider(curr, prev) {
   if (!prev) return true
   return curr.timestamp - prev.timestamp > 5 * 60 * 1000
@@ -184,49 +191,135 @@ function showTimeDivider(curr, prev) {
 </script>
 
 <style scoped>
-.chat-page { display: flex; flex-direction: column; height: 100vh; background: #f0f0f0; }
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f0f0f0;
+  position: relative;
+}
 
 .ws-status {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 6px; font-size: 12px; color: #999; background: #fff8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  font-size: 12px;
+  color: #64748b;
+  background: #fff8f8;
 }
 
 .msg-list {
-  flex: 1; overflow-y: auto; padding: 12px 12px 8px;
-  display: flex; flex-direction: column; gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.page-loading { display: flex; justify-content: center; padding: 40px 0; }
+.page-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
 
 .time-divider {
-  text-align: center; font-size: 11px; color: #bbb;
-  padding: 4px 12px; background: rgba(0,0,0,.04); border-radius: 10px;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 4px 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
   align-self: center;
 }
 
-.msg-row { display: flex; align-items: flex-end; gap: 8px; }
-.msg-row.self { flex-direction: row-reverse; }
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.msg-row.self {
+  flex-direction: row-reverse;
+}
 
 .bubble {
-  max-width: 68%; padding: 10px 14px; border-radius: 18px;
-  font-size: 15px; line-height: 1.5; word-break: break-word;
+  max-width: 68%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-break: break-word;
 }
-.bubble-other { background: #fff; color: #333; border-bottom-left-radius: 4px; }
-.bubble-self  { background: #FF6B8A; color: #fff; border-bottom-right-radius: 4px; }
+
+.bubble-other {
+  background: #fff;
+  color: #333;
+  border-bottom-left-radius: 4px;
+}
+
+.bubble-self {
+  background: #ff6b8a;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
 
 .bubble-avatar {
-  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #FF6B8A, #FFB3C1);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; color: #fff; font-weight: 700;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #ff6b8a, #ffb3c1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  font-weight: 700;
 }
-.self-avatar { background: linear-gradient(135deg, #FFB3C1, #FF6B8A); }
+
+.self-avatar {
+  background: linear-gradient(135deg, #ffb3c1, #ff6b8a);
+}
+
+.send-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.78);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.send-fade-enter-active,
+.send-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.send-fade-enter-from,
+.send-fade-leave-to {
+  opacity: 0;
+}
 
 .input-bar {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  background: #fff; box-shadow: 0 -1px 6px rgba(0,0,0,.06);
-  /* 避免被软键盘遮挡 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.06);
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
-.input-field { flex: 1; background: #f5f5f5; border-radius: 20px; padding: 0 12px; }
+
+.input-field {
+  flex: 1;
+  background: #f5f5f5;
+  border-radius: 20px;
+  padding: 0 12px;
+}
 </style>

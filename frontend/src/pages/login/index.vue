@@ -4,11 +4,11 @@
       <section class="login-card">
         <div class="logo-area">
           <span class="logo-mark" aria-hidden="true">LC</span>
-          <h1 class="logo-title">Love Cube</h1>
-          <p class="logo-sub">统一用户登录中心</p>
+          <h1 class="logo-title">欢迎来到 Love Cube</h1>
+          <p class="logo-sub">登录后即可继续你的平台体验</p>
         </div>
 
-        <van-tabs v-model:active="activeTab" class="login-tabs" color="#FF6B8A" title-active-color="#FF6B8A">
+        <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">
           <van-tab title="登录">
             <van-form @submit="handleLogin" class="form-wrap">
               <van-cell-group inset>
@@ -45,7 +45,7 @@
                   v-model="regForm.username"
                   name="username"
                   label="昵称"
-                  placeholder="给自己起个名字"
+                  placeholder="给自己起一个名字"
                 />
                 <van-field
                   v-model="regForm.phone"
@@ -72,6 +72,7 @@
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
               </van-cell-group>
+              <p class="register-tip">注册后即可使用联谊、活动、内容等平台能力</p>
               <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码。</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
@@ -91,7 +92,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import { useUserStore } from '@/stores/user.js'
 
 const router = useRouter()
@@ -116,10 +117,10 @@ async function handleLogin() {
   loading.value = true
   try {
     await userStore.login({ phone: loginForm.phone, password: loginForm.password })
-    showToast({ message: '登录成功', type: 'success' })
+    showToast({ message: '登录成功，欢迎回来', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
-    showToast({ message: err.message || '登录失败', type: 'fail' })
+    showToast({ message: err.message || '登录失败，请稍后重试', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -134,10 +135,20 @@ async function handleRegister() {
       password: regForm.password,
       inviteCode: regForm.inviteCode
     })
-    showToast({ message: '注册成功', type: 'success' })
-    router.replace(resolveRedirect())
+    showToast({ message: '注册成功，欢迎加入 Love Cube', type: 'success' })
+    await showConfirmDialog({
+      title: '注册完成',
+      message: '下一步你想先做什么？',
+      confirmButtonText: '去完善资料',
+      cancelButtonText: '去联谊模块'
+    })
+    router.replace('/fellowship/profile/edit')
   } catch (err) {
-    showToast({ message: err.message || '注册失败', type: 'fail' })
+    if (err?.name === 'Cancel') {
+      router.replace('/fellowship')
+      return
+    }
+    showToast({ message: err.message || '注册失败，请稍后重试', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -184,7 +195,7 @@ async function handleRegister() {
   font-size: 30px;
   font-weight: 800;
   color: #1f2a44;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .logo-sub {
@@ -205,8 +216,15 @@ async function handleRegister() {
   padding: 24px 16px 0;
 }
 
+.register-tip {
+  margin: 12px 18px 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .invite-tip {
-  margin: 10px 18px 0;
+  margin: 8px 18px 0;
   color: #f43f5e;
   font-size: 12px;
   line-height: 1.5;
@@ -286,7 +304,7 @@ async function handleRegister() {
   }
 
   .logo-title {
-    font-size: 28px;
+    font-size: 26px;
   }
 
   .logo-sub {

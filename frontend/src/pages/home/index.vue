@@ -1,51 +1,60 @@
 <template>
   <div class="home-page">
-    <!-- Header -->
     <header class="home-header">
       <div class="home-logo">
-        <span class="home-logo-icon">♡</span>
+        <span class="home-logo-icon">❤</span>
         <span class="home-logo-text">Love Cube</span>
       </div>
       <button class="home-avatar-btn" @click="router.push('/fellowship/me')">
-        <van-icon name="contact" size="22" color="#FF5F84" />
+        <van-icon name="contact" size="22" color="#ff5f84" />
       </button>
     </header>
 
     <div v-if="pageLoading" class="page-loading">
-      <van-loading type="spinner" color="#FF5F84" size="32" />
+      <van-loading type="spinner" color="#ff5f84" size="30" />
     </div>
 
     <template v-else>
-      <!-- Completion tip -->
-      <div v-if="!completion.completed" class="tip-card">
+      <div v-if="showProfileReminder" class="tip-card">
         <div class="tip-left">
-          <div class="tip-icon">✦</div>
+          <div class="tip-icon">!</div>
           <div>
-            <p class="tip-title">完善你的资料</p>
-            <p class="tip-desc">完善资料后，别人才能更好地了解你</p>
+            <p class="tip-title">完善资料可提升推荐效果</p>
+            <p class="tip-desc">当前资料完成度 {{ completion.percent || 0 }}%，建议先补充关键信息。</p>
           </div>
         </div>
-        <van-button round size="mini" color="#FF5F84" @click="router.push('/fellowship/profile/edit')">
-          去完善
+        <van-button round size="small" color="#ff5f84" @click="router.push('/fellowship/profile/edit')">
+          完善资料
         </van-button>
       </div>
 
-      <!-- Banner -->
+      <div v-if="showVerifyReminder" class="tip-card tip-card--blue">
+        <div class="tip-left">
+          <div class="tip-icon tip-icon--blue">✓</div>
+          <div>
+            <p class="tip-title">完成真人认证，提高信任度</p>
+            <p class="tip-desc">认证后更容易获得回应与推荐。</p>
+          </div>
+        </div>
+        <van-button round size="small" plain color="#2563eb" @click="router.push('/fellowship/verify')">
+          去认证
+        </van-button>
+      </div>
+
       <div class="banner-wrap">
-        <van-swipe :autoplay="3000" indicator-color="#FF5F84" class="banner-swipe">
-          <van-swipe-item v-for="item in banners" :key="item.id">
+        <van-swipe :autoplay="3000" indicator-color="#ff5f84" class="banner-swipe">
+          <van-swipe-item v-for="item in displayBanners" :key="item.id">
             <img :src="item.imageUrl || item.image_url || item.imgUrl" class="banner-img" alt="banner" @error="onImgError" />
           </van-swipe-item>
-          <van-swipe-item v-if="!banners.length">
+          <van-swipe-item v-if="!displayBanners.length">
             <div class="banner-fallback">
               <p class="banner-fallback-kicker">Love Cube Fellowship</p>
-              <p class="banner-fallback-title">遇见对的人</p>
+              <p class="banner-fallback-title">立即开始匹配</p>
             </div>
           </van-swipe-item>
         </van-swipe>
       </div>
 
-      <!-- Recommends -->
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">为你推荐</span>
@@ -73,13 +82,17 @@
               </van-image>
             </div>
             <p class="rec-name">{{ user.nickname || user.username }}</p>
-            <p class="rec-meta">{{ user.age }}岁</p>
+            <p class="rec-meta">{{ user.age || '--' }} 岁</p>
           </div>
         </div>
-        <van-empty v-else description="暂无推荐" image-size="60" />
+        <div v-else class="empty-guide">
+          <van-empty description="当前推荐较少，去完善资料试试" image-size="64" />
+          <van-button round type="primary" size="small" color="#ff5f84" @click="router.push('/fellowship/profile/edit')">
+            去完善资料
+          </van-button>
+        </div>
       </div>
 
-      <!-- Newcomers -->
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">新人</span>
@@ -99,14 +112,14 @@
             </van-image>
             <div class="nc-info">
               <p class="nc-name">{{ user.nickname || user.username }}</p>
-              <p class="nc-meta">{{ user.age }}岁 · {{ user.location || '未知' }}</p>
+              <p class="nc-meta">{{ user.age || '--' }} 岁 · {{ user.location || '未知' }}</p>
             </div>
             <button class="nc-greet-btn" @click.stop="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)">
               打招呼
             </button>
           </div>
         </div>
-        <van-empty v-else description="暂无新人" image-size="60" />
+        <van-empty v-else description="暂无新人，稍后再来看看" image-size="60" />
       </div>
     </template>
 
@@ -115,54 +128,82 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getBanners, getRecommends, getNewcomers } from '@/api/home.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.png'
+import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.png'
+import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.png'
 
 const router = useRouter()
 const profileStore = useFellowshipProfileStore()
+
 const pageLoading = ref(true)
 const banners = ref([])
 const recommends = ref([])
 const newcomers = ref([])
 const completion = ref({ completed: false, percent: 0, missingFields: [] })
+const verificationStatus = ref('none')
+
+const localBanners = [
+  { id: 'local-banner-1', imageUrl: banner1 },
+  { id: 'local-banner-2', imageUrl: banner2 },
+  { id: 'local-banner-3', imageUrl: banner3 }
+]
+
+const displayBanners = computed(() => (banners.value.length ? banners.value : localBanners))
+
+const showProfileReminder = computed(() => {
+  if (!completion.value) return false
+  if (completion.value.completed) return false
+  return Number(completion.value.percent || 0) < 80
+})
+
+const showVerifyReminder = computed(() => {
+  const status = String(verificationStatus.value || '').toLowerCase()
+  return !['approved', 'verified'].includes(status)
+})
 
 onMounted(async () => {
   try {
-    const [b, r, n, c] = await Promise.allSettled([
+    const [b, r, n, c, p] = await Promise.allSettled([
       getBanners(),
       getRecommends(),
       getNewcomers(),
-      profileStore.fetchCompletion()
+      profileStore.fetchCompletion(),
+      profileStore.fetchProfile()
     ])
     if (b.status === 'fulfilled') banners.value = b.value || []
     if (r.status === 'fulfilled') recommends.value = r.value || []
     if (n.status === 'fulfilled') newcomers.value = n.value || []
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
+    if (p.status === 'fulfilled') {
+      const profile = p.value || {}
+      verificationStatus.value =
+        profile.reviewStatus || profile.verificationStatus || profile.verified || 'none'
+    }
   } catch {
-    showToast({ message: '数据加载失败', type: 'fail' })
+    showToast({ message: '页面加载失败，请稍后重试', type: 'fail' })
   } finally {
     pageLoading.value = false
   }
 })
 
-function onImgError(e) {
-  e.target.style.display = 'none'
+function onImgError(event) {
+  event.target.style.display = 'none'
 }
 </script>
 
 <style scoped>
-/* ── Layout ── */
 .home-page {
   min-height: 100vh;
   background: #f4f6fb;
   padding-bottom: 72px;
 }
 
-/* ── Header ── */
 .home-header {
   position: sticky;
   top: 0;
@@ -181,16 +222,18 @@ function onImgError(e) {
   align-items: center;
   gap: 6px;
 }
+
 .home-logo-icon {
   font-size: 20px;
-  color: #FF5F84;
+  color: #ff5f84;
   line-height: 1;
 }
+
 .home-logo-text {
   font-size: 18px;
   font-weight: 800;
   color: #1a2236;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .home-avatar-btn {
@@ -202,17 +245,14 @@ function onImgError(e) {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
 }
 
-/* ── Loading ── */
 .page-loading {
   display: flex;
   justify-content: center;
   padding-top: 100px;
 }
 
-/* ── Tip card ── */
 .tip-card {
   display: flex;
   align-items: center;
@@ -220,10 +260,16 @@ function onImgError(e) {
   gap: 12px;
   margin: 12px 12px 0;
   padding: 12px 14px;
-  background: linear-gradient(135deg, #fff5f8, #fff8fa);
-  border: 1px solid #ffdde7;
-  border-radius: 14px;
+  background: #fff6f8;
+  border: 1px solid #ffd8e4;
+  border-radius: 12px;
 }
+
+.tip-card--blue {
+  background: #f4f8ff;
+  border-color: #dbeafe;
+}
+
 .tip-left {
   display: flex;
   align-items: center;
@@ -231,38 +277,53 @@ function onImgError(e) {
   flex: 1;
   min-width: 0;
 }
+
 .tip-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF5F84, #FF8FAA);
+  background: #ff5f84;
   color: #fff;
-  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-.tip-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a2236;
-}
-.tip-desc {
-  font-size: 12px;
-  color: #8898aa;
-  margin-top: 2px;
+  font-weight: 700;
 }
 
-/* ── Banner ── */
+.tip-icon--blue {
+  background: #2563eb;
+}
+
+.tip-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a2236;
+}
+
+.tip-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+}
+
 .banner-wrap {
   margin: 12px 12px 0;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
-.banner-swipe { height: 190px; }
-.banner-img { width: 100%; height: 190px; object-fit: cover; display: block; }
+
+.banner-swipe {
+  height: 190px;
+}
+
+.banner-img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  display: block;
+}
+
 .banner-fallback {
   height: 190px;
   background: linear-gradient(135deg, #1a1038 0%, #3d1a52 40%, #8b1a4a 100%);
@@ -272,6 +333,7 @@ function onImgError(e) {
   justify-content: center;
   gap: 8px;
 }
+
 .banner-fallback-kicker {
   font-size: 11px;
   font-weight: 700;
@@ -279,41 +341,41 @@ function onImgError(e) {
   text-transform: uppercase;
   color: rgba(255, 160, 185, 0.8);
 }
+
 .banner-fallback-title {
   font-size: 26px;
   font-weight: 800;
   color: #fff;
-  letter-spacing: -0.02em;
 }
 
-/* ── Section card ── */
 .section-card {
   margin: 12px 12px 0;
   padding: 16px 0 12px;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
-  overflow: hidden;
 }
+
 .section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 16px 12px;
 }
+
 .section-title {
   font-size: 16px;
   font-weight: 700;
   color: #1a2236;
 }
+
 .section-more {
   font-size: 12px;
-  color: #FF5F84;
+  color: #ff5f84;
   cursor: pointer;
   font-weight: 500;
 }
 
-/* ── Recommends ── */
 .rec-scroll {
   display: flex;
   gap: 8px;
@@ -321,7 +383,10 @@ function onImgError(e) {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.rec-scroll::-webkit-scrollbar { display: none; }
+
+.rec-scroll::-webkit-scrollbar {
+  display: none;
+}
 
 .rec-item {
   flex-shrink: 0;
@@ -329,17 +394,16 @@ function onImgError(e) {
   text-align: center;
   cursor: pointer;
 }
+
 .rec-avatar-ring {
   width: 66px;
   height: 66px;
   border-radius: 50%;
   padding: 2px;
-  background: linear-gradient(135deg, #FF5F84, #FFB3C4);
+  background: linear-gradient(135deg, #ff5f84, #ffb3c4);
   margin: 0 auto 6px;
 }
-.rec-avatar {
-  display: block;
-}
+
 .rec-name {
   font-size: 12px;
   font-weight: 500;
@@ -348,29 +412,45 @@ function onImgError(e) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .rec-meta {
   font-size: 11px;
   color: #a0abbe;
   margin-top: 2px;
 }
 
-/* ── Newcomers ── */
+.empty-guide {
+  padding: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
 .nc-list {
   display: flex;
   flex-direction: column;
   padding: 0 16px;
-  gap: 0;
 }
+
 .nc-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 11px 0;
   cursor: pointer;
   border-bottom: 1px solid #f4f6fb;
 }
-.nc-item:last-child { border-bottom: none; }
-.nc-info { flex: 1; min-width: 0; }
+
+.nc-item:last-child {
+  border-bottom: none;
+}
+
+.nc-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .nc-name {
   font-size: 14px;
   font-weight: 600;
@@ -379,39 +459,51 @@ function onImgError(e) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .nc-meta {
   font-size: 12px;
   color: #8898aa;
   margin-top: 2px;
 }
+
 .nc-greet-btn {
   flex-shrink: 0;
-  height: 28px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1.5px solid #FF5F84;
+  border: 1px solid #ff5f84;
   background: transparent;
-  color: #FF5F84;
+  color: #ff5f84;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.nc-greet-btn:active {
-  background: #FF5F84;
-  color: #fff;
 }
 
-/* ── Avatar fallback ── */
 .avatar-fb {
   border-radius: 50%;
-  background: linear-gradient(135deg, #FF5F84, #FFB3C4);
+  background: linear-gradient(135deg, #ff5f84, #ffb3c4);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 700;
 }
-.size60 { width: 60px; height: 60px; font-size: 20px; }
-.size48 { width: 48px; height: 48px; font-size: 16px; }
+
+.size60 {
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+}
+
+.size48 {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+
+@media (max-width: 375px) {
+  .tip-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 </style>

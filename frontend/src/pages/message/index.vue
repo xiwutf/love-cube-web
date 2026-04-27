@@ -1,21 +1,20 @@
 <template>
   <div class="message-page">
     <header class="msg-header">
-      <span class="msg-header-title">消息</span>
+      <span class="msg-header-title">消息中心</span>
       <van-badge v-if="msgStore.totalUnread" :content="msgStore.totalUnread" max="99" class="msg-header-badge" />
     </header>
 
     <van-tabs
       v-model:active="activeTab"
-      color="#FF5F84"
-      title-active-color="#FF5F84"
+      color="#ff5f84"
+      title-active-color="#ff5f84"
       title-inactive-color="#8898aa"
       sticky
       offset-top="52"
       :border="false"
       class="msg-tabs"
     >
-      <!-- 聊天 -->
       <van-tab title="聊天" :badge="msgStore.unreadChat || ''">
         <van-pull-refresh v-model="refreshingChat" @refresh="loadChat">
           <div class="tab-content">
@@ -42,13 +41,18 @@
                   <van-button square type="danger" text="删除" style="height: 100%" @click="handleDeleteChat(item)" />
                 </template>
               </van-swipe-cell>
-              <van-empty v-if="!loadingChat && !chatList.length" description="暂无聊天" image-size="70" />
+
+              <div v-if="!loadingChat && !chatList.length" class="empty-wrap">
+                <van-empty description="暂无聊天消息" image-size="70" />
+                <van-button round type="primary" size="small" color="#ff5f84" @click="router.push('/fellowship/discover')">
+                  去看看推荐用户吧
+                </van-button>
+              </div>
             </van-list>
           </div>
         </van-pull-refresh>
       </van-tab>
 
-      <!-- 互动 -->
       <van-tab title="互动" :badge="msgStore.unreadInteract || ''">
         <van-pull-refresh v-model="refreshingInteract" @refresh="loadInteract">
           <div class="tab-content">
@@ -74,7 +78,6 @@
         </van-pull-refresh>
       </van-tab>
 
-      <!-- 访客 -->
       <van-tab title="访客" :badge="msgStore.unreadVisitor || ''">
         <van-pull-refresh v-model="refreshingVisitor" @refresh="loadVisitor">
           <div class="tab-content">
@@ -97,21 +100,20 @@
                     <span class="chat-name">{{ item.visitor?.nickname || '神秘访客' }}</span>
                     <span class="chat-time">{{ formatTime(item.visitTime) }}</span>
                   </div>
-                  <p class="chat-last visitor-label">👀 来看了你的主页</p>
+                  <p class="chat-last visitor-label">来查看了你的主页</p>
                 </div>
               </div>
-              <van-empty v-if="!loadingVisitor && !visitorList.length" description="暂无访客" image-size="70" />
+              <van-empty v-if="!loadingVisitor && !visitorList.length" description="暂无访客记录" image-size="70" />
             </van-list>
           </div>
         </van-pull-refresh>
       </van-tab>
 
-      <!-- 通知 -->
       <van-tab title="通知" :badge="msgStore.unreadNotification || ''">
         <van-pull-refresh v-model="refreshingNotif" @refresh="loadNotifications">
           <div class="tab-content">
             <div class="notif-toolbar" v-if="notifList.length">
-              <span class="notif-count">共 {{ notifList.length }} 条</span>
+              <span class="notif-count">共 {{ notifList.length }} 条通知</span>
               <van-button size="mini" plain type="primary" @click="readAll">全部已读</van-button>
             </div>
 
@@ -131,7 +133,7 @@
               <div v-if="!item.isRead" class="notif-dot" />
             </div>
 
-            <van-empty v-if="!loadingNotif && !notifList.length" description="暂无通知" image-size="70" />
+            <van-empty v-if="!loadingNotif && !notifList.length" description="暂无通知消息" image-size="70" />
           </div>
         </van-pull-refresh>
       </van-tab>
@@ -144,52 +146,69 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { showConfirmDialog, showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { useMessageStore } from '@/stores/message.js'
-import { getChatList, getInteractList, getVisitorList, getUnreadCount,
-         markInteractRead, markVisitorRead } from '@/api/message.js'
-import { getNotifications, getNotifUnreadCount, markNotifRead, markAllNotifRead } from '@/api/notification.js'
+import {
+  getChatList,
+  getInteractList,
+  getVisitorList,
+  getUnreadCount,
+  markInteractRead,
+  markVisitorRead
+} from '@/api/message.js'
+import {
+  getNotifications,
+  getNotifUnreadCount,
+  markNotifRead,
+  markAllNotifRead
+} from '@/api/notification.js'
 import { deleteChat } from '@/api/chat.js'
 import { useUserStore } from '@/stores/user.js'
-import { showConfirmDialog, showToast } from 'vant'
 import { formatTime } from '@/utils/format.js'
 import { getAvatar } from '@/utils/image.js'
 
-const route     = useRoute()
-const router    = useRouter()
-const msgStore  = useMessageStore()
+const route = useRoute()
+const router = useRouter()
+const msgStore = useMessageStore()
 const userStore = useUserStore()
 
 const TAB_MAP = { chat: 0, interact: 1, visitor: 2, notification: 3 }
 const activeTab = ref(TAB_MAP[route.query.tab] ?? 0)
 
-// ── Chat ──
-const chatList      = ref([])
-const loadingChat   = ref(false)
+const chatList = ref([])
+const loadingChat = ref(false)
 const refreshingChat = ref(false)
+
+const interactList = ref([])
+const loadingInteract = ref(false)
+const refreshingInteract = ref(false)
+
+const visitorList = ref([])
+const loadingVisitor = ref(false)
+const refreshingVisitor = ref(false)
+
+const notifList = ref([])
+const loadingNotif = ref(false)
+const refreshingNotif = ref(false)
 
 async function loadChat() {
   loadingChat.value = true
   try {
     const data = await getChatList()
-    chatList.value = (Array.isArray(data) ? data : []).map(item => ({
-      userId:      item.partnerId ?? item.userId,
-      nickname:    item.nickname  ?? item.partnerName ?? '用户',
-      avatar:      getAvatar(item),
+    chatList.value = (Array.isArray(data) ? data : []).map((item) => ({
+      userId: item.partnerId ?? item.userId,
+      nickname: item.nickname ?? item.partnerName ?? '用户',
+      avatar: getAvatar(item),
       lastMessage: item.lastMessage ?? item.content ?? '',
-      lastTime:    item.lastTime    ?? item.timestamp,
-      unread:      item.unreadCount ?? 0,
+      lastTime: item.lastTime ?? item.timestamp,
+      unread: item.unreadCount ?? 0
     }))
   } finally {
-    loadingChat.value    = false
+    loadingChat.value = false
     refreshingChat.value = false
   }
 }
-
-// ── Interact ──
-const interactList      = ref([])
-const loadingInteract   = ref(false)
-const refreshingInteract = ref(false)
 
 async function loadInteract() {
   loadingInteract.value = true
@@ -199,15 +218,10 @@ async function loadInteract() {
     await markInteractRead()
     msgStore.clearInteract()
   } finally {
-    loadingInteract.value    = false
+    loadingInteract.value = false
     refreshingInteract.value = false
   }
 }
-
-// ── Visitor ──
-const visitorList      = ref([])
-const loadingVisitor   = ref(false)
-const refreshingVisitor = ref(false)
 
 async function loadVisitor() {
   loadingVisitor.value = true
@@ -217,15 +231,10 @@ async function loadVisitor() {
     await markVisitorRead()
     msgStore.clearVisitor()
   } finally {
-    loadingVisitor.value    = false
+    loadingVisitor.value = false
     refreshingVisitor.value = false
   }
 }
-
-// ── Notifications ──
-const notifList       = ref([])
-const loadingNotif    = ref(false)
-const refreshingNotif = ref(false)
 
 async function loadNotifications() {
   loadingNotif.value = true
@@ -233,10 +242,8 @@ async function loadNotifications() {
     const data = await getNotifications(50)
     notifList.value = Array.isArray(data) ? data : []
     msgStore.clearNotification()
-  } catch {
-    // silent
   } finally {
-    loadingNotif.value    = false
+    loadingNotif.value = false
     refreshingNotif.value = false
   }
 }
@@ -246,7 +253,6 @@ async function handleNotifClick(item) {
     item.isRead = true
     markNotifRead(item.id).catch(() => {})
   }
-  // Navigate based on targetType
   if (item.targetType === 'USER' && item.targetId) {
     router.push(`/fellowship/user-profile/${item.targetId}`)
   } else if (item.targetType === 'CHAT' && item.targetId) {
@@ -257,37 +263,33 @@ async function handleNotifClick(item) {
 async function readAll() {
   try {
     await markAllNotifRead()
-    notifList.value.forEach(n => { n.isRead = true })
+    notifList.value.forEach((item) => {
+      item.isRead = true
+    })
     msgStore.clearNotification()
-    showToast({ message: '已全部标为已读', type: 'success' })
+    showToast({ message: '通知已全部设为已读', type: 'success' })
   } catch {
-    showToast({ message: '操作失败', type: 'fail' })
+    showToast({ message: '操作失败，请稍后重试', type: 'fail' })
   }
 }
 
-// ── Unread polling ──
 async function fetchUnread() {
-  try {
-    const [msgData, notifData] = await Promise.allSettled([
-      getUnreadCount(),
-      getNotifUnreadCount(),
-    ])
-    const msg = msgData.status === 'fulfilled' ? msgData.value : {}
-    const notifCount = notifData.status === 'fulfilled' ? (notifData.value?.count ?? 0) : 0
-    msgStore.setUnread({
-      chat:         msg.chat     ?? msg.chatUnread     ?? 0,
-      interact:     msg.interact ?? msg.interactUnread ?? 0,
-      visitor:      msg.visitor  ?? msg.visitorUnread  ?? 0,
-      notification: notifCount,
-    })
-  } catch {}
+  const [msgData, notifData] = await Promise.allSettled([getUnreadCount(), getNotifUnreadCount()])
+  const msg = msgData.status === 'fulfilled' ? msgData.value : {}
+  const notifCount = notifData.status === 'fulfilled' ? (notifData.value?.count ?? 0) : 0
+  msgStore.setUnread({
+    chat: msg.chat ?? msg.chatUnread ?? 0,
+    interact: msg.interact ?? msg.interactUnread ?? 0,
+    visitor: msg.visitor ?? msg.visitorUnread ?? 0,
+    notification: notifCount
+  })
 }
 
 watch(activeTab, (tab) => {
-  if (tab === 0 && !chatList.value.length)    loadChat()
+  if (tab === 0 && !chatList.value.length) loadChat()
   if (tab === 1 && !interactList.value.length) loadInteract()
-  if (tab === 2 && !visitorList.value.length)  loadVisitor()
-  if (tab === 3 && !notifList.value.length)    loadNotifications()
+  if (tab === 2 && !visitorList.value.length) loadVisitor()
+  if (tab === 3 && !notifList.value.length) loadNotifications()
 })
 
 onMounted(async () => {
@@ -301,126 +303,311 @@ function goChat(item) {
 
 async function handleDeleteChat(item) {
   try {
-    await showConfirmDialog({ title: '删除聊天', message: `确认删除与 ${item.nickname} 的全部聊天记录？` })
-  } catch { return }
+    await showConfirmDialog({
+      title: '删除聊天',
+      message: `确认删除与 ${item.nickname} 的全部聊天记录吗？`
+    })
+  } catch {
+    return
+  }
   try {
     await deleteChat(userStore.userId, item.userId)
-    chatList.value = chatList.value.filter(c => c.userId !== item.userId)
+    chatList.value = chatList.value.filter((chat) => chat.userId !== item.userId)
     showToast({ type: 'success', message: '已删除' })
   } catch {
-    showToast({ type: 'fail', message: '删除失败' })
+    showToast({ type: 'fail', message: '删除失败，请稍后重试' })
   }
 }
 
 function notifIcon(type) {
   const map = {
-    LIKE:           '❤️',
-    MESSAGE:        '💬',
-    SYSTEM:         '📢',
-    REPORT_HANDLED: '🔎',
-    BANNED:         '🚫',
+    LIKE: '❤',
+    MESSAGE: '💬',
+    SYSTEM: '📢',
+    REPORT_HANDLED: '🛡',
+    BANNED: '⛔'
   }
   return map[type] || '🔔'
 }
 
 function interactLabel(type) {
-  const map = { like: '喜欢了你', follow: '关注了你', greet: '向你打了招呼', match: '和你配对成功' }
-  return map[type] || '与你互动'
+  const map = {
+    like: '喜欢了你',
+    follow: '关注了你',
+    greet: '向你打了招呼',
+    match: '和你匹配成功'
+  }
+  return map[type] || '与你有新的互动'
 }
 
 function interactIcon(type) {
-  const map = { like: '❤️', follow: '⭐', greet: '👋', match: '🎉' }
+  const map = {
+    like: '❤',
+    follow: '⭐',
+    greet: '👋',
+    match: '🎉'
+  }
   return map[type] || '💬'
 }
 </script>
 
 <style scoped>
-/* ── Page ── */
-.message-page { min-height: 100vh; background: #f4f6fb; padding-bottom: 72px; }
+.message-page {
+  min-height: 100vh;
+  background: #f4f6fb;
+  padding-bottom: 72px;
+}
 
-/* ── Header ── */
 .msg-header {
-  display: flex; align-items: center; gap: 8px;
-  height: 52px; padding: 0 16px; background: #fff;
-  position: sticky; top: 0; z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 16px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
   box-shadow: 0 1px 0 #f0f2f8;
 }
-.msg-header-title { font-size: 18px; font-weight: 800; color: #1a2236; letter-spacing: -0.01em; }
-.msg-header-badge { flex-shrink: 0; }
 
-/* ── Tabs ── */
-.msg-tabs :deep(.van-tabs__wrap)  { background: #fff; box-shadow: 0 1px 0 #f0f2f8; }
-.msg-tabs :deep(.van-tabs__nav)   { background: transparent; padding: 0 4px; }
-.msg-tabs :deep(.van-tab)         { font-size: 14px; font-weight: 600; }
-.msg-tabs :deep(.van-tabs__line)  { height: 3px; border-radius: 2px; width: 24px !important; }
+.msg-header-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a2236;
+}
 
-.tab-content { background: #fff; min-height: 200px; }
+.msg-tabs :deep(.van-tabs__wrap) {
+  background: #fff;
+  box-shadow: 0 1px 0 #f0f2f8;
+}
 
-/* ── Chat ── */
-.chat-cell :deep(.van-swipe-cell__wrapper) { background: #fff; }
+.msg-tabs :deep(.van-tabs__nav) {
+  background: transparent;
+  padding: 0 4px;
+}
+
+.msg-tabs :deep(.van-tab) {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.msg-tabs :deep(.van-tabs__line) {
+  height: 3px;
+  border-radius: 2px;
+  width: 24px !important;
+}
+
+.tab-content {
+  background: #fff;
+  min-height: 220px;
+}
+
+.chat-cell :deep(.van-swipe-cell__wrapper) {
+  background: #fff;
+}
+
 .chat-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; background: #fff; cursor: pointer;
-  border-bottom: 1px solid #f4f6fb; transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f4f6fb;
 }
-.chat-item:active { background: #fafbfc; }
-.chat-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.chat-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .unread-dot {
-  position: absolute; top: -3px; right: -3px;
-  min-width: 18px; height: 18px; border-radius: 9px;
-  background: #FF5F84; color: #fff; font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  padding: 0 4px; border: 2px solid #fff;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: #f43f5e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);
 }
-.chat-info { flex: 1; min-width: 0; }
-.chat-row  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.chat-name { font-size: 15px; font-weight: 600; color: #1a2236; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
-.chat-time { font-size: 11px; color: #c0cad8; flex-shrink: 0; }
-.chat-last { font-size: 13px; color: #8898aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.visitor-label { color: #a0abbe; }
 
-/* ── Interact ── */
-.interact-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f4f6fb; }
-.interact-info  { flex: 1; min-width: 0; }
-.interact-name  { font-size: 14px; font-weight: 600; color: #1a2236; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.interact-action { font-weight: 400; color: #FF5F84; margin-left: 4px; }
-.interact-time   { font-size: 12px; color: #c0cad8; margin-top: 4px; }
-.interact-type-icon { font-size: 22px; flex-shrink: 0; }
+.chat-info {
+  flex: 1;
+  min-width: 0;
+}
 
-/* ── Notifications ── */
+.chat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.chat-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2236;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60%;
+}
+
+.chat-time {
+  font-size: 11px;
+  color: #c0cad8;
+  flex-shrink: 0;
+}
+
+.chat-last {
+  font-size: 13px;
+  color: #8898aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visitor-label {
+  color: #94a3b8;
+}
+
+.empty-wrap {
+  padding: 12px 0 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.interact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f4f6fb;
+}
+
+.interact-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.interact-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2236;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.interact-action {
+  font-weight: 400;
+  color: #ff5f84;
+  margin-left: 4px;
+}
+
+.interact-time {
+  font-size: 12px;
+  color: #c0cad8;
+  margin-top: 4px;
+}
+
+.interact-type-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
 .notif-toolbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 16px; border-bottom: 1px solid #f0f2f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f2f8;
 }
-.notif-count { font-size: 12px; color: #8898aa; }
+
+.notif-count {
+  font-size: 12px;
+  color: #8898aa;
+}
 
 .notif-item {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 14px 16px; border-bottom: 1px solid #f4f6fb;
-  cursor: pointer; transition: background 0.1s;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f4f6fb;
   position: relative;
 }
-.notif-item:active { background: #fafbfc; }
-.notif-item.unread { background: #fff8fa; }
 
-.notif-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+.notif-item.unread {
+  background: #fff8fa;
+}
 
-.notif-body { flex: 1; min-width: 0; }
-.notif-title   { font-size: 14px; font-weight: 600; color: #1a2236; margin-bottom: 4px; }
-.notif-content { font-size: 13px; color: #5a6a80; line-height: 1.5; margin-bottom: 6px; }
-.notif-time    { font-size: 11px; color: #c0cad8; }
+.notif-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2236;
+  margin-bottom: 4px;
+}
+
+.notif-content {
+  font-size: 13px;
+  color: #5a6a80;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: #c0cad8;
+}
 
 .notif-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #FF5F84; flex-shrink: 0; margin-top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f43f5e;
+  margin-top: 4px;
 }
 
-/* ── Avatar fallback ── */
 .avatar-fb {
-  width: 50px; height: 50px; border-radius: 50%;
-  background: linear-gradient(135deg, #FF5F84, #FFB3C4);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 18px; font-weight: 700;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff5f84, #ffb3c4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
 }
-.avatar-fb.size46 { width: 46px; height: 46px; font-size: 16px; }
+
+.avatar-fb.size46 {
+  width: 46px;
+  height: 46px;
+  font-size: 16px;
+}
 </style>

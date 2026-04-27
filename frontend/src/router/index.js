@@ -21,6 +21,7 @@ const routes = [
       { path: 'events/:id', component: () => import('@/pages/platform/EventDetailPage.vue') },
       { path: 'about', component: () => import('@/pages/platform/AboutPage.vue') },
       { path: 'fellowship-intro', component: () => import('@/pages/platform/FellowshipIntroPage.vue') },
+      { path: 'modules', component: () => import('@/pages/platform/ModulesPage.vue') },
       { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue') }
     ]
   },
@@ -37,7 +38,8 @@ const routes = [
       { path: 'invites', component: () => import('@/pages/admin/InvitesAdminPage.vue') },
       { path: 'verifications', component: () => import('@/pages/admin/VerificationsAdminPage.vue') },
       { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue') },
-      { path: 'feedbacks', component: () => import('@/pages/admin/FeedbacksAdminPage.vue') }
+      { path: 'feedbacks', component: () => import('@/pages/admin/FeedbacksAdminPage.vue') },
+      { path: 'modules', component: () => import('@/pages/admin/ModulesAdminPage.vue') }
     ]
   },
   {

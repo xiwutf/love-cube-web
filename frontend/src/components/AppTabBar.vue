@@ -1,5 +1,11 @@
 <template>
-  <van-tabbar v-model="active" active-color="#FF6B8A" fixed placeholder>
+  <van-tabbar
+    v-model="active"
+    class="fellowship-tabbar"
+    active-color="#FF6B8A"
+    fixed
+    placeholder
+  >
     <van-tabbar-item icon="home-o" @click="go('/fellowship/discover')">首页</van-tabbar-item>
     <van-tabbar-item icon="search" @click="go('/fellowship/search')">发现</van-tabbar-item>
     <van-tabbar-item icon="like-o" @click="go('/fellowship/match')">认识</van-tabbar-item>
@@ -36,12 +42,23 @@ function go(path) {
 </script>
 
 <style scoped>
+:deep(.fellowship-tabbar.van-tabbar--fixed) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 120;
+}
+
 @media (min-width: 768px) {
-  :deep(.van-tabbar--fixed) {
+  :deep(.fellowship-tabbar.van-tabbar--fixed) {
     left: 50%;
     right: auto;
     width: 480px;
     transform: translateX(-50%);
+    bottom: 16px;
+    border-radius: 14px;
+    overflow: hidden;
   }
 }
 </style>
