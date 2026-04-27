@@ -24,6 +24,10 @@ export function fetchEventDetail(id) {
   return request.get(`/events/${id}`)
 }
 
+export function signupEvent(id) {
+  return request.post(`/events/${id}/signup`)
+}
+
 export function fetchHomeConfig() {
   return request.get('/home/config')
 }

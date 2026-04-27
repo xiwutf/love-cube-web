@@ -1,16 +1,43 @@
 <template>
   <div class="modules-page">
+    <div class="mc">
+      <section class="mp-hero">
+        <div>
+          <h1 class="mp-title">模块中心</h1>
+          <p class="mp-sub">连接人与服务的多元功能平台，探索 Love Cube 全新功能入口</p>
+          <div class="mp-stats">
+            <div v-for="item in stats" :key="item.label" class="mp-stat">
+              <p class="mp-stat-value">{{ item.value }}</p>
+              <p class="mp-stat-label">{{ item.label }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="mp-hero-art" aria-hidden="true">
+          <svg class="hero-svg" viewBox="0 0 340 180" role="presentation">
+            <defs>
+              <linearGradient id="cubePink" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffa1c3" />
+                <stop offset="100%" stop-color="#ff5ea0" />
+              </linearGradient>
+              <linearGradient id="cubeBlue" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#8bb3ff" />
+                <stop offset="100%" stop-color="#5d84ff" />
+              </linearGradient>
+              <linearGradient id="cubeCyan" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#95e3ff" />
+                <stop offset="100%" stop-color="#57baff" />
+              </linearGradient>
+            </defs>
+            <circle cx="170" cy="96" r="72" fill="#f7dff0" opacity="0.35" />
+            <rect x="131" y="44" rx="16" ry="16" width="78" height="78" fill="url(#cubePink)" />
+            <rect x="220" y="58" rx="14" ry="14" width="44" height="56" fill="url(#cubeBlue)" />
+            <rect x="86" y="70" rx="14" ry="14" width="36" height="46" fill="url(#cubeCyan)" />
+            <path d="M170 97.5l-7.8-7.2c-7.8-7.2-12.9-11.8-12.9-17.6 0-4.6 3.6-8.2 8.2-8.2 2.7 0 5.2 1.2 6.9 3.2 1.7-2 4.2-3.2 6.9-3.2 4.6 0 8.2 3.6 8.2 8.2 0 5.8-5.1 10.5-12.9 17.7l-7.6 7.1z" fill="#ffffff" />
+          </svg>
+        </div>
+      </section>
 
-    <section class="mp-hero">
-      <div class="mc">
-        <p class="mp-kicker">PLATFORM MODULES</p>
-        <h1 class="mp-title">模块中心</h1>
-        <p class="mp-sub">连接人与服务的多功能平台，探索 Love Cube 全部功能入口</p>
-      </div>
-    </section>
-
-    <section class="mp-body">
-      <div class="mc">
+      <section class="mp-main">
         <div class="mp-grid">
           <component
             v-for="mod in modules"
@@ -20,9 +47,9 @@
             class="mp-card"
             :class="{ 'mp-card--planned': mod.status === 'planned' }"
           >
-            <div class="mp-card-top">
+            <div class="mp-card-head">
               <span class="mp-icon" :style="{ color: mod.color, background: mod.iconBg }">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                   <path :d="mod.icon" />
                 </svg>
               </span>
@@ -32,28 +59,48 @@
             </div>
             <h2 class="mp-name">{{ mod.name }}</h2>
             <p class="mp-desc">{{ mod.description }}</p>
-            <div class="mp-footer">
-              <span v-if="mod.status === 'active'" class="mp-enter">进入模块 →</span>
-              <span v-else class="mp-coming">敬请期待</span>
-            </div>
+            <p class="mp-enter">{{ mod.status === 'active' ? '进入模块 →' : '敬请期待' }}</p>
           </component>
         </div>
-      </div>
-    </section>
 
-    <section class="mp-note">
-      <div class="mc">
-        <p class="mp-note-text">
-          Love Cube 当前以联谊模块为首个重点能力，同时持续扩展内容、活动和后续模块。
-          <router-link to="/about" class="mp-note-link">了解平台愿景 →</router-link>
-        </p>
-      </div>
-    </section>
+        <aside class="mp-side">
+          <section class="side-card">
+            <div class="side-title-row">
+              <h3>我的常用</h3>
+              <span class="side-manage">管理</span>
+            </div>
+            <router-link class="side-link" to="/fellowship">联谊交友</router-link>
+            <router-link class="side-link" to="/events">活动中心</router-link>
+            <router-link class="side-link" to="/articles">内容资讯</router-link>
+            <router-link class="side-link" to="/announcements">公告通知</router-link>
+          </section>
+          <section class="discover-card">
+            <div class="discover-bg" aria-hidden="true" />
+            <p class="discover-title">发现更多精彩</p>
+            <p class="discover-text">探索更多功能模块，发现城市新鲜事</p>
+            <button type="button" class="discover-btn">去探索</button>
+          </section>
+        </aside>
+      </section>
 
+      <section class="mp-recommend">
+        <h3 class="recommend-title">热门推荐</h3>
+        <div class="recommend-list">
+          <article v-for="item in recommends" :key="item.title" class="recommend-item">
+            <p class="recommend-item-title">{{ item.title }}</p>
+            <p class="recommend-item-desc">{{ item.desc }}</p>
+            <span class="recommend-action">{{ item.action }}</span>
+          </article>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { computed, onMounted, ref } from 'vue'
+import { fetchHomeConfig } from '@/api/platformContent.js'
+
 const ICONS = {
   heart:    'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
   calendar: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
@@ -63,7 +110,21 @@ const ICONS = {
   robot:    'M20 9V7c0-1.1-.9-2-2-2h-3c0-1.66-1.34-3-3-3S9 3.34 9 5H6c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zm-2 10H6V7h12v12zm-9-6c-.83 0-1.5-.67-1.5-1.5S8.17 10 9 10s1.5.67 1.5 1.5S9.83 13 9 13zm6 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm-3 2.5c-1.38 0-2.5-.56-2.5-1.25h5c0 .69-1.12 1.25-2.5 1.25z'
 }
 
-const modules = [
+const configuredModules = ref([])
+const stats = [
+  { value: '12', label: '开放模块' },
+  { value: '6', label: '使用中' },
+  { value: '1,245', label: '今日访问' },
+  { value: '98%', label: '用户满意度' }
+]
+const recommends = [
+  { title: '周末联谊派对', desc: '8月24日 14:00-18:00', action: '立即报名' },
+  { title: 'AI 写作助手', desc: '智能创作，效率加倍', action: '立即使用' },
+  { title: '同城二手市场', desc: '闲置好物，低价淘', action: '去逛逛' },
+  { title: '最新平台公告', desc: '重要通知，及时查看', action: '查看公告' }
+]
+
+const defaultModules = [
   {
     moduleKey:   'fellowship',
     name:        '联谊交友',
@@ -131,215 +192,431 @@ const modules = [
     sort:        6
   }
 ]
+
+const moduleIconByKey = {
+  fellowship: ICONS.heart,
+  events: ICONS.calendar,
+  articles: ICONS.article,
+  announcements: ICONS.bell,
+  'local-services': ICONS.map,
+  'ai-tools': ICONS.robot
+}
+
+const moduleColorByTone = {
+  'tone-blue': { color: '#1f4fd8', iconBg: '#eff6ff' },
+  'tone-cyan': { color: '#0891b2', iconBg: '#ecfeff' },
+  'tone-green': { color: '#059669', iconBg: '#f0fdf4' },
+  'tone-amber': { color: '#d97706', iconBg: '#fffbeb' },
+  'tone-violet': { color: '#7c3aed', iconBg: '#f5f3ff' },
+  'tone-rose': { color: '#f45b7a', iconBg: '#fff0f4' }
+}
+
+const defaultModuleByKey = Object.fromEntries(defaultModules.map(item => [item.moduleKey, item]))
+
+const modules = computed(() => {
+  const source = configuredModules.value.length ? configuredModules.value : defaultModules
+  return source
+    .filter(item => item.enabled !== false)
+    .map((item, index) => normalizeModule(item, index))
+    .sort((a, b) => a.sort - b.sort)
+})
+
+function normalizeModule(item, index) {
+  const fallback = defaultModuleByKey[item.moduleKey] || defaultModules[index] || {}
+  const tone = moduleColorByTone[item.tone] || {}
+  return {
+    moduleKey: item.moduleKey || fallback.moduleKey || `module-${index + 1}`,
+    name: item.title || item.name || fallback.name || '',
+    description: item.desc || item.description || fallback.description || '',
+    status: item.status || fallback.status || 'planned',
+    entryRoute: item.to || item.entryRoute || fallback.entryRoute || '',
+    icon: moduleIconByKey[item.moduleKey] || fallback.icon || ICONS.article,
+    iconBg: tone.iconBg || fallback.iconBg || '#eff6ff',
+    color: tone.color || fallback.color || '#1f4fd8',
+    sort: Number.isFinite(Number(item.sortOrder ?? item.sort)) ? Number(item.sortOrder ?? item.sort) : index + 1
+  }
+}
+
+onMounted(async () => {
+  try {
+    const config = await fetchHomeConfig()
+    configuredModules.value = Array.isArray(config?.modules) ? config.modules : []
+  } catch {
+    configuredModules.value = []
+  }
+})
 </script>
 
 <style scoped>
 .modules-page {
-  --primary: #2563eb;
-  --primary-dark: #1e40af;
-  --accent:  #f45b7a;
-  --text:    #111827;
-  --text-2:  #374151;
-  --text-3:  #64748b;
-  --border:  #e5e7eb;
-  --bg:      #f6f8fb;
-  --card:    #ffffff;
-  --radius-card: 16px;
-  --radius-tile: 14px;
-  --shadow-card: 0 14px 36px rgba(15, 23, 42, 0.06);
-  --shadow-card-hover: 0 18px 40px rgba(15, 23, 42, 0.1);
+  --text: #111827;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --bg: #f4f7fb;
+  --radius: 14px;
+  min-height: calc(100vh - 68px);
   background: var(--bg);
-  min-height: calc(100vh - 64px);
+  padding: 18px 0 30px;
 }
 
 .mc {
+  max-width: none;
   width: calc(100% - 48px);
   margin-left: auto;
   margin-right: auto;
 }
 
 .mp-hero {
-  background: linear-gradient(140deg, #f9fbff 0%, #eef3ff 55%, #e9efff 100%);
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin-top: 0;
-  padding: 22px 0 18px;
-  box-shadow: none;
-}
-
-.mp-kicker {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--primary);
-  text-transform: uppercase;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9ff 0%, #edf2ff 48%, #eaf0ff 100%);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
 }
 
 .mp-title {
-  margin: 0 0 6px;
-  font-size: clamp(24px, 2.6vw, 34px);
+  margin: 0;
+  font-size: clamp(28px, 3vw, 44px);
   font-weight: 800;
   color: var(--text);
-  letter-spacing: 0;
-  line-height: 1.14;
 }
 
 .mp-sub {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-3);
-  line-height: 1.6;
-  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 15px;
 }
 
-.mp-body {
-  padding: 16px 0 56px;
+.mp-stats {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mp-stat {
+  background: #fff;
+  border: 1px solid #dbe5f3;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.mp-stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.mp-stat-label {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mp-hero-art {
+  height: 180px;
+  border-radius: 18px;
+  position: relative;
+  background: linear-gradient(160deg, #f7f8ff 0%, #ecf1ff 100%);
+  overflow: hidden;
+}
+
+.hero-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mp-main {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
 }
 
 .mp-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .mp-card {
-  background: var(--card);
+  background: #fff;
   border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: 28px 24px;
+  border-radius: var(--radius);
+  padding: 14px;
   text-decoration: none;
   color: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
-  min-height: 236px;
+  transition: 0.2s ease;
+  min-height: 150px;
 }
 
 .mp-card:not(.mp-card--planned):hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
-  border-color: #c7d2fe;
+  transform: translateY(-3px);
+  border-color: #bfdbfe;
+  box-shadow: 0 14px 26px rgba(30, 64, 175, 0.1);
 }
 
 .mp-card--planned {
-  cursor: default;
-  opacity: 0.6;
+  opacity: 0.68;
 }
 
-.mp-card-top {
+.mp-card-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
 }
 
 .mp-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-tile);
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
 }
 
 .mp-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
   border-radius: 999px;
 }
 
 .mp-badge--active {
-  background: #dcfce7;
-  color: #15803d;
+  background: #dcfce7cc;
+  color: #166534;
 }
 
 .mp-badge--planned {
-  background: #f1f5f9;
+  background: #eef2f7;
   color: #64748b;
 }
 
 .mp-name {
-  font-size: 19px;
-  font-weight: 800;
+  margin: 12px 0 0;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--text);
-  margin: 0;
-  letter-spacing: 0;
 }
 
 .mp-desc {
-  font-size: 15px;
-  color: var(--text-3);
-  line-height: 1.75;
-  margin: 0;
-  flex: 1;
-}
-
-.mp-footer {
-  margin-top: auto;
-  padding-top: 8px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .mp-enter {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.mp-side {
+  display: grid;
+  gap: 12px;
+}
+
+.side-card,
+.discover-card,
+.mp-recommend {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.side-card {
+  padding: 14px;
+}
+
+.side-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-title-row h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.side-manage {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.side-link {
+  display: block;
+  margin-top: 10px;
+  text-decoration: none;
+  color: #334155;
   font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.side-link:last-child {
+  border-bottom: 0;
+}
+
+.discover-card {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  background: linear-gradient(150deg, #ffe8f1, #ffe2ef 60%, #ffd7e8);
+}
+
+.discover-bg {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 38%, rgba(255, 255, 255, 0.86) 0, rgba(255, 255, 255, 0.22) 34%, transparent 62%),
+    radial-gradient(circle at 65% 66%, rgba(251, 113, 171, 0.22), transparent 62%);
+}
+
+.discover-title {
+  position: relative;
+  margin: 0;
+  font-size: 18px;
   font-weight: 800;
-  color: var(--primary-dark);
+  color: #be185d;
 }
 
-.mp-coming {
-  font-size: 14px;
-  color: var(--text-3);
-  font-style: italic;
+.discover-text {
+  position: relative;
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #9d174d;
 }
 
-.mp-note {
-  background: var(--card);
-  border-top: 1px solid var(--border);
-  padding: 32px 0;
+.discover-btn {
+  position: relative;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #ec4899;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  height: 32px;
+  padding: 0 16px;
+  cursor: pointer;
 }
 
-.mp-note-text {
+.mp-recommend {
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.recommend-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.recommend-list {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.recommend-item {
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid #e6eef9;
+  padding: 12px;
+  background: linear-gradient(145deg, #fdfefe, #f5f9ff);
+}
+
+.recommend-item-title {
   margin: 0;
   font-size: 15px;
-  color: var(--text-3);
-  line-height: 1.7;
-  text-align: center;
+  font-weight: 700;
+  color: #0f172a;
 }
 
-.mp-note-link {
-  color: var(--primary-dark);
-  text-decoration: none;
-  font-weight: 600;
-  margin-left: 8px;
-}
-.mp-note-link:hover { text-decoration: underline; }
-
-@media (max-width: 1199px) {
-  .mc { width: calc(100% - 32px); }
-  .mp-grid { grid-template-columns: repeat(2, 1fr); }
+.recommend-item-desc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
-@media (min-width: 1360px) {
-  .mp-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.recommend-action {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+@media (max-width: 1279px) {
+  .mp-main {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-side {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mp-grid,
+  .recommend-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991px) {
+  .mp-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-hero-art {
+    height: 130px;
+  }
+
+  .mp-grid,
+  .recommend-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 767px) {
-  .mc { width: calc(100% - 24px); }
-  .mp-hero {
-    margin-top: 0;
-    border-radius: 10px;
-    padding: 16px 0 14px;
+  .mc {
+    width: calc(100% - 24px);
   }
-  .mp-title { font-size: clamp(22px, 8vw, 30px); }
-  .mp-sub { font-size: 13px; line-height: 1.55; }
-  .mp-body { padding: 12px 0 40px; }
-  .mp-grid { grid-template-columns: 1fr; gap: 14px; }
-  .mp-card { padding: 24px; min-height: auto; }
-  .mp-name { font-size: 17px; }
+
+  .modules-page {
+    padding-top: 10px;
+  }
+
+  .mp-hero {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .mp-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mp-side {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-grid,
+  .recommend-list {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="landing-page">
     <div class="content">
-      <div class="logo">💕</div>
+      <img class="logo" :src="loveCubeIcon" alt="Love Cube">
       <h1 class="title">真诚认识</h1>
       <p class="slogan">遇见你，是最好的事</p>
       <div class="actions">
@@ -18,6 +18,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { storage } from '@f/utils/storage.js'
+import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const router = useRouter()
 if (storage.get('token')) {
@@ -47,9 +48,12 @@ if (storage.get('token')) {
 }
 
 .logo {
-  font-size: 80px;
-  line-height: 1;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  display: block;
   margin-bottom: 20px;
+  box-shadow: 0 18px 36px rgba(232, 79, 115, 0.28);
 }
 
 .title {

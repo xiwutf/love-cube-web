@@ -1,7 +1,10 @@
 <template>
   <div class="admin-layout">
     <aside class="admin-sidebar">
-      <router-link to="/admin" class="admin-brand">Love Cube Console</router-link>
+      <router-link to="/admin" class="admin-brand">
+        <img :src="loveCubeIcon" alt="">
+        <span>Love Cube Console</span>
+      </router-link>
       <p class="admin-sub">运营后台</p>
 
       <section class="admin-sidebar-card">
@@ -27,7 +30,7 @@
           <h1 class="admin-main-title">{{ currentSection }}</h1>
         </div>
         <div class="admin-main-actions">
-          <RouteBackButton v-if="route.path !== '/admin'" class="admin-route-back" />
+          <RouteBackButton v-if="showRouteBackButton" class="admin-route-back" />
           <router-link to="/" class="admin-home-link">打开平台官网</router-link>
         </div>
       </header>
@@ -43,6 +46,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import RouteBackButton from '@/components/RouteBackButton.vue'
+import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const route = useRoute()
 
@@ -74,6 +78,8 @@ const sectionMap = {
   '/admin/home-config': '首页配置'
 }
 
+const navHomePaths = computed(() => new Set(navItems.map(item => item.to)))
+const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const currentSection = computed(() => sectionMap[route.path] || '管理中心')
 const todayText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
@@ -102,11 +108,21 @@ const todayText = computed(() =>
 }
 
 .admin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 18px;
   font-weight: 800;
   text-decoration: none;
   color: #0f172a;
   letter-spacing: .01em;
+}
+
+.admin-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: block;
 }
 
 .admin-sub {

@@ -26,7 +26,7 @@ public class HomeConfigService {
     }
 
     public Map<String, Object> getPublicHomeConfig() {
-        return buildResponse(homeConfigRepository.findByConfigGroupInAndEnabledTrueOrderByConfigGroupAscSortOrderAscIdAsc(ALL_GROUPS));
+        return filterPublicResponse(buildResponse(homeConfigRepository.findByConfigGroupInOrderByConfigGroupAscSortOrderAscIdAsc(ALL_GROUPS)));
     }
 
     public Map<String, Object> getAdminHomeConfig() {
@@ -102,6 +102,21 @@ public class HomeConfigService {
         result.put("foundation", foundation);
         result.put("banners", List.of());
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> filterPublicResponse(Map<String, Object> response) {
+        Map<String, Object> result = new LinkedHashMap<>(response);
+        result.put("modules", filterEnabledList((List<Map<String, Object>>) result.get("modules")));
+        result.put("abilities", filterEnabledList((List<Map<String, Object>>) result.get("abilities")));
+        return result;
+    }
+
+    private List<Map<String, Object>> filterEnabledList(List<Map<String, Object>> list) {
+        if (list == null) return List.of();
+        return list.stream()
+                .filter(item -> toBoolean(item.getOrDefault("enabled", true)))
+                .toList();
     }
 
     private void upsertList(String group, List<Map<String, Object>> list, String keyField) {
@@ -181,6 +196,22 @@ public class HomeConfigService {
         item.put("desc", description);
         item.put("to", entryRoute);
         item.put("status", status);
+        item.put("icon", switch (key) {
+            case "fellowship" -> "联";
+            case "events" -> "活";
+            case "articles" -> "文";
+            case "announcements" -> "告";
+            case "ai-tools" -> "AI";
+            default -> "服";
+        });
+        item.put("tone", switch (key) {
+            case "fellowship" -> "tone-blue";
+            case "events" -> "tone-cyan";
+            case "articles" -> "tone-green";
+            case "announcements" -> "tone-amber";
+            case "ai-tools" -> "tone-rose";
+            default -> "tone-violet";
+        });
         item.put("coverUrl", "");
         item.put("enabled", true);
         item.put("sortOrder", sortOrder);
@@ -192,6 +223,13 @@ public class HomeConfigService {
         item.put("abilityKey", key);
         item.put("title", title);
         item.put("desc", desc);
+        item.put("icon", switch (key) {
+            case "fellowship" -> "联";
+            case "events" -> "活";
+            case "articles" -> "文";
+            case "announcements" -> "告";
+            default -> "能";
+        });
         item.put("imageUrl", "");
         item.put("enabled", true);
         item.put("sortOrder", sortOrder);

@@ -1,13 +1,11 @@
 <template>
   <div class="platform-layout">
-    <header class="platform-header">
+    <header class="platform-header" :class="{ 'is-scrolled': isScrolled }">
       <div class="header-main">
         <div class="nav-wrap">
           <router-link to="/" class="brand" @click="menuOpen = false">
             <span class="brand-logo" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
+              <img :src="loveCubeIcon" alt="">
             </span>
             <span class="brand-copy">
               <span class="brand-text">Love Cube</span>
@@ -15,35 +13,51 @@
             </span>
           </router-link>
 
-          <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单">
-            {{ menuOpen ? '关闭' : '菜单' }}
-          </button>
-
           <nav class="nav-links nav-links-desktop">
-            <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-            <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块中心</router-link>
-            <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
-            <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
-            <router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link>
-            <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊介绍</router-link>
+            <router-link
+              v-for="item in navItems"
+              :key="item.to"
+              :to="item.to"
+              :class="{ 'is-active': isActive(item.to) }"
+            >
+              {{ item.label }}
+            </router-link>
           </nav>
 
+          <form class="nav-search" role="search" @submit.prevent="handleSearch">
+            <span class="nav-search-icon" aria-hidden="true">🔍</span>
+            <input v-model.trim="searchKeyword" type="search" placeholder="搜索内容、用户、活动..." aria-label="搜索内容">
+          </form>
+
           <div class="account-slot">
+            <router-link to="/events" class="nav-action">
+              <span aria-hidden="true">✎</span>
+              签到
+            </router-link>
+            <router-link to="/fellowship/messages" class="nav-action nav-action-message">
+              <span aria-hidden="true">💬</span>
+              消息
+              <i v-if="messageBadge" class="message-badge">{{ messageBadge }}</i>
+            </router-link>
             <template v-if="userStore.isLoggedIn">
-              <router-link to="/account" class="account-entry">{{ userStore.userInfo?.username || '我的账号' }}</router-link>
+              <router-link to="/account" class="login-entry">{{ userStore.userInfo?.username || '我的账号' }}</router-link>
               <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
-              <button class="logout-btn" type="button" @click="handleLogout">退出</button>
             </template>
             <template v-else>
-              <router-link to="/login" class="login-entry">登录</router-link>
-              <router-link to="/login" class="register-entry">免费注册</router-link>
+              <router-link to="/login" class="register-entry">登录 / 注册</router-link>
             </template>
           </div>
+
+          <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
         </div>
       </div>
     </header>
 
-    <RouteBackButton v-if="route.path !== '/'" class="platform-route-back" />
+    <RouteBackButton v-if="showRouteBackButton" class="platform-route-back" />
 
     <main class="platform-main">
       <router-view />
@@ -72,7 +86,7 @@
           </section>
           <section class="footer-col">
             <h4>内容</h4>
-            <router-link to="/articles">资讯中心</router-link>
+            <router-link to="/articles">精选内容</router-link>
             <router-link to="/events">活动中心</router-link>
             <router-link to="/about">关于我们</router-link>
           </section>
@@ -92,17 +106,24 @@
     </transition>
     <transition name="menu-slide">
       <nav v-if="menuOpen" class="mobile-menu-panel">
-        <router-link to="/" :class="{ 'is-active': isActive('/') }" @click="menuOpen = false">首页</router-link>
-        <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }" @click="menuOpen = false">模块中心</router-link>
-        <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }" @click="menuOpen = false">平台动态</router-link>
-        <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }" @click="menuOpen = false">精选内容</router-link>
-        <router-link to="/events" :class="{ 'is-active': isActive('/events') }" @click="menuOpen = false">活动</router-link>
-        <router-link to="/about" :class="{ 'is-active': isActive('/about') }" @click="menuOpen = false">关于我们</router-link>
-        <router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }" @click="menuOpen = false">联谊介绍</router-link>
+        <form class="mobile-search" role="search" @submit.prevent="handleSearch">
+          <span aria-hidden="true">⌕</span>
+          <input v-model.trim="searchKeyword" type="search" placeholder="搜索内容、用户、活动...">
+        </form>
+        <router-link
+          v-for="item in mobileNavItems"
+          :key="item.to"
+          :to="item.to"
+          :class="{ 'is-active': isActive(item.to) }"
+          @click="menuOpen = false"
+        >
+          {{ item.label }}
+        </router-link>
+        <router-link to="/events" @click="menuOpen = false">签到</router-link>
+        <router-link to="/fellowship/messages" @click="menuOpen = false">消息中心</router-link>
         <router-link v-if="userStore.isLoggedIn" to="/account" @click="menuOpen = false">我的账号</router-link>
         <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link>
-        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录</router-link>
-        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">免费注册</router-link>
+        <router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录 / 注册</router-link>
         <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button>
       </nav>
     </transition>
@@ -110,15 +131,36 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import RouteBackButton from '@/components/RouteBackButton.vue'
+import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const menuOpen = ref(false)
+const isScrolled = ref(false)
+const searchKeyword = ref('')
+
+const navItems = [
+  { to: '/', label: '首页' },
+  { to: '/modules', label: '缘说中心' },
+  { to: '/announcements', label: '平台动态' },
+  { to: '/articles', label: '精选内容' },
+  { to: '/events', label: '互动' },
+  { to: '/fellowship-intro', label: '联谊介绍' }
+]
+
+const mobileNavItems = [
+  ...navItems,
+  { to: '/about', label: '关于我们' }
+]
+
+const messageBadge = computed(() => '')
+const navHomePaths = computed(() => new Set([...navItems.map(item => item.to), '/about']))
+const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 
 watch(() => route.fullPath, () => {
   menuOpen.value = false
@@ -135,58 +177,99 @@ function handleLogout() {
   menuOpen.value = false
   router.push('/')
 }
+
+function handleSearch() {
+  const keyword = searchKeyword.value.trim()
+  menuOpen.value = false
+  if (!keyword) {
+    router.push('/articles')
+    return
+  }
+  router.push({ path: '/articles', query: { keyword } })
+}
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 8
+}
+
+onMounted(() => {
+  handleScroll()
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <style scoped>
 .platform-layout {
   min-height: 100vh;
-  background: #f3f6fb;
+  background: #f7f9fd;
   color: #111827;
 }
 
 .platform-header {
   position: sticky;
-  top: 0;
+  top: 10px;
   z-index: 100;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  transition: filter 0.22s ease;
 }
 
+.platform-header.is-scrolled {
+  filter: drop-shadow(0 10px 24px rgba(58, 51, 118, 0.22));
+}
+
+.header-main,
 .nav-wrap,
 .footer-inner {
-  width: calc(100% - 48px);
+  width: 100%;
   margin: 0 auto;
 }
 
-.header-main {
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid #d6e0ed;
-}
-
 .nav-wrap {
-  min-height: 68px;
+  min-height: 58px;
+  padding: 0 18px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(180px, 320px) auto auto;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
+  margin: 0 auto;
+  width: calc(100% - 30px);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: linear-gradient(90deg, #ef5ca7 0%, #8f96f8 56%, #6f8de7 100%);
+  box-shadow: 0 12px 28px rgba(94, 73, 178, 0.2);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 152px;
+  color: inherit;
   text-decoration: none;
 }
 
 .brand-logo {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #ff6f92, #e84f73);
-  box-shadow: 0 10px 24px rgba(232, 79, 115, 0.24);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 18px rgba(89, 26, 82, 0.25);
+}
+
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .brand-copy {
@@ -196,111 +279,196 @@ function handleLogout() {
 }
 
 .brand-text {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.01em;
+  color: #ffffff;
 }
 
 .brand-tag {
-  margin-top: 2px;
-  font-size: 11px;
-  color: #64748b;
+  margin-top: 1px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
   font-weight: 600;
 }
 
 .nav-links {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 22px;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .nav-links a {
-  color: #334155;
+  position: relative;
+  color: rgba(255, 255, 255, 0.95);
   text-decoration: none;
   font-weight: 700;
   font-size: 15px;
-  line-height: 68px;
-  border-bottom: 2px solid transparent;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 20px 2px 18px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
 }
 
+.nav-links a:hover,
 .nav-links a.router-link-exact-active,
 .nav-links a.is-active {
-  color: #e84f73;
-  border-bottom-color: #e84f73;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.nav-links a.router-link-exact-active::after,
+.nav-links a.is-active::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.nav-search,
+.mobile-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #edf1f7;
+  background: #f8fafc;
+  color: #7c8a9d;
+}
+
+.nav-search {
+  height: 34px;
+  border-radius: 999px;
+  padding: 0 12px;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.account-slot {
+  min-width: 0;
+}
+
+.nav-search-icon {
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.nav-search input,
+.mobile-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-search input::placeholder,
+.mobile-search input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .account-slot {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
 }
 
-.account-entry,
+.nav-action,
 .admin-entry,
 .login-entry,
-.logout-btn {
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 7px 12px;
+.register-entry {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 800;
   text-decoration: none;
-  border: 1px solid #d6e0ed;
-  background: #fff;
-  color: #334155;
-  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.account-entry:hover,
+.nav-action:hover,
 .admin-entry:hover,
 .login-entry:hover,
-.logout-btn:hover {
-  border-color: #ffd0db;
-  color: #e84f73;
+.register-entry:hover {
+  color: #ffffff;
 }
 
 .login-entry,
-.logout-btn {
-  border-color: #ffd2dc;
-  color: #e84f73;
+.register-entry {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message-badge {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ff4d7f;
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
 }
 
 .register-entry {
-  text-decoration: none;
-  background: linear-gradient(135deg, #ff6f92, #e84f73);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+  min-height: 32px;
+  padding: 0 14px;
   border-radius: 999px;
-  padding: 9px 14px;
-  box-shadow: 0 10px 22px rgba(232, 79, 115, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .menu-toggle {
   display: none;
-  border: 1px solid #ffd0db;
+  border: 1px solid #e1e8f2;
   background: #fff;
-  color: #e84f73;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.menu-toggle span {
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: #243449;
 }
 
 .platform-main {
-  min-height: calc(100vh - 68px - 212px);
+  min-height: calc(100vh - 74px - 212px);
 }
 
 .platform-route-back {
   position: fixed;
   left: 24px;
-  top: 84px;
+  top: 96px;
   z-index: 95;
 }
 
@@ -320,7 +488,7 @@ function handleLogout() {
 }
 
 .footer-inner {
-  padding: 36px 0 24px;
+  padding: 36px 24px 24px;
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr);
   gap: 30px;
@@ -330,7 +498,7 @@ function handleLogout() {
 .footer-title {
   margin: 0;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 900;
   color: #0f172a;
 }
 
@@ -377,7 +545,7 @@ function handleLogout() {
   border: 1px solid #ffd8e3;
   color: #e84f73;
   background: #fff8fa;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 700;
   text-align: left;
@@ -385,47 +553,105 @@ function handleLogout() {
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .nav-wrap,
-  .footer-inner {
-    width: calc(100% - 32px);
+  .platform-header {
+    top: 0;
   }
 
   .nav-wrap {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
     gap: 14px;
-    padding: 12px 0;
+    padding: 0 18px;
+    width: calc(100% - 24px);
+    border-radius: 16px;
   }
 
+  .nav-links-desktop,
   .account-slot {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+    display: none;
+  }
+
+  .nav-search {
+    width: min(100%, 360px);
+    justify-self: stretch;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
   }
 
   .footer-inner {
     grid-template-columns: 1fr;
   }
+
+  .mobile-menu-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .mobile-menu-panel {
+    position: fixed;
+    top: 94px;
+    left: 32px;
+    right: 32px;
+    z-index: 101;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-search {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    border-radius: 8px;
+    padding: 0 12px;
+  }
+
+  .mobile-menu-panel a {
+    color: #334155;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .mobile-menu-panel a.router-link-exact-active,
+  .mobile-menu-panel a.is-active {
+    background: #fff2f6;
+    color: #e84f73;
+  }
 }
 
 @media (max-width: 767px) {
-  .nav-wrap,
-  .footer-inner {
-    width: calc(100% - 24px);
+  .platform-header {
+    top: 0;
+    padding: 0;
   }
 
   .nav-wrap {
     grid-template-columns: 1fr auto;
     min-height: 64px;
+    padding: 0 12px;
     gap: 10px;
+    width: calc(100% - 16px);
+    border-radius: 12px;
   }
 
   .brand-logo {
-    width: 30px;
-    height: 30px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
   }
 
   .brand-text {
-    font-size: 18px;
+    font-size: 19px;
   }
 
   .brand-tag {
@@ -437,18 +663,19 @@ function handleLogout() {
   }
 
   .nav-links-desktop,
+  .nav-search,
   .account-slot {
     display: none;
   }
 
   .platform-main {
-    min-height: calc(100vh - 64px - 58px);
+    min-height: calc(100vh - 74px - 58px);
     padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
 
   .platform-route-back {
     left: 12px;
-    top: 76px;
+    top: 88px;
   }
 
   .mobile-quick-nav {
@@ -470,10 +697,10 @@ function handleLogout() {
     display: flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
     color: #64748b;
     font-size: 12px;
     font-weight: 700;
+    text-decoration: none;
   }
 
   .mobile-quick-nav a.router-link-exact-active,
@@ -488,7 +715,7 @@ function handleLogout() {
   .footer-inner {
     grid-template-columns: 1fr;
     gap: 20px;
-    padding: 28px 0 18px;
+    padding: 28px 16px 18px;
   }
 
   .footer-cols {
@@ -504,25 +731,34 @@ function handleLogout() {
 
   .mobile-menu-panel {
     position: fixed;
-    top: calc(64px + env(safe-area-inset-top));
-    left: 0;
-    right: 0;
+    top: calc(82px + env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
     z-index: 101;
-    background: #fff;
-    border-bottom: 1px solid #d6e0ed;
     display: grid;
-    padding: 12px;
     gap: 6px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(18px);
+  }
+
+  .mobile-search {
+    min-height: 44px;
+    margin-bottom: 4px;
+    padding: 0 12px;
+    border-radius: 8px;
   }
 
   .mobile-menu-panel a {
-    text-decoration: none;
     color: #334155;
     font-size: 15px;
     font-weight: 700;
+    text-decoration: none;
     padding: 11px 9px;
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
   .mobile-menu-panel a.router-link-exact-active,

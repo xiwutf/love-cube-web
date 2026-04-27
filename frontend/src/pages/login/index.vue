@@ -3,7 +3,7 @@
     <div class="login-shell">
       <section class="login-card">
         <div class="logo-area">
-          <span class="logo-mark" aria-hidden="true">LC</span>
+          <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
           <p class="logo-sub">登录后即可继续你的平台体验</p>
         </div>
@@ -94,6 +94,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { useUserStore } from '@/stores/user.js'
+import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const router = useRouter()
 const route = useRoute()
@@ -178,15 +179,9 @@ async function handleRegister() {
 .logo-mark {
   width: 56px;
   height: 56px;
-  border-radius: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(145deg, #ff6f92, #e84f73);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  border-radius: 14px;
+  display: inline-block;
+  object-fit: cover;
   box-shadow: 0 14px 26px rgba(232, 79, 115, 0.32);
 }
 

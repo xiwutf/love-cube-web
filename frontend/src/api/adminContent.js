@@ -105,3 +105,16 @@ export function getAdminHomeConfig() {
 export function saveAdminHomeConfig(payload) {
   return request.put('/admin/home-config', payload)
 }
+
+export async function getAdminModuleConfig() {
+  const config = await getAdminHomeConfig()
+  return Array.isArray(config?.modules) ? config.modules : []
+}
+
+export async function saveAdminModuleConfig(modules) {
+  const config = await getAdminHomeConfig()
+  return saveAdminHomeConfig({
+    ...config,
+    modules: Array.isArray(modules) ? modules : []
+  })
+}

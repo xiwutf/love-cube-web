@@ -1,72 +1,163 @@
 <template>
   <div class="modules-admin">
-    <div class="ma-header">
-      <h2 class="ma-title">模块管理</h2>
-      <p class="ma-desc">平台模块配置雏形，当前为静态展示。后续可接入 modules 数据表实现动态管理。</p>
-    </div>
+    <header class="ma-header">
+      <div>
+        <h2 class="ma-title">模块管理</h2>
+        <p class="ma-desc">这里维护的模块会同步影响前台首页“平台模块”和模块中心的展示、排序、状态与入口。</p>
+      </div>
+      <div class="ma-actions">
+        <button type="button" class="admin-btn" :disabled="loading" @click="loadModules">
+          {{ loading ? '加载中...' : '重新加载' }}
+        </button>
+        <button type="button" class="admin-btn primary" :disabled="saving" @click="saveModules">
+          {{ saving ? '保存中...' : '保存模块配置' }}
+        </button>
+      </div>
+    </header>
 
     <div class="ma-table-wrap">
       <table class="ma-table">
         <thead>
           <tr>
+            <th>显示</th>
             <th>排序</th>
+            <th>模块标识</th>
             <th>模块名称</th>
             <th>状态</th>
             <th>入口路由</th>
-            <th>是否展示</th>
-            <th>备注</th>
+            <th>图标</th>
+            <th>色调</th>
+            <th>说明</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="mod in modules" :key="mod.moduleKey">
-            <td class="ma-sort">{{ mod.sort }}</td>
-            <td class="ma-name">
-              <span class="ma-dot" :style="{ background: mod.color }"></span>
-              {{ mod.name }}
+            <td>
+              <label class="ma-switch">
+                <input v-model="mod.enabled" type="checkbox">
+                <span>{{ mod.enabled ? '展示' : '隐藏' }}</span>
+              </label>
             </td>
             <td>
-              <span class="ma-status" :class="mod.status === 'active' ? 'ma-status--active' : 'ma-status--planned'">
-                {{ mod.status === 'active' ? '已开放' : '规划中' }}
-              </span>
+              <input v-model.number="mod.sortOrder" class="ma-input ma-input-sort" type="number" min="0">
             </td>
-            <td class="ma-route">{{ mod.entryRoute || '—' }}</td>
             <td>
-              <span class="ma-show" :class="mod.visible ? 'ma-show--on' : 'ma-show--off'">
-                {{ mod.visible ? '展示' : '隐藏' }}
-              </span>
+              <code class="ma-key">{{ mod.moduleKey }}</code>
             </td>
-            <td class="ma-remark">{{ mod.remark }}</td>
+            <td>
+              <input v-model="mod.title" class="ma-input" type="text">
+            </td>
+            <td>
+              <select v-model="mod.status" class="ma-input">
+                <option value="active">已开放</option>
+                <option value="planned">规划中</option>
+              </select>
+            </td>
+            <td>
+              <input v-model="mod.to" class="ma-input" type="text" placeholder="/fellowship">
+            </td>
+            <td>
+              <input v-model="mod.icon" class="ma-input ma-input-icon" type="text" maxlength="2">
+            </td>
+            <td>
+              <select v-model="mod.tone" class="ma-input">
+                <option v-for="tone in toneOptions" :key="tone.value" :value="tone.value">
+                  {{ tone.label }}
+                </option>
+              </select>
+            </td>
+            <td>
+              <textarea v-model="mod.desc" class="ma-textarea" rows="2"></textarea>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <p class="ma-tip">* 当前为平台模块配置雏形，后续可接入 modules 数据表实现动态排序与状态切换。</p>
+    <p class="ma-tip">状态为“规划中”的模块会在前台显示为不可进入；关闭“显示”后会从公开页面隐藏。</p>
   </div>
 </template>
 
 <script setup>
-const modules = [
-  { moduleKey: 'fellowship',     name: '联谊交友', status: 'active',  entryRoute: '/fellowship',    visible: true,  sort: 1, color: '#f45b7a', remark: '首个重点模块，已全面上线' },
-  { moduleKey: 'events',         name: '活动中心', status: 'active',  entryRoute: '/events',         visible: true,  sort: 2, color: '#1f4fd8', remark: '活动发布与报名' },
-  { moduleKey: 'articles',       name: '内容资讯', status: 'active',  entryRoute: '/articles',       visible: true,  sort: 3, color: '#059669', remark: '文章与资讯内容' },
-  { moduleKey: 'announcements',  name: '公告通知', status: 'active',  entryRoute: '/announcements',  visible: true,  sort: 4, color: '#0891b2', remark: '平台公告与规则' },
-  { moduleKey: 'local-services', name: '本地服务', status: 'planned', entryRoute: null,              visible: true,  sort: 5, color: '#d97706', remark: '后续扩展：招聘、二手、生活服务' },
-  { moduleKey: 'ai-tools',       name: 'AI 工具',  status: 'planned', entryRoute: null,              visible: true,  sort: 6, color: '#7c3aed', remark: '后续接入智能工具与 AI 能力' },
+import { ref } from 'vue'
+import { showToast } from 'vant'
+import { getAdminModuleConfig, saveAdminModuleConfig } from '@/api/adminContent.js'
+
+const loading = ref(false)
+const saving = ref(false)
+const modules = ref([])
+
+const toneOptions = [
+  { value: 'tone-blue', label: '蓝色' },
+  { value: 'tone-cyan', label: '青色' },
+  { value: 'tone-green', label: '绿色' },
+  { value: 'tone-amber', label: '琥珀' },
+  { value: 'tone-violet', label: '紫色' },
+  { value: 'tone-rose', label: '玫红' }
 ]
+
+function normalizeModule(item, index) {
+  return {
+    moduleKey: item.moduleKey || `module-${index + 1}`,
+    title: item.title || item.name || '',
+    desc: item.desc || item.description || '',
+    to: item.to || item.entryRoute || '',
+    status: item.status || 'planned',
+    enabled: item.enabled !== false,
+    sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index + 1,
+    icon: item.icon || '模',
+    tone: item.tone || 'tone-blue',
+    coverUrl: item.coverUrl || ''
+  }
+}
+
+async function loadModules() {
+  loading.value = true
+  try {
+    const rows = await getAdminModuleConfig()
+    modules.value = rows.map(normalizeModule)
+  } catch (error) {
+    showToast({ type: 'fail', message: error.message || '加载模块配置失败' })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function saveModules() {
+  saving.value = true
+  try {
+    const payload = modules.value
+      .map((item, index) => normalizeModule(item, index))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+    const result = await saveAdminModuleConfig(payload)
+    modules.value = (result?.modules || payload).map(normalizeModule)
+    showToast({ type: 'success', message: '模块配置已保存' })
+  } catch (error) {
+    showToast({ type: 'fail', message: error.message || '保存模块配置失败' })
+  } finally {
+    saving.value = false
+  }
+}
+
+loadModules()
 </script>
 
 <style scoped>
 .modules-admin {
-  padding: 32px 0;
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 20px;
 }
 
 .ma-header {
-  margin-bottom: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
 }
 
 .ma-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 900;
   color: #0f172a;
   margin: 0 0 8px;
@@ -79,6 +170,12 @@ const modules = [
   line-height: 1.6;
 }
 
+.ma-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .ma-table-wrap {
   overflow-x: auto;
   border: 1px solid #e2e8f0;
@@ -88,6 +185,7 @@ const modules = [
 
 .ma-table {
   width: 100%;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -98,81 +196,91 @@ const modules = [
   font-weight: 700;
   font-size: 12px;
   text-align: left;
-  padding: 12px 16px;
+  padding: 12px;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
 
 .ma-table td {
-  padding: 14px 16px;
+  padding: 12px;
   border-bottom: 1px solid #f1f5f9;
   color: #374151;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 .ma-table tr:last-child td {
   border-bottom: none;
 }
 
-.ma-sort {
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.ma-name {
-  display: flex;
+.ma-switch {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.ma-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.ma-status {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
-
-.ma-status--active  { background: #dcfce7; color: #15803d; }
-.ma-status--planned { background: #f1f5f9; color: #64748b; }
-
-.ma-route {
-  font-family: monospace;
-  font-size: 13px;
+  gap: 6px;
   color: #475569;
-}
-
-.ma-show {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
-}
-
-.ma-show--on  { background: #eff6ff; color: #1d4ed8; }
-.ma-show--off { background: #f1f5f9; color: #94a3b8; }
-
-.ma-remark {
-  color: #94a3b8;
   font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ma-key {
+  display: inline-flex;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+}
+
+.ma-input,
+.ma-textarea {
+  width: 100%;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.ma-input:focus,
+.ma-textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+
+.ma-input-sort {
+  width: 72px;
+}
+
+.ma-input-icon {
+  width: 64px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.ma-textarea {
+  min-width: 240px;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .ma-tip {
-  margin-top: 16px;
+  margin: 0;
   font-size: 13px;
   color: #94a3b8;
   line-height: 1.6;
+}
+
+@media (max-width: 767px) {
+  .ma-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ma-actions {
+    width: 100%;
+  }
 }
 </style>

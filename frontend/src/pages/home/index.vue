@@ -2,7 +2,7 @@
   <div class="home-page">
     <header class="home-header">
       <div class="home-logo">
-        <span class="home-logo-icon">❤</span>
+        <img class="home-logo-icon" :src="loveCubeIcon" alt="">
         <span class="home-logo-text">Love Cube</span>
       </div>
       <button class="home-avatar-btn" @click="router.push('/fellowship/me')">
@@ -10,11 +10,7 @@
       </button>
     </header>
 
-    <div v-if="pageLoading" class="page-loading">
-      <van-loading type="spinner" color="#ff5f84" size="30" />
-    </div>
-
-    <template v-else>
+    <template>
       <div v-if="showProfileReminder" class="tip-card">
         <div class="tip-left">
           <div class="tip-icon">!</div>
@@ -44,7 +40,15 @@
       <div class="banner-wrap">
         <van-swipe :autoplay="3000" indicator-color="#ff5f84" class="banner-swipe">
           <van-swipe-item v-for="(item, index) in displayBanners" :key="item.id">
-            <img :src="item.imageUrl" class="banner-img" alt="banner" @error="onImgError($event, index)" />
+            <img
+              :src="item.imageUrl"
+              class="banner-img"
+              alt="banner"
+              :loading="index === 0 ? 'eager' : 'lazy'"
+              :fetchpriority="index === 0 ? 'high' : 'auto'"
+              decoding="async"
+              @error="onImgError($event, index)"
+            />
           </van-swipe-item>
           <van-swipe-item v-if="!displayBanners.length">
             <div class="banner-fallback">
@@ -137,11 +141,11 @@ import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.png'
 import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.png'
 import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.png'
+import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const router = useRouter()
 const profileStore = useFellowshipProfileStore()
 
-const pageLoading = ref(true)
 const banners = ref([])
 const recommends = ref([])
 const newcomers = ref([])
@@ -155,7 +159,8 @@ const localBanners = [
 ]
 
 const remoteBanners = computed(() => {
-  return banners.value
+  const list = Array.isArray(banners.value) ? banners.value : []
+  return list
     .map((item, index) => ({
       id: item?.id || `remote-banner-${index}`,
       imageUrl: resolveBannerImage(item)
@@ -185,9 +190,9 @@ onMounted(async () => {
       profileStore.fetchCompletion(),
       profileStore.fetchProfile()
     ])
-    if (b.status === 'fulfilled') banners.value = b.value || []
-    if (r.status === 'fulfilled') recommends.value = r.value || []
-    if (n.status === 'fulfilled') newcomers.value = n.value || []
+    if (b.status === 'fulfilled') banners.value = Array.isArray(b.value) ? b.value : []
+    if (r.status === 'fulfilled') recommends.value = Array.isArray(r.value) ? r.value : []
+    if (n.status === 'fulfilled') newcomers.value = Array.isArray(n.value) ? n.value : []
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
     if (p.status === 'fulfilled') {
       const profile = p.value || {}
@@ -196,8 +201,6 @@ onMounted(async () => {
     }
   } catch {
     showToast({ message: '页面加载失败，请稍后重试', type: 'fail' })
-  } finally {
-    pageLoading.value = false
   }
 })
 
@@ -259,9 +262,10 @@ function onImgError(event, index) {
 }
 
 .home-logo-icon {
-  font-size: 20px;
-  color: #ff5f84;
-  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: block;
 }
 
 .home-logo-text {
@@ -280,12 +284,6 @@ function onImgError(event, index) {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.page-loading {
-  display: flex;
-  justify-content: center;
-  padding-top: 100px;
 }
 
 .tip-card {
@@ -346,6 +344,7 @@ function onImgError(event, index) {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, #fff0f4, #eff6ff);
 }
 
 .banner-swipe {

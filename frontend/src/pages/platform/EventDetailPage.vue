@@ -14,6 +14,17 @@
       <div class="detail-body">
         <p>{{ item.content || '暂无活动详情。' }}</p>
         <div class="detail-stat">当前报名：{{ item.signupCount || 0 }} 人</div>
+        <div class="event-signup-panel">
+          <button
+            class="platform-btn platform-btn-primary event-signup-btn"
+            :disabled="signingUp || signedUp"
+            @click="handleSignup"
+          >
+            {{ signupButtonText }}
+          </button>
+          <span class="event-signup-hint">报名后请留意站内消息或活动通知。</span>
+        </div>
+        <p v-if="signupMessage" class="event-signup-message">{{ signupMessage }}</p>
       </div>
     </article>
 
@@ -25,12 +36,20 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchEventDetail } from '@/api/platformContent.js'
+import { fetchEventDetail, signupEvent } from '@/api/platformContent.js'
 
 const route = useRoute()
 const item = ref(null)
+const signedUp = ref(false)
+const signingUp = ref(false)
+const signupMessage = ref('')
+
+const signupButtonText = computed(() => {
+  if (signedUp.value) return '已报名'
+  return signingUp.value ? '报名中...' : '报名参加'
+})
 
 function formatDate(value, withTime = false) {
   if (!value) return ''
@@ -45,4 +64,48 @@ onMounted(async () => {
     item.value = null
   }
 })
+
+async function handleSignup() {
+  if (!item.value || signingUp.value || signedUp.value) return
+  signingUp.value = true
+  signupMessage.value = ''
+
+  try {
+    const result = await signupEvent(item.value.id)
+    item.value.signupCount = result.signupCount ?? item.value.signupCount
+    signedUp.value = true
+    signupMessage.value = result.message || '报名成功'
+  } catch (error) {
+    signupMessage.value = error.message || '报名失败，请稍后再试'
+  } finally {
+    signingUp.value = false
+  }
+}
 </script>
+
+<style scoped>
+.event-signup-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-4);
+  flex-wrap: wrap;
+  margin-top: var(--lc-space-6);
+}
+
+.event-signup-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.event-signup-hint,
+.event-signup-message {
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+}
+
+.event-signup-message {
+  margin: var(--lc-space-3) 0 0;
+  color: var(--lc-blue-dark);
+  font-weight: 700;
+}
+</style>

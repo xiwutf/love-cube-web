@@ -2,12 +2,17 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
+import com.lovecube.backend.entity.EventSignup;
 import com.lovecube.backend.entity.PlatformEvent;
+import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
+import com.lovecube.backend.repository.EventSignupRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
+import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.HomeConfigService;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,18 +25,24 @@ public class PlatformContentController {
     private final AnnouncementRepository announcementRepository;
     private final ArticleRepository articleRepository;
     private final PlatformEventRepository platformEventRepository;
+    private final EventSignupRepository eventSignupRepository;
     private final HomeConfigService homeConfigService;
+    private final AdminAuthService adminAuthService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
             ArticleRepository articleRepository,
             PlatformEventRepository platformEventRepository,
-            HomeConfigService homeConfigService
+            EventSignupRepository eventSignupRepository,
+            HomeConfigService homeConfigService,
+            AdminAuthService adminAuthService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
         this.platformEventRepository = platformEventRepository;
+        this.eventSignupRepository = eventSignupRepository;
         this.homeConfigService = homeConfigService;
+        this.adminAuthService = adminAuthService;
     }
 
     @GetMapping("/announcements")
@@ -95,6 +106,38 @@ public class PlatformContentController {
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         platformEventRepository.save(item);
         return item;
+    }
+
+    @PostMapping("/events/{id}/signup")
+    @Transactional
+    public Map<String, Object> signupEvent(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        PlatformEvent item = platformEventRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        if (!"published".equals(item.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动暂不可报名");
+        }
+
+        boolean alreadySignedUp = eventSignupRepository.existsByEventIdAndUserId(id, user.getUserid());
+        if (!alreadySignedUp) {
+            EventSignup signup = new EventSignup();
+            signup.setEventId(id);
+            signup.setUserId(user.getUserid());
+            eventSignupRepository.save(signup);
+            item.setSignupCount((item.getSignupCount() == null ? 0 : item.getSignupCount()) + 1);
+        }
+
+        platformEventRepository.save(item);
+
+        return Map.of(
+                "signedUp", true,
+                "alreadySignedUp", alreadySignedUp,
+                "signupCount", item.getSignupCount() == null ? 0 : item.getSignupCount(),
+                "message", alreadySignedUp ? "已报名，无需重复提交" : "报名成功"
+        );
     }
 
     @GetMapping("/home/config")

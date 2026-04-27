@@ -17,9 +17,30 @@
           </div>
         </div>
       </div>
-      <router-link v-if="userStore.isAdmin" to="/admin" class="platform-btn platform-btn-primary ac-admin-btn">
-        进入管理后台
-      </router-link>
+      <div class="ac-profile-side">
+        <div class="ac-stat-strip">
+          <div class="ac-stat-pill">
+            <span class="ac-stat-value">{{ unreadTotal }}</span>
+            <span class="ac-stat-name">未读消息</span>
+          </div>
+          <div class="ac-stat-pill">
+            <span class="ac-stat-value">{{ certifiedCount }}/2</span>
+            <span class="ac-stat-name">认证进度</span>
+          </div>
+          <div class="ac-stat-pill">
+            <span class="ac-stat-value">{{ nextSteps.length }}</span>
+            <span class="ac-stat-name">待办建议</span>
+          </div>
+        </div>
+        <div class="ac-profile-actions">
+          <router-link to="/fellowship/profile/edit" class="platform-btn platform-btn-primary ac-main-action">
+            完善资料
+          </router-link>
+          <router-link v-if="userStore.isAdmin" to="/admin" class="platform-btn ac-admin-btn">
+            管理后台
+          </router-link>
+        </div>
+      </div>
     </div>
 
     <div class="platform-card ac-advice-card">
@@ -27,9 +48,13 @@
         <h2 class="ac-section-title">下一步建议</h2>
       </div>
       <div class="ac-advice-grid">
-        <router-link v-for="item in nextSteps" :key="item.key" :to="item.to" class="ac-advice-item">
-          <p class="ac-advice-title">{{ item.title }}</p>
-          <p class="ac-advice-desc">{{ item.desc }}</p>
+        <router-link v-for="(item, index) in nextSteps" :key="item.key" :to="item.to" class="ac-advice-item">
+          <span class="ac-advice-index">{{ index + 1 }}</span>
+          <span class="ac-advice-copy">
+            <span class="ac-advice-title">{{ item.title }}</span>
+            <span class="ac-advice-desc">{{ item.desc }}</span>
+          </span>
+          <span class="ac-card-arrow">→</span>
         </router-link>
       </div>
     </div>
@@ -46,7 +71,11 @@
               <path :d="mod.icon" />
             </svg>
           </span>
-          <span class="ac-mod-name">{{ mod.name }}</span>
+          <span class="ac-mod-copy">
+            <span class="ac-mod-name">{{ mod.name }}</span>
+            <span class="ac-mod-desc">{{ mod.desc }}</span>
+          </span>
+          <span class="ac-card-arrow">→</span>
         </router-link>
       </div>
     </div>
@@ -174,6 +203,8 @@ const livenessLabel = computed(() => statusLabel(livenessStatus.value))
 const realnameLabel = computed(() => statusLabel(realnameStatus.value))
 const livenessClass = computed(() => statusClass(livenessStatus.value))
 const realnameClass = computed(() => statusClass(realnameStatus.value))
+const unreadTotal = computed(() => unreadChat.value + unreadNotif.value)
+const certifiedCount = computed(() => [livenessStatus.value, realnameStatus.value].filter((status) => status === 'approved').length)
 
 const verifyHint = computed(() => {
   if (livenessStatus.value === 'none' && realnameStatus.value === 'none') {
@@ -193,10 +224,10 @@ const ICONS = {
 }
 
 const myModules = [
-  { key: 'fellowship', name: '联谊交友', to: '/fellowship/me', icon: ICONS.heart, color: '#f45b7a', bg: '#fff0f4' },
-  { key: 'events', name: '活动中心', to: '/events', icon: ICONS.calendar, color: '#1f4fd8', bg: '#eff6ff' },
-  { key: 'articles', name: '内容资讯', to: '/articles', icon: ICONS.article, color: '#059669', bg: '#f0fdf4' },
-  { key: 'modules', name: '模块中心', to: '/modules', icon: ICONS.grid, color: '#7c3aed', bg: '#f5f3ff' }
+  { key: 'fellowship', name: '联谊交友', desc: '资料、推荐与互动', to: '/fellowship/me', icon: ICONS.heart, color: '#f45b7a', bg: '#fff0f4' },
+  { key: 'events', name: '活动中心', desc: '报名线下与主题活动', to: '/events', icon: ICONS.calendar, color: '#1f4fd8', bg: '#eff6ff' },
+  { key: 'articles', name: '内容资讯', desc: '公告、资讯与精选内容', to: '/articles', icon: ICONS.article, color: '#059669', bg: '#f0fdf4' },
+  { key: 'modules', name: '模块中心', desc: '查看平台能力矩阵', to: '/modules', icon: ICONS.grid, color: '#7c3aed', bg: '#f5f3ff' }
 ]
 
 onMounted(async () => {
@@ -242,8 +273,9 @@ function handleLogout() {
 
 .module-page {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.18fr) minmax(380px, 0.82fr);
+  gap: 20px;
+  align-items: start;
 }
 
 .ac-profile-card,
@@ -264,7 +296,7 @@ function handleLogout() {
   border-color: var(--lc-border);
   border-radius: var(--lc-radius);
   box-shadow: var(--lc-shadow-sm);
-  padding: 24px;
+  padding: 22px;
 }
 
 .platform-btn-primary {
@@ -276,8 +308,12 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 30px;
   flex-wrap: wrap;
+  padding: 28px 30px;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0) 42%),
+    var(--lc-surface);
 }
 
 .ac-profile-main {
@@ -289,11 +325,12 @@ function handleLogout() {
 }
 
 .ac-avatar {
-  width: 76px;
-  height: 76px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--lc-blue-border);
+  border: 4px solid var(--lc-surface);
+  box-shadow: 0 0 0 1px var(--lc-blue-border), var(--lc-shadow-blue);
 }
 
 .ac-avatar-fallback {
@@ -317,6 +354,50 @@ function handleLogout() {
   margin: 0 0 10px;
   font-size: 14px;
   color: var(--lc-muted);
+}
+
+.ac-profile-side {
+  display: grid;
+  gap: 14px;
+  min-width: min(520px, 100%);
+}
+
+.ac-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ac-stat-pill {
+  padding: 13px 14px;
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.ac-stat-value,
+.ac-stat-name {
+  display: block;
+}
+
+.ac-stat-value {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--lc-text);
+  line-height: 1;
+}
+
+.ac-stat-name {
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--lc-muted);
+}
+
+.ac-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ac-badges {
@@ -368,11 +449,18 @@ function handleLogout() {
   color: var(--lc-red);
 }
 
-.ac-admin-btn {
+.ac-admin-btn,
+.ac-main-action {
   min-height: 44px;
   padding: 10px 20px;
   border-radius: var(--lc-radius-sm);
   font-size: 14px;
+}
+
+.ac-admin-btn {
+  border: 1px solid var(--lc-blue-border);
+  color: var(--lc-blue-dark);
+  background: var(--lc-surface);
 }
 
 .ac-section-head {
@@ -385,7 +473,7 @@ function handleLogout() {
 
 .ac-section-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 900;
   color: var(--lc-text);
 }
@@ -400,16 +488,48 @@ function handleLogout() {
 .ac-advice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .ac-advice-item {
-  display: block;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   border: 1px solid var(--lc-border);
   border-radius: 12px;
-  padding: 14px;
+  min-height: 82px;
+  padding: 16px;
   text-decoration: none;
-  background: var(--lc-surface);
+  background: linear-gradient(180deg, var(--lc-surface), var(--lc-bg));
+  transition: var(--lc-transition);
+}
+
+.ac-advice-item:hover,
+.ac-mod-card:hover {
+  border-color: var(--lc-blue-border);
+  box-shadow: var(--lc-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.ac-advice-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--lc-blue-light);
+  color: var(--lc-blue-dark);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.ac-advice-copy,
+.ac-mod-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
 .ac-advice-title {
@@ -420,10 +540,16 @@ function handleLogout() {
 }
 
 .ac-advice-desc {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 12px;
   color: var(--lc-muted);
-  line-height: 1.6;
+  line-height: 1.45;
+}
+
+.ac-card-arrow {
+  color: var(--lc-subtle);
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .ac-mod-grid {
@@ -433,17 +559,18 @@ function handleLogout() {
 }
 
 .ac-mod-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  min-height: 120px;
-  padding: 16px 10px;
+  gap: 12px;
+  min-height: 108px;
+  padding: 16px;
   border: 1px solid var(--lc-border);
   border-radius: 12px;
   text-decoration: none;
   color: inherit;
   background: var(--lc-surface);
+  transition: var(--lc-transition);
 }
 
 .ac-mod-icon {
@@ -459,6 +586,12 @@ function handleLogout() {
   font-size: 14px;
   font-weight: 700;
   color: var(--lc-text);
+}
+
+.ac-mod-desc {
+  color: var(--lc-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .ac-two-col {
@@ -478,7 +611,8 @@ function handleLogout() {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 16px 10px;
+  min-height: 82px;
+  padding: 18px 10px;
   background: var(--lc-bg);
   border-radius: 12px;
   border: 1px solid var(--lc-border);
@@ -552,7 +686,7 @@ function handleLogout() {
 }
 
 .ac-logout-card {
-  padding: 18px 24px;
+  padding: 18px 22px;
 }
 
 .ac-logout-btn {
@@ -600,14 +734,27 @@ function handleLogout() {
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+    padding: 20px;
   }
 
-  .ac-admin-btn {
+  .ac-profile-side {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ac-stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .ac-profile-actions,
+  .ac-admin-btn,
+  .ac-main-action {
     width: 100%;
   }
 
   .ac-advice-grid,
-  .ac-mod-grid {
+  .ac-mod-grid,
+  .ac-msg-grid {
     grid-template-columns: 1fr;
   }
 }
