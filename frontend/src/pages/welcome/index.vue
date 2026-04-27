@@ -36,7 +36,8 @@ onUnmounted(() => clearInterval(timer))
 
 <style scoped>
 .welcome-page {
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -44,6 +45,7 @@ onUnmounted(() => clearInterval(timer))
   background: linear-gradient(160deg, #fff0f3 0%, #ffffff 60%);
   cursor: pointer;
   user-select: none;
+  padding: calc(20px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom));
 }
 
 .content { text-align: center; }
@@ -51,5 +53,29 @@ onUnmounted(() => clearInterval(timer))
 .title { font-size: 32px; font-weight: 700; color: #ff6b8a; letter-spacing: 3px; }
 .slogan { font-size: 15px; color: #aaa; margin-top: 10px; }
 .countdown { font-size: 13px; color: #ccc; margin-top: 32px; }
-.hint { position: absolute; bottom: 40px; font-size: 12px; color: #ddd; }
+.hint { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); font-size: 12px; color: #ddd; }
+
+@media (max-width: 360px) {
+  .welcome-page {
+    padding: 20px 12px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .title {
+    font-size: 28px;
+    letter-spacing: 2px;
+  }
+
+  .slogan {
+    font-size: 14px;
+  }
+
+  .countdown {
+    margin-top: 24px;
+  }
+
+  .hint {
+    position: static;
+    margin-top: 16px;
+  }
+}
 </style>

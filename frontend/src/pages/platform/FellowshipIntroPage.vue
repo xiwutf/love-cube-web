@@ -65,7 +65,7 @@
 <style scoped>
 .fellowship-intro-page {
   width: calc(100% - 48px);
-  margin: 12px auto 30px;
+  margin: calc(12px + env(safe-area-inset-top)) auto calc(30px + env(safe-area-inset-bottom));
 }
 
 .intro-hero {
@@ -305,16 +305,16 @@
 @media (max-width: 767px) {
   .fellowship-intro-page {
     width: calc(100% - 24px);
-    margin-top: 8px;
+    margin-top: calc(8px + env(safe-area-inset-top));
   }
 
   .intro-hero {
-    min-height: 420px;
+    min-height: auto;
     border-radius: 18px;
   }
 
   .intro-hero-overlay {
-    padding: 24px 16px 24px;
+    padding: 24px 16px 16px;
     max-width: 100%;
   }
 
@@ -330,15 +330,13 @@
   }
 
   .intro-slogan-side {
-    right: 16px;
-    top: 16px;
-    font-size: 22px;
-    opacity: 0.85;
+    display: none;
   }
 
   .intro-hero-badges {
+    position: static;
+    margin: 10px 12px 12px;
     grid-template-columns: 1fr;
-    bottom: 12px;
     gap: 8px;
   }
 
@@ -353,6 +351,8 @@
 
   .intro-btn {
     width: 100%;
+    min-height: 44px;
+    font-size: 14px;
   }
 
   .intro-feature-section {
@@ -372,6 +372,85 @@
   .intro-feature-text {
     margin-top: 6px;
     font-size: 14px;
+  }
+}
+
+@media (max-width: 375px) {
+  .fellowship-intro-page {
+    width: calc(100% - 16px);
+  }
+
+  .intro-hero-overlay {
+    padding: 18px 12px 12px;
+  }
+
+  .intro-title {
+    font-size: 32px;
+  }
+
+  .intro-subtitle {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .intro-actions {
+    margin-top: 14px;
+    gap: 8px;
+  }
+
+  .intro-hero-badges {
+    margin: 8px;
+    gap: 6px;
+  }
+
+  .intro-badge {
+    padding: 8px 10px;
+  }
+
+  .intro-badge strong {
+    font-size: 16px;
+  }
+
+  .intro-badge span {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 360px) {
+  .fellowship-intro-page {
+    width: calc(100% - 12px);
+    margin-top: calc(6px + env(safe-area-inset-top));
+  }
+
+  .intro-hero {
+    border-radius: 14px;
+  }
+
+  .intro-hero-overlay {
+    padding: 14px 10px 10px;
+  }
+
+  .intro-kicker {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .intro-title {
+    margin-top: 8px;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .intro-subtitle {
+    margin-top: 8px;
+    font-size: 13px;
+  }
+
+  .intro-btn {
+    min-height: 40px;
+    font-size: 13px;
   }
 }
 </style>
