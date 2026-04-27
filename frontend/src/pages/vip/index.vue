@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="vip-page">
-    <NavBar title="VIP 会员" />
+    <NavBar title="VIP 浼氬憳" />
 
     <section class="vip-hero">
       <div class="hero-orbit" />
@@ -25,14 +25,14 @@
       <div class="hero-privileges">
         <span>金色身份标识</span>
         <span>推荐曝光加权</span>
-        <span>高意向用户优先触达</span>
+        <span>高意向用户优先触</span>
       </div>
     </section>
 
     <section class="section benefit-section">
       <div class="section-head">
         <p class="section-title">VIP 会员特权</p>
-        <span>开通后立即生效</span>
+        <span>弢通后立即生效</span>
       </div>
       <div class="benefits-grid">
         <div v-for="b in benefits" :key="b.title" class="benefit-item">
@@ -62,7 +62,7 @@
         >
           <span v-if="pkg.badge" class="package-badge">{{ pkg.badge }}</span>
           <div class="package-name">{{ pkg.name }}</div>
-          <div class="package-price"><small>¥</small>{{ pkg.price }}</div>
+          <div class="package-price"><small>楼</small>{{ pkg.price }}</div>
           <div class="package-desc">{{ pkg.desc }}</div>
         </div>
       </div>
@@ -70,8 +70,8 @@
 
     <section class="trust-panel">
       <div>
-        <p>认证 + VIP 双身份展示</p>
-        <span>资料页、推荐卡片、互动入口都会强化可信与优质感。</span>
+        <p>认证 + VIP 双身份展</p>
+        <span>资料页推荐卡片互动入口都会强化可信与优质感</span>
       </div>
       <van-icon name="certificate" size="30" />
     </section>
@@ -107,7 +107,7 @@ const userName    = computed(() => userStore.userInfo?.nickname || '用户')
 const userInitial = computed(() => (userName.value || '?')[0])
 
 const benefits = [
-  { icon: 'fire-o', title: '曝光加权', desc: '优先进入推荐流' },
+  { icon: 'fire-o', title: '曝光加权', desc: '优先进入推荐' },
   { icon: 'eye-o', title: '访客解锁', desc: '看见谁关注了你' },
   { icon: 'chat-o', title: '高频互动', desc: '更多聊天机会' },
   { icon: 'gold-coin-o', title: '尊贵金标', desc: '身份更有辨识度' },
@@ -116,7 +116,7 @@ const benefits = [
 const packages = [
   { id: 'month', name: '月卡', price: 30, desc: '轻量体验', badge: '' },
   { id: 'season', name: '季卡', price: 80, desc: '连续曝光', badge: '推荐' },
-  { id: 'year', name: '年卡', price: 280, desc: '长期优选', badge: '省更多' },
+  { id: 'year', name: '年卡', price: 280, desc: '长期优惠', badge: '省更多' },
 ]
 
 const statusText = computed(() => {
@@ -129,21 +129,21 @@ async function handlePay() {
   try {
     await showConfirmDialog({
       title: '确认支付',
-      message: `确认支付 ¥${pkg.price} 购买${pkg.name} VIP 吗？`,
+      message: `确认支付 ${pkg.price} 元购买 ${pkg.name} VIP`,
     })
   } catch {
     return
   }
 
   paying.value = true
-  showLoadingToast({ message: '支付中…', forbidClick: true })
+  showLoadingToast({ message: '支付中...', forbidClick: true })
   try {
     await buyVip(pkg.id, pkg.name, pkg.price)
     closeToast()
-    showToast({ type: 'success', message: 'VIP 开通成功！' })
+    showToast({ type: 'success', message: 'VIP 弢通成功！' })
   } catch (e) {
     closeToast()
-    showToast({ type: 'fail', message: e?.message || '支付失败，请重试' })
+    showToast({ type: 'fail', message: e?.message || '֧ʧܣ' })
   } finally {
     paying.value = false
   }
@@ -455,3 +455,4 @@ async function handlePay() {
   background: linear-gradient(180deg, rgba(247, 243, 236, 0), rgba(247, 243, 236, 0.96) 26%, #f7f3ec 100%);
 }
 </style>
+

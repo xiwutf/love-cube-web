@@ -62,6 +62,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByInvitedByUserIdOrderByCreatedAtDesc(Long invitedByUserId);
 
+    List<User> findByRoleInOrderByCreatedAtAsc(List<String> roles);
+
     long countByCreatedAtGreaterThanEqual(LocalDateTime createdAt);
 
     long countByUserStatusIgnoreCase(String userStatus);

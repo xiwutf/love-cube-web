@@ -14,6 +14,11 @@ public interface PlatformEventRepository extends JpaRepository<PlatformEvent, St
 
     long countByRecommendedTrue();
 
+    long countByStatus(String status);
+
+    @Query("SELECT COUNT(DISTINCT e.location) FROM PlatformEvent e WHERE e.status = 'published' AND e.location IS NOT NULL AND e.location <> ''")
+    long countDistinctPublishedLocations();
+
     @Query("SELECT e FROM PlatformEvent e WHERE e.status = :status ORDER BY CASE WHEN e.pinned = true THEN 0 ELSE 1 END, e.eventTime DESC")
     List<PlatformEvent> findByStatusPinnedFirst(@Param("status") String status);
 }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="platform-page module-page">
     <div class="detail-nav-row">
       <router-link to="/articles" class="platform-backlink">返回资讯列表</router-link>
@@ -15,8 +15,8 @@
     </article>
 
     <article v-else class="platform-card module-empty">
-      <h3 class="platform-heading">内容不存在</h3>
-      <p class="platform-text">该内容可能已下线，请返回资讯页查看最新列表。</p>
+      <h3 class="platform-heading">内容不存</h3>
+      <p class="platform-text">该内容可能已下线，请返回资讯页查看最新列表</p>
     </article>
   </section>
 </template>
@@ -37,3 +37,4 @@ onMounted(async () => {
   }
 })
 </script>
+

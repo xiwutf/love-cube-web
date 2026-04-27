@@ -95,7 +95,7 @@ const stats = ref({
 })
 
 function pick(groupKey, key) {
-  return stats.value?.[groupKey]?.[key] ?? stats.value?.[key] ?? 0
+  return stats.value?.[groupKey]?.[key] ? stats.value?.[key] ? 0
 }
 
 const statGroups = computed(() => [

@@ -27,10 +27,13 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<?> list(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) String type) {
         try {
             User user = unifiedProfileService.requireCurrentUser(authHeader);
-            List<Notification> list = notificationService.getMyNotifications(user.getUserid(), limit);
+            List<Notification> list = (type != null && !type.isBlank())
+                    ? notificationService.getMyNotificationsByType(user.getUserid(), type, limit)
+                    : notificationService.getMyNotifications(user.getUserid(), limit);
             return ResponseEntity.ok(list);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));

@@ -36,6 +36,12 @@ public class NotificationService {
             .collect(Collectors.toList());
     }
 
+    public List<Notification> getMyNotificationsByType(Long userId, String type, int limit) {
+        return notificationRepository.findByUserIdAndTypeOrderByCreatedAtDesc(userId, type)
+            .stream().limit(Math.max(1, Math.min(limit, 200)))
+            .collect(Collectors.toList());
+    }
+
     public long getUnreadCount(Long userId) {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }

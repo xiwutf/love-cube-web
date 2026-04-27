@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <section class="featured-page">
     <section class="featured-hero">
       <div class="hero-copy">
         <p class="hero-kicker">Featured Content</p>
-        <h1>精选内容资讯</h1>
-        <p>发现有价值的内容，获取实用技巧与最新资讯，丰富你的社交生活</p>
+        <h1>精内容资</h1>
+        <p>мֵݣȡʵüRѶḻ罻</p>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <img :src="heroImage" alt="" />
@@ -101,7 +101,7 @@
 
         <article v-if="!loading && !filteredList.length" class="empty-state">
           <h3>暂无内容</h3>
-          <p>当前筛选条件下还没有已发布文章，换个分类再看看。</p>
+          <p>当前筛条件下还没有已发布文章，换个分类再看看</p>
         </article>
 
         <div v-if="hasMore" class="load-more-wrap">
@@ -109,10 +109,10 @@
         </div>
 
         <section class="content-policy">
-          <div class="policy-icon" aria-hidden="true">♥</div>
+          <div class="policy-icon" aria-hidden="true">❤</div>
           <div>
             <h2>内容规范</h2>
-            <p>我们鼓励优质内容分享，严禁发布违法违规、低俗色情、恶意攻击等不良信息，共同维护良好的社区环境。</p>
+            <p>我们鼓励优质内容分享，严禁发布违法违规低俗色情恶意攻击等不良信息，共同维护良好的社区环境</p>
           </div>
           <router-link to="/policies/content-policy">查看内容规范</router-link>
         </section>
@@ -144,7 +144,7 @@
 
         <section class="aside-card">
           <div class="aside-head">
-            <h2>推荐作者</h2>
+            <h2>推荐作</h2>
             <router-link to="/articles">查看更多</router-link>
           </div>
           <div class="author-list">
@@ -166,14 +166,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchArticles } from '@/api/platformContent.js'
-import heroImage from '@/assets/首页首屏右侧大图.png'
-import leadImage from '@/assets/联谊专区.png'
-import eventImage from '@/assets/活动模块.png'
-import aiImage from '@/assets/AI工具模块卡片.png'
-import announcementImage from '@/assets/公告模块卡片.png'
-import ctaImage from '@/assets/底部横幅 CTA.png'
-import moduleImage from '@/assets/未来扩展模块.png'
+import { fetchArticles, fetchHotTopics, fetchRecommendedAuthors } from '@/api/platformContent.js'
+import heroImage from '@/assets/首页首屏右侧大图.webp'
+import leadImage from '@/assets/联谊专区.webp'
+import eventImage from '@/assets/活动模块.webp'
+import aiImage from '@/assets/AI工具模块卡片.webp'
+import announcementImage from '@/assets/公告模块卡片.webp'
+import ctaImage from '@/assets/底部横幅 CTA.webp'
+import moduleImage from '@/assets/未来扩展模块.webp'
 
 const PAGE_SIZE = 4
 const route = useRoute()
@@ -189,129 +189,31 @@ const categories = [
   { label: '活动指南', value: '活动指南' },
   { label: '活动中心', value: '活动中心' },
   { label: '平台攻略', value: '平台攻略' },
-  { label: 'AI工具', value: 'AI工具' },
+  { label: 'AI宸ュ叿', value: 'AI宸ュ叿' },
   { label: '本地服务', value: '本地服务' }
 ]
 
-const fallbackArticles = [
-  {
-    id: 'social-icebreaker',
-    title: '平台账号安全升级指南',
-    summary: '从登录保护、通知设置到密码策略，三步提升账号安全。',
-    category: '平台资讯',
-    author: 'Love Cube官方',
-    reads: '2.4k',
-    likes: 128,
-    date: '2026-04-28',
-    coverUrl: leadImage,
-    hot: 128
-  },
-  {
-    id: 'may-event-guide',
-    title: '五一平台活动参与指南',
-    summary: '活动亮点、报名方式、注意事项一文看懂',
-    category: '活动指南',
-    author: '活动小助手',
-    reads: '1.8k',
-    likes: 86,
-    date: '2026-04-26',
-    coverUrl: eventImage,
-    hot: 86
-  },
-  {
-    id: 'healthy-relationship',
-    title: '内容互动礼仪与社区规范',
-    summary: '帮助你在平台内高质量表达与互动，减少沟通误解。',
-    category: '平台资讯',
-    author: '心语心理',
-    reads: '1.3k',
-    likes: 136,
-    date: '2026-04-25',
-    coverUrl: ctaImage,
-    hot: 136
-  },
-  {
-    id: 'city-cafe-map',
-    title: '城市生活服务精选清单',
-    summary: '覆盖餐饮、运动、学习等场景的一站式服务推荐。',
-    category: '本地服务',
-    author: '生活探索家',
-    reads: '1.2k',
-    likes: 74,
-    date: '2026-04-24',
-    coverUrl: announcementImage,
-    hot: 74
-  },
-  {
-    id: 'love-cube-tips',
-    title: 'Love Cube 使用技巧大全',
-    summary: '功能使用指南，玩转平台不迷路',
-    category: '平台攻略',
-    author: '官方小助手',
-    reads: '2.7k',
-    likes: 102,
-    date: '2026-04-23',
-    coverUrl: moduleImage,
-    hot: 102
-  },
-  {
-    id: 'ai-social-helper',
-    title: 'AI 助手：你的社交好帮手',
-    summary: '内容推荐、话题建议、表达辅助',
-    category: 'AI工具',
-    author: 'AI小智',
-    reads: '1.6k',
-    likes: 98,
-    date: '2026-04-22',
-    coverUrl: aiImage,
-    hot: 98
-  },
-  {
-    id: 'weekend-city-plan',
-    title: '本周活动中心热门主题',
-    summary: '快速了解近期平台活动中心最受关注的专题。',
-    category: '活动中心',
-    author: '城市向导',
-    reads: '1.9k',
-    likes: 95,
-    date: '2026-04-21',
-    coverUrl: eventImage,
-    hot: 95
-  }
-]
 
-const topics = [
-  { rank: 1, name: '五一联谊活动', heat: '12.4k' },
-  { rank: 2, name: '如何快速破冰', heat: '8.7k' },
-  { rank: 3, name: '恋爱心理学', heat: '6.9k' },
-  { rank: 4, name: '城市约会圣地', heat: '5.3k' },
-  { rank: 5, name: '社交技巧分享', heat: '4.8k' }
-]
-
-const authors = [
-  { name: 'Love Cube官方', badge: '官方', desc: '内容创作者与策展', initial: 'L', tone: 'pink' },
-  { name: '心语心理', badge: '达人', desc: '心理学研究者，情感专栏作者', initial: '心', tone: 'blue' },
-  { name: '生活探索家', badge: '达人', desc: '热爱生活，分享美好日常', initial: '生', tone: 'green' },
-  { name: '活动小助手', badge: '官方', desc: '活动策划专家', initial: '活', tone: 'violet' }
-]
+const topics = ref([])
+const authors = ref([])
+const AUTHOR_TONES = ['pink', 'blue', 'green', 'violet']
 
 const shareImage = ctaImage
 
-const normalizedItems = computed(() => allItems.value.map((item, index) => {
-  const fallback = fallbackArticles[index % fallbackArticles.length]
-  const category = item.category || item.tag || fallback.category
+const normalizedItems = computed(() => allItems.value.map((item) => {
+  const category = item.category || item.tag || ''
   return {
-    id: item.id || fallback.id,
-    title: item.title || fallback.title,
-    summary: item.summary || fallback.summary,
+    id: item.id,
+    title: item.title || '',
+    summary: item.summary || '',
     category,
     sourceLabel: sourceLabelByCategory(category),
-    author: item.authorName || item.author || fallback.author,
-    reads: formatCount(item.viewCount || item.views || fallback.reads),
-    likes: item.likeCount || item.likes || fallback.likes,
-    date: formatDate(item.publishedAt || item.createdAt || item.date || fallback.date),
-    coverUrl: item.coverUrl || item.cover || fallback.coverUrl,
-    hot: Number(item.viewCount || item.likes || fallback.hot || 0),
+    author: item.authorName || item.author || '',
+    reads: item.viewCount > 0 ? formatCount(item.viewCount) : '',
+    likes: item.likeCount || item.likes || 0,
+    date: formatDate(item.publishedAt || item.createdAt || item.date),
+    coverUrl: item.coverUrl || item.cover || '',
+    hot: Number(item.viewCount || item.likes || 0),
     labelClass: labelClass(category)
   }
 }))
@@ -350,11 +252,12 @@ function setCategory(value) {
 }
 
 function formatCount(value) {
-  if (typeof value === 'string') return value
+  if (typeof value === 'string' && isNaN(Number(value))) return value
   const count = Number(value || 0)
+  if (count <= 0) return ''
   if (count >= 10000) return `${(count / 10000).toFixed(1)}w`
   if (count >= 1000) return `${(count / 1000).toFixed(1)}k`
-  return String(count || '1.2k')
+  return String(count)
 }
 
 function formatDate(value) {
@@ -364,38 +267,62 @@ function formatDate(value) {
 
 function labelClass(category) {
   const map = {
-    平台资讯: 'label-platform',
-    活动指南: 'label-event',
-    活动中心: 'label-event',
-    平台攻略: 'label-platform',
-    AI工具: 'label-ai',
-    本地服务: 'label-life'
+    '平台资讯': 'label-platform',
+    '活动指南': 'label-event',
+    '活动中心': 'label-event',
+    '平台攻略': 'label-platform',
+    'AI工具': 'label-ai',
+    '本地服务': 'label-life'
   }
   return map[category] || 'label-platform'
 }
 
 function sourceLabelByCategory(category) {
   const mapping = {
-    平台资讯: '[平台资讯]',
-    活动指南: '[活动中心]',
-    活动中心: '[活动中心]',
-    平台攻略: '[平台资讯]',
-    AI工具: '[AI工具]',
-    本地服务: '[本地服务]'
+    '平台资讯': '[平台资讯]',
+    '活动指南': '[活动中心]',
+    '活动中心': '[活动中心]',
+    '平台攻略': '[平台资讯]',
+    'AI工具': '[AI工具]',
+    '本地服务': '[本地服务]'
   }
   return mapping[category] || '[平台资讯]'
 }
 
+function formatHeat(val) {
+  const n = Number(val) || 0
+  return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n)
+}
+
 onMounted(async () => {
   loading.value = true
-  try {
-    const data = await fetchArticles({ status: 'published' })
-    allItems.value = Array.isArray(data) && data.length ? data : fallbackArticles
-  } catch {
-    allItems.value = fallbackArticles
-  } finally {
-    loading.value = false
+  const [articlesRes, topicsRes, authorsRes] = await Promise.allSettled([
+    fetchArticles({ status: 'published' }),
+    fetchHotTopics(5),
+    fetchRecommendedAuthors(4)
+  ])
+
+  if (articlesRes.status === 'fulfilled') {
+    allItems.value = Array.isArray(articlesRes.value) ? articlesRes.value : []
+  } else {
+    allItems.value = []
   }
+
+  if (topicsRes.status === 'fulfilled' && Array.isArray(topicsRes.value) && topicsRes.value.length) {
+    topics.value = topicsRes.value.map(t => ({ rank: t.rank, name: t.name, heat: formatHeat(t.heatValue) }))
+  }
+
+  if (authorsRes.status === 'fulfilled' && Array.isArray(authorsRes.value) && authorsRes.value.length) {
+    authors.value = authorsRes.value.map((a, i) => ({
+      name: a.username || 'Love Cube瀹樻柟',
+      badge: a.badge || '瀹樻柟',
+      desc: a.description || '',
+      initial: (a.username || 'L').slice(0, 1),
+      tone: AUTHOR_TONES[i % AUTHOR_TONES.length]
+    }))
+  }
+
+  loading.value = false
 })
 </script>
 
@@ -1095,3 +1022,4 @@ onMounted(async () => {
   }
 }
 </style>
+

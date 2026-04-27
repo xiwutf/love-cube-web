@@ -7,4 +7,6 @@ public interface EventSignupRepository extends JpaRepository<EventSignup, Long> 
     boolean existsByEventIdAndUserId(String eventId, Long userId);
 
     long countByEventId(String eventId);
+
+    long countByUserId(Long userId);
 }

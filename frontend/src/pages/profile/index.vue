@@ -1,6 +1,6 @@
-<template>
+﻿<template>
   <div class="profile-page">
-    <!-- 顶部栏 -->
+    <!-- 顶部信息 -->
     <div class="top-bar">
       <van-icon name="arrow-left" size="22" @click="router.back()" />
       <span class="top-title">个人中心</span>
@@ -13,7 +13,7 @@
     </div>
 
     <template v-else-if="userInfo">
-      <!-- 头部信息 -->
+      <!-- 澶撮儴淇℃伅 -->
       <div class="profile-header">
         <van-image
           round
@@ -32,7 +32,7 @@
           <p class="bio">{{ userInfo.signature || '这个人很懒，什么都没留下~' }}</p>
           <div class="tags">
             <van-tag v-if="userInfo.gender"    plain type="primary">{{ userInfo.gender }}</van-tag>
-            <van-tag v-if="userInfo.age"       plain type="success">{{ userInfo.age }}岁</van-tag>
+            <van-tag v-if="userInfo.age" plain type="success">{{ userInfo.age }}岁</van-tag>
             <van-tag v-if="userInfo.constellation" plain type="warning">{{ userInfo.constellation }}</van-tag>
           </div>
         </div>
@@ -41,7 +41,7 @@
       <!-- 资料完整度 -->
       <div class="completion-bar">
         <div class="completion-label">
-          <span>资料完整度</span>
+          <span>资料完整</span>
           <span class="completion-value">{{ userInfo.completionRate }}%</span>
         </div>
         <van-progress :percentage="userInfo.completionRate" color="#FF6B8A" :show-pivot="false" />
@@ -50,26 +50,26 @@
       <!-- 基本信息 -->
       <van-cell-group inset title="基本信息" class="info-group">
         <van-cell title="手机号" :value="userInfo.phoneNumber || '未绑定'" />
-        <van-cell title="所在地" :value="userInfo.location   || '未填写'" />
-        <van-cell title="职业"   :value="userInfo.occupation || '未填写'" />
-        <van-cell title="身高"   :value="userInfo.height ? userInfo.height + 'cm' : '未填写'" />
-        <van-cell title="生日"   :value="userInfo.birthday   || '未填写'" />
+        <van-cell title="所在地" :value="userInfo.location || '未填写'" />
+        <van-cell title="职业" :value="userInfo.occupation || '未填写'" />
+        <van-cell title="身高" :value="userInfo.height ? userInfo.height + 'cm' : '未填写'" />
+        <van-cell title="生日" :value="userInfo.birthday || '未填写'" />
       </van-cell-group>
 
       <!-- 统计数据 -->
       <div class="stats-row" v-if="userInfo.statistics">
         <div class="stat-item">
-          <span class="stat-num">{{ userInfo.statistics.likeCount ?? 0 }}</span>
+          <span class="stat-num">{{ userInfo.statistics.likeCount ? 0 }}</span>
           <span class="stat-label">获赞</span>
         </div>
         <div class="stat-divider" />
         <div class="stat-item">
-          <span class="stat-num">{{ userInfo.statistics.visitorCount ?? 0 }}</span>
+          <span class="stat-num">{{ userInfo.statistics.visitorCount ? 0 }}</span>
           <span class="stat-label">访客</span>
         </div>
         <div class="stat-divider" />
         <div class="stat-item">
-          <span class="stat-num">{{ userInfo.statistics.matchCount ?? 0 }}</span>
+          <span class="stat-num">{{ userInfo.statistics.matchCount ? 0 }}</span>
           <span class="stat-label">配对</span>
         </div>
       </div>
@@ -268,3 +268,4 @@ onMounted(loadUserInfo)
   padding: 0 16px;
 }
 </style>
+

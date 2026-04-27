@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="invite-page">
     <header class="header">
       <van-icon name="arrow-left" size="20" @click="router.back()" />
@@ -11,16 +11,16 @@
       <p class="code">{{ summary.inviteCode || '-' }}</p>
       <p class="count">已邀请 {{ summary.inviteCount || 0 }} 人</p>
       <div class="actions">
-        <van-button type="primary" round size="small" @click="copyCode">一键复制</van-button>
+        <van-button type="primary" round size="small" @click="copyCode">一键复制邀请码</van-button>
       </div>
     </section>
 
     <section class="card">
       <h3>邀请说明</h3>
       <ul>
-        <li>Love Cube 采用邀请制注册。</li>
-        <li>请将邀请码分享给你信任的朋友。</li>
-        <li>被邀请人注册后会记录注册时间、IP 与设备信息。</li>
+        <li>Love Cube 采用邀请制注册</li>
+        <li>请将邀请码分享给你信任的朋友</li>
+        <li>注册时间与 IP 信息将用于安全风控</li>
       </ul>
     </section>
 
@@ -32,7 +32,7 @@
         <article v-for="item in invitees" :key="item.userId" class="invitee-item">
           <div>
             <p class="name">{{ item.nickname || item.username || `用户${item.userId}` }}</p>
-            <p class="meta">ID {{ item.userId }} · 状态 {{ item.status || 'NORMAL' }}</p>
+            <p class="meta">ID {{ item.userId }} · 状态：{{ item.status || 'NORMAL' }}</p>
           </div>
           <p class="time">{{ formatTime(item.registeredAt) }}</p>
         </article>
@@ -59,7 +59,7 @@ async function loadData() {
     summary.value = summaryRes || summary.value
     invitees.value = Array.isArray(listRes) ? listRes : []
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '邀请码数据加载失败' })
+    showToast({ type: 'fail', message: err.message || '邢请码数据加载失败' })
   } finally {
     loading.value = false
   }
@@ -68,12 +68,12 @@ async function loadData() {
 async function copyCode() {
   const code = summary.value.inviteCode
   if (!code) {
-    showToast('暂无邀请码')
+    showToast('暂无邢请码')
     return
   }
   try {
     await navigator.clipboard.writeText(code)
-    showToast({ type: 'success', message: '邀请码已复制' })
+    showToast({ type: 'success', message: '邢请码已复刄17' })
   } catch {
     showToast({ type: 'fail', message: '复制失败，请手动复制' })
   }
@@ -193,4 +193,6 @@ ul {
   font-size: 12px;
 }
 </style>
+
+
 

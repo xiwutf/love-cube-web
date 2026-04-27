@@ -89,6 +89,8 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      */
     Long countByToUserIdAndInteractionType(Long toUserId, UserInteraction.InteractionType interactionType);
 
+    Long countByFromUserIdAndInteractionType(Long fromUserId, UserInteraction.InteractionType interactionType);
+
     Long countByInteractionTypeAndCreatedAtGreaterThanEqual(
         UserInteraction.InteractionType interactionType,
         LocalDateTime createdAt);

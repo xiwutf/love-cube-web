@@ -1,6 +1,9 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.repository.DynamicLikeRepository;
+import com.lovecube.backend.repository.DynamicRepository;
+import com.lovecube.backend.repository.EventSignupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.UnifiedProfileService;
@@ -20,17 +23,26 @@ public class UserController {
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
     private final UnifiedProfileService unifiedProfileService;
+    private final DynamicRepository dynamicRepository;
+    private final EventSignupRepository eventSignupRepository;
+    private final DynamicLikeRepository dynamicLikeRepository;
 
     public UserController(
             UserService userService,
             UserRepository userRepository,
             AdminAuthService adminAuthService,
-            UnifiedProfileService unifiedProfileService
+            UnifiedProfileService unifiedProfileService,
+            DynamicRepository dynamicRepository,
+            EventSignupRepository eventSignupRepository,
+            DynamicLikeRepository dynamicLikeRepository
     ) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
         this.unifiedProfileService = unifiedProfileService;
+        this.dynamicRepository = dynamicRepository;
+        this.eventSignupRepository = eventSignupRepository;
+        this.dynamicLikeRepository = dynamicLikeRepository;
     }
 
     @GetMapping("/users/{userId}")
@@ -91,6 +103,26 @@ public class UserController {
         }
         response.put("registered", userRepository.existsByOpenid(openid));
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users/me/stats")
+    public ResponseEntity<?> getCurrentUserStats(@RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            long userId = currentUser.getUserid();
+            long contentCount = dynamicRepository.countByUserIdAndIsDeletedFalse(userId);
+            long eventCount = eventSignupRepository.countByUserId(userId);
+            long favoriteCount = dynamicLikeRepository.countByUserId(userId);
+            return ResponseEntity.ok(Map.of(
+                    "contentCount", contentCount,
+                    "eventCount", eventCount,
+                    "favoriteCount", favoriteCount
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "获取统计数据失败: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/users/me")

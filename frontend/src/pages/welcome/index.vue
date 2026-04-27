@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <div class="welcome-page" @click="goHome">
     <div class="content">
       <img class="logo" :src="loveCubeIcon" alt="Love Cube">
       <h1 class="title">Love Cube</h1>
-      <p class="slogan">遇见你，是最好的事</p>
+      <p class="slogan">遇见你，是最好的</p>
       <p class="countdown">{{ count }} 秒后自动进入</p>
     </div>
-    <p class="hint">点击任意处立即进入</p>
+    <p class="hint">点击任意处立即进</p>
   </div>
 </template>
 
@@ -79,3 +79,4 @@ onUnmounted(() => clearInterval(timer))
   }
 }
 </style>
+

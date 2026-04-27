@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="chat-page">
     <NavBar :title="partnerName">
       <template #right>
@@ -16,11 +16,11 @@
         <van-loading type="spinner" color="#ff6b8a" />
       </div>
 
-      <template v-for="(msg, i) in allMessages" :key="msg.id ?? i">
-        <div v-if="showTimeDivider(msg, allMessages[i - 1])" class="time-divider">
+      <template v-for="(msg, i) in allMessages">
+        <div v-if="showTimeDivider(msg, allMessages[i - 1])" :key="`time-${msg.id || i}`" class="time-divider">
           {{ formatTime(msg.timestamp) }}
         </div>
-        <div class="msg-row" :class="{ self: msg.isSelf }">
+        <div :key="`msg-${msg.id || i}`" class="msg-row" :class="{ self: msg.isSelf }">
           <van-image v-if="!msg.isSelf" round width="36" height="36" :src="partnerAvatar" fit="cover">
             <template #error><div class="bubble-avatar">{{ partnerName[0] }}</div></template>
           </van-image>
@@ -35,7 +35,7 @@
     </div>
 
     <transition name="send-fade">
-      <div v-if="sendSuccessTip" class="send-tip">已发送</div>
+      <div v-if="sendSuccessTip" class="send-tip">已发</div>
     </transition>
 
     <div class="input-bar">
@@ -90,7 +90,7 @@ const allMessages = computed(() => {
   const seen = new Set()
   return all
     .filter((item) => {
-      const key = item.id ?? `${item.senderId}-${item.timestamp}`
+      const key = item.id ? String(item.id) : `${item.senderId || item.sender_id}-${item.timestamp || item.createdAt}-${item.content || ''}`
       if (seen.has(key)) return false
       seen.add(key)
       return true
@@ -104,7 +104,7 @@ const statusLabel = computed(() => {
     closed: '连接已断开',
     error: '连接异常，正在重试...'
   }
-  return map[wsStatus.value] ?? ''
+  return map[wsStatus.value] || ''
 })
 
 onMounted(async () => {
@@ -114,14 +114,14 @@ onMounted(async () => {
       request.get(`/users/${receiverId}`)
     ])
     if (hist.status === 'fulfilled') {
-      const msgs = Array.isArray(hist.value) ? hist.value : (hist.value?.messages ?? [])
+      const msgs = Array.isArray(hist.value) ? hist.value : (hist.value?.messages || [])
       historyMessages.value = msgs.map((item) => ({
         id: item.id,
-        senderId: item.senderId ?? item.sender_id,
-        receiverId: item.receiverId ?? item.receiver_id,
-        content: item.content ?? '',
-        timestamp: item.timestamp ?? new Date(item.createdAt).getTime(),
-        isSelf: String(item.senderId ?? item.sender_id) === String(myId)
+        senderId: item.senderId || item.sender_id,
+        receiverId: item.receiverId || item.receiver_id,
+        content: item.content || '',
+        timestamp: item.timestamp ? new Date(item.timestamp).getTime() : new Date(item.createdAt).getTime(),
+        isSelf: String(item.senderId || item.sender_id) === String(myId)
       }))
     }
     if (partner.status === 'fulfilled') {
@@ -323,3 +323,4 @@ function showTimeDivider(curr, prev) {
   padding: 0 12px;
 }
 </style>
+

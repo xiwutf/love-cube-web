@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <div class="me-page">
     <header class="page-header">
       <h1 class="page-title">个人中心</h1>
-      <p class="header-tip">完善资料提升匹配率 ></p>
+      <p class="header-tip">完善资料提升匹配率</p>
       <div class="header-actions">
         <button class="header-icon-btn" @click="router.push('/fellowship/settings')">
           <van-icon name="setting-o" size="20" />
@@ -15,10 +15,15 @@
     </header>
 
     <main class="me-content">
-      <section class="profile-card">
+      <div v-if="loadingPage" class="me-skeleton" aria-hidden="true">
+        <div class="skeleton-block tall"></div>
+        <div class="skeleton-block"></div>
+        <div class="skeleton-block"></div>
+      </div>
+      <section v-show="!loadingPage" class="profile-card">
         <div class="profile-main">
-          <div class="avatar-wrap" @click="chooseAvatar">
-            <img class="avatar" :src="displayAvatar" alt="头像" />
+          <div class="avatar-wrap" :class="{ disabled: avatarUploading }" @click="chooseAvatar">
+            <img class="avatar" :src="displayAvatar" alt="澶村儚" />
             <div class="avatar-camera">
               <van-icon name="photo-o" size="14" />
             </div>
@@ -59,13 +64,13 @@
         </div>
       </section>
 
-      <section class="status-panel">
+      <section v-show="!loadingPage" class="status-panel">
         <div class="completion-cell">
           <p class="cell-title">资料完整度 80%</p>
           <div class="progress-track">
             <div class="progress-bar" />
           </div>
-          <p class="cell-sub">再完善3项，匹配率提升+30%</p>
+          <p class="cell-sub">再完善 1 项，匹配率提升 30%</p>
           <button class="minor-link" @click="router.push('/fellowship/profile/edit')">去完善</button>
         </div>
         <div class="status-cell">
@@ -91,7 +96,7 @@
         </div>
       </section>
 
-      <section class="menu-grid-card">
+      <section v-show="!loadingPage" class="menu-grid-card">
         <button v-for="item in menuItems" :key="item.key" class="menu-item" @click="goTo(item.to)">
           <div class="menu-icon" :class="`menu-${item.theme}`">
             <van-icon :name="item.icon" size="22" />
@@ -101,7 +106,7 @@
         </button>
       </section>
 
-      <section class="photos-card">
+      <section v-show="!loadingPage" class="photos-card">
         <div class="block-header">
           <h3>我的照片</h3>
           <button class="block-link" @click="router.push('/fellowship/profile-edit')">全部照片 ></button>
@@ -109,7 +114,7 @@
         <div class="photos-row">
           <div v-for="(photo, index) in displayPhotos" :key="photo.id || index" class="photo-item">
             <img :src="photo.url" alt="照片" />
-            <span v-if="index === 0" class="main-tag">主照片</span>
+            <span v-if="index === 0" class="main-tag">主照</span>
             <button
               class="remove-photo-btn"
               type="button"
@@ -119,7 +124,7 @@
               删除
             </button>
           </div>
-          <button class="upload-item" @click="choosePhoto">
+          <button class="upload-item" :disabled="photoUploading || photoDeleting" @click="choosePhoto">
             <van-icon name="plus" size="22" />
             <span>上传照片</span>
             <small>({{ displayPhotos.length }}/9)</small>
@@ -127,7 +132,7 @@
         </div>
       </section>
 
-      <section class="activity-card">
+      <section v-show="!loadingPage" class="activity-card">
         <div class="block-header">
           <h3>平台动态</h3>
           <button class="block-link" @click="router.push('/fellowship/messages')">全部 ></button>
@@ -146,11 +151,11 @@
         </ul>
       </section>
 
-      <section class="vip-banner" @click="router.push('/fellowship/vip')">
+      <section v-show="!loadingPage" class="vip-banner" @click="router.push('/fellowship/vip')">
         <div class="vip-banner-main">
           <span class="vip-banner-kicker">Love Cube Premium</span>
           <p class="vip-title">开通会员 · 让优质身份被优先看见</p>
-          <span class="vip-sub">专属金标、优先曝光、访客解锁、喜欢我的人一键查看</span>
+          <span class="vip-sub">专属金标、优先曝光、访客解锁，喜欢你的人一键查</span>
         </div>
         <button type="button">升级身份</button>
       </section>
@@ -179,13 +184,15 @@ import {
   uploadFellowshipAvatar,
   uploadFellowshipPhoto
 } from '@/api/fellowshipProfile.js'
+import { getFellowshipMeStatsCached } from '@/api/fellowship.js'
+import { getNotifUnreadCountCached } from '@/api/notification.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const avatarInput = ref(null)
 const photoInput = ref(null)
 
-const userInfo = computed(() => userStore.syncCurrentUser() || {})
+const userInfo = computed(() => userStore.userInfo || {})
 const profile = ref({
   nickname: '',
   avatarUrl: '',
@@ -197,7 +204,19 @@ const profile = ref({
 const completion = ref({ percent: 0, missingFields: [] })
 const photoList = ref([])
 const photoDeleting = ref(false)
-const notificationCount = ref(5)
+const avatarUploading = ref(false)
+const photoUploading = ref(false)
+const loadingPage = ref(true)
+const notificationCount = ref(0)
+const fellowshipStats = ref({
+  todayVisitorCount: 0,
+  totalVisitorCount: 0,
+  likesReceived: 0,
+  mutualMatchCount: 0,
+  followingCount: 0,
+  blacklistCount: 0,
+  eventSignupCount: 0
+})
 
 const displayName = computed(() => profile.value.nickname || userInfo.value?.username || 'Love Cube 用户')
 const displayAvatar = computed(
@@ -220,37 +239,40 @@ const verificationLevel = computed(() => {
   return 'is-none'
 })
 const profileMeta = computed(() => [
-  profile.value.height ? `${profile.value.height}cm` : '178cm',
-  profile.value.weight ? `${profile.value.weight}kg` : '68kg',
-  profile.value.education || '本科',
-  profile.value.houseStatus || '有房',
-  profile.value.smokeStatus || '不抽烟'
+  profile.value.height ? `${profile.value.height}cm` : '--',
+  profile.value.weight ? `${profile.value.weight}kg` : '--',
+  profile.value.education || '--',
+  profile.value.houseStatus || '--',
+  profile.value.smokeStatus || '--'
 ])
 
 const identityPerks = ['真人核验', '资料可信', '优先推荐']
 
-const menuItems = [
-  { key: 'match', title: '我的匹配', sub: '12人与你匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
-  { key: 'visitor', title: '谁看过我', sub: '今日+3', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
-  { key: 'likes', title: '喜欢我的人', sub: '8人戳了你', icon: 'good-job', to: '/fellowship/my-likes', theme: 'yellow' },
-  { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
-  { key: 'signup', title: '我的报名', sub: '3个活动报名中', icon: 'calendar', to: '/fellowship/messages?tab=event', theme: 'green' },
-  { key: 'collect', title: '我的收藏', sub: '18人被收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
-  { key: 'blacklist', title: '黑名单', sub: '1人已加入', icon: 'shield', to: '/fellowship/blacklist', theme: 'indigo' },
-  { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: '/fellowship/privacy', theme: 'gray' }
-]
+const menuItems = computed(() => {
+  const s = fellowshipStats.value
+  return [
+    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
+    { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
+    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/my-likes', theme: 'yellow' },
+    { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
+    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/fellowship/messages?tab=event', theme: 'green' },
+    { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
+    { key: 'blacklist', title: '黑名单', sub: s.blacklistCount > 0 ? `${s.blacklistCount}人` : '管理黑名单', icon: 'shield', to: '/fellowship/blacklist', theme: 'indigo' },
+    { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: '/fellowship/privacy', theme: 'gray' }
+  ]
+})
 
-const activityItems = [
-  { icon: 'eye-o', title: '今日有 3 人浏览了你', time: '2小时前', theme: 'pink' },
-  { icon: 'volume-o', title: '资料完整度提升可增加曝光30%', time: '1天前', theme: 'orange' },
-  {
-    icon: 'gift-o',
-    title: '本周线下活动报名中，快来参与吧～',
-    time: '3天前',
-    theme: 'purple',
-    action: { label: '去看看', to: '/fellowship/messages?tab=event' }
+const activityItems = computed(() => {
+  const s = fellowshipStats.value
+  const items = []
+  if (s.todayVisitorCount > 0) {
+    items.push({ icon: 'eye-o', title: `今日有 ${s.todayVisitorCount} 人浏览了你`, time: '今日', theme: 'pink' })
   }
-]
+  if (s.likesReceived > 0) {
+    items.push({ icon: 'good-job-o', title: `共有 ${s.likesReceived} 人对你感兴趣`, time: '累计', theme: 'yellow' })
+  }
+  return items
+})
 
 function normalizeProfile(data) {
   if (!data) return
@@ -282,10 +304,12 @@ async function loadPageData() {
 }
 
 function chooseAvatar() {
+  if (avatarUploading.value) return
   avatarInput.value?.click()
 }
 
 function choosePhoto() {
+  if (photoUploading.value || photoDeleting.value) return
   photoInput.value?.click()
 }
 
@@ -296,23 +320,27 @@ function parseUploadUrl(res) {
 async function onAvatarSelected(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
-  if (!file) return
+  if (!file || avatarUploading.value) return
+  avatarUploading.value = true
   try {
     const uploadRes = await uploadFellowshipAvatar(file)
     const url = parseUploadUrl(uploadRes)
-    if (!url) throw new Error('头像上传返回为空')
+    if (!url) throw new Error('澶村儚涓婁紶杩斿洖涓虹┖')
     await updateMyFellowshipProfile({ avatarUrl: url })
     profile.value.avatarUrl = url
     showToast({ type: 'success', message: '头像已更新' })
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '头像上传失败' })
+    showToast({ type: 'fail', message: err.message || '澶村儚涓婁紶澶辫触' })
+  } finally {
+    avatarUploading.value = false
   }
 }
 
 async function onPhotoSelected(event) {
   const files = Array.from(event.target.files || [])
   event.target.value = ''
-  if (!files.length) return
+  if (!files.length || photoUploading.value) return
+  photoUploading.value = true
   try {
     const uploadResults = await Promise.all(files.map((file) => uploadFellowshipPhoto(file)))
     const uploadedUrls = uploadResults.map(parseUploadUrl).filter(Boolean)
@@ -320,9 +348,11 @@ async function onPhotoSelected(event) {
     const next = [...uploadedUrls, ...photoList.value.map((item) => item.url)]
     await saveFellowshipPhotos(next.slice(0, 9))
     photoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
-    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照片` })
+    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照牄17` })
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '照片上传失败' })
+  } finally {
+    photoUploading.value = false
   }
 }
 
@@ -357,7 +387,29 @@ function goTo(path) {
   router.push(path)
 }
 
-onMounted(loadPageData)
+onMounted(async () => {
+  try {
+    if (!userStore.userInfo) {
+      await userStore.refreshCurrentUser().catch(() => null)
+    }
+    const [pageDataRes, notifRes, statsRes] = await Promise.allSettled([
+      loadPageData(),
+      getNotifUnreadCountCached(),
+      getFellowshipMeStatsCached()
+    ])
+    if (pageDataRes.status === 'rejected') {
+      console.warn('[me-page] loadPageData failed:', pageDataRes.reason)
+    }
+    if (notifRes.status === 'fulfilled') {
+      notificationCount.value = Number(notifRes.value?.count ?? notifRes.value?.unreadCount ?? 0)
+    }
+    if (statsRes.status === 'fulfilled' && statsRes.value) {
+      fellowshipStats.value = statsRes.value
+    }
+  } finally {
+    loadingPage.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -434,6 +486,32 @@ onMounted(loadPageData)
   gap: 10px;
 }
 
+.me-skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-block {
+  position: relative;
+  height: 100px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #e9edf6;
+}
+
+.skeleton-block.tall {
+  height: 180px;
+}
+
+.skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.84), transparent);
+  animation: skeleton-slide 1.2s ease infinite;
+}
+
 .profile-card,
 .status-panel,
 .menu-grid-card,
@@ -464,6 +542,11 @@ onMounted(loadPageData)
   position: relative;
   border: 3px solid #fff;
   box-shadow: 0 7px 16px rgba(232, 82, 145, 0.16);
+}
+
+.avatar-wrap.disabled {
+  pointer-events: none;
+  opacity: 0.68;
 }
 
 .avatar {
@@ -968,6 +1051,10 @@ onMounted(loadPageData)
   aspect-ratio: 1 / 1.12;
 }
 
+.upload-item:disabled {
+  opacity: 0.55;
+}
+
 .upload-item span {
   font-size: 12px;
 }
@@ -1109,10 +1196,29 @@ onMounted(loadPageData)
   display: none;
 }
 
+@keyframes skeleton-slide {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @media (max-width: 420px) {
   .photos-row {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
   }
+
+  .profile-card,
+  .status-panel,
+  .menu-grid-card,
+  .photos-card,
+  .activity-card,
+  .photo-item,
+  .vip-banner {
+    box-shadow: none;
+  }
 }
 </style>
+
+
+

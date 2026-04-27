@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="fellowship-intro-page">
     <section class="intro-hero">
       <div class="intro-hero-bg" />
@@ -15,7 +15,7 @@
         <div class="intro-actions">
           <router-link to="/fellowship" class="intro-btn intro-btn-primary">进入联谊模块</router-link>
           <router-link to="/fellowship/profile/edit" class="intro-btn intro-btn-ghost">完善资料</router-link>
-          <router-link to="/policies/content-policy" class="intro-btn intro-btn-rule">了解规则</router-link>
+          <router-link to="/policies/content-policy" class="intro-btn intro-btn-rule">浜嗚В瑙勫垯</router-link>
         </div>
       </div>
 
@@ -28,7 +28,7 @@
         </article>
         <article class="intro-badge">
           <strong>优质青年</strong>
-          <span>高质量圈层 精准匹配</span>
+          <span>高质量圈层 · 精准匹配</span>
         </article>
         <article class="intro-badge">
           <strong>安全隐私</strong>
@@ -41,22 +41,22 @@
       <article class="intro-feature-card">
         <span class="intro-feature-index">01</span>
         <h3 class="intro-feature-title">完善资料</h3>
-        <p class="intro-feature-text">填写真实资料，提升匹配成功率，让对的人更快看到你。</p>
+        <p class="intro-feature-text">填写真实资料，提升匹配成功率，让对的人更快看到你</p>
       </article>
       <article class="intro-feature-card">
         <span class="intro-feature-index">02</span>
         <h3 class="intro-feature-title">智能匹配</h3>
-        <p class="intro-feature-text">基于兴趣和活跃行为推荐，帮助你高效建立连接。</p>
+        <p class="intro-feature-text">基于兴趣和活跃行为推荐，帮助你高效建立连接</p>
       </article>
       <article class="intro-feature-card">
         <span class="intro-feature-index">03</span>
-        <h3 class="intro-feature-title">私信互动</h3>
-        <p class="intro-feature-text">支持站内私信沟通，消息提醒清晰，互动链路顺畅。</p>
+        <h3 class="intro-feature-title">绉佷俊浜掑姩</h3>
+        <p class="intro-feature-text">支持站内私信沟，消息提醒清晰，互动链路顺畅</p>
       </article>
       <article class="intro-feature-card">
         <span class="intro-feature-index">04</span>
-        <h3 class="intro-feature-title">举报治理</h3>
-        <p class="intro-feature-text">违规行为可举报与拉黑，持续维护健康交友环境。</p>
+        <h3 class="intro-feature-title">涓炬姤娌荤悊</h3>
+        <p class="intro-feature-text">违规行为可举报与拉黑，持续维护健康交友环境</p>
       </article>
     </section>
   </section>
@@ -84,7 +84,7 @@
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.62) 34%, rgba(255, 255, 255, 0.12) 60%, rgba(255, 255, 255, 0) 75%),
     linear-gradient(0deg, rgba(255, 220, 232, 0.32) 0%, rgba(255, 220, 232, 0) 42%),
-    url('@/assets/platform/fellowship-hero.png');
+    url('@/assets/platform/fellowship-hero.webp');
   background-position: left center, center, center;
   background-size: cover, cover, cover;
   background-repeat: no-repeat;
@@ -454,3 +454,5 @@
   }
 }
 </style>
+
+

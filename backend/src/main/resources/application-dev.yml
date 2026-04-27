@@ -22,3 +22,7 @@ spring:
     baseline-on-migrate: true
     baseline-version: 1
     validate-on-migrate: true
+
+lovecube:
+  seed:
+    enabled: false

@@ -57,3 +57,27 @@ export function getBlockStatus(userId) {
   return request.get(`/blacklist/status/${userId}`)
 }
 
+export function getFellowshipMeStats() {
+  return request.get('/fellowship/users/me/stats')
+}
+
+let meStatsCache = null
+let meStatsCacheAt = 0
+let meStatsPending = null
+
+export async function getFellowshipMeStatsCached(maxAgeMs = 15000) {
+  const now = Date.now()
+  if (meStatsCache && now - meStatsCacheAt < maxAgeMs) return meStatsCache
+  if (meStatsPending) return meStatsPending
+  meStatsPending = getFellowshipMeStats()
+    .then((res) => {
+      meStatsCache = res
+      meStatsCacheAt = Date.now()
+      return res
+    })
+    .finally(() => {
+      meStatsPending = null
+    })
+  return meStatsPending
+}
+

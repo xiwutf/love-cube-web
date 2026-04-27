@@ -5,10 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
@@ -32,6 +29,11 @@ public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
      * 获取用户动态数量
      */
     Long countByUserIdAndIsDeletedFalse(Long userId);
+
+    /**
+     * 获取未删除动态总数
+     */
+    long countByIsDeletedFalse();
     
     /**
      * 获取热门动态（按点赞数排序）

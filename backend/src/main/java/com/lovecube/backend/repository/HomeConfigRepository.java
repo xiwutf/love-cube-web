@@ -13,4 +13,8 @@ public interface HomeConfigRepository extends JpaRepository<HomeConfig, Long> {
     List<HomeConfig> findByConfigGroupInOrderByConfigGroupAscSortOrderAscIdAsc(Collection<String> groups);
 
     List<HomeConfig> findByConfigGroupInAndEnabledTrueOrderByConfigGroupAscSortOrderAscIdAsc(Collection<String> groups);
+
+    long countByConfigGroup(String configGroup);
+
+    long countByConfigGroupAndEnabledTrue(String configGroup);
 }

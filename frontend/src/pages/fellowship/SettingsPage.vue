@@ -1,0 +1,66 @@
+﻿<template>
+  <div class="settings-page">
+    <NavBar title="璁剧疆" />
+
+    <van-cell-group inset title="账号" class="group">
+      <van-cell title="平台个人中心" is-link @click="router.push('/me')" />
+      <van-cell title="退出登录" is-link @click="handleLogout" title-class="danger-text" />
+    </van-cell-group>
+
+    <van-cell-group inset title="隐私" class="group">
+      <van-cell title="黑名单" is-link @click="router.push('/fellowship/blacklist')" />
+    </van-cell-group>
+
+    <van-cell-group inset title="瀛樺偍" class="group">
+      <van-cell title="娓呯悊缂撳瓨" is-link :value="cacheSize" @click="handleClearCache" />
+    </van-cell-group>
+
+    <van-cell-group inset title="关于" class="group">
+      <van-cell title="版本号" value="v0.2.0" />
+      <van-cell title="Love Cube" value="遇见你，是最好的" />
+    </van-cell-group>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { showConfirmDialog, showToast } from 'vant'
+import NavBar from '@/components/NavBar.vue'
+import { useUserStore } from '@/stores/user.js'
+import { storage } from '@/utils/storage.js'
+
+const router = useRouter()
+const userStore = useUserStore()
+const cacheSize = ref('已优化')
+
+function handleLogout() {
+  showConfirmDialog({ title: '退出登录', message: '确认退出当前账号吗？' })
+    .then(() => {
+      userStore.logout()
+      router.replace('/login')
+    })
+    .catch(() => {})
+}
+
+function handleClearCache() {
+  showConfirmDialog({ title: '清理缓存', message: '确认清除本地缓存数据吗？' })
+    .then(() => {
+      const token = storage.get('token')
+      const userId = storage.get('userId')
+      storage.clear()
+      if (token) storage.set('token', token)
+      if (userId) storage.set('userId', userId)
+      cacheSize.value = '已清理'
+      showToast({ message: '缓存已清理', type: 'success' })
+    })
+    .catch(() => {})
+}
+</script>
+
+<style scoped>
+.settings-page { min-height: 100vh; background: #f8f8f8; }
+.group { margin-top: 12px; }
+:deep(.danger-text) { color: #ee0a24; }
+</style>
+

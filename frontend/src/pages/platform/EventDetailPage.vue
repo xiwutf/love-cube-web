@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="platform-page module-page">
     <div class="detail-nav-row">
       <router-link to="/events" class="platform-backlink">返回活动列表</router-link>
@@ -7,7 +7,7 @@
 
     <article v-if="item" class="platform-card detail-article">
       <p class="module-card-meta">
-        活动时间：{{ formatDate(item.eventTime || item.time, true) }} · 地点：{{ item.location || '待定' }}
+        活动时间：{{ formatDate(item.eventTime || item.time, true) }} 路 地点：{{ item.location || '待定' }}
       </p>
       <h1 class="detail-title">{{ item.title || '未命名活动' }}</h1>
       <p class="detail-lead">{{ item.summary || '暂无活动说明' }}</p>
@@ -22,15 +22,15 @@
           >
             {{ signupButtonText }}
           </button>
-          <span class="event-signup-hint">报名后请留意站内消息或活动通知。</span>
+          <span class="event-signup-hint">报名后请留意站内消息或活动知</span>
         </div>
         <p v-if="signupMessage" class="event-signup-message">{{ signupMessage }}</p>
       </div>
     </article>
 
     <article v-else class="platform-card module-empty">
-      <h3 class="platform-heading">活动不存在</h3>
-      <p class="platform-text">该活动可能已下线或链接错误，请返回活动中心查看。</p>
+      <h3 class="platform-heading">活动不存</h3>
+      <p class="platform-text">该活动可能已下线或链接错误，请返回活动中心查看</p>
     </article>
   </section>
 </template>
@@ -72,7 +72,7 @@ async function handleSignup() {
 
   try {
     const result = await signupEvent(item.value.id)
-    item.value.signupCount = result.signupCount ?? item.value.signupCount
+    item.value.signupCount = result.signupCount ? item.value.signupCount
     signedUp.value = true
     signupMessage.value = result.message || '报名成功'
   } catch (error) {
@@ -109,3 +109,4 @@ async function handleSignup() {
   font-weight: 700;
 }
 </style>
+

@@ -1,24 +1,24 @@
-<template>
+﻿<template>
   <div class="landing-page">
     <div class="content">
       <p class="eyebrow">Love Cube Fellowship</p>
       <h1 class="title">更可靠的联谊交友体验</h1>
-      <p class="slogan">从完善资料到开始匹配，3 分钟即可进入互动状态。</p>
+      <p class="slogan">从完善资料到弢始匹配，3 分钟即可进入互动状</p>
       <div class="actions">
-        <router-link to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
+        <router-link to="/fellowship/discover" class="btn-primary">立即弢始匹</router-link>
         <router-link to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
       </div>
-      <p class="hint">新用户建议先完善资料并完成真人认证，推荐效果会更好。</p>
+      <p class="hint">新用户建议先完善资料并完成真人认证，推荐效果会更好</p>
 
       <div class="quick-grid">
         <router-link to="/fellowship/discover" class="quick-item">推荐对象</router-link>
-        <router-link to="/fellowship/messages?tab=interact" class="quick-item">打招呼消息</router-link>
-        <router-link to="/fellowship/messages?tab=visitor" class="quick-item">谁看过我</router-link>
+        <router-link to="/fellowship/messages?tab=interact" class="quick-item">打招呼消</router-link>
+        <router-link to="/fellowship/messages?tab=visitor" class="quick-item">璋佺湅杩囨垜</router-link>
         <router-link to="/fellowship/my-likes" class="quick-item">我的喜欢</router-link>
         <router-link to="/fellowship/preferences" class="quick-item">择偶条件</router-link>
         <router-link to="/fellowship/verify" class="quick-item">真人/实名认证</router-link>
-        <router-link to="/fellowship/blacklist" class="quick-item">黑名单</router-link>
-        <router-link to="/fellowship/profile/edit" class="quick-item">生活照管理</router-link>
+        <router-link to="/fellowship/blacklist" class="quick-item">黑名</router-link>
+        <router-link to="/fellowship/profile/edit" class="quick-item">生活照管</router-link>
       </div>
     </div>
     <div class="footer-link">
@@ -250,3 +250,4 @@ if (storage.get('token')) {
   }
 }
 </style>
+

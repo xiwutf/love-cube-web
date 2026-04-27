@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="home-page">
     <header class="home-header">
       <div class="home-logo">
@@ -28,7 +28,7 @@
         <div class="tip-left">
           <div class="tip-icon tip-icon--blue">✓</div>
           <div>
-            <p class="tip-title">完成真人认证，提高信任度</p>
+            <p class="tip-title">完成真人认证，提升信任度</p>
             <p class="tip-desc">认证后更容易获得回应与推荐。</p>
           </div>
         </div>
@@ -149,9 +149,9 @@ import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getBanners, getRecommends, getNewcomers } from '@/api/home.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
-import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.png'
-import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.png'
-import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.png'
+import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.webp'
+import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.webp'
+import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.webp'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const router = useRouter()
@@ -606,3 +606,6 @@ function onImgError(event, index) {
   }
 }
 </style>
+
+
+

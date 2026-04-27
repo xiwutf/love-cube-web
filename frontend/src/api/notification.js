@@ -1,6 +1,33 @@
 import request from './request.js'
 
-export const getNotifications     = (limit = 50)  => request.get('/notifications', { params: { limit } })
-export const getNotifUnreadCount  = ()             => request.get('/notifications/unread-count')
-export const markNotifRead        = (id)           => request.patch(`/notifications/${id}/read`)
-export const markAllNotifRead     = ()             => request.post('/notifications/read-all')
+let unreadCountCache = null
+let unreadCountCacheAt = 0
+let unreadCountPending = null
+
+export const getNotifications = (limit = 10) => request.get('/notifications', { params: { limit } })
+export const getNotificationsByType = (type, limit = 20) => request.get('/notifications', { params: { type, limit } })
+export const getNotifUnreadCount = () => request.get('/notifications/unread-count')
+export const markNotifRead = (id) => request.patch(`/notifications/${id}/read`)
+export const markAllNotifRead = () => request.post('/notifications/read-all')
+
+export async function getNotifUnreadCountCached(maxAgeMs = 15000) {
+  const now = Date.now()
+  if (unreadCountCache && now - unreadCountCacheAt < maxAgeMs) return unreadCountCache
+  if (unreadCountPending) return unreadCountPending
+  unreadCountPending = getNotifUnreadCount()
+    .then((res) => {
+      unreadCountCache = res
+      unreadCountCacheAt = Date.now()
+      return res
+    })
+    .finally(() => {
+      unreadCountPending = null
+    })
+  return unreadCountPending
+}
+
+export function clearNotifUnreadCache() {
+  unreadCountCache = null
+  unreadCountCacheAt = 0
+  unreadCountPending = null
+}

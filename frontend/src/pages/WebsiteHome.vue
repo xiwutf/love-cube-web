@@ -4,9 +4,13 @@
       <div class="hero-copy">
         <p class="home-kicker">LOVE CUBE PLATFORM</p>
         <h1>
-          <template v-for="(line, index) in heroTitleLines" :key="`${line}-${index}`">
-            {{ line }}<br v-if="index < heroTitleLines.length - 1">
-          </template>
+          <span
+            v-for="(line, index) in heroTitleLines"
+            :key="`${line}-${index}`"
+            class="hero-title-line"
+          >
+            {{ line }}
+          </span>
         </h1>
         <p class="hero-lead">{{ homepageHero.subtitle }}</p>
         <div class="hero-actions">
@@ -21,7 +25,8 @@
           <span class="avatar-stack">
             <span v-for="item in proofAvatars" :key="item" class="proof-avatar">{{ item }}</span>
           </span>
-          <span>已有 <strong>12,345+</strong> 青年在这里遇见美好</span>
+          <span v-if="platformData.userCount > 0">已有 <strong>{{ platformData.userCount.toLocaleString() }}+</strong> 青年在这里遇见美好</span>
+          <span v-else>加入 Love Cube，遇见美好</span>
         </div>
       </div>
 
@@ -63,100 +68,66 @@
       </router-link>
     </section>
 
-    <section class="content-grid">
-      <div class="content-panel">
-        <div class="panel-head">
-          <h2>热门资讯</h2>
-          <router-link to="/articles">查看更多 →</router-link>
-        </div>
-        <div class="featured-news">
-          <router-link :to="featuredUpdate.to || '/articles'" class="featured-card">
-            <img
-              v-if="featuredUpdate.cover"
-              :src="featuredUpdate.cover"
-              :alt="featuredUpdate.title"
-              loading="lazy"
-              decoding="async"
-              @error="onMediaError"
-            >
-            <span class="news-badge">{{ featuredUpdate.tag }}</span>
-            <span class="news-source">{{ featuredUpdate.sourceLabel }}</span>
-            <h3>{{ featuredUpdate.title }}</h3>
-            <p>{{ featuredUpdate.summary }}</p>
-            <small>{{ featuredUpdate.date }} · {{ featuredUpdate.reads }}</small>
-          </router-link>
-          <div class="news-list">
-            <router-link
-              v-for="item in sideUpdates"
-              :key="item.key"
-              :to="item.to || '/announcements'"
-              class="news-row"
-            >
-              <span class="news-row-icon" :class="item.tone">{{ item.short }}</span>
-              <span>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.sourceLabel }} · {{ item.date }} · {{ item.reads }}</small>
-              </span>
-            </router-link>
-          </div>
-        </div>
-      </div>
-
-      <div class="content-panel">
-        <div class="panel-head">
-          <h2>模块推荐</h2>
-          <router-link to="/modules">查看更多 →</router-link>
-        </div>
-        <div class="people-grid">
-          <article v-for="module in moduleCards" :key="module.title" class="person-card">
-            <div class="person-photo" :class="module.tone">
-              <span>{{ module.icon }}</span>
-              <i></i>
-            </div>
-            <strong>{{ module.title }}</strong>
-            <small>{{ module.meta }}</small>
-            <p>{{ module.desc }}</p>
-            <router-link :to="module.to">{{ module.actionText }}</router-link>
-          </article>
-        </div>
-      </div>
+    <section ref="belowFoldRef" class="deferred-anchor">
+      <section v-if="shouldRenderBelowFold" class="content-grid">
+        <HomeNewsPanel
+          :featured-update="featuredUpdate"
+          :side-updates="sideUpdates"
+          @media-error="onMediaError"
+        />
+        <HomeModuleCardsPanel :module-cards="moduleCards" />
+      </section>
+      <section v-else class="section-skeleton section-skeleton-grid" aria-hidden="true">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </section>
     </section>
 
-    <section class="stats-band" aria-label="平台数据">
-      <article v-for="item in platformStats" :key="item.label" class="stat-card">
-        <span class="stat-icon" :class="item.tone">{{ item.icon }}</span>
-        <strong>{{ item.value }}</strong>
-        <small>{{ item.label }}</small>
-        <em>{{ item.delta }}</em>
-      </article>
+    <section ref="statsRef" class="deferred-anchor">
+      <HomeStatsBand v-if="shouldRenderStats" :platform-stats="platformStats" />
+      <section v-else class="section-skeleton section-skeleton-stats" aria-hidden="true">
+        <div v-for="idx in 3" :key="`stat-skeleton-${idx}`" class="skeleton-chip"></div>
+      </section>
     </section>
 
-    <section class="cta-panel">
-      <div>
-        <h2>加入 Love Cube，开启美好生活之旅</h2>
-        <p>在这里，遇见有趣的人，发现精彩的生活。</p>
-      </div>
-      <div class="cta-actions">
-        <router-link to="/login" class="home-btn home-btn-white">立即注册</router-link>
-        <router-link to="/modules" class="home-btn home-btn-outline">了解更多</router-link>
-      </div>
-      <img :src="ctaBackgroundImage" alt="" loading="lazy" decoding="async" @error="onMediaError">
+    <section ref="ctaRef" class="deferred-anchor">
+      <HomeCtaPanel
+        v-if="shouldRenderCta"
+        :cta-background-image="ctaBackgroundImage"
+        @media-error="onMediaError"
+      />
+      <section v-else class="section-skeleton section-skeleton-cta" aria-hidden="true">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </section>
     </section>
   </main>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { fetchAnnouncements, fetchArticles, fetchEvents, fetchHomeConfig } from '@/api/platformContent.js'
-import heroImage from '@/assets/首页首屏右侧大图.png'
-import moduleEventsImage from '@/assets/活动模块.png'
-import moduleArticlesImage from '@/assets/公告模块卡片.png'
-import ctaBackgroundImage from '@/assets/底部横幅 CTA.png'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { fetchAnnouncements, fetchArticles, fetchEvents, fetchHomeConfig, fetchPlatformStats } from '@/api/platformContent.js'
+import { useDeferredRender } from '@/composables/useDeferredRender.js'
+import heroImage from '@/assets/首页首屏右侧大图.webp'
+import moduleEventsImage from '@/assets/活动模块.webp'
+import moduleArticlesImage from '@/assets/公告模块卡片.webp'
+import ctaBackgroundImage from '@/assets/底部横幅 CTA.webp'
+
+const HomeNewsPanel = defineAsyncComponent(() => import('@/components/platform/home/HomeNewsPanel.vue'))
+const HomeModuleCardsPanel = defineAsyncComponent(() => import('@/components/platform/home/HomeModuleCardsPanel.vue'))
+const HomeStatsBand = defineAsyncComponent(() => import('@/components/platform/home/HomeStatsBand.vue'))
+const HomeCtaPanel = defineAsyncComponent(() => import('@/components/platform/home/HomeCtaPanel.vue'))
 
 const announcements = ref([])
 const articles = ref([])
 const events = ref([])
 const homeConfig = ref(null)
+const platformData = ref({ userCount: 0, eventSignupCount: 0, dynamicsCount: 0, articleViewCount: 0, citiesCount: 0 })
+const belowFoldLoaded = ref(false)
+
+const { mountRef: belowFoldRef, shouldRender: shouldRenderBelowFold } = useDeferredRender({ rootMargin: '260px 0px' })
+const { mountRef: statsRef, shouldRender: shouldRenderStats } = useDeferredRender({ rootMargin: '320px 0px' })
+const { mountRef: ctaRef, shouldRender: shouldRenderCta } = useDeferredRender({ rootMargin: '420px 0px' })
 
 const proofAvatars = ['溪', '光', '甜', '风']
 
@@ -164,7 +135,7 @@ const defaultPlatformModules = [
   { moduleKey: 'fellowship', title: '联谊交友', desc: '寻找心动的 TA', to: '/fellowship', status: 'active', icon: '❤', tone: 'tone-pink', sortOrder: 1 },
   { moduleKey: 'dynamic', title: '动态社区', desc: '分享生活，结识朋友', to: '/fellowship/dynamic', status: 'active', icon: '●', tone: 'tone-violet', sortOrder: 2 },
   { moduleKey: 'ai-tools', title: 'AI 工具', desc: '智能工具，提升效率', to: '/modules', status: 'planned', icon: 'AI', tone: 'tone-blue', sortOrder: 3 },
-  { moduleKey: 'announcements', title: '公告通知', desc: '最新公告，及时获取', to: '/announcements', status: 'active', icon: '告', tone: 'tone-orange', sortOrder: 4 },
+  { moduleKey: 'announcements', title: '公告通知', desc: '¹棬ʱȡ', to: '/announcements', status: 'active', icon: '告', tone: 'tone-orange', sortOrder: 4 },
   { moduleKey: 'local-services', title: '本地服务', desc: '便捷生活，触手可及', to: '/modules', status: 'planned', icon: '位', tone: 'tone-green', sortOrder: 5 },
   { moduleKey: 'modules', title: '更多模块', desc: '更多精彩，敬请期待', to: '/modules', status: 'active', icon: '▦', tone: 'tone-purple', sortOrder: 6 }
 ]
@@ -215,11 +186,11 @@ const platformModules = computed(() => {
     .sort((a, b) => a.sortOrder - b.sortOrder)
 })
 
-const heroMetrics = [
-  { label: '今日活跃', value: '2,345 人', tone: 'line-blue' },
-  { label: '在线用户', value: '1,234 人', tone: 'line-green' },
-  { label: '活动报名', value: '3,456 人次', tone: 'line-orange' }
-]
+const heroMetrics = computed(() => [
+  { label: '注册用户', value: platformData.value.userCount > 0 ? `${platformData.value.userCount.toLocaleString()} 人` : '--', tone: 'line-blue' },
+  { label: '活动报名', value: platformData.value.eventSignupCount > 0 ? `${platformData.value.eventSignupCount.toLocaleString()} 人次` : '--', tone: 'line-orange' },
+  { label: '内容发布', value: platformData.value.dynamicsCount > 0 ? `${platformData.value.dynamicsCount.toLocaleString()} 条` : '--', tone: 'line-green' }
+])
 
 const moduleCards = [
   { title: '联谊模块', icon: '联', meta: '交友业务专区', desc: '进入联谊专区处理资料、互动与消息。', tone: 'tone-pink', to: '/fellowship', actionText: '进入模块' },
@@ -228,14 +199,13 @@ const moduleCards = [
   { title: '模块中心', icon: '模', meta: '统一入口', desc: '从模块中心进入更多平台能力。', tone: 'tone-violet', to: '/modules', actionText: '前往模块' }
 ]
 
-const platformStats = [
-  { icon: '人', value: '125,678+', label: '注册用户', delta: '较昨日 +2.5%', tone: 'tone-blue' },
-  { icon: '活', value: '23,456+', label: '活动报名', delta: '较昨日 +3.2%', tone: 'tone-pink' },
-  { icon: '聊', value: '89,123+', label: '动态发布', delta: '较昨日 +1.8%', tone: 'tone-violet' },
-  { icon: '眼', value: '456,789+', label: '内容浏览', delta: '较昨日 +4.3%', tone: 'tone-purple' },
-  { icon: '楼', value: '128+', label: '合作商家', delta: '较昨日 +2.1%', tone: 'tone-green' },
-  { icon: '位', value: '15+', label: '覆盖城市', delta: '较昨日 +1.5%', tone: 'tone-blue' }
-]
+const platformStats = computed(() => [
+  { icon: '人', value: platformData.value.userCount > 0 ? `${platformData.value.userCount.toLocaleString()}+` : '--', label: '注册用户', delta: '', tone: 'tone-blue' },
+  { icon: '活', value: platformData.value.eventSignupCount > 0 ? `${platformData.value.eventSignupCount.toLocaleString()}+` : '--', label: '活动报名', delta: '', tone: 'tone-pink' },
+  { icon: '聊', value: platformData.value.dynamicsCount > 0 ? `${platformData.value.dynamicsCount.toLocaleString()}+` : '--', label: '动态发布', delta: '', tone: 'tone-violet' },
+  { icon: '眼', value: platformData.value.articleViewCount > 0 ? `${platformData.value.articleViewCount.toLocaleString()}+` : '--', label: '内容浏览', delta: '', tone: 'tone-purple' },
+  { icon: '位', value: platformData.value.citiesCount > 0 ? `${platformData.value.citiesCount}+` : '--', label: '覆盖城市', delta: '', tone: 'tone-green' }
+])
 
 const allUpdates = computed(() => {
   const rows = [
@@ -246,7 +216,7 @@ const allUpdates = computed(() => {
       category: item.category || '平台资讯',
       sourceLabel: sourceLabelByCategory(item.category || '平台资讯'),
       date: formatDate(item.publishDate || item.createdAt),
-      reads: `${item.viewCount || 856}阅读`,
+      reads: item.viewCount > 0 ? `${item.viewCount}阅读` : '',
       tag: index === 0 ? '推荐' : '资讯',
       short: 'AI',
       tone: 'tone-violet',
@@ -260,7 +230,7 @@ const allUpdates = computed(() => {
       category: '平台公告',
       sourceLabel: '[平台资讯]',
       date: formatDate(item.publishDate || item.createdAt),
-      reads: `${item.viewCount || 623}阅读`,
+      reads: item.viewCount > 0 ? `${item.viewCount}阅读` : '',
       tag: '公告',
       short: '告',
       tone: 'tone-blue',
@@ -274,7 +244,7 @@ const allUpdates = computed(() => {
       category: '活动预告',
       sourceLabel: '[活动中心]',
       date: formatDate(item.eventTime || item.createdAt),
-      reads: `${item.viewCount || 1234}阅读`,
+      reads: item.viewCount > 0 ? `${item.viewCount}阅读` : '',
       tag: '活动',
       short: '活',
       tone: 'tone-orange',
@@ -283,70 +253,42 @@ const allUpdates = computed(() => {
     }))
   ]
 
-  return rows.length ? rows : fallbackUpdates
+  return (rows.length ? rows : fallbackUpdates).slice(0, 3)
 })
 
 const fallbackUpdates = [
   {
     key: 'fallback-featured',
-    title: '周末城市青年主题活动报名中',
-    summary: '围绕兴趣社交与城市探索，欢迎报名参与。',
-    category: '活动预告',
-    sourceLabel: '[活动中心]',
-    date: '2小时前',
-    reads: '1,234阅读',
+    title: 'Love Cube 平台内容持续更新中',
+    summary: '平台资讯、活动与公告正在陆续发布，欢迎前往内容中心查看最新动态。',
+    category: '平台资讯',
+    sourceLabel: '[平台资讯]',
+    date: '刚刚',
+    reads: '',
     tag: '推荐',
-    short: '活',
-    tone: 'tone-orange',
-    cover: moduleEventsImage,
-    to: '/events'
+    short: '站',
+    tone: 'tone-blue',
+    cover: moduleArticlesImage,
+    to: '/articles'
   },
   {
-    key: 'fallback-ai',
-    title: 'AI工具上新：内容推荐算法升级',
-    summary: '平台公告 · 5小时前',
+    key: 'fallback-announcement',
+    title: '欢迎来到 Love Cube',
+    summary: '关注平台公告，及时获取最新产品与活动信息。',
     category: '平台公告',
     sourceLabel: '[平台资讯]',
-    date: '5小时前',
-    reads: '856阅读',
+    date: '刚刚',
+    reads: '',
     tag: '公告',
-    short: 'AI',
+    short: '告',
     tone: 'tone-violet',
     cover: '',
     to: '/announcements'
-  },
-  {
-    key: 'fallback-local',
-    title: '本地优质商家推荐',
-    summary: '生活服务 · 1天前',
-    category: '生活服务',
-    sourceLabel: '[本地服务]',
-    date: '1天前',
-    reads: '623阅读',
-    tag: '服务',
-    short: '服',
-    tone: 'tone-blue',
-    cover: '',
-    to: '/articles'
-  },
-  {
-    key: 'fallback-love',
-    title: '如何在 Love Cube 高效使用平台模块',
-    summary: '平台指南 · 2天前',
-    category: '平台指南',
-    sourceLabel: '[平台资讯]',
-    date: '2天前',
-    reads: '1,023阅读',
-    tag: '攻略',
-    short: '爱',
-    tone: 'tone-orange',
-    cover: '',
-    to: '/articles'
   }
 ]
 
 const featuredUpdate = computed(() => allUpdates.value[0] || fallbackUpdates[0])
-const sideUpdates = computed(() => allUpdates.value.slice(1, 4))
+const sideUpdates = computed(() => allUpdates.value.slice(1, 3))
 
 function normalizeModule(item, index) {
   const moduleKey = item.moduleKey || item.key || ''
@@ -392,17 +334,30 @@ function onHeroImageError(event) {
   onMediaError(event)
 }
 
-onMounted(async () => {
-  const [ann, art, ev, cfg] = await Promise.allSettled([
-    fetchAnnouncements({ status: 'published' }),
-    fetchArticles({ status: 'published' }),
-    fetchEvents({ status: 'published' }),
-    fetchHomeConfig()
+watch(shouldRenderBelowFold, (next) => {
+  if (next) loadBelowFold()
+}, { immediate: true })
+
+async function loadBelowFold() {
+  if (belowFoldLoaded.value) return
+  belowFoldLoaded.value = true
+  const [ann, art, ev] = await Promise.allSettled([
+    fetchAnnouncements({ status: 'published', limit: 10 }),
+    fetchArticles({ status: 'published', limit: 10 }),
+    fetchEvents({ status: 'published', limit: 10 })
   ])
   if (ann.status === 'fulfilled') announcements.value = ann.value || []
   if (art.status === 'fulfilled') articles.value = art.value || []
   if (ev.status === 'fulfilled') events.value = ev.value || []
+}
+
+onMounted(async () => {
+  const [cfg, stats] = await Promise.allSettled([
+    fetchHomeConfig(),
+    fetchPlatformStats()
+  ])
   if (cfg.status === 'fulfilled') homeConfig.value = cfg.value || null
+  if (stats.status === 'fulfilled' && stats.value) platformData.value = stats.value
 })
 </script>
 
@@ -449,6 +404,10 @@ onMounted(async () => {
 
 .hero-copy h1 :deep(*) {
   letter-spacing: 0;
+}
+
+.hero-title-line {
+  display: block;
 }
 
 .hero-lead {
@@ -650,6 +609,73 @@ onMounted(async () => {
 .person-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.1);
+}
+
+.deferred-anchor {
+  min-height: 72px;
+}
+
+.section-skeleton {
+  margin-top: 22px;
+}
+
+.section-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.skeleton-card,
+.skeleton-chip,
+.skeleton-line {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #eef2f8;
+}
+
+.skeleton-card::after,
+.skeleton-chip::after,
+.skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  animation: skeleton-slide 1.2s ease infinite;
+}
+
+.skeleton-card {
+  min-height: 280px;
+}
+
+.section-skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.skeleton-chip {
+  height: 86px;
+}
+
+.section-skeleton-cta {
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-line {
+  height: 24px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes skeleton-slide {
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .module-entry-icon,
@@ -1040,38 +1066,199 @@ onMounted(async () => {
 
 @media (max-width: 760px) {
   .home-wrap {
-    width: calc(100% - 24px);
-    padding-top: 12px;
+    width: calc(100% - 16px);
+    padding-top: 10px;
   }
 
   .hero-shell {
-    padding: 28px 18px;
+    gap: 16px;
+    padding: 20px 14px;
   }
 
   .hero-data-card,
-  .module-strip,
   .featured-news,
   .stats-band {
     grid-template-columns: 1fr;
+  }
+
+  .module-strip {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .hero-shell {
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.08);
+  }
+
+  .home-btn:hover,
+  .module-entry:hover,
+  .news-row:hover,
+  .person-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .module-entry {
+    grid-template-columns: 50px minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    gap: 3px 10px;
+    min-height: 0;
+    padding: 14px 12px;
+    text-align: left;
+  }
+
+  .module-entry-icon {
+    grid-row: 1 / 4;
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+
+  .module-entry strong {
+    font-size: 16px;
+    line-height: 1.3;
+  }
+
+  .module-entry small {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .module-entry em {
+    margin-top: 2px;
+    font-size: 12px;
   }
 
   .people-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .person-card {
+    min-height: 180px;
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .person-photo {
+    width: 72px;
+    height: 80px;
+  }
+
+  .person-photo span {
+    width: 52px;
+    height: 52px;
+    font-size: 20px;
+  }
+
   .hero-visual img {
-    height: 240px;
+    height: 204px;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.1);
+  }
+
+  .stats-band {
+    margin-top: 16px;
+    padding: 10px;
+    gap: 8px;
+    border-radius: 8px;
+  }
+
+  .stat-card {
+    min-height: 80px;
+    padding: 10px 12px;
+    gap: 4px 10px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .stat-card strong {
+    font-size: 18px;
   }
 
   .cta-panel {
     align-items: flex-start;
     flex-direction: column;
-    padding: 28px 20px;
+    padding: 22px 16px;
   }
 
   .cta-actions,
   .home-btn {
     width: 100%;
   }
+
+  .section-skeleton-grid,
+  .section-skeleton-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .people-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .person-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    gap: 2px 10px;
+    min-height: 0;
+    padding: 12px;
+    text-align: left;
+  }
+
+  .person-photo {
+    grid-row: 1 / 5;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+  }
+
+  .person-photo span {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+  }
+
+  .person-photo i {
+    right: 2px;
+    bottom: 2px;
+  }
+
+  .person-card strong {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  .person-card small {
+    font-size: 13px;
+  }
+
+  .person-card p {
+    min-height: 0;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .person-card a {
+    margin-top: 4px;
+    min-width: 82px;
+    height: 32px;
+  }
+
+  .stats-band {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
 }
 </style>
+

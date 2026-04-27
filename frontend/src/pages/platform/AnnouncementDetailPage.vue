@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="platform-page module-page">
     <div class="detail-nav-row">
       <router-link to="/announcements" class="platform-backlink">返回公告列表</router-link>
@@ -42,3 +42,4 @@ onMounted(async () => {
   }
 })
 </script>
+

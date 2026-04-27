@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="search-page">
     <!-- Search bar -->
     <div class="search-header">
@@ -18,15 +18,15 @@
     <div v-if="!keyword && !list.length && !loading" class="discover-state">
       <div class="discover-hint">
         <div class="discover-icon">🔍</div>
-        <p class="discover-title">探索新朋友</p>
-        <p class="discover-desc">输入昵称，找到你感兴趣的人</p>
+        <p class="discover-title">探索新朋</p>
+        <p class="discover-desc">输入昵称，找到你感兴趣的</p>
       </div>
       <div class="hot-tags">
         <span class="hot-tag">五象新区</span>
         <span class="hot-tag">在校学生</span>
         <span class="hot-tag">职场新人</span>
-        <span class="hot-tag">爱运动</span>
-        <span class="hot-tag">爱旅行</span>
+        <span class="hot-tag">爱运</span>
+        <span class="hot-tag">爱旅</span>
         <span class="hot-tag">摄影爱好</span>
       </div>
     </div>
@@ -133,7 +133,7 @@ function loadMore() {
   padding-bottom: 72px;
 }
 
-/* ── Search header ── */
+/* 鈹€鈹€ Search header 鈹€鈹€ */
 .search-header {
   position: sticky;
   top: 0;
@@ -143,7 +143,7 @@ function loadMore() {
   box-shadow: 0 1px 0 #f0f2f8;
 }
 
-/* ── Discovery state ── */
+/* 鈹€鈹€ Discovery state 鈹€鈹€ */
 .discover-state {
   padding: 40px 20px 24px;
   display: flex;
@@ -193,7 +193,7 @@ function loadMore() {
   background: #fff0f4;
 }
 
-/* ── Results ── */
+/* 鈹€鈹€ Results 鈹€鈹€ */
 .results-wrap {
   background: #fff;
   margin: 12px 0 0;
@@ -212,3 +212,4 @@ function loadMore() {
   border-bottom: none;
 }
 </style>
+

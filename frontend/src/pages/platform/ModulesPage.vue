@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="modules-page">
     <div class="mc">
       <section class="mp-hero">
@@ -77,29 +77,19 @@
           <section class="discover-card">
             <div class="discover-bg" aria-hidden="true" />
             <p class="discover-title">发现更多精彩</p>
-            <p class="discover-text">探索更多功能模块，发现城市新鲜事</p>
-            <button type="button" class="discover-btn">去探索</button>
+            <p class="discover-text">̽๦ģ飬ֳ</p>
+            <button type="button" class="discover-btn">去探</button>
           </section>
         </aside>
       </section>
 
-      <section class="mp-recommend">
-        <h3 class="recommend-title">热门推荐</h3>
-        <div class="recommend-list">
-          <article v-for="item in recommends" :key="item.title" class="recommend-item">
-            <p class="recommend-item-title">{{ item.title }}</p>
-            <p class="recommend-item-desc">{{ item.desc }}</p>
-            <span class="recommend-action">{{ item.action }}</span>
-          </article>
-        </div>
-      </section>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchHomeConfig } from '@/api/platformContent.js'
+import { fetchHomeConfig, fetchModulesStats } from '@/api/platformContent.js'
 
 const ICONS = {
   heart:    'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
@@ -111,24 +101,16 @@ const ICONS = {
 }
 
 const configuredModules = ref([])
-const stats = [
-  { value: '12', label: '开放模块' },
-  { value: '6', label: '使用中' },
-  { value: '1,245', label: '今日访问' },
-  { value: '98%', label: '用户满意度' }
-]
-const recommends = [
-  { title: '周末联谊派对', desc: '8月24日 14:00-18:00', action: '立即报名' },
-  { title: 'AI 写作助手', desc: '智能创作，效率加倍', action: '立即使用' },
-  { title: '同城二手市场', desc: '闲置好物，低价淘', action: '去逛逛' },
-  { title: '最新平台公告', desc: '重要通知，及时查看', action: '查看公告' }
-]
+const stats = ref([
+  { value: '--', label: '开放模块' },
+  { value: '--', label: '使用中' }
+])
 
 const defaultModules = [
   {
     moduleKey:   'fellowship',
     name:        '联谊交友',
-    description: '真实资料认证、私信互动、举报治理的联谊社交服务',
+    description: '真实资料认证、私信互动举报治理的联谊社交服务',
     status:      'active',
     entryRoute:  '/fellowship',
     icon:        ICONS.heart,
@@ -139,7 +121,7 @@ const defaultModules = [
   {
     moduleKey:   'events',
     name:        '活动中心',
-    description: '平台活动、线下聚会、主题活动展示与报名',
+    description: '平台活动、线下聚会主题活动展示与报名',
     status:      'active',
     entryRoute:  '/events',
     icon:        ICONS.calendar,
@@ -150,7 +132,7 @@ const defaultModules = [
   {
     moduleKey:   'articles',
     name:        '内容资讯',
-    description: '平台资讯、生活内容、干货文章发布与阅读',
+    description: '平台资讯、生活内容干货文章发布与阅读',
     status:      'active',
     entryRoute:  '/articles',
     icon:        ICONS.article,
@@ -161,7 +143,7 @@ const defaultModules = [
   {
     moduleKey:   'announcements',
     name:        '公告通知',
-    description: '平台公告、规则说明、重要通知实时发布',
+    description: 'ƽ̨桢˵Ҫ֪ʵʱ',
     status:      'active',
     entryRoute:  '/announcements',
     icon:        ICONS.bell,
@@ -172,7 +154,7 @@ const defaultModules = [
   {
     moduleKey:   'local-services',
     name:        '本地服务',
-    description: '后续可扩展招聘、二手车、生活服务等本地模块',
+    description: '后续可扩展招聘二手车、生活服务等本地模块',
     status:      'planned',
     entryRoute:  null,
     icon:        ICONS.map,
@@ -182,8 +164,8 @@ const defaultModules = [
   },
   {
     moduleKey:   'ai-tools',
-    name:        'AI 工具',
-    description: '后续接入智能助手、内容生成、效率工具等 AI 能力',
+    name:        'AI 宸ュ叿',
+    description: '后续接入智能助手、内容生成效率工具等 AI 能力',
     status:      'planned',
     entryRoute:  null,
     icon:        ICONS.robot,
@@ -233,16 +215,26 @@ function normalizeModule(item, index) {
     icon: moduleIconByKey[item.moduleKey] || fallback.icon || ICONS.article,
     iconBg: tone.iconBg || fallback.iconBg || '#eff6ff',
     color: tone.color || fallback.color || '#1f4fd8',
-    sort: Number.isFinite(Number(item.sortOrder ?? item.sort)) ? Number(item.sortOrder ?? item.sort) : index + 1
+    sort: Number.isFinite(Number(item.sortOrder ? item.sort)) ? Number(item.sortOrder ? item.sort) : index + 1
   }
 }
 
 onMounted(async () => {
-  try {
-    const config = await fetchHomeConfig()
-    configuredModules.value = Array.isArray(config?.modules) ? config.modules : []
-  } catch {
-    configuredModules.value = []
+  const [configRes, statsRes] = await Promise.allSettled([
+    fetchHomeConfig(),
+    fetchModulesStats()
+  ])
+
+  if (configRes.status === 'fulfilled') {
+    configuredModules.value = Array.isArray(configRes.value?.modules) ? configRes.value.modules : []
+  }
+
+  if (statsRes.status === 'fulfilled' && statsRes.value) {
+    const s = statsRes.value
+    stats.value = [
+      { value: String(s.totalModules ? '--'), label: '开放模块' },
+      { value: String(s.activeModules ? '--'), label: '使用中' }
+    ]
   }
 })
 </script>
@@ -620,3 +612,4 @@ onMounted(async () => {
   }
 }
 </style>
+

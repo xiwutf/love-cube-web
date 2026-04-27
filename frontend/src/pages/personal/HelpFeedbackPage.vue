@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <div class="help-page">
-    <NavBar title="帮助与反馈" />
+    <NavBar title="帮助与反" />
 
     <van-cell-group inset class="faq-card">
-      <van-cell title="如何提高匹配成功率？" label="完善资料、上传清晰头像、主动打招呼。" />
-      <van-cell title="为什么看不到更多用户？" label="可前往发现页搜索，或稍后刷新推荐池。" />
-      <van-cell title="如何保护隐私？" label="在隐私设置中可控制展示项和消息权限。" />
+      <van-cell title="如何提高匹配成功率？" label="完善资料、上传清晰头像主动打招呼" />
+      <van-cell title="为什么看不到更多用户？" label="可前往发现页搜索，或稍后刷新推荐池" />
+      <van-cell title="如何保护隐私？" label="在隐私设置中可控制展示项和消息权限" />
     </van-cell-group>
 
     <div class="form-card">
@@ -83,4 +83,5 @@ async function submit() {
   font-size: 16px;
 }
 </style>
+
 

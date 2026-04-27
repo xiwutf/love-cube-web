@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="announcements-page">
     <section class="bulletin-hero">
       <div class="hero-copy">
@@ -35,7 +35,7 @@
 
       <form class="hero-search" role="search" @submit.prevent>
         <input v-model.trim="keyword" type="search" placeholder="搜索公告标题、关键词..." aria-label="搜索公告">
-        <span aria-hidden="true">⌕</span>
+        <span aria-hidden="true">🔍</span>
       </form>
     </section>
 
@@ -83,12 +83,12 @@
               <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" loading="lazy">
               <span v-else>{{ getCategoryIcon(item.category) }}</span>
             </div>
-            <span class="card-arrow" aria-hidden="true">›</span>
+            <span class="card-arrow" aria-hidden="true">→</span>
           </router-link>
 
           <article v-if="!loading && !filteredList.length" class="empty-state">
             <h3>暂无公告</h3>
-            <p>当前没有符合条件的公告内容，换个分类或关键词看看。</p>
+            <p>当前没有符合条件的公告内容，换个分类或关键词试试。</p>
           </article>
         </section>
 
@@ -133,7 +133,7 @@
             <p>开启平台通知，不错过任何重要更新。</p>
             <router-link to="/me">去设置</router-link>
           </div>
-          <span aria-hidden="true">✉</span>
+          <span aria-hidden="true">✓</span>
         </section>
       </aside>
     </div>
@@ -152,59 +152,6 @@ const page = ref(1)
 const keyword = ref('')
 const sortMode = ref('latest')
 
-const fallbackAnnouncements = [
-  {
-    id: 'safety-upgrade-20260410',
-    date: '2026-04-10 09:00',
-    title: '平台安全策略升级公告',
-    summary: '新增异常登录提醒与账号保护说明，提升账号安全性。请所有用户及时查看并完成安全设置。',
-    category: '平台公告',
-    pinned: true,
-    recommended: true,
-    viewCount: 1245
-  },
-  {
-    id: 'review-rule-20260405',
-    date: '2026-04-05 10:00',
-    title: '联谊资料审核规范更新',
-    summary: '优化资料审核与内容推荐规则，新增实名认证项，保障互动质量，提升推荐质量。',
-    category: '功能更新',
-    recommended: true,
-    viewCount: 856
-  },
-  {
-    id: 'event-preview-20260328',
-    date: '2026-03-28 15:00',
-    title: '五一主题活动预告',
-    summary: '开放线上专题活动报名，支持站内通知与一键参与，赢取专属奖励。',
-    category: '活动通知',
-    viewCount: 2368
-  },
-  {
-    id: 'community-rule-20260320',
-    date: '2026-03-20 11:20',
-    title: '平台用户行为规范说明',
-    summary: '对发布内容、互动礼仪、隐私保护进行统一说明，维护良好社区氛围。',
-    category: '规则说明',
-    viewCount: 623
-  },
-  {
-    id: 'report-center-20260312',
-    date: '2026-03-12 16:00',
-    title: '安全提醒与举报入口优化',
-    summary: '升级举报反馈链路，新增处理进度提示，帮助用户更高效地反馈异常行为。',
-    category: '安全提醒',
-    viewCount: 412
-  },
-  {
-    id: 'ai-tools-online-20260301',
-    date: '2026-03-01 09:30',
-    title: 'AI 工具模块即将上线',
-    summary: '内容辅助、资料完善和智能提醒能力将陆续开放，帮助用户提升使用效率。',
-    category: '功能更新',
-    viewCount: 532
-  }
-]
 
 const normalizedItems = computed(() => allItems.value.map((item, index) => ({
   ...item,
@@ -242,7 +189,7 @@ const latestMonthCount = computed(() => normalizedItems.value.filter(item => {
 
 const heroStats = computed(() => [
   { label: '公告总数', value: normalizedItems.value.length, icon: '告', tone: 'blue' },
-  { label: '本月更新', value: latestMonthCount.value, icon: '日', tone: 'violet' },
+  { label: '本月更新', value: latestMonthCount.value, icon: '新', tone: 'violet' },
   { label: '总阅读', value: formatViews(totalViews.value), icon: '读', tone: 'cyan' },
   { label: '通知触达', value: '98%', icon: '达', tone: 'orange' }
 ])
@@ -295,12 +242,12 @@ function formatViews(value) {
 }
 
 function getCategoryIcon(category = '') {
-  if (category.includes('活动')) return '礼'
-  if (category.includes('功能')) return '卡'
-  if (category.includes('安全')) return '盾'
-  if (category.includes('规则')) return '文'
-  if (category.includes('更新')) return '闪'
-  return '心'
+  if (category.includes('活动')) return '活'
+  if (category.includes('功能')) return '功'
+  if (category.includes('安全')) return '安'
+  if (category.includes('规则')) return '规'
+  if (category.includes('更新')) return '新'
+  return '告'
 }
 
 function getTone(category = '') {
@@ -323,9 +270,9 @@ onMounted(async () => {
   loading.value = true
   try {
     const data = await fetchAnnouncements({ status: 'published' })
-    allItems.value = Array.isArray(data) && data.length ? data : fallbackAnnouncements
+    allItems.value = Array.isArray(data) ? data : []
   } catch {
-    allItems.value = fallbackAnnouncements
+    allItems.value = []
   } finally {
     loading.value = false
   }
@@ -1166,3 +1113,4 @@ onMounted(async () => {
   }
 }
 </style>
+

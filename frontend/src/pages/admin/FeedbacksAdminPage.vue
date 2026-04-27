@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">用户反馈</h1>
-      <p class="platform-subtitle">集中查看用户问题与建议，支持处理进度和维护备注，方便后续版本迭代。</p>
+      <p class="platform-subtitle">в鿴û뽨飬ִ֧Ⱥάע汾</p>
     </section>
 
-    <div v-if="loading" class="admin-loading">加载中…</div>
-    <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">重试</button></div>
+    <div v-if="loading" class="admin-loading">加载中</div>
+    <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">閲嶈瘯</button></div>
 
     <section v-else class="admin-table-wrap admin-desktop-only">
       <table class="admin-table">
@@ -15,8 +15,8 @@
             <th>用户</th>
             <th>联系方式</th>
             <th>反馈内容</th>
-            <th>状态</th>
-            <th>处理备注</th>
+            <th>状</th>
+            <th>澶勭悊澶囨敞</th>
             <th>提交时间</th>
             <th>操作</th>
           </tr>
@@ -28,12 +28,12 @@
             <td class="feedback-content">{{ item.content }}</td>
             <td>
               <select v-model="item.status" class="admin-select">
-                <option value="pending">待处理</option>
-                <option value="processing">处理中</option>
-                <option value="resolved">已解决</option>
+                <option value="pending">待处</option>
+                <option value="processing">澶勭悊涓</option>
+                <option value="resolved">已解</option>
               </select>
             </td>
-            <td><textarea v-model="item.adminNote" class="admin-textarea" placeholder="记录处理方案或发布时间计划" /></td>
+            <td><textarea v-model="item.adminNote" class="admin-textarea" placeholder="记录处理方案或发布时间计" ></textarea></td>
             <td><span class="admin-row-meta">{{ formatDate(item.createdAt) }}</span></td>
             <td>
               <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
@@ -54,11 +54,11 @@
         <p class="admin-row-meta">联系方式：{{ item.contact || '-' }}</p>
         <p class="admin-row-meta">提交时间：{{ formatDate(item.createdAt) }}</p>
         <select v-model="item.status" class="admin-select">
-          <option value="pending">待处理</option>
+          <option value="pending">待处</option>
           <option value="processing">处理中</option>
           <option value="resolved">已解决</option>
         </select>
-        <textarea v-model="item.adminNote" class="admin-textarea" placeholder="处理备注" />
+        <textarea v-model="item.adminNote" class="admin-textarea" placeholder="处理备注" ></textarea>
         <div class="admin-toolbar">
           <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
         </div>
@@ -84,7 +84,7 @@ async function load() {
   try {
     items.value = await getFeedbacks()
   } catch (e) {
-    error.value = e.message || '加载失败'
+    error.value = e.message || 'ʧ'
   } finally {
     loading.value = false
   }
@@ -98,7 +98,7 @@ async function save(item) {
       adminNote: item.adminNote || ''
     })
     Object.assign(item, updated)
-    showToast({ message: '反馈状态已更新', type: 'success' })
+    showToast({ message: '״Ѹ', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '保存失败', type: 'fail' })
   } finally {
@@ -107,7 +107,7 @@ async function save(item) {
 }
 
 function statusLabel(status) {
-  const map = { pending: '待处理', processing: '处理中', resolved: '已解决' }
+  const map = { pending: '', processing: '', resolved: 'ѽ' }
   return map[status] || status
 }
 
@@ -125,3 +125,6 @@ onMounted(load)
   white-space: pre-wrap;
 }
 </style>
+
+
+

@@ -174,7 +174,7 @@ const msgStore = useMessageStore()
 const userStore = useUserStore()
 
 const TAB_MAP = { chat: 0, interact: 1, visitor: 2, notification: 3 }
-const activeTab = ref(TAB_MAP[route.query.tab] ?? 0)
+const activeTab = ref(TAB_MAP[route.query.tab] ? 0)
 
 const chatList = ref([])
 const loadingChat = ref(false)
@@ -197,12 +197,12 @@ async function loadChat() {
   try {
     const data = await getChatList()
     chatList.value = (Array.isArray(data) ? data : []).map((item) => ({
-      userId: item.partnerId ?? item.userId,
-      nickname: item.nickname ?? item.partnerName ?? '用户',
+      userId: item.partnerId ? item.userId,
+      nickname: item.nickname ? item.partnerName ? '用户',
       avatar: getAvatar(item),
-      lastMessage: item.lastMessage ?? item.content ?? '',
-      lastTime: item.lastTime ?? item.timestamp,
-      unread: item.unreadCount ?? 0
+      lastMessage: item.lastMessage ? item.content ? '',
+      lastTime: item.lastTime ? item.timestamp,
+      unread: item.unreadCount ? 0
     }))
   } finally {
     loadingChat.value = false
@@ -276,11 +276,11 @@ async function readAll() {
 async function fetchUnread() {
   const [msgData, notifData] = await Promise.allSettled([getUnreadCount(), getNotifUnreadCount()])
   const msg = msgData.status === 'fulfilled' ? msgData.value : {}
-  const notifCount = notifData.status === 'fulfilled' ? (notifData.value?.count ?? 0) : 0
+  const notifCount = notifData.status === 'fulfilled' ? (notifData.value?.count ? 0) : 0
   msgStore.setUnread({
-    chat: msg.chat ?? msg.chatUnread ?? 0,
-    interact: msg.interact ?? msg.interactUnread ?? 0,
-    visitor: msg.visitor ?? msg.visitorUnread ?? 0,
+    chat: msg.chat ? msg.chatUnread ? 0,
+    interact: msg.interact ? msg.interactUnread ? 0,
+    visitor: msg.visitor ? msg.visitorUnread ? 0,
     notification: notifCount
   })
 }

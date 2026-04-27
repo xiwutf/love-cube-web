@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <section class="events-page">
     <section class="events-hero" aria-labelledby="events-title">
       <div class="hero-copy">
-        <router-link to="/" class="back-link">‹ 返回</router-link>
-        <h1 id="events-title">活动中心<span aria-hidden="true">✦</span></h1>
-        <p>发现精彩活动，结识志同道合的朋友，丰富你的生活体验</p>
+        <router-link to="/" class="back-link">?返回</router-link>
+        <h1 id="events-title">活动中心<span aria-hidden="true">✓</span></h1>
+        <p>发现精彩活动，结识志同道合的朋友，丰富你的生活体</p>
 
         <div class="stats-grid" aria-label="活动数据概览">
           <article v-for="stat in stats" :key="stat.label" class="stat-card">
@@ -50,45 +50,57 @@
             </button>
           </nav>
 
-          <div class="filters">
-            <label>
-              <span>城市</span>
-              <select v-model="cityFilter">
-                <option value="">全部城市</option>
-                <option v-for="city in cityOptions" :key="city" :value="city">{{ city }}</option>
-              </select>
-            </label>
-            <label>
-              <span>时间</span>
-              <select v-model="timeFilter">
-                <option value="">全部时间</option>
-                <option value="week">本周活动</option>
-                <option value="month">本月活动</option>
-                <option value="future">即将开始</option>
-              </select>
-            </label>
-            <label>
-              <span>类型</span>
-              <select v-model="typeFilter">
-                <option value="">全部类型</option>
-                <option v-for="type in typeOptions" :key="type" :value="type">{{ type }}</option>
-              </select>
-            </label>
-            <label>
-              <span>排序</span>
-              <select v-model="sortMode">
-                <option value="default">默认排序</option>
-                <option value="time">按时间最近</option>
-                <option value="signup">按报名人数</option>
-              </select>
-            </label>
-            <label class="check-filter">
-              <input v-model="availableOnly" type="checkbox">
-              <span>仅看可报名</span>
-            </label>
-            <div class="view-toggle" aria-label="视图切换">
-              <button type="button" class="active" aria-label="网格视图">▦</button>
-              <button type="button" aria-label="列表视图">☰</button>
+          <button
+            type="button"
+            class="filter-toggle"
+            :aria-expanded="filtersExpanded ? 'true' : 'false'"
+            @click="filtersExpanded = !filtersExpanded"
+          >
+            <span>绛涢€夋潯浠</span>
+            <i :class="{ expanded: filtersExpanded }" aria-hidden="true">⌄</i>
+          </button>
+
+          <div class="filters-wrap" :class="{ 'is-collapsed': !filtersExpanded }">
+            <div class="filters">
+              <label>
+                <span>城市</span>
+                <select v-model="cityFilter">
+                  <option value="">全部城市</option>
+                  <option v-for="city in cityOptions" :key="city" :value="city">{{ city }}</option>
+                </select>
+              </label>
+              <label>
+                <span>时间</span>
+                <select v-model="timeFilter">
+                  <option value="">全部时间</option>
+                  <option value="week">本周活动</option>
+                  <option value="month">本月活动</option>
+                  <option value="future">即将开始</option>
+                </select>
+              </label>
+              <label>
+                <span>绫诲瀷</span>
+                <select v-model="typeFilter">
+                  <option value="">全部类型</option>
+                  <option v-for="type in typeOptions" :key="type" :value="type">{{ type }}</option>
+                </select>
+              </label>
+              <label>
+                <span>排序</span>
+                <select v-model="sortMode">
+                  <option value="default">默认排序</option>
+                  <option value="time">按时间最近</option>
+                  <option value="signup">按报名人数</option>
+                </select>
+              </label>
+              <label class="check-filter">
+                <input v-model="availableOnly" type="checkbox">
+                <span>仅看可报</span>
+              </label>
+              <div class="view-toggle" aria-label="视图切换">
+                <button type="button" class="active" aria-label="网格视图">▦</button>
+                <button type="button" aria-label="列表视图">☰</button>
+              </div>
             </div>
           </div>
         </div>
@@ -112,7 +124,7 @@
                 <div class="chips">
                   <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
                 </div>
-                <p class="meta-row">◷ {{ formatEventTime(item.time) }}　⌖ {{ item.location }}</p>
+                <p class="meta-row">● {{ formatEventTime(item.time) }} · 📍 {{ item.location }}</p>
                 <div class="card-foot">
                   <div class="avatars" aria-hidden="true">
                     <i v-for="avatar in item.avatars" :key="avatar" :style="{ backgroundImage: `url(${avatar})` }"></i>
@@ -123,26 +135,26 @@
             </router-link>
 
             <article v-if="!loading && !visibleList.length" class="empty-card">
-              <h3>暂无符合条件的活动</h3>
-              <p>换一个筛选条件试试，新的活动也会持续补充。</p>
+              <h3>暂无符合条件的活</h3>
+              <p>换一个筛选条件试试，新的活动也会持续补充</p>
             </article>
           </div>
         </section>
 
-        <button v-if="hasMore" type="button" class="load-more" @click="page += 1">加载更多活动⌄</button>
+        <button v-if="hasMore" type="button" class="load-more" @click="page += 1">加载更多活动</button>
       </div>
 
       <aside class="events-aside">
         <section class="side-card">
           <div class="side-head">
             <h2>热门活动</h2>
-            <router-link to="/events">查看更多 ›</router-link>
+            <router-link to="/events">查看更多 </router-link>
           </div>
           <router-link v-for="item in hotActivities" :key="item.id" :to="`/events/${item.id}`" class="hot-item">
             <img :src="item.coverUrl" :alt="item.title" loading="lazy">
             <span>
               <strong>{{ item.title }}</strong>
-              <small>{{ formatShortTime(item.time) }}　报名 {{ item.signupCount }} 人</small>
+              <small>{{ formatShortTime(item.time) }} · 报名 {{ item.signupCount }} 人</small>
             </span>
             <em :class="item.tone">{{ item.hotLabel }}</em>
           </router-link>
@@ -150,9 +162,9 @@
 
         <section class="side-card publish-card">
           <div>
-            <h2>快速发布活动</h2>
-            <p>分享你的活动，吸引更多伙伴参与</p>
-            <router-link to="/admin/events" class="publish-btn">＋ 发布新活动</router-link>
+            <h2>快发布活</h2>
+            <p>分享你的活动，吸引更多伙伴参</p>
+            <router-link to="/admin/events" class="publish-btn">?发布新活</router-link>
           </div>
           <div class="mini-calendar" aria-hidden="true"></div>
         </section>
@@ -163,111 +175,21 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchEvents } from '@/api/platformContent.js'
+import { fetchEvents, fetchEventsStats } from '@/api/platformContent.js'
 
-const PAGE_SIZE = 4
+const PAGE_SIZE = 10
 const activeCategory = ref('')
 const cityFilter = ref('')
 const timeFilter = ref('')
 const typeFilter = ref('')
 const sortMode = ref('default')
 const availableOnly = ref(false)
+const filtersExpanded = ref(true)
 const loading = ref(false)
 const allItems = ref([])
 const page = ref(1)
 
-const fallbackEvents = [
-  {
-    id: 'offline-shanghai-meetup',
-    title: '线下见面会（上海）',
-    category: '线下活动',
-    type: '社交联谊',
-    time: '2026-05-24 15:00',
-    location: '上海市 静安区',
-    city: '上海',
-    signupCount: 30,
-    capacity: 40,
-    hotLabel: '火热',
-    tone: 'pink',
-    coverUrl: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80',
-    tags: ['社交联谊', '线下聚会']
-  },
-  {
-    id: 'online-icebreak-night',
-    title: '线上破冰夜',
-    category: '线上活动',
-    type: '互动游戏',
-    time: '2026-05-19 19:30',
-    location: '线上直播间',
-    city: '线上',
-    signupCount: 16,
-    capacity: 80,
-    hotLabel: '推荐',
-    tone: 'blue',
-    coverUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80',
-    tags: ['互动游戏', '线上交流']
-  },
-  {
-    id: 'interest-open-day',
-    title: '兴趣小组开放日',
-    category: '兴趣小组',
-    type: '兴趣社群',
-    time: '2026-05-11 20:00',
-    location: '线上/线下同步',
-    city: '线上',
-    signupCount: 23,
-    capacity: 60,
-    hotLabel: '公益',
-    tone: 'green',
-    coverUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80',
-    tags: ['兴趣社群', '线下活动']
-  },
-  {
-    id: 'summer-music-party',
-    title: '夏日音乐派对',
-    category: '主题派对',
-    type: '音乐派对',
-    time: '2026-06-01 18:30',
-    location: '浦东新区 滨江公园',
-    city: '上海',
-    signupCount: 45,
-    capacity: 100,
-    hotLabel: '兴趣',
-    tone: 'violet',
-    coverUrl: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=900&q=80',
-    tags: ['音乐派对', '主题活动']
-  },
-  {
-    id: 'public-welfare-walk',
-    title: '公益徒步行',
-    category: '公益活动',
-    type: '户外公益',
-    time: '2026-05-18 08:30',
-    location: '世纪公园',
-    city: '上海',
-    signupCount: 36,
-    capacity: 50,
-    hotLabel: '公益',
-    tone: 'green',
-    coverUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=900&q=80',
-    tags: ['公益活动', '户外徒步']
-  },
-  {
-    id: 'photo-walk',
-    title: '摄影采风活动',
-    category: '兴趣小组',
-    type: '摄影采风',
-    time: '2026-06-26 14:00',
-    location: '苏州河沿线',
-    city: '上海',
-    signupCount: 22,
-    capacity: 36,
-    hotLabel: '兴趣',
-    tone: 'blue',
-    coverUrl: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=900&q=80',
-    tags: ['摄影采风', '城市漫步']
-  }
-]
+const EVENT_TONES = ['pink', 'blue', 'green', 'violet', 'amber']
 
 const categoryTabs = [
   { label: '全部活动', value: '' },
@@ -278,34 +200,31 @@ const categoryTabs = [
   { label: '公益活动', value: '公益活动' }
 ]
 
+const eventsApiStats = ref({ totalEvents: 0, totalSignups: 0, citiesCount: 0, activeEvents: 0 })
+
 const stats = computed(() => [
-  { icon: '▣', value: allItems.value.length || 32, label: '全部活动', note: `进行中 ${activeCount.value} 场`, tone: 'pink' },
-  { icon: '♟', value: signupTotal.value || 328, label: '已报名', note: '本月参与人数', tone: 'blue' },
-  { icon: '●', value: cityOptions.value.length || 18, label: '城市覆盖', note: '活动举办城市', tone: 'green' },
-  { icon: '♥', value: '96%', label: '用户满意度', note: '活动好评率', tone: 'amber' }
+  { icon: '总', value: eventsApiStats.value.totalEvents || allItems.value.length, label: '全部活动', note: `进行中 ${activeCount.value} 场`, tone: 'pink' },
+  { icon: '报', value: eventsApiStats.value.totalSignups || signupTotal.value, label: '已报名', note: '本月参与人数', tone: 'blue' },
+  { icon: '城', value: eventsApiStats.value.citiesCount || cityOptions.value.length, label: '城市覆盖', note: '活动举办城市', tone: 'green' },
+  { icon: '评', value: '96%', label: '用户满意度', note: '活动好评率', tone: 'amber' }
 ])
 
-const normalizedItems = computed(() => allItems.value.map((item, index) => {
-  const fallback = fallbackEvents[index % fallbackEvents.length]
-  return {
-    ...fallback,
-    ...item,
-    id: item.id || fallback.id,
-    title: item.title || fallback.title,
-    category: item.category || fallback.category,
-    type: item.type || item.category || fallback.type,
-    time: item.eventTime || item.time || fallback.time,
-    location: item.location || fallback.location,
-    city: item.city || parseCity(item.location) || fallback.city,
-    signupCount: Number(item.signupCount ?? fallback.signupCount),
-    capacity: Number(item.capacity ?? fallback.capacity),
-    coverUrl: item.coverUrl || fallback.coverUrl,
-    tags: item.tags || fallback.tags,
-    tone: fallback.tone,
-    hotLabel: item.recommended ? '推荐' : fallback.hotLabel,
-    avatars: avatarSet(index)
-  }
-}))
+const normalizedItems = computed(() => allItems.value.map((item, index) => ({
+  id: item.id,
+  title: item.title || '',
+  category: item.category || '',
+  type: item.type || item.category || '',
+  time: item.eventTime || item.time || '',
+  location: item.location || '',
+  city: item.city || parseCity(item.location) || '',
+  signupCount: Number(item.signupCount ?  0),
+  capacity: Number(item.capacity ?  0),
+  coverUrl: item.coverUrl || '',
+  tags: item.tags || [],
+  tone: EVENT_TONES[index % EVENT_TONES.length],
+  hotLabel: item.recommended ? '推荐' : '',
+  avatars: avatarSet(index)
+})))
 
 const cityOptions = computed(() => [...new Set(normalizedItems.value.map(item => item.city).filter(Boolean))])
 const typeOptions = computed(() => [...new Set(normalizedItems.value.map(item => item.type).filter(Boolean))])
@@ -348,8 +267,8 @@ function setCategory(value) {
 }
 
 function parseCity(location = '') {
-  if (location.includes('上海')) return '上海'
-  if (location.includes('线上')) return '线上'
+  if (location.includes('涓婃捣')) return '涓婃捣'
+  if (location.includes('绾夸笂')) return '绾夸笂'
   return ''
 }
 
@@ -366,27 +285,41 @@ function formatEventTime(value) {
 }
 
 function formatShortTime(value) {
-  if (!value) return '待定'
+  if (!value) return '寰呭畾'
   const [date, time = ''] = String(value).split(' ')
   return `${date.slice(5)} ${time.slice(0, 5)}`
 }
 
 onMounted(async () => {
-  loading.value = true
-  try {
-    const data = await fetchEvents({ status: 'published' })
-    allItems.value = Array.isArray(data) && data.length ? data : fallbackEvents
-  } catch {
-    allItems.value = fallbackEvents
-  } finally {
-    loading.value = false
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    filtersExpanded.value = false
   }
+
+  loading.value = true
+  const [eventsRes, statsRes] = await Promise.allSettled([
+    fetchEvents({ status: 'published' }),
+    fetchEventsStats()
+  ])
+
+  if (eventsRes.status === 'fulfilled') {
+    allItems.value = Array.isArray(eventsRes.value) ? eventsRes.value : []
+  } else {
+    allItems.value = []
+  }
+
+  if (statsRes.status === 'fulfilled' && statsRes.value) {
+    eventsApiStats.value = statsRes.value
+  }
+
+  loading.value = false
 })
 </script>
 
 <style scoped>
 .events-page {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   padding: 32px clamp(20px, 5vw, 92px) 0;
   background:
@@ -450,7 +383,7 @@ onMounted(async () => {
   border-radius: var(--lc-radius-sm);
   background: rgba(255, 255, 255, 0.76);
   box-shadow: var(--lc-shadow-sm);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
 }
 
 .stat-icon {
@@ -585,7 +518,7 @@ onMounted(async () => {
 }
 
 .calendar-grid i.marked::after {
-  content: '♥';
+  content: '*';
   position: absolute;
   right: -18px;
   top: -12px;
@@ -652,7 +585,7 @@ onMounted(async () => {
   border-radius: var(--lc-radius);
   background: rgba(255, 255, 255, 0.86);
   box-shadow: var(--lc-shadow-sm);
-  backdrop-filter: blur(16px);
+  backdrop-filter: none;
 }
 
 .filter-panel {
@@ -699,6 +632,14 @@ onMounted(async () => {
   grid-template-columns: repeat(4, minmax(130px, 1fr)) auto auto;
   gap: var(--lc-space-3);
   align-items: center;
+}
+
+.filter-toggle {
+  display: none;
+}
+
+.filters-wrap {
+  overflow: visible;
 }
 
 .filters label {
@@ -1063,6 +1004,12 @@ onMounted(async () => {
     padding: 16px 12px 0;
   }
 
+  .activity-card,
+  .side-card,
+  .stat-card {
+    box-shadow: none;
+  }
+
   .stats-grid,
   .activity-grid,
   .filters {
@@ -1071,6 +1018,42 @@ onMounted(async () => {
 
   .tabs {
     gap: var(--lc-space-4);
+  }
+
+  .filter-toggle {
+    width: 100%;
+    height: 40px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--lc-border);
+    border-radius: var(--lc-radius-xs);
+    background: #fff;
+    color: var(--lc-text);
+    padding: 0 12px;
+    font-size: var(--lc-text-sm);
+    font-weight: 800;
+  }
+
+  .filter-toggle i {
+    font-style: normal;
+    transition: transform 0.2s ease;
+  }
+
+  .filter-toggle i.expanded {
+    transform: rotate(180deg);
+  }
+
+  .filters-wrap {
+    max-height: 420px;
+    overflow: hidden;
+    transition: max-height 0.22s ease, opacity 0.22s ease;
+  }
+
+  .filters-wrap.is-collapsed {
+    max-height: 0;
+    opacity: 0;
   }
 
   .hot-item {
@@ -1087,3 +1070,4 @@ onMounted(async () => {
   }
 }
 </style>
+

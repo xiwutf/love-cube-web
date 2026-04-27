@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="verify-page">
     <NavBar title="认证中心" />
 
@@ -7,7 +7,7 @@
     </div>
 
     <div v-else class="verify-content">
-      <p class="verify-intro">通过认证可提升个人信任度，获得认证标识展示在资料页和推荐卡片上。</p>
+      <p class="verify-intro">通过认证可提升个人信任度，获得认证标识展示在资料页和推荐卡片上</p>
 
       <!-- 真人头像认证 -->
       <div class="verify-card">
@@ -15,7 +15,7 @@
           <span class="verify-icon">📷</span>
           <div class="verify-card-info">
             <p class="verify-name">真人头像认证</p>
-            <p class="verify-desc">上传一张本人正脸照片，确认为真实用户</p>
+            <p class="verify-desc">上传一张本人正脸照片，确认真实身份</p>
           </div>
           <span class="verify-status-badge" :class="photoStatus">{{ statusLabel(photoStatus) }}</span>
         </div>
@@ -24,7 +24,7 @@
         <p v-else-if="photoStatus === 'pending'" class="verify-pending-msg">🕐 审核中，请耐心等待</p>
         <template v-else>
           <p v-if="photoStatus === 'rejected'" class="verify-rejected-msg">
-            ❌ 上次审核未通过：{{ photoRejectReason || '请重新提交' }}
+            上次审核未通过：{{ photoRejectReason || '请重新提交' }}
           </p>
           <div class="verify-form">
             <van-uploader
@@ -64,7 +64,7 @@
         <p v-else-if="realnameStatus === 'pending'" class="verify-pending-msg">🕐 审核中，请耐心等待</p>
         <template v-else>
           <p v-if="realnameStatus === 'rejected'" class="verify-rejected-msg">
-            ❌ 上次审核未通过：{{ realnameRejectReason || '请重新提交' }}
+            上次审核未通过：{{ realnameRejectReason || '请重新提交' }}
           </p>
           <div class="verify-form">
             <van-field
@@ -117,7 +117,12 @@ const realName = ref('')
 const idLast4  = ref('')
 
 function statusLabel(s) {
-  return { approved: '已认证', pending: '审核中', rejected: '未通过', none: '未认证' }[s] || '未认证'
+  return {
+    approved: '已认证',
+    pending: '审核中',
+    rejected: '未过',
+    none: '未认证'
+  }[s] || '未认证'
 }
 
 function latestByType(list, type) {
@@ -159,7 +164,7 @@ async function submitPhoto() {
   try {
     const res = await uploadVerifyPhoto(photoFile.value)
     const selfieUrl = res?.url || res?.data?.url || ''
-    if (!selfieUrl) throw new Error('上传失败，未获得图片地址')
+    if (!selfieUrl) throw new Error('上传失败，未获取图片地址')
     await submitVerification('PHOTO', JSON.stringify({ selfieUrl }))
     photoStatus.value = 'pending'
     photoFiles.value  = []
@@ -181,7 +186,7 @@ async function submitRealname() {
     realnameStatus.value = 'pending'
     realName.value = ''
     idLast4.value  = ''
-    showToast({ message: '已提交，等待审核', type: 'success' })
+    showToast({ message: '宸叉彁浜わ紝绛夊緟瀹℃牳', type: 'success' })
   } catch (e) {
     showToast({ message: e.response?.data?.message || e.message || '提交失败', type: 'fail' })
   } finally {
@@ -236,3 +241,4 @@ onMounted(load)
 .verify-field { background: #f9f9f9; border-radius: 8px; overflow: hidden; }
 .verify-tip { text-align: center; font-size: 12px; color: #bbb; margin-top: 8px; }
 </style>
+

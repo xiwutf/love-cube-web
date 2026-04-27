@@ -44,21 +44,11 @@ function go(path) {
 <style scoped>
 :deep(.fellowship-tabbar.van-tabbar--fixed) {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: min(100%, 480px);
   bottom: 0;
   z-index: 120;
-}
-
-@media (min-width: 768px) {
-  :deep(.fellowship-tabbar.van-tabbar--fixed) {
-    left: 50%;
-    right: auto;
-    width: 480px;
-    transform: translateX(-50%);
-    bottom: 16px;
-    border-radius: 14px;
-    overflow: hidden;
-  }
 }
 </style>

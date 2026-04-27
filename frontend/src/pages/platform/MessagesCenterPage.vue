@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <section class="platform-page messages-page">
     <div class="platform-card messages-header">
       <h1>平台消息中心</h1>
-      <p>统一接收平台通知、系统公告、活动通知、内容互动，并提供联谊消息入口。</p>
+      <p>统一接收平台通知、系统公告活动知、内容互动，并提供联谊消息入口</p>
     </div>
 
     <div class="platform-card">
@@ -57,14 +57,14 @@
 
         <van-tab title="联谊消息">
           <div class="fellowship-entry">
-            <p>联谊消息在业务模块内查看，平台消息中心仅提供入口。</p>
+            <p>联谊消息在业务模块内查看，平台消息中心仅提供入口</p>
             <router-link class="platform-btn platform-btn-primary" to="/fellowship/messages">进入联谊消息</router-link>
           </div>
         </van-tab>
 
         <van-tab title="订单消息（预留）">
           <div class="fellowship-entry">
-            <p>订单消息能力正在规划中，后续会在此频道统一承载。</p>
+            <p>Ϣڹ滮УڴƵͳ</p>
           </div>
         </van-tab>
       </van-tabs>
@@ -74,18 +74,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getNotifications } from '@/api/notification.js'
+import { getNotifications, getNotificationsByType } from '@/api/notification.js'
 
 const activeTab = ref(0)
 const platformNotices = ref([])
-
-const eventNotices = ref([
-  { id: 'event-1', title: '活动报名提醒', content: '你关注的活动将于今晚截止报名。', time: '今天 09:20' }
-])
-
-const contentInteractions = ref([
-  { id: 'content-1', title: '内容互动提醒', content: '你发布的内容有新的点赞与评论。', time: '今天 08:10' }
-])
+const eventNotices = ref([])
+const contentInteractions = ref([])
 
 const allMessages = computed(() => [
   ...platformNotices.value,
@@ -93,15 +87,34 @@ const allMessages = computed(() => [
   ...contentInteractions.value
 ])
 
-onMounted(async () => {
-  const list = await getNotifications(30).catch(() => [])
-  const rows = Array.isArray(list) ? list : []
-  platformNotices.value = rows.map((item, index) => ({
+function normalizeNotif(item, index, fallbackTitle) {
+  return {
     id: item.id || `notice-${index}`,
-    title: item.title || '平台通知',
-    content: item.content || '你有一条新的平台通知。',
-    time: String(item.createdAt || item.publishDate || '').slice(0, 16) || '刚刚'
-  }))
+    title: item.title || fallbackTitle,
+    content: item.content || '',
+    time: String(item.createdAt || '').slice(0, 16) || '刚刚'
+  }
+}
+
+onMounted(async () => {
+  const [platformRes, eventRes, interactionRes] = await Promise.allSettled([
+    getNotifications(30),
+    getNotificationsByType('event', 20),
+    getNotificationsByType('interaction', 20)
+  ])
+
+  if (platformRes.status === 'fulfilled') {
+    const rows = Array.isArray(platformRes.value) ? platformRes.value : []
+    platformNotices.value = rows.map((item, i) => normalizeNotif(item, i, '平台通知'))
+  }
+  if (eventRes.status === 'fulfilled') {
+    const rows = Array.isArray(eventRes.value) ? eventRes.value : []
+    eventNotices.value = rows.map((item, i) => normalizeNotif(item, i, '活动提醒'))
+  }
+  if (interactionRes.status === 'fulfilled') {
+    const rows = Array.isArray(interactionRes.value) ? interactionRes.value : []
+    contentInteractions.value = rows.map((item, i) => normalizeNotif(item, i, '内容互动'))
+  }
 })
 </script>
 
@@ -166,3 +179,4 @@ onMounted(async () => {
   color: var(--lc-muted);
 }
 </style>
+

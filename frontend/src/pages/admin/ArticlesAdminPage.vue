@@ -1,21 +1,21 @@
-<template>
+﻿<template>
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">资讯管理</h1>
-      <p class="platform-subtitle">PC 端支持完整编辑与发布；手机端提供轻量查看。</p>
+      <p class="platform-subtitle">PC 端支持完整编辑与发布；手机端提供轻量查看</p>
 
       <div class="admin-toolbar admin-desktop-only">
         <input v-model="draft.title" class="admin-input" placeholder="资讯标题" />
         <input v-model="draft.tag" class="admin-input" placeholder="标签" />
-        <input v-model="draft.category" class="admin-input" placeholder="分类（选填）" />
+        <input v-model="draft.category" class="admin-input" placeholder="分类（填" />
         <CoverUploadField v-model="draft.coverUrl" :disabled="saving" />
         <label class="admin-check"><input type="checkbox" v-model="draft.pinned" /> 置顶</label>
         <label class="admin-check"><input type="checkbox" v-model="draft.recommended" /> 推荐</label>
         <button type="button" class="admin-btn primary" :disabled="saving" @click="create">新增资讯</button>
       </div>
-      <textarea v-model="draft.content" class="admin-textarea admin-desktop-only" placeholder="资讯内容" />
+      <textarea v-model="draft.content" class="admin-textarea admin-desktop-only" placeholder="资讯内容" ></textarea>
 
-      <p class="admin-mobile-note admin-mobile-only">手机端仅支持查看资讯状态与更新时间，编辑发布请在 PC 端完成。</p>
+      <p class="admin-mobile-note admin-mobile-only">移动端仅支持查看，编辑请使用 PC 端。</p>
     </section>
 
     <div v-if="loading" class="admin-loading">加载中...</div>
@@ -51,7 +51,7 @@
             </td>
             <td><span class="admin-tag" :class="item.status">{{ item.status }}</span></td>
             <td><input v-model="item.summary" class="admin-input" /></td>
-            <td><textarea v-model="item.content" class="admin-textarea" /></td>
+            <td><textarea v-model="item.content" class="admin-textarea" ></textarea></td>
             <td>
               <div class="admin-cell-actions">
                 <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
@@ -80,7 +80,7 @@
           <span v-if="item.recommended">推荐</span>
         </p>
         <p class="admin-row-meta">{{ item.summary }}</p>
-        <p class="admin-row-meta">更新于 {{ formatDate(item.updatedAt) }}</p>
+        <p class="admin-row-meta">更新：{{ formatDate(item.updatedAt) }}</p>
       </article>
       <van-empty v-if="!items.length" description="暂无资讯" />
     </div>
@@ -136,7 +136,7 @@ async function create() {
       pinned: false,
       recommended: false
     })
-    showToast({ message: '资讯已创建', type: 'success' })
+    showToast({ message: '资讯已创', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '创建失败', type: 'fail' })
   } finally {
@@ -149,7 +149,7 @@ async function save(item) {
   try {
     const updated = await saveArticle({ ...item })
     Object.assign(item, updated)
-    showToast({ message: '资讯已保存', type: 'success' })
+    showToast({ message: '资讯已保', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '保存失败', type: 'fail' })
   } finally {
@@ -163,7 +163,7 @@ async function toggle(item) {
     const newStatus = item.status === 'published' ? 'draft' : 'published'
     const updated = await saveArticle({ ...item, status: newStatus })
     Object.assign(item, updated)
-    showToast({ message: '状态已更新', type: 'success' })
+    showToast({ message: '状已更新', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '更新失败', type: 'fail' })
   } finally {
@@ -176,7 +176,7 @@ async function remove(item) {
   try {
     await deleteArticle(item.id)
     items.value = items.value.filter((entry) => entry.id !== item.id)
-    showToast({ message: '资讯已删除', type: 'success' })
+    showToast({ message: '资讯已删', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '删除失败', type: 'fail' })
   } finally {
@@ -208,3 +208,6 @@ onMounted(load)
   accent-color: #e84f73;
 }
 </style>
+
+
+

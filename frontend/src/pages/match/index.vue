@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <div class="match-page">
     <!-- Top bar -->
     <header class="match-header">
       <div class="match-header-left">
-        <span class="match-logo-icon">♡</span>
-        <span class="match-title">认识</span>
+        <span class="match-logo-icon">鈾</span>
+        <span class="match-title">璁よ瘑</span>
       </div>
       <button class="filter-btn" @click="showFilter = true">
         <van-icon name="filter-o" size="18" />
-        <span>筛选</span>
+        <span>绛涢€</span>
       </button>
     </header>
 
@@ -39,9 +39,9 @@
       </template>
 
       <div v-else-if="!pageLoading" class="no-more">
-        <div class="no-more-icon">💫</div>
-        <p class="no-more-title">今日推荐已看完</p>
-        <p class="no-more-desc">明天还有更多新朋友等你</p>
+        <div class="no-more-icon">💤</div>
+        <p class="no-more-title">今日推荐已看</p>
+        <p class="no-more-desc">明天还有更多新朋友等</p>
         <van-button round color="#FF5F84" size="small" style="margin-top: 16px" @click="loadCards">
           刷新推荐
         </van-button>
@@ -65,23 +65,22 @@
     <van-popup v-model:show="showFilter" position="bottom" round>
       <div class="filter-popup">
         <div class="filter-handle" />
-        <h3 class="filter-title">筛选条件</h3>
+        <h3 class="filter-title">绛涢€夋潯浠</h3>
         <div class="filter-block">
           <p class="filter-label">年龄范围</p>
-          <p class="filter-value">{{ filter.ageRange[0] }} — {{ filter.ageRange[1] }} 岁</p>
+          <p class="filter-value">{{ filter.ageRange[0] }} - {{ filter.ageRange[1] }} 岁</p>
           <van-slider v-model="filter.ageRange" range :min="18" :max="60" bar-height="4" active-color="#FF5F84" />
         </div>
         <div class="filter-block">
           <p class="filter-label">性别偏好</p>
           <van-radio-group v-model="filter.gender" direction="horizontal" class="filter-radio-group">
-            <van-radio name="" icon-size="16">不限</van-radio>
+            <van-radio name="" icon-size="16">涓嶉檺</van-radio>
             <van-radio name="male" icon-size="16">男生</van-radio>
-            <van-radio name="female" icon-size="16">女生</van-radio>
+            <van-radio name="female" icon-size="16">濂崇敓</van-radio>
           </van-radio-group>
         </div>
         <van-button round block color="#FF5F84" style="margin-top: 8px" @click="applyFilter">
-          应用筛选
-        </van-button>
+          搴旂敤绛涢€?        </van-button>
       </div>
     </van-popup>
 
@@ -97,8 +96,8 @@
     >
       <div class="matched-content">
         <div class="matched-emoji">🎉</div>
-        <h3 class="matched-title">配对成功！</h3>
-        <p class="matched-desc">你们互相感兴趣了<br/>快去打个招呼吧</p>
+        <h3 class="matched-title">配对成功</h3>
+        <p class="matched-desc">你们互相感兴趣了<br/>快去打个招呼</p>
       </div>
     </van-dialog>
 
@@ -199,7 +198,7 @@ onMounted(loadCards)
 </script>
 
 <style scoped>
-/* ── Page ── */
+/* 鈹€鈹€ Page 鈹€鈹€ */
 .match-page {
   min-height: 100vh;
   background: #f4f6fb;
@@ -208,7 +207,7 @@ onMounted(loadCards)
   padding-bottom: 72px;
 }
 
-/* ── Header ── */
+/* 鈹€鈹€ Header 鈹€鈹€ */
 .match-header {
   display: flex;
   justify-content: space-between;
@@ -248,7 +247,7 @@ onMounted(loadCards)
   cursor: pointer;
 }
 
-/* ── Card area ── */
+/* 鈹€鈹€ Card area 鈹€鈹€ */
 .card-area {
   flex: 1;
   position: relative;
@@ -283,7 +282,7 @@ onMounted(loadCards)
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
 }
 
-/* ── No more ── */
+/* 鈹€鈹€ No more 鈹€鈹€ */
 .no-more {
   display: flex;
   flex-direction: column;
@@ -306,7 +305,7 @@ onMounted(loadCards)
   color: #a0abbe;
 }
 
-/* ── Action bar ── */
+/* 鈹€鈹€ Action bar 鈹€鈹€ */
 .action-bar {
   display: flex;
   justify-content: center;
@@ -365,7 +364,7 @@ onMounted(loadCards)
   height: 26px;
 }
 
-/* ── Filter popup ── */
+/* 鈹€鈹€ Filter popup 鈹€鈹€ */
 .filter-popup {
   padding: 12px 20px 32px;
 }
@@ -402,7 +401,7 @@ onMounted(loadCards)
   flex-wrap: wrap;
 }
 
-/* ── Matched dialog ── */
+/* 鈹€鈹€ Matched dialog 鈹€鈹€ */
 .matched-content {
   padding: 24px 16px 16px;
   text-align: center;
@@ -423,3 +422,4 @@ onMounted(loadCards)
   line-height: 1.6;
 }
 </style>
+

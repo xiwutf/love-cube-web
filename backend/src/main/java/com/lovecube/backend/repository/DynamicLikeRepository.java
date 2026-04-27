@@ -28,4 +28,6 @@ public interface DynamicLikeRepository extends JpaRepository<DynamicLike, Long> 
      * 获取用户点赞的动态ID列表
      */
     List<DynamicLike> findByUserId(Long userId);
+
+    long countByUserId(Long userId);
 } 

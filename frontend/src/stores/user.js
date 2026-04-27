@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { storage } from '@/utils/storage.js'
 import { login as loginApi, register as registerApi } from '@/api/auth.js'
-import { getMe } from '@/api/user.js'
+import { clearMeCache, getMeCached } from '@/api/user.js'
 
 const REDIRECT_KEY = 'postLoginRedirect'
 
@@ -49,7 +49,7 @@ export const useUserStore = defineStore('user', () => {
       userInfo.value = null
       return null
     }
-    const me = await getMe()
+    const me = await getMeCached()
     const normalized = normalizeUser(me)
     if (normalized?.userId) {
       userId.value = normalized.userId
@@ -93,6 +93,7 @@ export const useUserStore = defineStore('user', () => {
     storage.remove('token')
     storage.remove('userId')
     storage.remove(REDIRECT_KEY)
+    clearMeCache()
   }
 
   function setPostLoginRedirect(path) {

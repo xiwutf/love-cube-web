@@ -605,7 +605,7 @@ onBeforeUnmount(() => {
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 20px 46px rgba(15, 23, 42, 0.18);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
   }
 
   .mobile-search {
@@ -691,7 +691,7 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(5, 1fr);
     background: rgba(255, 255, 255, 0.96);
     border-top: 1px solid #d6e0ed;
-    backdrop-filter: blur(8px);
+    backdrop-filter: none;
   }
 
   .mobile-quick-nav a {
@@ -743,7 +743,7 @@ onBeforeUnmount(() => {
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
   }
 
   .mobile-search {

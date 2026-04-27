@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">用户管理</h1>
-      <p class="platform-subtitle">展示用户列表并支持角色与状态管理。</p>
+      <p class="platform-subtitle">展示用户列表并支持角色与状管理</p>
     </section>
 
     <section class="platform-card" style="margin-top: 12px;">
-      <p class="platform-text">当前共 {{ users.length }} 位用户</p>
+      <p class="platform-text">当前 {{ users.length }} 位用户</p>
     </section>
 
     <section class="admin-table-wrap admin-desktop-only">
@@ -14,10 +14,10 @@
         <thead>
           <tr>
             <th>用户</th>
-            <th>手机号</th>
-            <th>角色</th>
-            <th>认证</th>
-            <th>状态</th>
+            <th>手机</th>
+            <th>瑙掕壊</th>
+            <th>璁よ瘉</th>
+            <th>状</th>
             <th>注册时间</th>
             <th>操作</th>
           </tr>
@@ -115,13 +115,13 @@ const currentAdminRole = computed(() => normalizeRole(userStore.syncCurrentUser(
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
     .map((item) => ({
-      userId: item.userId ?? item.id,
-      username: item.username ?? '',
-      phone: item.phone ?? '',
-      role: normalizeRole(item.role ?? 'user'),
-      verificationStatus: item.verificationStatus ?? 'none',
-      status: item.status ?? 'active',
-      createdAt: item.createdAt ?? null,
+      userId: item.userId ? item.id,
+      username: item.username ? '',
+      phone: item.phone ? '',
+      role: normalizeRole(item.role ? 'user'),
+      verificationStatus: item.verificationStatus ? 'none',
+      status: item.status ? 'active',
+      createdAt: item.createdAt ? null,
       canForceDelete: !!item.canForceDelete
     }))
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
@@ -164,7 +164,7 @@ async function setStatus(item, status) {
   try {
     const result = await updateAdminUserStatus(item.userId, status)
     item.status = result.status
-    showToast({ type: 'success', message: result.message || '状态已更新' })
+    showToast({ type: 'success', message: result.message || '状已更新' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '操作失败' })
   }
@@ -172,7 +172,7 @@ async function setStatus(item, status) {
 
 async function saveRole(item) {
   if (!item?.userId) {
-    showToast({ type: 'fail', message: '缺少用户ID，无法保存' })
+    showToast({ type: 'fail', message: '缺少用户ID，无法保' })
     return
   }
   if (!canEditRole(item)) {
@@ -180,13 +180,13 @@ async function saveRole(item) {
     return
   }
   if (!['user', 'admin'].includes(item.role)) {
-    showToast({ type: 'fail', message: '仅可设置 USER/ADMIN' })
+    showToast({ type: 'fail', message: '浠呭彲璁剧疆 USER/ADMIN' })
     return
   }
   try {
     savingRoleUserId.value = item.userId
     await updateAdminUserRole(item.userId, item.role)
-    showToast({ type: 'success', message: '角色已更新' })
+    showToast({ type: 'success', message: '角色已更' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '角色更新失败' })
   } finally {
@@ -196,7 +196,7 @@ async function saveRole(item) {
 
 async function forceDelete(item) {
   if (!canForceDelete(item)) {
-    showToast({ type: 'fail', message: '当前账号无强制删除权限' })
+    showToast({ type: 'fail', message: '当前账号无强制删除权' })
     return
   }
   try {
@@ -210,7 +210,7 @@ async function forceDelete(item) {
   try {
     const result = await forceDeleteAdminUser(item.userId)
     users.value = users.value.filter((u) => u.userId !== item.userId)
-    showToast({ type: 'success', message: result.message || '用户已删除' })
+    showToast({ type: 'success', message: result.message || '用户已删' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '强制删除失败' })
   }
@@ -237,3 +237,6 @@ onMounted(loadUsers)
   gap: 8px;
 }
 </style>
+
+
+

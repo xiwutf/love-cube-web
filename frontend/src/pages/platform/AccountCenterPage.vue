@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="platform-page me-layout">
     <aside class="platform-card me-sidebar">
       <h2>平台个人中心</h2>
@@ -18,7 +18,7 @@
     <main class="me-main">
       <div class="platform-card me-hero">
         <div class="me-user">
-          <img v-if="user?.avatar" :src="user.avatar" class="me-avatar" alt="头像" />
+          <img v-if="user?.avatar" :src="user.avatar" class="me-avatar" alt="澶村儚" />
           <div v-else class="me-avatar me-avatar-fallback">{{ avatarFallback }}</div>
           <div class="me-meta">
             <h1>{{ user?.username || '平台用户' }}</h1>
@@ -55,13 +55,13 @@
           <div class="me-shortcuts">
             <router-link to="/modules">模块中心</router-link>
             <router-link to="/fellowship">联谊模块入口</router-link>
-            <router-link to="/announcements">平台动态</router-link>
-            <router-link to="/articles">精选内容</router-link>
+            <router-link to="/announcements">平台动</router-link>
+            <router-link to="/articles">精内</router-link>
           </div>
         </div>
 
         <div class="platform-card">
-          <h3>账号与设置</h3>
+          <h3>账号与设</h3>
           <div class="me-shortcuts">
             <router-link to="/me">平台个人中心</router-link>
             <router-link to="/messages">平台消息中心</router-link>
@@ -77,15 +77,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/stores/user.js'
-import { getNotifUnreadCount } from '@/api/notification.js'
+import { getNotifUnreadCountCached } from '@/api/notification.js'
+import { getUserStatsCached } from '@/api/user.js'
 
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
 const unreadCount = ref(0)
 
-const myContentCount = ref(8)
-const myEventCount = ref(2)
-const myFavoriteCount = ref(12)
+const myContentCount = ref(0)
+const myEventCount = ref(0)
+const myFavoriteCount = ref(0)
 
 const avatarFallback = computed(() => {
   const name = user.value?.username || ''
@@ -102,7 +103,7 @@ const verifyLabel = computed(() => {
   const status = String(user.value?.verificationStatus || 'none')
   if (status === 'approved') return '账号已认证'
   if (status === 'pending') return '认证审核中'
-  if (status === 'rejected') return '认证未通过'
+  if (status === 'rejected') return '认证未过'
   return '账号未认证'
 })
 
@@ -110,8 +111,18 @@ onMounted(async () => {
   if (!user.value) {
     await userStore.refreshCurrentUser().catch(() => {})
   }
-  const res = await getNotifUnreadCount().catch(() => null)
-  unreadCount.value = Number(res?.count ?? res?.unreadCount ?? 0)
+  const [notifRes, statsRes] = await Promise.allSettled([
+    getNotifUnreadCountCached(),
+    getUserStatsCached()
+  ])
+  if (notifRes.status === 'fulfilled') {
+    unreadCount.value = Number(notifRes.value?.count ? notifRes.value?.unreadCount ? 0)
+  }
+  if (statsRes.status === 'fulfilled' && statsRes.value) {
+    myContentCount.value = Number(statsRes.value.contentCount ? 0)
+    myEventCount.value = Number(statsRes.value.eventCount ? 0)
+    myFavoriteCount.value = Number(statsRes.value.favoriteCount ? 0)
+  }
 })
 </script>
 
@@ -284,3 +295,4 @@ onMounted(async () => {
   }
 }
 </style>
+

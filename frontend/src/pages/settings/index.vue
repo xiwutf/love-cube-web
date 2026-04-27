@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="settings-page">
     <NavBar title="设置" />
 
@@ -16,7 +16,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="关于" class="group">
-      <van-cell title="版本号" value="v0.2.0" />
+      <van-cell title="版本" value="v0.2.0" />
       <van-cell title="Love Cube" value="遇见你，是最好的事" />
     </van-cell-group>
   </div>
@@ -63,3 +63,4 @@ function handleClearCache() {
 .group { margin-top: 12px; }
 :deep(.danger-text) { color: #ee0a24; }
 </style>
+

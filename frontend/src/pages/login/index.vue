@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <div :class="['login-page', isFellowshipRoute ? 'is-fellowship' : 'is-platform']">
     <div class="login-shell">
       <section class="login-card">
         <div class="logo-area">
           <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
-          <p class="logo-sub">登录后即可继续你的平台体验</p>
+          <p class="logo-sub">登录后即可继续你的平台体</p>
         </div>
 
         <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">
@@ -24,10 +24,10 @@
                 <van-field
                   v-model="loginForm.password"
                   name="password"
-                  label="密码"
+                  label="瀵嗙爜"
                   placeholder="请输入密码"
                   type="password"
-                  :rules="[{ required: true, message: '请填写密码' }]"
+                  :rules="[{ required: true, message: '请输入密码' }]"
                 />
               </van-cell-group>
               <div class="btn-wrap">
@@ -38,14 +38,14 @@
             </van-form>
           </van-tab>
 
-          <van-tab title="注册">
+          <van-tab title="娉ㄥ唽">
             <van-form @submit="handleRegister" class="form-wrap">
               <van-cell-group inset>
                 <van-field
                   v-model="regForm.username"
                   name="username"
                   label="昵称"
-                  placeholder="给自己起一个名字"
+                  placeholder="给自己起一个昵称"
                 />
                 <van-field
                   v-model="regForm.phone"
@@ -59,31 +59,31 @@
                 <van-field
                   v-model="regForm.password"
                   name="password"
-                  label="密码"
+                  label="瀵嗙爜"
                   placeholder="至少 6 位"
                   type="password"
-                  :rules="[{ required: true, message: '请填写密码' }, { min: 6, message: '密码至少 6 位' }]"
+                  :rules="[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少 6 位' }]"
                 />
                 <van-field
                   v-model="regForm.inviteCode"
                   name="inviteCode"
-                  label="邀请码"
+                  label="邢请码"
                   placeholder="请输入邀请码"
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
               </van-cell-group>
-              <p class="register-tip">注册后即可使用联谊、活动、内容等平台能力</p>
-              <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码。</p>
+              <p class="register-tip">注册后即可使用联谊活动内容等平台能力</p>
+              <p class="invite-tip">Love Cube 当前采用邢请制注册，请填写邢请人提供的邀请码</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
-                  注册
+                  娉ㄥ唽
                 </van-button>
               </div>
             </van-form>
           </van-tab>
         </van-tabs>
 
-        <p class="hint">演示账号：admin 13800000000 / 123456；普通用户 13900000000 / 123456</p>
+        <p class="hint">演示账号：admin 13800000000 / 123456；普通用户：13900000000 / 123456</p>
       </section>
     </div>
   </div>
@@ -118,10 +118,10 @@ async function handleLogin() {
   loading.value = true
   try {
     await userStore.login({ phone: loginForm.phone, password: loginForm.password })
-    showToast({ message: '登录成功，欢迎回来', type: 'success' })
+    showToast({ message: '¼ɹӭ', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
-    showToast({ message: err.message || '登录失败，请稍后重试', type: 'fail' })
+    showToast({ message: err.message || '¼ʧܣԺ', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -136,12 +136,12 @@ async function handleRegister() {
       password: regForm.password,
       inviteCode: regForm.inviteCode
     })
-    showToast({ message: '注册成功，欢迎加入 Love Cube', type: 'success' })
+    showToast({ message: 'עɹӭ?Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: '下一步你想先做什么？',
-      confirmButtonText: '去完善资料',
-      cancelButtonText: '去联谊模块'
+      message: 'һʲô',
+      confirmButtonText: 'ȥ',
+      cancelButtonText: 'ȥģ'
     })
     router.replace('/fellowship/profile/edit')
   } catch (err) {
@@ -149,7 +149,7 @@ async function handleRegister() {
       router.replace('/fellowship')
       return
     }
-    showToast({ message: err.message || '注册失败，请稍后重试', type: 'fail' })
+    showToast({ message: err.message || 'עʧܣԺ', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -307,3 +307,4 @@ async function handleRegister() {
   }
 }
 </style>
+
