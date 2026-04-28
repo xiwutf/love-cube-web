@@ -191,6 +191,7 @@ public class PositiveShareService {
                 "createdAt", saved.getCreatedAt(),
                 "userId", userId,
                 "username", user != null ? user.getUsername() : "用户",
+                "avatar", user != null ? user.getProfilePhoto() : null,
                 "commentCount", share.getCommentCount()
         );
     }
@@ -349,6 +350,7 @@ public class PositiveShareService {
                     "shareId", row.getShareId(),
                     "userId", row.getUserId(),
                     "username", user != null && user.getUsername() != null && !user.getUsername().isBlank() ? user.getUsername() : "平台用户",
+                    "avatar", user != null ? user.getProfilePhoto() : null,
                     "content", row.getContent(),
                     "createdAt", row.getCreatedAt()
             ));

@@ -2,7 +2,16 @@
   <article class="share-card">
     <header class="share-head">
       <div class="author">
-        <div class="avatar" :style="avatarStyle">{{ avatarText }}</div>
+        <div class="avatar" :style="avatarStyle">
+          <img
+            v-if="showAvatarImage"
+            :src="props.item.avatar"
+            :alt="`${displayName}头像`"
+            class="avatar-img"
+            @error="handleAvatarError"
+          >
+          <span v-else>{{ avatarText }}</span>
+        </div>
         <div class="author-info">
           <div class="name-row">
             <span class="name">{{ displayName }}</span>
@@ -36,7 +45,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   item: {
@@ -46,6 +55,8 @@ const props = defineProps({
 })
 
 defineEmits(['like', 'comment'])
+
+const avatarLoadFailed = ref(false)
 
 const AVATAR_PALETTES = [
   { bg: '#ffdde1', text: '#e05c7c' },
@@ -88,6 +99,10 @@ const avatarText = computed(() => {
   return String(name).slice(0, 1)
 })
 
+const showAvatarImage = computed(() =>
+  !props.item.anonymous && Boolean(props.item.avatar) && !avatarLoadFailed.value
+)
+
 const avatarStyle = computed(() => {
   if (props.item.anonymous) {
     return { background: '#f1f5f9', color: '#94a3b8' }
@@ -113,6 +128,17 @@ function formatTime(value) {
   if (dateStr === yesterday) return `昨天 ${timeStr}`
   return `${dateStr.slice(5).replace('-', '/')} ${timeStr}`
 }
+
+function handleAvatarError() {
+  avatarLoadFailed.value = true
+}
+
+watch(
+  () => props.item.avatar,
+  () => {
+    avatarLoadFailed.value = false
+  }
+)
 </script>
 
 <style scoped>
@@ -153,6 +179,13 @@ function formatTime(value) {
   font-size: 15px;
   font-weight: 700;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .author-info {

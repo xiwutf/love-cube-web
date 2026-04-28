@@ -114,9 +114,21 @@
                   <p v-if="commentsLoading" class="comment-loading">加载中...</p>
                   <p v-else-if="!comments.length" class="comment-empty">暂无评论，欢迎留下第一句鼓励 ✨</p>
                   <article v-for="comment in comments" :key="comment.id" class="comment-row">
-                    <strong class="comment-author">{{ comment.username || '用户' }}</strong>
-                    <p class="comment-text">{{ comment.content }}</p>
-                    <time class="comment-time">{{ formatDate(comment.createdAt) }}</time>
+                    <div class="comment-avatar">
+                      <img
+                        v-if="comment.avatar && !isCommentAvatarError(comment.id)"
+                        :src="comment.avatar"
+                        :alt="`${comment.username || '用户'}头像`"
+                        class="comment-avatar-img"
+                        @error="markCommentAvatarError(comment.id)"
+                      >
+                      <span v-else>{{ commentInitial(comment.username) }}</span>
+                    </div>
+                    <div class="comment-main">
+                      <strong class="comment-author">{{ comment.username || '用户' }}</strong>
+                      <p class="comment-text">{{ comment.content }}</p>
+                      <time class="comment-time">{{ formatDate(comment.createdAt) }}</time>
+                    </div>
                   </article>
                 </div>
               </div>
@@ -292,6 +304,7 @@ const commentSubmitting = ref(false)
 const expandedShareId = ref(null)
 const commentsLoading = ref(false)
 const comments = ref([])
+const commentAvatarErrorIds = ref(new Set())
 const editorRef = ref(null)
 
 async function fetchList(append = false) {
@@ -453,8 +466,10 @@ async function loadComments(shareId) {
   try {
     const res = await fetchPositiveShareComments(shareId, { pageNum: 1, pageSize: 30 })
     comments.value = Array.isArray(res?.list) ? res.list : []
+    commentAvatarErrorIds.value = new Set()
   } catch {
     comments.value = []
+    commentAvatarErrorIds.value = new Set()
   } finally {
     commentsLoading.value = false
   }
@@ -463,6 +478,19 @@ async function loadComments(shareId) {
 function formatDate(value) {
   if (!value) return '刚刚'
   return String(value).replace('T', ' ').slice(0, 16)
+}
+
+function commentInitial(username) {
+  const safeName = String(username || '用户').trim()
+  return safeName ? safeName.slice(0, 1) : '用'
+}
+
+function isCommentAvatarError(commentId) {
+  return commentAvatarErrorIds.value.has(commentId)
+}
+
+function markCommentAvatarError(commentId) {
+  commentAvatarErrorIds.value.add(commentId)
 }
 
 function scrollToEditor() {
@@ -906,6 +934,35 @@ onMounted(() => fetchList(false))
   background: #fff;
   border-radius: 8px;
   padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.comment-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.comment-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.comment-main {
+  min-width: 0;
+  flex: 1;
 }
 
 .comment-author {
