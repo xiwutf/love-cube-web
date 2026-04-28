@@ -68,7 +68,8 @@
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">3</span><h3>你觉得目前网站最需要改进什么?</h3><em>单选</em></div><label class="survey-select"><select v-model="coCreationForm.improvement" required><option value="" disabled>请选择当前最需要改进的选项</option><option v-for="item in improvementOptions" :key="item" :value="item">{{ item }}</option></select></label></div>
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">4</span><h3>你最希望网站新增什么功能?</h3><em>必填</em></div><label class="survey-textarea"><textarea v-model.trim="coCreationForm.featureSuggestion" rows="4" maxlength="200" required placeholder="例如：私信聊天、同城活动、AI助手、内容投稿、认证体系、更多本地服务等。"></textarea><span>{{ featureSuggestionCount }}/200</span></label></div>
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">5</span><h3>你还有其他想说的吗?</h3><em>选填</em></div><label class="survey-textarea"><textarea v-model.trim="coCreationForm.extraComment" rows="3" maxlength="200" placeholder="可以写下你对网站的想法、吐槽、建议或创意。"></textarea><span>{{ extraCommentCount }}/200</span></label></div>
-            <div class="survey-question"><div class="survey-question-title"><span class="survey-number">6</span><h3>如果你愿意，也可以留下联系方式</h3><em>选填</em></div><label class="survey-contact"><input v-model.trim="coCreationForm.contact" type="text" maxlength="60" placeholder="可填写微信号、手机号或邮箱，方便我们联系你"></label></div>
+            <div class="survey-question"><div class="survey-question-title"><span class="survey-number">6</span><h3>你在使用网站时遇到过哪些问题?</h3><em>选填</em></div><label class="survey-textarea"><textarea v-model.trim="coCreationForm.usageIssue" rows="3" maxlength="200" placeholder="例如：页面加载慢、按钮不明显、流程不清晰、某功能无法使用等。"></textarea><span>{{ usageIssueCount }}/200</span></label></div>
+            <div class="survey-question"><div class="survey-question-title"><span class="survey-number">7</span><h3>如果你愿意，也可以留下联系方式</h3><em>选填</em></div><label class="survey-contact"><input v-model.trim="coCreationForm.contact" type="text" maxlength="60" placeholder="可填写微信号、手机号或邮箱，方便我们联系你"></label></div>
             <p v-if="coCreationMessage" class="co-creation-message" :class="{ 'is-error': coCreationError }">{{ coCreationMessage }}</p>
             <button class="co-creation-submit" type="submit" :disabled="coCreationSubmitting">{{ coCreationSubmitting ? '提交中...' : '提交反馈' }}</button>
             <p class="co-creation-privacy">你也可以留下联系方式；若想直接联系我，可加微信：LinXi-5152。</p>
@@ -110,6 +111,7 @@ const coCreationForm = ref({
   improvement: '',
   featureSuggestion: '',
   extraComment: '',
+  usageIssue: '',
   contact: ''
 })
 
@@ -127,6 +129,7 @@ const goalOptions = [
 const improvementOptions = ['用户太少', '功能太少', '页面不够好看', '不知道怎么玩', '内容太少', '信任感不足', '操作不够方便', '其他']
 const featureSuggestionCount = computed(() => coCreationForm.value.featureSuggestion.length)
 const extraCommentCount = computed(() => coCreationForm.value.extraComment.length)
+const usageIssueCount = computed(() => coCreationForm.value.usageIssue.length)
 
 const navItems = [
   { to: '/', label: '首页' },
@@ -189,6 +192,7 @@ function resetCoCreationForm() {
     improvement: '',
     featureSuggestion: '',
     extraComment: '',
+    usageIssue: '',
     contact: ''
   }
 }
@@ -220,6 +224,7 @@ async function handleCoCreationSubmit() {
   const improvement = coCreationForm.value.improvement
   const featureSuggestion = coCreationForm.value.featureSuggestion.trim()
   const extraComment = coCreationForm.value.extraComment.trim()
+  const usageIssue = coCreationForm.value.usageIssue.trim()
   const contact = coCreationForm.value.contact.trim()
 
   if (!focusModule || !goals.length || !improvement || !featureSuggestion) {
@@ -235,7 +240,8 @@ async function handleCoCreationSubmit() {
       `Q2-来站目标：${goals.join('、')}`,
       `Q3-最需要改进：${improvement}`,
       `Q4-新增功能建议：${featureSuggestion}`,
-      extraComment ? `Q5-其他想法：${extraComment}` : ''
+      extraComment ? `Q5-其他想法：${extraComment}` : '',
+      usageIssue ? `Q6-使用问题反馈：${usageIssue}` : ''
     ].filter(Boolean).join('\n')
 
     try {

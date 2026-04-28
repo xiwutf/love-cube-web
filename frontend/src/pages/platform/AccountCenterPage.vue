@@ -27,6 +27,9 @@
               <span class="me-tag">{{ roleLabel }}</span>
               <span class="me-tag">{{ verifyLabel }}</span>
             </div>
+            <button type="button" class="me-edit-btn" @click="toggleEdit">
+              {{ editOpen ? '收起编辑' : '编辑资料' }}
+            </button>
           </div>
         </div>
         <div class="me-kpis">
@@ -47,6 +50,33 @@
             <strong>{{ myFavoriteCount }}</strong>
           </article>
         </div>
+      </div>
+
+      <div v-if="editOpen" class="platform-card me-edit-card">
+        <h3>编辑个人资料</h3>
+        <form class="me-edit-form" @submit.prevent="handleSaveProfile">
+          <label>
+            <span>昵称</span>
+            <input v-model.trim="editForm.username" type="text" maxlength="30" placeholder="请输入昵称" />
+          </label>
+          <label>
+            <span>头像链接</span>
+            <input v-model.trim="editForm.avatar" type="url" maxlength="500" placeholder="https://example.com/avatar.jpg" />
+          </label>
+          <label>
+            <span>所在地</span>
+            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：上海·浦东" />
+          </label>
+          <label>
+            <span>个人简介</span>
+            <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
+          </label>
+          <p v-if="saveMessage" :class="['me-save-message', { 'is-error': saveError }]">{{ saveMessage }}</p>
+          <div class="me-edit-actions">
+            <button type="button" class="me-edit-cancel" :disabled="saving" @click="resetEditForm">重置</button>
+            <button type="submit" class="me-edit-submit" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
+          </div>
+        </form>
       </div>
 
       <div class="me-grid">
@@ -75,14 +105,24 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
-import { getUserStatsCached } from '@/api/user.js'
+import { getUserStatsCached, updateProfile } from '@/api/user.js'
 
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
 const unreadCount = ref(0)
+const editOpen = ref(false)
+const saving = ref(false)
+const saveMessage = ref('')
+const saveError = ref(false)
+const editForm = reactive({
+  username: '',
+  avatar: '',
+  location: '',
+  bio: ''
+})
 
 const myContentCount = ref(0)
 const myEventCount = ref(0)
@@ -106,6 +146,58 @@ const verifyLabel = computed(() => {
   if (status === 'rejected') return '认证未过'
   return '账号未认证'
 })
+
+watch(
+  () => user.value,
+  (value) => {
+    editForm.username = value?.username || ''
+    editForm.avatar = value?.avatar || ''
+    editForm.location = value?.location || ''
+    editForm.bio = value?.bio || ''
+  },
+  { immediate: true }
+)
+
+function toggleEdit() {
+  editOpen.value = !editOpen.value
+  saveMessage.value = ''
+  saveError.value = false
+}
+
+function resetEditForm() {
+  editForm.username = user.value?.username || ''
+  editForm.avatar = user.value?.avatar || ''
+  editForm.location = user.value?.location || ''
+  editForm.bio = user.value?.bio || ''
+  saveMessage.value = ''
+  saveError.value = false
+}
+
+async function handleSaveProfile() {
+  saveMessage.value = ''
+  saveError.value = false
+  if (!editForm.username.trim()) {
+    saveError.value = true
+    saveMessage.value = '昵称不能为空'
+    return
+  }
+  saving.value = true
+  try {
+    await updateProfile({
+      username: editForm.username,
+      profilePhoto: editForm.avatar,
+      location: editForm.location,
+      bio: editForm.bio
+    })
+    await userStore.refreshCurrentUser().catch(() => {})
+    saveMessage.value = '资料已更新'
+  } catch (error) {
+    saveError.value = true
+    saveMessage.value = error?.message || '保存失败，请稍后重试'
+  } finally {
+    saving.value = false
+  }
+}
 
 onMounted(async () => {
   if (!user.value) {
@@ -237,6 +329,18 @@ onMounted(async () => {
   font-size: 12px;
 }
 
+.me-edit-btn {
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .me-kpis {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -263,6 +367,79 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.me-edit-card h3 {
+  margin-top: 0;
+}
+
+.me-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.me-edit-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.me-edit-form span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.me-edit-form input,
+.me-edit-form textarea {
+  width: 100%;
+  border: 1px solid #d7e0ed;
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  color: #0f172a;
+  background: #fff;
+}
+
+.me-edit-form textarea {
+  resize: vertical;
+}
+
+.me-save-message {
+  margin: 0;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.me-save-message.is-error {
+  color: #dc2626;
+}
+
+.me-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.me-edit-cancel,
+.me-edit-submit {
+  border: 1px solid #d7e0ed;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.me-edit-cancel {
+  background: #fff;
+  color: #334155;
+}
+
+.me-edit-submit {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
 }
 
 .me-shortcuts {
