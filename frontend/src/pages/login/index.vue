@@ -6,6 +6,7 @@
           <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
           <p class="logo-sub">登录后即可继续你的平台体验</p>
+          <p class="faith-tip">仅限教友注册和登录</p>
         </div>
 
         <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">
@@ -43,6 +44,7 @@
               <van-cell-group inset>
                 <van-field
                   v-model="regForm.username"
+                  :maxlength="USERNAME_MAX_LENGTH"
                   name="username"
                   label="昵称"
                   placeholder="给自己起一个昵称"
@@ -102,6 +104,7 @@ const userStore = useUserStore()
 
 const activeTab = ref(0)
 const loading = ref(false)
+const USERNAME_MAX_LENGTH = 20
 const loginForm = reactive({ phone: '', password: '' })
 const regForm = reactive({ username: '', phone: '', password: '', inviteCode: '' })
 const isFellowshipRoute = computed(() => route.path.startsWith('/fellowship'))
@@ -128,10 +131,15 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  const username = regForm.username.trim()
+  if (username.length > USERNAME_MAX_LENGTH) {
+    showToast({ message: `昵称最多 ${USERNAME_MAX_LENGTH} 个字符`, type: 'fail' })
+    return
+  }
   loading.value = true
   try {
     await userStore.register({
-      username: regForm.username,
+      username,
       phone: regForm.phone,
       password: regForm.password,
       inviteCode: regForm.inviteCode
@@ -197,6 +205,14 @@ async function handleRegister() {
   margin-top: 8px;
   font-size: 14px;
   color: #64748b;
+}
+
+.faith-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e11d48;
+  font-weight: 600;
 }
 
 .login-tabs {

@@ -32,7 +32,7 @@ const tabMap = [
 ]
 
 const active = computed(() => {
-  const idx = tabMap.indexOf(route.path)
+  const idx = tabMap.findIndex((path) => route.path === path || route.path.startsWith(`${path}/`))
   return idx >= 0 ? idx : 0
 })
 

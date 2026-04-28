@@ -4,7 +4,7 @@
 
     <van-form class="form-wrap" @submit="handleSubmit">
       <van-cell-group inset>
-        <van-field v-model="form.nickname" label="昵称" placeholder="请输入昵称" />
+        <van-field v-model="form.nickname" label="昵称" placeholder="请输入昵称（最多20字）" maxlength="20" />
         <van-field
           :model-value="genderLabel"
           label="性别"
@@ -175,8 +175,13 @@ function findCityCodeByName(cityText) {
 }
 
 async function handleSubmit() {
+  const nickname = String(form.nickname || '').trim()
+  if (nickname.length > 20) {
+    showToast({ message: '昵称最多 20 个字符', type: 'fail' })
+    return
+  }
   await store.saveProfile({
-    nickname: form.nickname,
+    nickname,
     gender: form.gender,
     birthYear: form.birthYear ? Number(form.birthYear) : null,
     city: form.city,

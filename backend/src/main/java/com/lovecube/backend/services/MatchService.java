@@ -152,6 +152,21 @@ public class MatchService
      * 获取推荐列表：排除自己、已操作用户和家长账号
      */
     public List<User> getAllUsers(Long currentUserId, Integer gender) {
+        return getAllUsers(currentUserId, gender, null, null, null, false);
+    }
+
+    /**
+     * 获取推荐列表（支持筛选）：默认按当前用户异性过滤
+     */
+    public List<User> getAllUsers(Long currentUserId, Integer gender, Integer minAge, Integer maxAge, String location) {
+        return getAllUsers(currentUserId, gender, minAge, maxAge, location, false);
+    }
+
+    /**
+     * 获取推荐/浏览列表（支持筛选）：默认按当前用户异性过滤。
+     * includeActed=true 时会保留已互动用户，用于“全部异性浏览”场景。
+     */
+    public List<User> getAllUsers(Long currentUserId, Integer gender, Integer minAge, Integer maxAge, String location, Boolean includeActed) {
         User currentUser = userRepository.findById(currentUserId).orElse(null);
         Integer oppositeGender = currentUser == null ? null : getOppositeGender(currentUser.getGender());
         if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
@@ -162,22 +177,29 @@ public class MatchService
         List<Long> actedIds    = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
         List<Long> guardianIds = getGuardianUserIds();
         List<Long> blacklistIds = getBlacklistIds(currentUserId);
+        boolean keepActedUsers = Boolean.TRUE.equals(includeActed);
 
         if (effectiveGender != null) {
             return userRepository.findByGenderAndUseridNot(effectiveGender, currentUserId)
                 .stream()
                 .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
-                .filter(u -> !actedIds.contains(u.getUserid()))
+                .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
                 .filter(u -> !guardianIds.contains(u.getUserid()))
                 .filter(u -> !blacklistIds.contains(u.getUserid()))
+                .filter(u -> minAge == null || (u.getAge() != null && u.getAge() >= minAge))
+                .filter(u -> maxAge == null || (u.getAge() != null && u.getAge() <= maxAge))
+                .filter(u -> location == null || location.isBlank() || (u.getLocation() != null && u.getLocation().contains(location)))
                 .collect(Collectors.toList());
         }
         return userRepository.findByUseridNot(currentUserId)
             .stream()
             .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
-            .filter(u -> !actedIds.contains(u.getUserid()))
+            .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
             .filter(u -> !guardianIds.contains(u.getUserid()))
             .filter(u -> !blacklistIds.contains(u.getUserid()))
+            .filter(u -> minAge == null || (u.getAge() != null && u.getAge() >= minAge))
+            .filter(u -> maxAge == null || (u.getAge() != null && u.getAge() <= maxAge))
+            .filter(u -> location == null || location.isBlank() || (u.getLocation() != null && u.getLocation().contains(location)))
             .collect(Collectors.toList());
     }
 

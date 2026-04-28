@@ -32,16 +32,18 @@ const props = defineProps({
   user: { type: Object, required: true }
 })
 
-const emit = defineEmits(['like', 'dislike', 'superlike'])
+const emit = defineEmits(['like', 'dislike', 'superlike', 'view-profile'])
 
 const THRESHOLD  = 80   // px - 触发 like/dislike 的阈值
 const THRESHOLD_Y = -80  // px - 触发 superlike 的阈值
 
 let startX = 0, startY = 0
+let tapStartAt = 0
 const deltaX = ref(0)
 const deltaY = ref(0)
 const isDragging = ref(false)
 const isFlying   = ref(false)
+const cardEl = ref(null)
 
 const cardStyle = computed(() => {
   if (isFlying.value) return {}  // 飞出时由 flyOut 动画控制
@@ -62,6 +64,7 @@ function onTouchStart(e) {
   const t = e.touches[0]
   startX = t.clientX
   startY = t.clientY
+  tapStartAt = Date.now()
   isDragging.value = true
 }
 
@@ -74,6 +77,16 @@ function onTouchMove(e) {
 
 function onTouchEnd() {
   isDragging.value = false
+  const moveDistance = Math.hypot(deltaX.value, deltaY.value)
+  const touchDuration = Date.now() - tapStartAt
+  const isTap = moveDistance < 12 && touchDuration < 250
+  if (isTap) {
+    deltaX.value = 0
+    deltaY.value = 0
+    emit('view-profile')
+    return
+  }
+
   if (deltaY.value < THRESHOLD_Y && Math.abs(deltaX.value) < THRESHOLD) {
     flyOut(0, -window.innerHeight, 'superlike')
   } else if (deltaX.value > THRESHOLD) {
@@ -91,7 +104,7 @@ function flyOut(tx, ty, action) {
   isFlying.value = true
   const rotate = action === 'like' ? 30 : action === 'dislike' ? -30 : 0
   // 用 CSS transition 飞出
-  const el = document.querySelector('.swipe-card')
+  const el = cardEl.value
   if (el) {
     el.style.transition = 'transform 0.4s ease, opacity 0.4s ease'
     el.style.transform  = `translateX(${tx}px) translateY(${ty}px) rotate(${rotate}deg)`

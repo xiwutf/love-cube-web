@@ -60,7 +60,8 @@ public class UserController {
             unifiedProfileService.updateLegacyProfile(currentUser, profileData);
             return ResponseEntity.ok(Map.of("message", "资料更新成功"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+            HttpStatus status = isAuthError(e.getMessage()) ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "更新失败: " + e.getMessage()));
         }
@@ -137,5 +138,12 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "获取用户信息失败: " + e.getMessage()));
         }
+    }
+
+    private boolean isAuthError(String message) {
+        if (message == null) {
+            return false;
+        }
+        return "未登录".equals(message) || "登录凭证无效".equals(message) || "用户不存在".equals(message);
     }
 }

@@ -6,10 +6,16 @@
         <span class="match-logo-icon">❤</span>
         <span class="match-title">认识</span>
       </div>
-      <button class="filter-btn" @click="showFilter = true">
-        <van-icon name="filter-o" size="18" />
-        <span>筛选</span>
-      </button>
+      <div class="match-header-actions">
+        <button class="header-btn" @click="goAllOppositeUsers">
+          <van-icon name="friends-o" size="18" />
+          <span>查看全部</span>
+        </button>
+        <button class="header-btn" @click="showFilter = true">
+          <van-icon name="filter-o" size="18" />
+          <span>筛选</span>
+        </button>
+      </div>
     </header>
 
     <!-- Card area -->
@@ -30,6 +36,7 @@
             v-if="i === 0"
             :ref="el => topCardRef = el"
             :user="user"
+            @view-profile="goUserProfile(user.userId)"
             @like="onAction('like')"
             @dislike="onAction('dislike')"
             @superlike="onAction('superlike')"
@@ -79,6 +86,20 @@
             <van-radio name="female" icon-size="16">女生</van-radio>
           </van-radio-group>
         </div>
+        <div class="filter-block">
+          <p class="filter-label">地区关键词</p>
+          <van-field
+            v-model="filter.region"
+            placeholder="例如：上海 / 杭州 / 深圳"
+            clearable
+            input-align="left"
+          />
+        </div>
+        <div class="filter-block verify-only">
+          <p class="filter-label">认证过滤</p>
+          <van-switch v-model="filter.verifiedOnly" size="22px" active-color="#FF5F84" />
+          <span class="verify-only-text">仅看已认证用户</span>
+        </div>
         <van-button round block color="#FF5F84" style="margin-top: 8px" @click="applyFilter">
           应用筛选
         </van-button>
@@ -112,7 +133,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import SwipeCard from '@/components/SwipeCard.vue'
-import { filterMatches, getMatchList, likeUser, dislikeUser, superlikeUser } from '@/api/match.js'
+import { getMatchList, likeUser, dislikeUser, superlikeUser } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 
 const router = useRouter()
@@ -121,18 +142,37 @@ const cardStack = ref([])
 const topCardRef = ref(null)
 const showFilter = ref(false)
 const showMatched = ref(false)
+const pager = reactive({
+  page: 1,
+  size: 20,
+  hasMore: true,
+  loadingMore: false
+})
 let matchedUserId = null
 
-const filter = reactive({ ageRange: [18, 40], gender: '' })
+const filter = reactive({
+  ageRange: [18, 40],
+  gender: '',
+  region: '',
+  verifiedOnly: false
+})
 
 async function loadCards() {
   pageLoading.value = true
+  pager.page = 1
+  pager.hasMore = true
   try {
-    const data = await getMatchList({
+    const result = await getMatchList({
       gender: filter.gender,
-      ageRange: filter.ageRange
+      ageRange: filter.ageRange,
+      region: filter.region,
+      verifiedOnly: filter.verifiedOnly,
+      page: pager.page,
+      size: pager.size
     })
-    cardStack.value = (Array.isArray(data) ? data : []).map(normalizeUser)
+    const list = Array.isArray(result?.list) ? result.list : []
+    cardStack.value = list.map(normalizeUser)
+    pager.hasMore = Boolean(result?.hasMore)
   } catch {
     showToast({ message: '加载失败', type: 'fail' })
   } finally {
@@ -160,39 +200,51 @@ async function onAction(action) {
     // ignore and continue browsing
   }
 
-  if (cardStack.value.length <= 2) loadMore()
+  if (cardStack.value.length <= 3) loadMore()
 }
 
 async function loadMore() {
+  if (!pager.hasMore || pager.loadingMore) return
+  pager.loadingMore = true
   try {
-    const data = await getMatchList({
+    const nextPage = pager.page + 1
+    const result = await getMatchList({
       gender: filter.gender,
-      ageRange: filter.ageRange
+      ageRange: filter.ageRange,
+      region: filter.region,
+      verifiedOnly: filter.verifiedOnly,
+      page: nextPage,
+      size: pager.size
     })
-    const items = (Array.isArray(data) ? data : []).map(normalizeUser)
+    const items = (Array.isArray(result?.list) ? result.list : []).map(normalizeUser)
     const existing = new Set(cardStack.value.map(u => u.userId))
     cardStack.value.push(...items.filter(u => !existing.has(u.userId)))
+    pager.page = nextPage
+    pager.hasMore = Boolean(result?.hasMore)
   } catch {
     // ignore
+  } finally {
+    pager.loadingMore = false
   }
 }
 
 async function applyFilter() {
   showFilter.value = false
-  try {
-    const data = await filterMatches({
-      gender: filter.gender,
-      ageRange: filter.ageRange
-    })
-    cardStack.value = (Array.isArray(data) ? data : []).map(normalizeUser)
-  } catch {
-    showToast({ message: '筛选失败', type: 'fail' })
-  }
+  await loadCards()
 }
 
 function goChat() {
   showMatched.value = false
   if (matchedUserId) router.push(`/fellowship/chat/${matchedUserId}`)
+}
+
+function goUserProfile(userId) {
+  if (!userId) return
+  router.push(`/fellowship/user-profile/${userId}`)
+}
+
+function goAllOppositeUsers() {
+  router.push('/fellowship/match/all')
 }
 
 onMounted(loadCards)
@@ -234,7 +286,12 @@ onMounted(loadCards)
   color: #1a2236;
   letter-spacing: -0.01em;
 }
-.filter-btn {
+.match-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-btn {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -400,6 +457,15 @@ onMounted(loadCards)
 .filter-radio-group {
   gap: 12px;
   flex-wrap: wrap;
+}
+.verify-only {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.verify-only-text {
+  font-size: 13px;
+  color: #5b6b8a;
 }
 
 /* 鈹€鈹€ Matched dialog 鈹€鈹€ */

@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class UnifiedProfileService {
+    private static final int NICKNAME_MAX_LENGTH = 20;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final FellowshipProfileRepository legacyFellowshipProfileRepository;
@@ -128,7 +129,7 @@ public class UnifiedProfileService {
         if (payload.containsKey("nickname") || payload.containsKey("username")) {
             String nickname = firstText(payload.get("nickname"), payload.get("username"));
             if (nickname != null) {
-                user.setUsername(nickname);
+                user.setUsername(normalizeNickname(nickname));
             }
         }
         if (payload.containsKey("avatar") || payload.containsKey("profilePhoto")) {
@@ -187,6 +188,7 @@ public class UnifiedProfileService {
                 });
 
         String nickname = getText(payload, "nickname", main.getNickname(), user.getUsername());
+        nickname = normalizeNickname(nickname);
         String gender = normalizeGender(getText(payload, "gender", main.getGender(), fromGenderCode(user.getGender())));
         Integer birthYear = getInteger(payload, "birthYear", legacy.getBirthYear(), user.getBirthDate() == null ? null : user.getBirthDate().getYear());
         Integer age = birthYear == null ? user.getAge() : calcAge(birthYear);
@@ -700,6 +702,17 @@ public class UnifiedProfileService {
 
     private String defaultText(String text, String fallback) {
         return text == null || text.isBlank() ? fallback : text;
+    }
+
+    private String normalizeNickname(String rawNickname) {
+        if (rawNickname == null) {
+            return null;
+        }
+        String nickname = rawNickname.trim();
+        if (nickname.length() > NICKNAME_MAX_LENGTH) {
+            throw new IllegalArgumentException("昵称最多 20 个字符");
+        }
+        return nickname;
     }
 
     private List<String> parsePhotosJson(String photosJson) {

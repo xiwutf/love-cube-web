@@ -57,7 +57,7 @@
         <form class="me-edit-form" @submit.prevent="handleSaveProfile">
           <label>
             <span>昵称</span>
-            <input v-model.trim="editForm.username" type="text" maxlength="30" placeholder="请输入昵称" />
+            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称（最多20字）" />
           </label>
           <label>
             <span>头像</span>
@@ -202,15 +202,21 @@ async function handlePickAvatar() {
 async function handleSaveProfile() {
   saveMessage.value = ''
   saveError.value = false
-  if (!editForm.username.trim()) {
+  const username = editForm.username.trim()
+  if (!username) {
     saveError.value = true
     saveMessage.value = '昵称不能为空'
+    return
+  }
+  if (username.length > 20) {
+    saveError.value = true
+    saveMessage.value = '昵称最多 20 个字符'
     return
   }
   saving.value = true
   try {
     await updateProfile({
-      username: editForm.username,
+      username,
       profilePhoto: editForm.avatar,
       location: editForm.location,
       bio: editForm.bio
@@ -332,9 +338,16 @@ onMounted(async () => {
   font-weight: 800;
 }
 
+.me-meta {
+  min-width: 0;
+}
+
 .me-meta h1 {
   margin: 0;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .me-meta p {

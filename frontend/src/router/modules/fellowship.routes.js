@@ -12,6 +12,7 @@ export default {
     { path: 'me', component: () => import('@/pages/fellowship/MePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
 
     { path: 'search', component: () => import('@/pages/search/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'match/all', component: () => import('@/pages/match/all.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'dynamic', component: () => import('@/pages/dynamic/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile-edit', component: () => import('@/pages/fellowship/ProfileEditPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },

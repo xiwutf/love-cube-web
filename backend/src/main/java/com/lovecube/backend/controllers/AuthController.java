@@ -20,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final int USERNAME_MAX_LENGTH = 20;
     private static final Set<String> BOOTSTRAP_ADMIN_PHONES = Set.of(
             "15030251407"
     );
@@ -85,12 +86,18 @@ public class AuthController {
         String username = body.get("username");
         String inviteCodeRaw = body.get("inviteCode");
         String inviteCode = inviteCodeRaw == null ? "" : inviteCodeRaw.trim().toUpperCase();
+        String normalizedUsername;
 
         if (phone == null || phone.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "手机号不能为空"));
         }
         if (password == null || password.length() < 6) {
             return ResponseEntity.badRequest().body(Map.of("message", "密码至少 6 位"));
+        }
+        try {
+            normalizedUsername = normalizeUsername(username);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         }
         if (userRepository.findByPhoneNumber(phone) != null) {
             return ResponseEntity.badRequest().body(Map.of("message", "该手机号已注册"));
@@ -113,7 +120,7 @@ public class AuthController {
             User user = new User();
             user.setPhoneNumber(phone);
             user.setPasswordHash(passwordEncoder.encode(password));
-            user.setUsername(username != null && !username.isEmpty() ? username : "用户" + phone.substring(phone.length() - 4));
+            user.setUsername(normalizedUsername != null ? normalizedUsername : "用户" + phone.substring(phone.length() - 4));
             user.setOpenid("h5_tmp_" + UUID.randomUUID().toString().replace("-", ""));
             user.setInvitedByUserId(inviter == null ? null : inviter.getUserid());
             user.setRegisterIp(resolveClientIp(request));
@@ -145,6 +152,20 @@ public class AuthController {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "注册失败，请稍后重试"));
         }
+    }
+
+    private String normalizeUsername(String rawUsername) {
+        if (rawUsername == null) {
+            return null;
+        }
+        String username = rawUsername.trim();
+        if (username.isEmpty()) {
+            return null;
+        }
+        if (username.length() > USERNAME_MAX_LENGTH) {
+            throw new IllegalArgumentException("昵称最多 20 个字符");
+        }
+        return username;
     }
 
     private boolean isBootstrapAdmin(String phone) {

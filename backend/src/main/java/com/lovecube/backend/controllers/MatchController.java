@@ -32,18 +32,42 @@ public class MatchController {
     @GetMapping("/list")
     public ResponseEntity<?> getUserList(
             @RequestHeader("Authorization") String token,
-            @RequestParam(required = false) Integer gender) {
+            @RequestParam(required = false) Integer gender,
+            @RequestParam(required = false) Integer minAge,
+            @RequestParam(required = false) Integer maxAge,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Boolean verifiedOnly,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeActed,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
         try {
             Long currentUserId = matchService.getCurrentUserId(token);
             if (currentUserId == null) {
                 return ResponseEntity.badRequest().body("无效的用户Token");
             }
 
-            List<User> users = matchService.getAllUsers(currentUserId, gender);
-            List<Long> userIds = users.stream().map(User::getUserid).collect(Collectors.toList());
+            int safePage = page == null || page < 1 ? 1 : page;
+            int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 50);
+
+            List<User> users = matchService.getAllUsers(currentUserId, gender, minAge, maxAge, location, includeActed);
+            if (Boolean.TRUE.equals(verifiedOnly) && !users.isEmpty()) {
+                List<Long> allUserIds = users.stream().map(User::getUserid).collect(Collectors.toList());
+                Map<Long, Map<String, Boolean>> allVerifyMap = verificationService.getBatchSummary(allUserIds);
+                users = users.stream().filter(u -> {
+                    Map<String, Boolean> badges = allVerifyMap.getOrDefault(u.getUserid(), Map.of());
+                    boolean photoVerified = badges.getOrDefault("photoVerified", false);
+                    boolean realnameVerified = badges.getOrDefault("realnameVerified", false);
+                    return photoVerified || realnameVerified;
+                }).collect(Collectors.toList());
+            }
+            int total = users.size();
+            int fromIndex = Math.min((safePage - 1) * safeSize, total);
+            int toIndex = Math.min(fromIndex + safeSize, total);
+            List<User> pageUsers = users.subList(fromIndex, toIndex);
+            List<Long> userIds = pageUsers.stream().map(User::getUserid).collect(Collectors.toList());
             Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
 
-            List<Map<String, Object>> enriched = users.stream().map(u -> {
+            List<Map<String, Object>> enriched = pageUsers.stream().map(u -> {
                 Map<String, Object> payload = unifiedProfileService.buildLegacyUserPayload(u);
                 Map<String, Boolean> badges = verifyMap.getOrDefault(u.getUserid(), Map.of());
                 payload.put("photoVerified",    badges.getOrDefault("photoVerified",    false));
@@ -54,6 +78,10 @@ public class MatchController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("data", enriched);
+            response.put("page", safePage);
+            response.put("size", safeSize);
+            response.put("total", total);
+            response.put("hasMore", toIndex < total);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -74,9 +102,12 @@ public class MatchController {
 
             Integer minAge = null;
             Integer maxAge = null;
-            if (filters.containsKey("ageRange") && filters.get("ageRange") instanceof List) {
-                List<Integer> ageRange = (List<Integer>) filters.get("ageRange");
-                if (ageRange.size() == 2) { minAge = ageRange.get(0); maxAge = ageRange.get(1); }
+            if (filters.containsKey("ageRange") && filters.get("ageRange") instanceof List<?>) {
+                List<?> ageRange = (List<?>) filters.get("ageRange");
+                if (ageRange.size() == 2 && ageRange.get(0) instanceof Number && ageRange.get(1) instanceof Number) {
+                    minAge = ((Number) ageRange.get(0)).intValue();
+                    maxAge = ((Number) ageRange.get(1)).intValue();
+                }
             }
             Integer gender = filters.get("gender") != null
                 ? Integer.parseInt(filters.get("gender").toString()) : null;
