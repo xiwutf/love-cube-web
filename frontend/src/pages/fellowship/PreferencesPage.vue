@@ -5,7 +5,7 @@
     <van-form class="form-wrap" @submit="handleSave">
       <van-cell-group inset>
         <van-field
-          :model-value="`${form.minAge} - ${form.maxAge} 宀乣`"
+          :model-value="`${form.minAge} - ${form.maxAge} 岁`"
           label="年龄范围"
           readonly
           is-link
@@ -34,7 +34,7 @@
         />
         <van-field
           :model-value="form.marriagePlan"
-          label="濠氭亱瑙勫垝"
+          label="婚恋规划"
           readonly
           is-link
           @click="showPlanPicker = true"
@@ -70,7 +70,7 @@
     <van-popup v-model:show="showAgePicker" position="bottom" round>
       <div class="age-popup">
         <h3>选择年龄范围</h3>
-        <p>{{ form.minAge }} - {{ form.maxAge }} 宀</p>
+        <p>{{ form.minAge }} - {{ form.maxAge }} 岁</p>
         <van-slider v-model="ageRange" range :min="18" :max="60" bar-height="4" active-color="#ff5f84" />
         <van-button round block type="primary" @click="confirmAgeRange">确定</van-button>
       </div>
@@ -93,8 +93,8 @@ const form = reactive({
   maxAge: Number(saved.maxAge || 32),
   gender: saved.gender || 'female',
   city: saved.city || '',
-  education: saved.education || '涓嶉檺',
-  marriagePlan: saved.marriagePlan || '丢年内考虑',
+  education: saved.education || '不限',
+  marriagePlan: saved.marriagePlan || '一年内考虑',
   note: saved.note || ''
 })
 
@@ -105,26 +105,26 @@ const showEducationPicker = ref(false)
 const showPlanPicker = ref(false)
 
 const genderOptions = [
-  { text: '涓嶉檺', value: 'any' },
+  { text: '不限', value: 'any' },
   { text: '男生', value: 'male' },
-  { text: '濂崇敓', value: 'female' }
+  { text: '女生', value: 'female' }
 ]
 const educationOptions = [
-  { text: '涓嶉檺', value: '涓嶉檺' },
+  { text: '不限', value: '不限' },
   { text: '大专及以上', value: '大专及以上' },
   { text: '本科及以上', value: '本科及以上' },
   { text: '硕士及以上', value: '硕士及以上' }
 ]
 const planOptions = [
-  { text: '半年内虑', value: '半年内虑' },
-  { text: '丢年内考虑', value: '丢年内考虑' },
-  { text: '两年内虑', value: '两年内虑' },
+  { text: '半年内考虑', value: '半年内考虑' },
+  { text: '一年内考虑', value: '一年内考虑' },
+  { text: '两年内考虑', value: '两年内考虑' },
   { text: '先了解再决定', value: '先了解再决定' }
 ]
 
 const genderLabel = computed(() => {
-  const map = { any: '涓嶉檺', male: '男生', female: '濂崇敓' }
-  return map[form.gender] || '涓嶉檺'
+  const map = { any: '不限', male: '男生', female: '女生' }
+  return map[form.gender] || '不限'
 })
 
 function onGenderConfirm({ selectedValues }) {

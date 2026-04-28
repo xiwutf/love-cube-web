@@ -121,10 +121,10 @@ async function handleLogin() {
   loading.value = true
   try {
     await userStore.login({ phone: loginForm.phone, password: loginForm.password })
-    showToast({ message: '¼ɹӭ', type: 'success' })
+    showToast({ message: '登录成功，欢迎回来', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
-    showToast({ message: err.message || '¼ʧܣԺ', type: 'fail' })
+    showToast({ message: err.message || '登录失败，请稍后重试', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -144,12 +144,12 @@ async function handleRegister() {
       password: regForm.password,
       inviteCode: regForm.inviteCode
     })
-    showToast({ message: 'עɹӭ?Love Cube', type: 'success' })
+    showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: 'һʲô',
-      confirmButtonText: 'ȥ',
-      cancelButtonText: 'ȥģ'
+      message: '是否立即完善资料？',
+      confirmButtonText: '去完善',
+      cancelButtonText: '去首页'
     })
     router.replace('/fellowship/profile/edit')
   } catch (err) {
@@ -157,7 +157,7 @@ async function handleRegister() {
       router.replace('/fellowship')
       return
     }
-    showToast({ message: err.message || 'עʧܣԺ', type: 'fail' })
+    showToast({ message: err.message || '注册失败，请稍后重试', type: 'fail' })
   } finally {
     loading.value = false
   }

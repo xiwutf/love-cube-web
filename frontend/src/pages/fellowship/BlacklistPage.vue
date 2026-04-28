@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="blacklist-page">
-    <NavBar title="榛戝悕鍗" />
+    <NavBar title="黑名单" />
 
     <div v-if="loading" class="page-loading">
       <van-loading type="spinner" color="#FF6B8A" />
@@ -31,11 +31,11 @@
             :loading="removing === item.blockedUserId"
             @click="remove(item.blockedUserId)"
           >
-            瑙ｉ櫎鎷夐粦
+            解除拉黑
           </van-button>
         </article>
       </template>
-      <van-empty v-else description="榛戝悕鍗曚负绌" />
+      <van-empty v-else description="黑名单为空" />
     </section>
   </div>
 </template>
@@ -67,7 +67,7 @@ async function remove(userId) {
     list.value = list.value.filter(item => item.blockedUserId !== userId)
     showToast({ type: 'success', message: '已解除拉黑' })
   } catch {
-    showToast({ message: 'ʧܣ', type: 'fail' })
+    showToast({ message: '操作失败，请稍后重试', type: 'fail' })
   } finally {
     removing.value = null
   }
