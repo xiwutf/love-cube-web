@@ -56,6 +56,11 @@ public class MatchService
         // 获取当前用户
         User currentUser = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+        Integer oppositeGender = getOppositeGender(currentUser.getGender());
+        if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
+            return new ArrayList<>();
+        }
+        Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 
         // 构建查询条件
         List<User> potentialMatches = userRepository.findAll().stream()
@@ -63,7 +68,7 @@ public class MatchService
             .filter(user -> !"DISABLED".equalsIgnoreCase(user.getUserStatus()))
             .filter(user -> minAge == null || user.getAge() >= minAge)
             .filter(user -> maxAge == null || user.getAge() <= maxAge)
-            .filter(user -> gender == null || user.getGender().equals(gender))
+            .filter(user -> effectiveGender == null || user.getGender().equals(effectiveGender))
             .filter(user -> location == null || user.getLocation().contains(location))
             .collect(Collectors.toList());
 
@@ -147,12 +152,19 @@ public class MatchService
      * 获取推荐列表：排除自己、已操作用户和家长账号
      */
     public List<User> getAllUsers(Long currentUserId, Integer gender) {
+        User currentUser = userRepository.findById(currentUserId).orElse(null);
+        Integer oppositeGender = currentUser == null ? null : getOppositeGender(currentUser.getGender());
+        if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
+            return new ArrayList<>();
+        }
+        Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
+
         List<Long> actedIds    = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
         List<Long> guardianIds = getGuardianUserIds();
         List<Long> blacklistIds = getBlacklistIds(currentUserId);
 
-        if (gender != null) {
-            return userRepository.findByGenderAndUseridNot(gender, currentUserId)
+        if (effectiveGender != null) {
+            return userRepository.findByGenderAndUseridNot(effectiveGender, currentUserId)
                 .stream()
                 .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
                 .filter(u -> !actedIds.contains(u.getUserid()))
@@ -167,6 +179,13 @@ public class MatchService
             .filter(u -> !guardianIds.contains(u.getUserid()))
             .filter(u -> !blacklistIds.contains(u.getUserid()))
             .collect(Collectors.toList());
+    }
+
+    private Integer getOppositeGender(Integer gender) {
+        if (gender == null) return null;
+        if (gender.equals(1)) return 2;
+        if (gender.equals(2)) return 1;
+        return null;
     }
 
     private List<Long> getBlacklistIds(Long userId) {

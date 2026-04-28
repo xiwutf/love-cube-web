@@ -15,7 +15,7 @@
         <div class="intro-actions">
           <router-link to="/fellowship" class="intro-btn intro-btn-primary">进入联谊模块</router-link>
           <router-link to="/fellowship/profile/edit" class="intro-btn intro-btn-ghost">完善资料</router-link>
-          <router-link to="/policies/content-policy" class="intro-btn intro-btn-rule">浜嗚В瑙勫垯</router-link>
+          <router-link to="/policies/content-policy" class="intro-btn intro-btn-rule">了解规则</router-link>
         </div>
       </div>
 

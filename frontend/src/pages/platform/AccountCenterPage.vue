@@ -60,8 +60,17 @@
             <input v-model.trim="editForm.username" type="text" maxlength="30" placeholder="请输入昵称" />
           </label>
           <label>
-            <span>头像链接</span>
-            <input v-model.trim="editForm.avatar" type="url" maxlength="500" placeholder="https://example.com/avatar.jpg" />
+            <span>头像</span>
+            <div class="me-avatar-uploader">
+              <img v-if="editForm.avatar" :src="editForm.avatar" class="me-avatar-upload-preview" alt="头像预览" />
+              <div v-else class="me-avatar-upload-preview me-avatar-upload-fallback">{{ avatarFallback }}</div>
+              <div class="me-avatar-upload-actions">
+                <button type="button" class="me-avatar-upload-btn" :disabled="uploading || saving" @click="handlePickAvatar">
+                  {{ uploading ? '上传中...' : '选择图片' }}
+                </button>
+                <p class="me-avatar-upload-tip">支持常见图片格式，选择后自动上传并填充头像</p>
+              </div>
+            </div>
           </label>
           <label>
             <span>所在地</span>
@@ -109,6 +118,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
+import { useImageUpload } from '@/composables/useImageUpload.js'
 
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
@@ -117,6 +127,7 @@ const editOpen = ref(false)
 const saving = ref(false)
 const saveMessage = ref('')
 const saveError = ref(false)
+const { pickAndUpload, uploading } = useImageUpload()
 const editForm = reactive({
   username: '',
   avatar: '',
@@ -171,6 +182,21 @@ function resetEditForm() {
   editForm.bio = user.value?.bio || ''
   saveMessage.value = ''
   saveError.value = false
+}
+
+async function handlePickAvatar() {
+  saveMessage.value = ''
+  saveError.value = false
+  try {
+    const avatarUrl = await pickAndUpload({ quality: 0.8 })
+    if (!avatarUrl) {
+      throw new Error('上传失败，请重试')
+    }
+    editForm.avatar = avatarUrl
+  } catch (error) {
+    saveError.value = true
+    saveMessage.value = error?.message || '头像上传失败，请稍后重试'
+  }
 }
 
 async function handleSaveProfile() {
@@ -402,6 +428,58 @@ onMounted(async () => {
 
 .me-edit-form textarea {
   resize: vertical;
+}
+
+.me-avatar-uploader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.me-avatar-upload-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #d7e0ed;
+}
+
+.me-avatar-upload-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.me-avatar-upload-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.me-avatar-upload-btn {
+  width: fit-content;
+  border: 1px solid #d7e0ed;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.me-avatar-upload-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.me-avatar-upload-tip {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .me-save-message {
