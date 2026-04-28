@@ -57,7 +57,7 @@
             <div class="co-creation-copy">
               <p class="co-creation-kicker">LOVE CUBE CO-CREATION</p>
               <h2 id="co-creation-title">帮我们做得更好</h2>
-              <p class="co-creation-subtitle">你的建议，将帮助我们打造更优质的体验和服务</p>
+              <p class="co-creation-subtitle">没有大公司的流程限制，只要合理、好用、合法合规，很多想法都能快速实现。</p>
             </div>
             <div class="survey-illustration" aria-hidden="true"><span class="survey-orbit"></span><span class="survey-clipboard"><i></i><b></b><b></b><b></b></span><span class="survey-pencil"></span><span class="survey-heart"></span></div>
           </header>
@@ -68,9 +68,10 @@
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">3</span><h3>你觉得目前网站最需要改进什么?</h3><em>单选</em></div><label class="survey-select"><select v-model="coCreationForm.improvement" required><option value="" disabled>请选择当前最需要改进的选项</option><option v-for="item in improvementOptions" :key="item" :value="item">{{ item }}</option></select></label></div>
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">4</span><h3>你最希望网站新增什么功能?</h3><em>必填</em></div><label class="survey-textarea"><textarea v-model.trim="coCreationForm.featureSuggestion" rows="4" maxlength="200" required placeholder="例如：私信聊天、同城活动、AI助手、内容投稿、认证体系、更多本地服务等。"></textarea><span>{{ featureSuggestionCount }}/200</span></label></div>
             <div class="survey-question"><div class="survey-question-title"><span class="survey-number">5</span><h3>你还有其他想说的吗?</h3><em>选填</em></div><label class="survey-textarea"><textarea v-model.trim="coCreationForm.extraComment" rows="3" maxlength="200" placeholder="可以写下你对网站的想法、吐槽、建议或创意。"></textarea><span>{{ extraCommentCount }}/200</span></label></div>
+            <div class="survey-question"><div class="survey-question-title"><span class="survey-number">6</span><h3>如果你愿意，也可以留下联系方式</h3><em>选填</em></div><label class="survey-contact"><input v-model.trim="coCreationForm.contact" type="text" maxlength="60" placeholder="可填写微信号、手机号或邮箱，方便我们联系你"></label></div>
             <p v-if="coCreationMessage" class="co-creation-message" :class="{ 'is-error': coCreationError }">{{ coCreationMessage }}</p>
             <button class="co-creation-submit" type="submit" :disabled="coCreationSubmitting">{{ coCreationSubmitting ? '提交中...' : '提交反馈' }}</button>
-            <p class="co-creation-privacy">感谢你的反馈，我们会认真对待每一条建议</p>
+            <p class="co-creation-privacy">你也可以留下联系方式；若想直接联系我，可加微信：LinXi-5152。</p>
           </form>
         </section>
       </div>
@@ -828,6 +829,7 @@ onBeforeUnmount(() => {
 }
 
 .survey-select select,
+.survey-contact input,
 .survey-textarea textarea {
   width: 100%;
   border: 1px solid #d8e1ee;
@@ -853,6 +855,17 @@ onBeforeUnmount(() => {
   display: block;
 }
 
+.survey-contact {
+  display: block;
+}
+
+.survey-contact input {
+  height: 64px;
+  padding: 0 20px;
+  color: #41516c;
+  font-size: 18px;
+}
+
 .survey-textarea textarea {
   min-height: 142px;
   padding: 20px 20px 42px;
@@ -872,6 +885,7 @@ onBeforeUnmount(() => {
 }
 
 .survey-select select:focus,
+.survey-contact input:focus,
 .survey-textarea textarea:focus {
   border-color: #8bb5ff;
   background: var(--lc-surface);
@@ -1287,6 +1301,11 @@ onBeforeUnmount(() => {
   }
 
   .survey-select select {
+    height: 52px;
+    font-size: 15px;
+  }
+
+  .survey-contact input {
     height: 52px;
     font-size: 15px;
   }

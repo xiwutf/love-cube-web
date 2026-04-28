@@ -315,6 +315,8 @@ public class AdminContentController {
         adminAuthService.requireAdmin(authHeader);
         List<UserFeedback> feedbacks = userFeedbackRepository.findAllByOrderByCreatedAtDesc();
         Map<String, Long> moduleCount = new HashMap<>();
+        Map<String, Long> goalCount = new HashMap<>();
+        Map<String, Long> improvementCount = new HashMap<>();
         long total = feedbacks.size();
         for (UserFeedback feedback : feedbacks) {
             String module = extractField(feedback.getContent(), "Q1-最关注模块：");
@@ -322,22 +324,35 @@ public class AdminContentController {
                 module = "未填写";
             }
             moduleCount.put(module, moduleCount.getOrDefault(module, 0L) + 1);
+
+            String goals = extractField(feedback.getContent(), "Q2-来站目标：");
+            if (goals.isBlank()) {
+                goalCount.put("未填写", goalCount.getOrDefault("未填写", 0L) + 1);
+            } else {
+                for (String goal : splitMultiOptions(goals)) {
+                    goalCount.put(goal, goalCount.getOrDefault(goal, 0L) + 1);
+                }
+            }
+
+            String improvement = extractField(feedback.getContent(), "Q3-最需要改进：");
+            if (improvement.isBlank()) {
+                improvement = extractField(feedback.getContent(), "Q3-当前最缺：");
+            }
+            if (improvement.isBlank()) {
+                improvement = "未填写";
+            }
+            improvementCount.put(improvement, improvementCount.getOrDefault(improvement, 0L) + 1);
         }
 
-        List<Map<String, Object>> ranking = moduleCount.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
-                .map(entry -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("module", entry.getKey());
-                    item.put("count", entry.getValue());
-                    item.put("percent", total <= 0 ? 0 : Math.round(entry.getValue() * 10000.0 / total) / 100.0);
-                    return item;
-                })
-                .collect(Collectors.toList());
+        List<Map<String, Object>> moduleRanking = buildRanking(moduleCount, total, "module");
+        List<Map<String, Object>> goalRanking = buildRanking(goalCount, total, "goal");
+        List<Map<String, Object>> improvementRanking = buildRanking(improvementCount, total, "improvement");
 
         Map<String, Object> result = new HashMap<>();
         result.put("total", total);
-        result.put("moduleRanking", ranking);
+        result.put("moduleRanking", moduleRanking);
+        result.put("goalRanking", goalRanking);
+        result.put("improvementRanking", improvementRanking);
         return result;
     }
 
@@ -735,6 +750,30 @@ public class AdminContentController {
             }
         }
         return "";
+    }
+
+    private List<String> splitMultiOptions(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of("未填写");
+        }
+        List<String> options = List.of(value.split("[、,，/；;|]")).stream()
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toList());
+        return options.isEmpty() ? List.of("未填写") : options;
+    }
+
+    private List<Map<String, Object>> buildRanking(Map<String, Long> source, long total, String keyName) {
+        return source.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .map(entry -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put(keyName, entry.getKey());
+                    item.put("count", entry.getValue());
+                    item.put("percent", total <= 0 ? 0 : Math.round(entry.getValue() * 10000.0 / total) / 100.0);
+                    return item;
+                })
+                .collect(Collectors.toList());
     }
 
     private String normalizeRoleForView(String role, boolean isAdminFallback) {

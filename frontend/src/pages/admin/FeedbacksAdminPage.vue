@@ -11,10 +11,53 @@
     <section v-if="!loading && !error" class="platform-card summary-card">
       <h2 class="platform-title">问卷统计概览</h2>
       <p class="platform-subtitle">总样本 {{ summary.total }} 份</p>
-      <div v-if="summary.moduleRanking.length" class="summary-list">
-        <div v-for="item in summary.moduleRanking" :key="item.module" class="summary-item">
-          <span>{{ item.module }}</span>
-          <span>{{ item.percent }}%（{{ item.count }}）</span>
+      <div v-if="summary.total > 0" class="summary-grid">
+        <div class="summary-panel">
+          <h3>Q1 最关注模块</h3>
+          <div v-if="summary.moduleRanking.length" class="summary-list">
+            <div v-for="item in summary.moduleRanking" :key="`module-${item.module}`" class="summary-item">
+              <div class="summary-item-head">
+                <span class="summary-label">{{ item.module }}</span>
+                <span class="summary-value">{{ item.percent }}%（{{ item.count }}）</span>
+              </div>
+              <div class="summary-bar">
+                <span class="summary-bar-fill" :style="{ width: `${item.percent}%` }" />
+              </div>
+            </div>
+          </div>
+          <p v-else class="admin-row-meta">暂无可用统计数据</p>
+        </div>
+
+        <div class="summary-panel">
+          <h3>Q2 来站目标（多选）</h3>
+          <div v-if="summary.goalRanking.length" class="summary-list">
+            <div v-for="item in summary.goalRanking" :key="`goal-${item.goal}`" class="summary-item">
+              <div class="summary-item-head">
+                <span class="summary-label">{{ item.goal }}</span>
+                <span class="summary-value">{{ item.percent }}%（{{ item.count }}）</span>
+              </div>
+              <div class="summary-bar">
+                <span class="summary-bar-fill goal" :style="{ width: `${item.percent}%` }" />
+              </div>
+            </div>
+          </div>
+          <p v-else class="admin-row-meta">暂无可用统计数据</p>
+        </div>
+
+        <div class="summary-panel">
+          <h3>Q3 最需要改进</h3>
+          <div v-if="summary.improvementRanking.length" class="summary-list">
+            <div v-for="item in summary.improvementRanking" :key="`improvement-${item.improvement}`" class="summary-item">
+              <div class="summary-item-head">
+                <span class="summary-label">{{ item.improvement }}</span>
+                <span class="summary-value">{{ item.percent }}%（{{ item.count }}）</span>
+              </div>
+              <div class="summary-bar">
+                <span class="summary-bar-fill improvement" :style="{ width: `${item.percent}%` }" />
+              </div>
+            </div>
+          </div>
+          <p v-else class="admin-row-meta">暂无可用统计数据</p>
         </div>
       </div>
       <p v-else class="admin-row-meta">暂无可用统计数据</p>
@@ -91,7 +134,9 @@ const error = ref('')
 const items = ref([])
 const summary = ref({
   total: 0,
-  moduleRanking: []
+  moduleRanking: [],
+  goalRanking: [],
+  improvementRanking: []
 })
 
 async function load() {
@@ -100,12 +145,14 @@ async function load() {
   try {
     const [feedbackList, feedbackSummary] = await Promise.all([
       getFeedbacks(),
-      getFeedbackSummary().catch(() => ({ total: 0, moduleRanking: [] }))
+      getFeedbackSummary().catch(() => ({ total: 0, moduleRanking: [], goalRanking: [], improvementRanking: [] }))
     ])
     items.value = Array.isArray(feedbackList) ? feedbackList : []
     summary.value = {
       total: Number(feedbackSummary?.total || 0),
-      moduleRanking: Array.isArray(feedbackSummary?.moduleRanking) ? feedbackSummary.moduleRanking : []
+      moduleRanking: Array.isArray(feedbackSummary?.moduleRanking) ? feedbackSummary.moduleRanking : [],
+      goalRanking: Array.isArray(feedbackSummary?.goalRanking) ? feedbackSummary.goalRanking : [],
+      improvementRanking: Array.isArray(feedbackSummary?.improvementRanking) ? feedbackSummary.improvementRanking : []
     }
   } catch (e) {
     error.value = e.message || '加载失败'
@@ -153,20 +200,72 @@ onMounted(load)
   margin-bottom: 12px;
 }
 
-.summary-list {
+.summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.summary-panel {
+  border: 1px solid #eceff5;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.summary-panel h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #1f2a44;
+}
+
+.summary-list {
   gap: 8px;
+  display: grid;
 }
 
 .summary-item {
-  border: 1px solid #eceff5;
   border-radius: 10px;
-  background: #fafbfe;
-  padding: 8px 10px;
+  background: #f8faff;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.summary-item-head {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.summary-label {
+  color: #2b3a55;
+}
+
+.summary-value {
+  color: #51607d;
+  white-space: nowrap;
+}
+
+.summary-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #e6edf8;
+  overflow: hidden;
+}
+
+.summary-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.summary-bar-fill.goal {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.summary-bar-fill.improvement {
+  background: linear-gradient(90deg, #10b981, #34d399);
 }
 </style>
 
