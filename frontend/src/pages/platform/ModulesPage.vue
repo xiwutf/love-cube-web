@@ -70,6 +70,7 @@
               <span class="side-manage">管理</span>
             </div>
             <router-link class="side-link" to="/fellowship">联谊交友</router-link>
+            <router-link class="side-link" to="/platform/positive-share">每日心声</router-link>
             <router-link class="side-link" to="/events">活动中心</router-link>
             <router-link class="side-link" to="/articles">内容资讯</router-link>
             <router-link class="side-link" to="/announcements">公告通知</router-link>
@@ -119,6 +120,17 @@ const defaultModules = [
     sort:        1
   },
   {
+    moduleKey:   'positive-share',
+    name:        '每日心声',
+    description: '发布正能量想法、感恩与成长感悟，传递温暖鼓励',
+    status:      'active',
+    entryRoute:  '/platform/positive-share',
+    icon:        ICONS.heart,
+    iconBg:      '#fff0f4',
+    color:       '#ec4899',
+    sort:        2
+  },
+  {
     moduleKey:   'events',
     name:        '活动中心',
     description: '平台活动、线下聚会主题活动展示与报名',
@@ -127,7 +139,7 @@ const defaultModules = [
     icon:        ICONS.calendar,
     iconBg:      '#eff6ff',
     color:       '#1f4fd8',
-    sort:        2
+    sort:        3
   },
   {
     moduleKey:   'articles',
@@ -138,7 +150,7 @@ const defaultModules = [
     icon:        ICONS.article,
     iconBg:      '#f0fdf4',
     color:       '#059669',
-    sort:        3
+    sort:        4
   },
   {
     moduleKey:   'announcements',
@@ -149,7 +161,7 @@ const defaultModules = [
     icon:        ICONS.bell,
     iconBg:      '#ecfeff',
     color:       '#0891b2',
-    sort:        4
+    sort:        5
   },
   {
     moduleKey:   'local-services',
@@ -160,7 +172,7 @@ const defaultModules = [
     icon:        ICONS.map,
     iconBg:      '#fffbeb',
     color:       '#d97706',
-    sort:        5
+    sort:        6
   },
   {
     moduleKey:   'ai-tools',
@@ -171,12 +183,13 @@ const defaultModules = [
     icon:        ICONS.robot,
     iconBg:      '#f5f3ff',
     color:       '#7c3aed',
-    sort:        6
+    sort:        7
   }
 ]
 
 const moduleIconByKey = {
   fellowship: ICONS.heart,
+  'positive-share': ICONS.heart,
   events: ICONS.calendar,
   articles: ICONS.article,
   announcements: ICONS.bell,

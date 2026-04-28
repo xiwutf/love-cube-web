@@ -78,7 +78,7 @@
       </div>
     </transition>
 
-    <nav class="mobile-quick-nav"><router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link><router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link><router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">内容</router-link><router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link><router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊</router-link></nav>
+    <nav class="mobile-quick-nav"><router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link><router-link to="/platform/positive-share" :class="{ 'is-active': isActive('/platform/positive-share') }">每日心声</router-link><router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link><router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">内容</router-link><router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link><router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊</router-link></nav>
 
     <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
@@ -133,6 +133,7 @@ const usageIssueCount = computed(() => coCreationForm.value.usageIssue.length)
 
 const navItems = [
   { to: '/', label: '首页' },
+  { to: '/platform/positive-share', label: '每日心声' },
   { to: '/modules', label: '模块中心' },
   { to: '/announcements', label: '平台动态' },
   { to: '/articles', label: '精选内容' },

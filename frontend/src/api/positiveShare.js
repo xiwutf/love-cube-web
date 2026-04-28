@@ -1,0 +1,29 @@
+import request from './request.js'
+
+export function createPositiveShare(payload) {
+  return request.post('/positive-shares', payload)
+}
+
+export function fetchPositiveShares(params = {}) {
+  return request.get('/positive-shares', { params })
+}
+
+export function fetchMyPositiveShares(params = {}) {
+  return request.get('/positive-shares/my', { params })
+}
+
+export function likePositiveShare(id) {
+  return request.post(`/positive-shares/${id}/like`)
+}
+
+export function unlikePositiveShare(id) {
+  return request.delete(`/positive-shares/${id}/like`)
+}
+
+export function commentPositiveShare(id, payload) {
+  return request.post(`/positive-shares/${id}/comments`, payload)
+}
+
+export function fetchPositiveShareComments(id, params = {}) {
+  return request.get(`/positive-shares/${id}/comments`, { params })
+}

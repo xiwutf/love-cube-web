@@ -6,6 +6,7 @@ export default {
     { path: '', component: () => import('@/pages/admin/DashboardPage.vue'), meta: { module: 'admin' } },
     { path: 'announcements', component: () => import('@/pages/admin/AnnouncementsAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'articles', component: () => import('@/pages/admin/ArticlesAdminPage.vue'), meta: { module: 'admin' } },
+    { path: 'positive-shares', component: () => import('@/pages/admin/PositiveSharesAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'events', component: () => import('@/pages/admin/EventsAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'users', component: () => import('@/pages/admin/UsersAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'invites', component: () => import('@/pages/admin/InvitesAdminPage.vue'), meta: { module: 'admin' } },

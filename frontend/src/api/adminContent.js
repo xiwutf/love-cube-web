@@ -122,3 +122,20 @@ export async function saveAdminModuleConfig(modules) {
     modules: Array.isArray(modules) ? modules : []
   })
 }
+
+// Positive shares
+export function getAdminPositiveShares(params = {}) {
+  return request.get('/admin/positive-shares', { params })
+}
+
+export function reviewAdminPositiveShare(id, status) {
+  return request.patch(`/admin/positive-shares/${id}/review`, { status })
+}
+
+export function batchReviewAdminPositiveShare(ids, status) {
+  return request.patch('/admin/positive-shares/batch-review', { ids, status })
+}
+
+export function getAdminPositiveShareComments(id, params = {}) {
+  return request.get(`/admin/positive-shares/${id}/comments`, { params })
+}

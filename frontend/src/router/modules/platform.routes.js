@@ -18,6 +18,7 @@ export default {
     { path: 'about', component: () => import('@/pages/platform/AboutPage.vue'), meta: { module: 'platform' } },
     { path: 'fellowship-intro', component: () => import('@/pages/platform/FellowshipIntroPage.vue'), meta: { module: 'platform' } },
     { path: 'modules', component: () => import('@/pages/platform/ModulesPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/positive-share', component: () => import('@/pages/platform/PositiveSharePage.vue'), meta: { module: 'platform' } },
     { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue'), meta: { module: 'platform' } }
   ]
 }

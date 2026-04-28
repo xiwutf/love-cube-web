@@ -9,6 +9,7 @@
           <span v-if="unreadCount > 0" class="me-dot">{{ unreadCount }}</span>
         </router-link>
         <router-link to="/articles" class="me-menu-item">我的内容</router-link>
+        <router-link to="/platform/positive-share" class="me-menu-item">我的每日心声</router-link>
         <router-link to="/events" class="me-menu-item">我的活动</router-link>
         <router-link to="/modules" class="me-menu-item">模块入口</router-link>
         <router-link to="/about" class="me-menu-item">平台设置</router-link>
@@ -93,6 +94,7 @@
           <h3>我的模块</h3>
           <div class="me-shortcuts">
             <router-link to="/modules">模块中心</router-link>
+            <router-link to="/platform/positive-share">我的每日心声</router-link>
             <router-link to="/fellowship">联谊模块入口</router-link>
             <router-link to="/announcements">平台动</router-link>
             <router-link to="/articles">精内</router-link>

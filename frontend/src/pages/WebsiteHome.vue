@@ -133,7 +133,7 @@ const proofAvatars = ['溪', '光', '甜', '风']
 
 const defaultPlatformModules = [
   { moduleKey: 'fellowship', title: '联谊交友', desc: '寻找心动的 TA', to: '/fellowship', status: 'active', icon: '❤', tone: 'tone-pink', sortOrder: 1 },
-  { moduleKey: 'dynamic', title: '动态社区', desc: '分享生活，结识朋友', to: '/fellowship/dynamic', status: 'active', icon: '●', tone: 'tone-violet', sortOrder: 2 },
+  { moduleKey: 'positive-share', title: '每日心声', desc: '分享感恩和成长思考', to: '/platform/positive-share', status: 'active', icon: '暖', tone: 'tone-pink', sortOrder: 2 },
   { moduleKey: 'ai-tools', title: 'AI 工具', desc: '智能工具，提升效率', to: '/modules', status: 'planned', icon: 'AI', tone: 'tone-blue', sortOrder: 3 },
   { moduleKey: 'announcements', title: '公告通知', desc: '及时获取重要通知', to: '/announcements', status: 'active', icon: '告', tone: 'tone-orange', sortOrder: 4 },
   { moduleKey: 'local-services', title: '本地服务', desc: '便捷生活，触手可及', to: '/modules', status: 'planned', icon: '位', tone: 'tone-green', sortOrder: 5 },
@@ -142,6 +142,7 @@ const defaultPlatformModules = [
 
 const moduleToneByKey = {
   fellowship: 'tone-pink',
+  'positive-share': 'tone-pink',
   dynamic: 'tone-violet',
   events: 'tone-blue',
   articles: 'tone-green',
@@ -153,6 +154,7 @@ const moduleToneByKey = {
 
 const moduleIconByKey = {
   fellowship: '❤',
+  'positive-share': '暖',
   dynamic: '●',
   events: '日',
   articles: '文',
@@ -194,7 +196,7 @@ const heroMetrics = computed(() => [
 
 const moduleCards = [
   { title: '联谊模块', icon: '联', meta: '交友业务专区', desc: '进入联谊专区处理资料、互动与消息。', tone: 'tone-pink', to: '/fellowship', actionText: '进入模块' },
-  { title: '内容资讯', icon: '文', meta: '内容中心', desc: '查看平台精选内容与运营资讯。', tone: 'tone-blue', to: '/articles', actionText: '查看内容' },
+  { title: '每日心声', icon: '暖', meta: '平台内容专区', desc: '每天记录感恩、鼓励与成长思考。', tone: 'tone-pink', to: '/platform/positive-share', actionText: '进入分享' },
   { title: '活动中心', icon: '活', meta: '线上线下活动', desc: '浏览近期活动并完成报名。', tone: 'tone-orange', to: '/events', actionText: '查看活动' },
   { title: '模块中心', icon: '模', meta: '统一入口', desc: '从模块中心进入更多平台能力。', tone: 'tone-violet', to: '/modules', actionText: '前往模块' }
 ]
