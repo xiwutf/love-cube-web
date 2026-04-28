@@ -1378,8 +1378,36 @@ onMounted(() => fetchList(false))
   }
 
   .stats-band {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .stat-card {
+    padding: 10px 8px;
+    gap: 8px;
+    border-radius: 12px;
+    align-items: flex-start;
+  }
+
+  .stat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 16px;
+  }
+
+  .stat-num {
+    font-size: 22px;
+  }
+
+  .stat-unit,
+  .stat-label {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .stat-trend {
+    display: none;
   }
 
   .side-panel {

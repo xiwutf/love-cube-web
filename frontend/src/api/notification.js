@@ -7,8 +7,16 @@ let unreadCountPending = null
 export const getNotifications = (limit = 10) => request.get('/notifications', { params: { limit } })
 export const getNotificationsByType = (type, limit = 20) => request.get('/notifications', { params: { type, limit } })
 export const getNotifUnreadCount = () => request.get('/notifications/unread-count')
-export const markNotifRead = (id) => request.patch(`/notifications/${id}/read`)
-export const markAllNotifRead = () => request.post('/notifications/read-all')
+export async function markNotifRead(id) {
+  const res = await request.patch(`/notifications/${id}/read`)
+  clearNotifUnreadCache()
+  return res
+}
+export async function markAllNotifRead() {
+  const res = await request.post('/notifications/read-all')
+  clearNotifUnreadCache()
+  return res
+}
 
 export async function getNotifUnreadCountCached(maxAgeMs = 15000) {
   const now = Date.now()

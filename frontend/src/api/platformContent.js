@@ -16,6 +16,10 @@ export function fetchArticleDetail(id) {
   return request.get(`/articles/${id}`)
 }
 
+export function submitArticle(payload) {
+  return request.post('/articles/submissions', payload)
+}
+
 export function fetchEvents(params = { status: 'published' }) {
   return request.get('/events', { params })
 }

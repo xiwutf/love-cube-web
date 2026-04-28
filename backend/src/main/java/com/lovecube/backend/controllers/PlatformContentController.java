@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api")
@@ -100,6 +102,50 @@ public class PlatformContentController {
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         articleRepository.save(item);
         return item;
+    }
+
+    @PostMapping("/articles/submissions")
+    public Map<String, Object> submitArticle(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        adminAuthService.requireUser(authHeader);
+        String title = String.valueOf(payload.getOrDefault("title", "")).trim();
+        String summary = String.valueOf(payload.getOrDefault("summary", "")).trim();
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        String category = String.valueOf(payload.getOrDefault("category", "平台资讯")).trim();
+        String tag = String.valueOf(payload.getOrDefault("tag", category)).trim();
+        String coverUrl = String.valueOf(payload.getOrDefault("coverUrl", "")).trim();
+
+        if (title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "标题不能为空");
+        }
+        if (content.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "正文不能为空");
+        }
+
+        Article article = new Article();
+        article.setId("article-" + UUID.randomUUID());
+        article.setTitle(title);
+        article.setSummary(summary);
+        article.setContent(content);
+        article.setCategory(category.isBlank() ? "平台资讯" : category);
+        article.setTag(tag.isBlank() ? article.getCategory() : tag);
+        article.setCoverUrl(coverUrl);
+        article.setStatus("draft");
+        article.setPinned(false);
+        article.setRecommended(false);
+        article.setViewCount(0);
+        article.setCreatedAt(LocalDateTime.now());
+        article.setUpdatedAt(LocalDateTime.now());
+        Article saved = articleRepository.save(article);
+
+        return Map.of(
+                "id", saved.getId(),
+                "title", saved.getTitle(),
+                "status", saved.getStatus(),
+                "message", "投稿已提交，待管理员审核发布"
+        );
     }
 
     @GetMapping("/events")

@@ -85,6 +85,20 @@
 
     <transition name="menu-fade"><div v-if="menuOpen" class="mobile-menu-mask" @click="menuOpen = false" /></transition>
     <transition name="menu-slide"><nav v-if="menuOpen" class="mobile-menu-panel"><form class="mobile-search" role="search" @submit.prevent="handleSearch"><span aria-hidden="true">⌕</span><input v-model.trim="searchKeyword" type="search" placeholder="搜索内容、用户、活动..."></form><router-link v-for="item in mobileNavItems" :key="item.to" :to="item.to" :class="{ 'is-active': isActive(item.to) }" @click="menuOpen = false">{{ item.label }}</router-link><router-link to="/events" @click="menuOpen = false">签到</router-link><router-link to="/messages" @click="menuOpen = false">平台消息中心</router-link><router-link v-if="userStore.isLoggedIn" to="/me" @click="menuOpen = false">平台个人中心</router-link><router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link><router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录 / 注册</router-link><button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button></nav></transition>
+
+    <transition name="dialog-fade">
+      <div v-if="wechatGuideVisible" class="wechat-guide-mask" @click.self="closeWechatGuide">
+        <section class="wechat-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="wechat-guide-title">
+          <h3 id="wechat-guide-title">建议使用手机浏览器打开</h3>
+          <p>你当前在微信内打开，部分功能可能受限。</p>
+          <p>请点击右上角「···」，选择「在浏览器打开」。</p>
+          <div class="wechat-guide-actions">
+            <button type="button" class="wechat-guide-btn wechat-guide-btn-main" @click="copyCurrentLink">{{ wechatCopyDone ? '链接已复制' : '复制当前链接' }}</button>
+            <button type="button" class="wechat-guide-btn" @click="closeWechatGuide">我知道了</button>
+          </div>
+        </section>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -106,6 +120,8 @@ const coCreationOpen = ref(false)
 const coCreationSubmitting = ref(false)
 const coCreationMessage = ref('')
 const coCreationError = ref(false)
+const wechatGuideVisible = ref(false)
+const wechatCopyDone = ref(false)
 const coCreationForm = ref({
   focusModule: '',
   goals: [],
@@ -149,6 +165,7 @@ const mobileNavItems = [
 const messageBadge = computed(() => '')
 const navHomePaths = computed(() => new Set([...navItems.map(item => item.to), '/about']))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
+const WECHAT_GUIDE_KEY = 'platform-wechat-guide-dismissed-date'
 
 watch(() => route.fullPath, () => {
   menuOpen.value = false
@@ -274,8 +291,52 @@ function handleScroll() {
   isScrolled.value = window.scrollY > 8
 }
 
+function isMobileWechat() {
+  const ua = window.navigator.userAgent.toLowerCase()
+  const isWechat = ua.includes('micromessenger')
+  const isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua)
+  return isWechat && isMobile
+}
+
+function closeWechatGuide() {
+  wechatGuideVisible.value = false
+  try {
+    localStorage.setItem(WECHAT_GUIDE_KEY, new Date().toDateString())
+  } catch (error) {
+    // ignore storage exceptions
+  }
+}
+
+async function copyCurrentLink() {
+  const currentUrl = window.location.href
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(currentUrl)
+    } else {
+      const input = document.createElement('input')
+      input.value = currentUrl
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
+    wechatCopyDone.value = true
+  } catch (error) {
+    wechatCopyDone.value = false
+  }
+}
+
+function setupWechatGuide() {
+  if (!isMobileWechat()) return
+  const today = new Date().toDateString()
+  const dismissedDate = localStorage.getItem(WECHAT_GUIDE_KEY)
+  if (dismissedDate === today) return
+  wechatGuideVisible.value = true
+}
+
 onMounted(() => {
   handleScroll()
+  setupWechatGuide()
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
@@ -1191,20 +1252,20 @@ onBeforeUnmount(() => {
 
   .nav-wrap {
     grid-template-columns: 1fr auto;
-    min-height: 64px;
-    padding: 0 12px;
-    gap: 10px;
+    min-height: 56px;
+    padding: 0 10px;
+    gap: 8px;
     width: calc(100% - 16px);
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   .brand-logo {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
   }
 
   .brand-text {
-    font-size: 19px;
+    font-size: 17px;
   }
 
   .brand-tag {
@@ -1223,7 +1284,7 @@ onBeforeUnmount(() => {
 
   .platform-main {
     min-height: calc(100vh - 74px - 58px);
-    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    padding-bottom: calc(62px + env(safe-area-inset-bottom));
   }
 
   .co-creation-toolbar {
@@ -1253,29 +1314,31 @@ onBeforeUnmount(() => {
   }
 
   .co-creation-mask {
-    align-items: end;
-    padding: 12px 12px calc(72px + env(safe-area-inset-bottom));
+    align-items: start;
+    overflow-y: auto;
+    padding: calc(8px + env(safe-area-inset-top)) 10px calc(66px + env(safe-area-inset-bottom));
   }
 
   .co-creation-dialog {
     width: 100%;
-    max-height: calc(100vh - 104px - env(safe-area-inset-bottom));
-    padding: 28px 16px 18px;
-    overflow: auto;
+    max-height: none;
+    min-height: min(620px, calc(100dvh - 20px - env(safe-area-inset-bottom)));
+    padding: 22px 14px 14px;
+    overflow: visible;
   }
 
   .co-creation-close {
-    top: 14px;
-    right: 14px;
-    width: 40px;
-    height: 40px;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
   }
 
   .co-creation-hero {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
     min-height: 0;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
   }
 
   .survey-illustration {
@@ -1283,57 +1346,62 @@ onBeforeUnmount(() => {
   }
 
   .co-creation-kicker {
-    margin-bottom: 10px;
-    padding-right: 48px;
-    font-size: 13px;
+    margin-bottom: 6px;
+    padding-right: 38px;
+    font-size: 12px;
   }
 
   .co-creation-dialog h2 {
-    font-size: 27px;
+    font-size: 21px;
+    line-height: 1.2;
   }
 
   .co-creation-subtitle {
-    margin-top: 10px;
-    font-size: 14px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.55;
   }
 
   .co-creation-form {
-    gap: 22px;
+    gap: 14px;
   }
 
   .survey-question {
-    gap: 12px;
+    gap: 8px;
   }
 
   .survey-question-title {
-    gap: 10px;
+    gap: 8px;
     align-items: flex-start;
   }
 
   .survey-number {
-    width: 26px;
-    height: 26px;
-    font-size: 15px;
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
   }
 
   .survey-question-title h3 {
     flex: 1;
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1.35;
   }
 
   .survey-question-title em {
-    font-size: 13px;
-    line-height: 26px;
+    font-size: 12px;
+    line-height: 22px;
   }
 
   .survey-select select {
-    height: 52px;
-    font-size: 15px;
+    height: 46px;
+    padding: 0 42px 0 12px;
+    font-size: 14px;
   }
 
   .survey-contact input {
-    height: 52px;
-    font-size: 15px;
+    height: 46px;
+    padding: 0 12px;
+    font-size: 14px;
   }
 
   .co-creation-checkboxes {
@@ -1342,43 +1410,45 @@ onBeforeUnmount(() => {
   }
 
   .co-creation-check-item {
-    min-height: 60px;
-    gap: 14px;
-    padding: 10px 12px;
-    font-size: 16px;
+    min-height: 52px;
+    gap: 10px;
+    padding: 8px 10px;
+    font-size: 14px;
   }
 
   .goal-icon {
-    width: 42px;
-    height: 42px;
-    font-size: 21px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 18px;
   }
 
   .survey-textarea textarea {
-    min-height: 118px;
-    padding: 14px 14px 34px;
-    font-size: 15px;
+    min-height: 96px;
+    padding: 10px 10px 28px;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   .survey-textarea span {
-    right: 14px;
-    bottom: 10px;
-    font-size: 13px;
+    right: 10px;
+    bottom: 8px;
+    font-size: 12px;
   }
 
   .co-creation-submit {
-    height: 50px;
-    font-size: 16px;
+    height: 44px;
+    font-size: 15px;
   }
 
   .co-creation-privacy {
-    margin-top: -12px;
-    font-size: 13px;
+    margin-top: -6px;
+    font-size: 11px;
   }
 
   .platform-route-back {
-    top: 78px;
-    margin: 6px 0 0 10px;
+    top: 68px;
+    margin: 4px 0 0 8px;
   }
 
   .mobile-quick-nav {
@@ -1387,7 +1457,7 @@ onBeforeUnmount(() => {
     right: 0;
     bottom: 0;
     z-index: 90;
-    height: calc(58px + env(safe-area-inset-bottom));
+    height: calc(52px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -1401,7 +1471,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     color: #64748b;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     text-decoration: none;
   }
@@ -1412,7 +1482,7 @@ onBeforeUnmount(() => {
   }
 
   .platform-footer {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
 
   .footer-inner {
@@ -1500,5 +1570,60 @@ onBeforeUnmount(() => {
 .dialog-fade-enter-from,
 .dialog-fade-leave-to {
   opacity: 0;
+}
+
+.wechat-guide-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.wechat-guide-dialog {
+  width: min(92vw, 360px);
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 18px 16px 14px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28);
+}
+
+.wechat-guide-dialog h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.wechat-guide-dialog p {
+  margin: 0 0 8px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.wechat-guide-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.wechat-guide-btn {
+  border: 1px solid #d0dbe9;
+  border-radius: 999px;
+  height: 40px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wechat-guide-btn-main {
+  border-color: #e84f73;
+  background: linear-gradient(90deg, #ef5ca7 0%, #8f96f8 100%);
+  color: #ffffff;
 }
 </style>

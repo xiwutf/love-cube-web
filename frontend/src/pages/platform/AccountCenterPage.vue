@@ -11,6 +11,7 @@
         <router-link to="/articles" class="me-menu-item">我的内容</router-link>
         <router-link to="/platform/positive-share" class="me-menu-item">我的每日心声</router-link>
         <router-link to="/events" class="me-menu-item">我的活动</router-link>
+        <router-link to="/fellowship/invite" class="me-menu-item">我的邀请码</router-link>
         <router-link to="/modules" class="me-menu-item">模块入口</router-link>
         <router-link to="/about" class="me-menu-item">平台设置</router-link>
       </nav>
@@ -106,6 +107,7 @@
           <div class="me-shortcuts">
             <router-link to="/me">平台个人中心</router-link>
             <router-link to="/messages">平台消息中心</router-link>
+            <router-link to="/fellowship/invite">我的邀请码</router-link>
             <router-link to="/about">登录安全</router-link>
             <router-link to="/about">平台设置</router-link>
           </div>
@@ -553,6 +555,7 @@ onMounted(async () => {
 @media (max-width: 1023px) {
   .me-layout {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .me-sidebar {
@@ -562,6 +565,157 @@ onMounted(async () => {
   .me-hero,
   .me-grid {
     grid-template-columns: 1fr;
+  }
+
+  .me-kpis strong {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  .me-layout {
+    gap: 10px;
+  }
+
+  .me-layout .platform-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .me-sidebar h2 {
+    font-size: 20px;
+  }
+
+  .me-menu {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .me-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .me-menu-item {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: #f8fafc;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .me-dot {
+    margin-left: 6px;
+  }
+
+  .me-main {
+    gap: 10px;
+  }
+
+  .me-hero {
+    gap: 12px;
+    border-radius: 12px;
+  }
+
+  .me-user {
+    align-items: flex-start;
+  }
+
+  .me-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .me-avatar-fallback {
+    font-size: 24px;
+  }
+
+  .me-meta h1 {
+    font-size: 22px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .me-meta p {
+    margin: 4px 0;
+    font-size: 13px;
+  }
+
+  .me-tags {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .me-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .me-edit-btn {
+    margin-top: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+  }
+
+  .me-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .me-kpis article {
+    padding: 8px 10px;
+  }
+
+  .me-kpis p {
+    font-size: 11px;
+  }
+
+  .me-kpis strong {
+    font-size: 20px;
+  }
+
+  .me-edit-form {
+    gap: 10px;
+  }
+
+  .me-avatar-uploader {
+    align-items: flex-start;
+  }
+
+  .me-avatar-upload-preview {
+    width: 56px;
+    height: 56px;
+  }
+
+  .me-avatar-upload-fallback {
+    font-size: 20px;
+  }
+
+  .me-edit-actions {
+    justify-content: stretch;
+  }
+
+  .me-edit-cancel,
+  .me-edit-submit {
+    flex: 1;
+    min-height: 36px;
+  }
+
+  .me-shortcuts {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .me-shortcuts a {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 14px;
   }
 }
 </style>
