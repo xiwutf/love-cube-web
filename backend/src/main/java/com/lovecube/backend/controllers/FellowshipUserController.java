@@ -116,6 +116,9 @@ public class FellowshipUserController {
         List<Map<String, Object>> rows = userRepository.findAll().stream()
                 .filter(u -> currentUserId == null || !u.getUserid().equals(currentUserId))
                 .filter(u -> !finalBlacklistIds.contains(u.getUserid()))
+                .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
+                .filter(u -> Boolean.TRUE.equals(u.getFellowshipEnabled()))
+                .filter(u -> Boolean.TRUE.equals(u.getFellowshipMatchVisible()))
                 .limit(Math.max(1, Math.min(limit, 100)))
                 .map(unifiedProfileService::buildLegacyUserPayload)
                 .collect(Collectors.toList());

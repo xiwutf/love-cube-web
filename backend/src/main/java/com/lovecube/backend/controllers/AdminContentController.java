@@ -195,6 +195,7 @@ public class AdminContentController {
                     item.put("phone", user.getPhoneNumber() == null ? "" : user.getPhoneNumber());
                     item.put("role", normalizeRoleForView(user.getRole(), adminAuthService.isAdmin(user)));
                     item.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
+                    item.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
                     item.put("verificationStatus", "none");
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
@@ -600,6 +601,34 @@ public class AdminContentController {
         result.put("userId", userId);
         result.put("status", "DISABLED".equalsIgnoreCase(target.getUserStatus()) ? "banned" : "active");
         result.put("message", "banned".equals(status) ? "用户已封禁" : "用户已解封");
+        return result;
+    }
+
+    @PutMapping("/users/{userId}/fellowship")
+    public Map<String, Object> updateUserFellowshipStatus(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User operator = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isAdmin(operator)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
+        }
+
+        User target = userRepository.findById(userId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+        if (!adminAuthService.isHiddenSuperAdmin(operator) && adminAuthService.isHiddenSuperAdmin(target)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在");
+        }
+
+        boolean fellowshipEnabled = Boolean.parseBoolean(String.valueOf(payload.getOrDefault("fellowshipEnabled", false)));
+        target.setFellowshipEnabled(fellowshipEnabled);
+        userRepository.save(target);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", userId);
+        result.put("fellowshipEnabled", fellowshipEnabled);
+        result.put("message", fellowshipEnabled ? "联谊模块已开通" : "联谊模块已关闭");
         return result;
     }
 

@@ -74,7 +74,7 @@
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
               </van-cell-group>
-              <p class="register-tip">注册后即可使用联谊活动内容等平台能力</p>
+              <p class="register-tip">注册后默认仅开通平台账号；联谊模块需本人手动点击开通</p>
               <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
@@ -114,7 +114,7 @@ function resolveRedirect() {
   const fromStore = userStore.consumePostLoginRedirect()
   const target = fromQuery || fromStore
   if (target) return decodeURIComponent(target)
-  return route.path.startsWith('/fellowship') ? '/fellowship/discover' : '/me'
+  return route.path.startsWith('/fellowship') ? '/fellowship/discover' : '/account'
 }
 
 async function handleLogin() {
@@ -147,14 +147,14 @@ async function handleRegister() {
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: '是否立即完善资料？',
-      confirmButtonText: '去完善',
-      cancelButtonText: '去首页'
+      message: '是否现在去开通联谊模块？',
+      confirmButtonText: '去开通',
+      cancelButtonText: '稍后再说'
     })
-    router.replace('/fellowship/profile/edit')
+    router.replace('/fellowship')
   } catch (err) {
     if (err?.name === 'Cancel') {
-      router.replace('/fellowship')
+      router.replace('/')
       return
     }
     showToast({ message: err.message || '注册失败，请稍后重试', type: 'fail' })

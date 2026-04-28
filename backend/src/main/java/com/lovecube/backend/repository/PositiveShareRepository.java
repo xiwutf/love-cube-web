@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Collection;
 
 public interface PositiveShareRepository extends JpaRepository<PositiveShare, Long> {
     @Query("SELECT p FROM PositiveShare p WHERE p.status = 'PUBLISHED' AND p.publicVisible = true ORDER BY p.createdAt DESC")
@@ -32,4 +33,14 @@ public interface PositiveShareRepository extends JpaRepository<PositiveShare, Lo
 
     @Query("SELECT p FROM PositiveShare p WHERE p.status <> 'DELETED' ORDER BY p.createdAt DESC")
     Page<PositiveShare> findAllNonDeleted(Pageable pageable);
+
+    @Query("SELECT p FROM PositiveShare p WHERE p.id IN :ids AND p.status <> 'DELETED' ORDER BY p.createdAt DESC")
+    Page<PositiveShare> findByIdInAndNotDeleted(@Param("ids") Collection<Long> ids, Pageable pageable);
+
+    @Query("SELECT p FROM PositiveShare p WHERE p.userId = :userId AND p.status IN :statuses ORDER BY p.createdAt DESC")
+    Page<PositiveShare> findByUserIdAndStatusInOrderByCreatedAtDesc(
+            @Param("userId") Long userId,
+            @Param("statuses") Collection<String> statuses,
+            Pageable pageable
+    );
 }

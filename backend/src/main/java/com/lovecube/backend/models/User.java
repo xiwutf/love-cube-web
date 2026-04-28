@@ -82,6 +82,12 @@ public class User {
     @Column(name = "invite_code_status", length = 32)
     private String inviteCodeStatus;
 
+    @Column(name = "fellowship_enabled")
+    private Boolean fellowshipEnabled;
+
+    @Column(name = "fellowship_match_visible")
+    private Boolean fellowshipMatchVisible;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -100,6 +106,12 @@ public class User {
         }
         if (inviteCodeStatus == null || inviteCodeStatus.isBlank()) {
             inviteCodeStatus = "ENABLED";
+        }
+        if (fellowshipEnabled == null) {
+            fellowshipEnabled = false;
+        }
+        if (fellowshipMatchVisible == null) {
+            fellowshipMatchVisible = false;
         }
     }
 

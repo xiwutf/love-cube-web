@@ -12,6 +12,18 @@ export function getMe() {
   return request.get('/users/me')
 }
 
+export function activateFellowship() {
+  return request.post('/users/me/fellowship/activate')
+}
+
+export function deactivateFellowship() {
+  return request.post('/users/me/fellowship/deactivate')
+}
+
+export function updateFellowshipMatchVisibility(visible) {
+  return request.post('/users/me/fellowship/match-visibility', { visible })
+}
+
 export async function getMeCached(maxAgeMs = 15000) {
   const now = Date.now()
   if (meCache && now - meCacheAt < maxAgeMs) return meCache

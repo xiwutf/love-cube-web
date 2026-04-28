@@ -3,22 +3,25 @@
     <div class="content">
       <p class="eyebrow">Love Cube Fellowship</p>
       <h1 class="title">更可靠的联谊交友体验</h1>
-      <p class="slogan">从完善资料到开始匹配，3 分钟即可进入互动状态</p>
+      <p class="slogan">{{ sloganText }}</p>
       <div class="actions">
-        <router-link to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
-        <router-link to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
+        <button
+          v-if="isLoggedIn && !isFellowshipEnabled"
+          type="button"
+          class="btn-primary"
+          :disabled="activating"
+          @click="handleActivate"
+        >
+          {{ activating ? '开通中...' : '立即开通联谊模块' }}
+        </button>
+        <router-link v-else to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
+        <router-link v-if="isLoggedIn && isFellowshipEnabled" to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
+        <router-link v-else to="/fellowship/login" class="btn-ghost">登录后开通</router-link>
       </div>
-      <p class="hint">新用户建议先完善资料并完成真人认证，推荐效果会更好</p>
+      <p class="hint">{{ hintText }}</p>
 
       <div class="quick-grid">
-        <router-link to="/fellowship/discover" class="quick-item">推荐对象</router-link>
-        <router-link to="/fellowship/messages?tab=interact" class="quick-item">打招呼消息</router-link>
-        <router-link to="/fellowship/messages?tab=visitor" class="quick-item">谁看过我</router-link>
-        <router-link to="/fellowship/my-likes" class="quick-item">我的喜欢</router-link>
-        <router-link to="/fellowship/preferences" class="quick-item">择偶条件</router-link>
-        <router-link to="/fellowship/verify" class="quick-item">真人/实名认证</router-link>
-        <router-link to="/fellowship/blacklist" class="quick-item">黑名单</router-link>
-        <router-link to="/fellowship/profile/edit" class="quick-item">生活照管理</router-link>
+        <router-link v-for="item in quickItems" :key="item.label" :to="item.to" class="quick-item">{{ item.label }}</router-link>
       </div>
     </div>
     <div class="footer-link">
@@ -28,12 +31,71 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { storage } from '@/utils/storage.js'
+import { computed, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { showToast } from 'vant'
+import { useUserStore } from '@/stores/user.js'
 
 const router = useRouter()
-if (storage.get('token')) {
-  router.replace('/fellowship/discover')
+const route = useRoute()
+const userStore = useUserStore()
+const activating = ref(false)
+
+const isLoggedIn = computed(() => userStore.isLoggedIn)
+const isFellowshipEnabled = computed(() => userStore.isFellowshipEnabled)
+
+const sloganText = computed(() => {
+  if (isLoggedIn.value && !isFellowshipEnabled.value) {
+    return '联谊模块默认关闭，需你本人手动开通后才可进入'
+  }
+  return '从完善资料到开始匹配，3 分钟即可进入互动状态'
+})
+
+const hintText = computed(() => {
+  if (isLoggedIn.value && !isFellowshipEnabled.value) {
+    return '你的平台账号不受影响，开通后才会启用联谊能力'
+  }
+  return '新用户建议先完善资料并完成真人认证，推荐效果会更好'
+})
+
+const quickItems = computed(() => {
+  if (isLoggedIn.value && !isFellowshipEnabled.value) {
+    return [
+      { label: '联谊是什么', to: '/fellowship-intro' },
+      { label: '平台首页', to: '/' },
+      { label: '内容广场', to: '/articles' },
+      { label: '活动中心', to: '/events' }
+    ]
+  }
+  return [
+    { label: '推荐对象', to: '/fellowship/discover' },
+    { label: '打招呼消息', to: '/fellowship/messages?tab=interact' },
+    { label: '谁看过我', to: '/fellowship/messages?tab=visitor' },
+    { label: '我的喜欢', to: '/fellowship/my-likes' },
+    { label: '择偶条件', to: '/fellowship/preferences' },
+    { label: '真人/实名认证', to: '/fellowship/verify' },
+    { label: '黑名单', to: '/fellowship/blacklist' },
+    { label: '生活照管理', to: '/fellowship/profile/edit' }
+  ]
+})
+
+async function handleActivate() {
+  activating.value = true
+  try {
+    await userStore.activateFellowship()
+    showToast({ type: 'success', message: '联谊模块已开通' })
+    const target = typeof route.query.redirect === 'string' ? decodeURIComponent(route.query.redirect) : '/fellowship/discover'
+    router.replace(target || '/fellowship/discover')
+  } catch (error) {
+    showToast({ type: 'fail', message: error?.message || '开通失败，请稍后重试' })
+  } finally {
+    activating.value = false
+  }
+}
+
+if (isLoggedIn.value && isFellowshipEnabled.value) {
+  const target = typeof route.query.redirect === 'string' ? decodeURIComponent(route.query.redirect) : '/fellowship/discover'
+  router.replace(target || '/fellowship/discover')
 }
 </script>
 
@@ -103,6 +165,8 @@ if (storage.get('token')) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-primary {
@@ -115,6 +179,11 @@ if (storage.get('token')) {
   border: 1px solid #ffc6d4;
   color: #d94870;
   background: #fff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .hint {

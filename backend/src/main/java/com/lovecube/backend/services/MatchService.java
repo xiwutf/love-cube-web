@@ -66,6 +66,7 @@ public class MatchService
         List<User> potentialMatches = userRepository.findAll().stream()
             .filter(user -> !user.getUserid().equals(userId))
             .filter(user -> !"DISABLED".equalsIgnoreCase(user.getUserStatus()))
+            .filter(this::isVisibleInMatchPool)
             .filter(user -> minAge == null || user.getAge() >= minAge)
             .filter(user -> maxAge == null || user.getAge() <= maxAge)
             .filter(user -> effectiveGender == null || user.getGender().equals(effectiveGender))
@@ -183,6 +184,7 @@ public class MatchService
             return userRepository.findByGenderAndUseridNot(effectiveGender, currentUserId)
                 .stream()
                 .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
+                .filter(this::isVisibleInMatchPool)
                 .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
                 .filter(u -> !guardianIds.contains(u.getUserid()))
                 .filter(u -> !blacklistIds.contains(u.getUserid()))
@@ -194,6 +196,7 @@ public class MatchService
         return userRepository.findByUseridNot(currentUserId)
             .stream()
             .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
+            .filter(this::isVisibleInMatchPool)
             .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
             .filter(u -> !guardianIds.contains(u.getUserid()))
             .filter(u -> !blacklistIds.contains(u.getUserid()))
@@ -208,6 +211,11 @@ public class MatchService
         if (gender.equals(1)) return 2;
         if (gender.equals(2)) return 1;
         return null;
+    }
+
+    private boolean isVisibleInMatchPool(User user) {
+        return Boolean.TRUE.equals(user.getFellowshipEnabled())
+                && Boolean.TRUE.equals(user.getFellowshipMatchVisible());
     }
 
     private List<Long> getBlacklistIds(Long userId) {

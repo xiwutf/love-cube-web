@@ -64,6 +64,26 @@ public class PositiveShareController {
         return positiveShareService.listShares("my", pageNum, pageSize, user.getUserid());
     }
 
+    @GetMapping("/my/favorites")
+    public Map<String, Object> listMyFavorites(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.listMyFavorites(user.getUserid(), pageNum, pageSize);
+    }
+
+    @GetMapping("/my/drafts")
+    public Map<String, Object> listMyDrafts(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.listMyDrafts(user.getUserid(), pageNum, pageSize);
+    }
+
     @PostMapping("/{id}/like")
     public Map<String, Object> likeShare(
             @PathVariable Long id,

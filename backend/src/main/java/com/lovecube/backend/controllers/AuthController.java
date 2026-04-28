@@ -127,6 +127,8 @@ public class AuthController {
             user.setRegisterUserAgent(trim(request.getHeader("User-Agent"), 500));
             user.setUserStatus("NORMAL");
             user.setInviteCodeStatus("ENABLED");
+            user.setFellowshipEnabled(false);
+            user.setFellowshipMatchVisible(false);
 
             User saved = userRepository.save(user);
             saved.setOpenid("h5_" + saved.getUserid());

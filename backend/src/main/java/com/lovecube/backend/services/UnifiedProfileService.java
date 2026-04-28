@@ -112,6 +112,8 @@ public class UnifiedProfileService {
         result.put("photos", merged.getOrDefault("photos", List.of()));
         result.put("role", normalizeRole(user.getRole()));
         result.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
+        result.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
+        result.put("fellowshipMatchVisible", Boolean.TRUE.equals(user.getFellowshipMatchVisible()));
         result.put("verificationStatus", merged.getOrDefault("verificationStatus", "none"));
         result.put("verificationRejectReason", merged.getOrDefault("verificationRejectReason", ""));
         result.put("photoVerified", merged.getOrDefault("photoVerified", false));
@@ -293,6 +295,8 @@ public class UnifiedProfileService {
         result.put("profileStatus", merged.getOrDefault("profileStatus", "INCOMPLETE"));
         result.put("reviewStatus", merged.getOrDefault("reviewStatus", "pending"));
         result.put("completionRate", merged.getOrDefault("completionRate", 0));
+        result.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
+        result.put("fellowshipMatchVisible", Boolean.TRUE.equals(user.getFellowshipMatchVisible()));
         return result;
     }
 

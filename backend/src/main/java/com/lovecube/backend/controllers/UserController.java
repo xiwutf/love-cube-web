@@ -140,6 +140,65 @@ public class UserController {
         }
     }
 
+    @PostMapping("/users/me/fellowship/activate")
+    public ResponseEntity<?> activateFellowship(@RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            if (!Boolean.TRUE.equals(currentUser.getFellowshipEnabled())) {
+                currentUser.setFellowshipEnabled(true);
+                userRepository.save(currentUser);
+            }
+            Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
+            result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "开通联谊模块失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/users/me/fellowship/deactivate")
+    public ResponseEntity<?> deactivateFellowship(@RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            if (Boolean.TRUE.equals(currentUser.getFellowshipEnabled())) {
+                currentUser.setFellowshipEnabled(false);
+                userRepository.save(currentUser);
+            }
+            Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
+            result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "关闭联谊模块失败: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/users/me/fellowship/match-visibility")
+    public ResponseEntity<?> updateMyFellowshipMatchVisibility(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            boolean visible = Boolean.parseBoolean(String.valueOf(payload.getOrDefault("visible", false)));
+            if (!Boolean.TRUE.equals(currentUser.getFellowshipEnabled()) && visible) {
+                return ResponseEntity.badRequest().body(Map.of("message", "请先开通联谊模块"));
+            }
+            currentUser.setFellowshipMatchVisible(visible);
+            userRepository.save(currentUser);
+            Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
+            result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "更新匹配列表可见性失败: " + e.getMessage()));
+        }
+    }
+
     private boolean isAuthError(String message) {
         if (message == null) {
             return false;

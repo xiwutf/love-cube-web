@@ -7,6 +7,8 @@ export default {
     ...authRoutes,
     { path: '', component: () => import('@/pages/WebsiteHome.vue'), meta: { module: 'platform' } },
     { path: 'me', component: () => import('@/pages/platform/AccountCenterPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'me/favorites', component: () => import('@/pages/platform/MyFavoritesPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'me/drafts', component: () => import('@/pages/platform/MyDraftsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'account', redirect: '/me', meta: { module: 'platform' } },
     { path: 'messages', component: () => import('@/pages/platform/MessagesCenterPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'announcements', component: () => import('@/pages/platform/AnnouncementsPage.vue'), meta: { module: 'platform' } },

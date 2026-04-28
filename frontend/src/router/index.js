@@ -27,6 +27,13 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: encodeURIComponent(to.fullPath) } }
   }
 
+  if (to.path.startsWith('/fellowship') && to.path !== '/fellowship' && token) {
+    await userStore.refreshCurrentUser().catch(() => null)
+    if (!userStore.isFellowshipEnabled) {
+      return { path: '/fellowship', query: { redirect: encodeURIComponent(to.fullPath) } }
+    }
+  }
+
   if (to.meta.requiresAdmin) {
     await userStore.refreshCurrentUser().catch(() => null)
     if (!userStore.isAdmin) {

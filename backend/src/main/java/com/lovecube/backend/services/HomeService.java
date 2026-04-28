@@ -34,12 +34,14 @@ public class HomeService {
 
     public List<Map<String, Object>> getRecommends() {
         return userRepository.findRandomUsers(10).stream()
+                .filter(this::isVisibleInMatchPool)
                 .map(this::convertUserToMap)
                 .collect(Collectors.toList());
     }
 
     public List<Map<String, Object>> getNewcomers() {
         return userRepository.findNewcomers(10).stream()
+                .filter(this::isVisibleInMatchPool)
                 .map(this::convertUserToMap)
                 .collect(Collectors.toList());
     }
@@ -77,5 +79,12 @@ public class HomeService {
         merged.put("bio", merged.getOrDefault("bio", user.getBio()));
         merged.put("lifePhotos", merged.getOrDefault("photos", List.of()));
         return merged;
+    }
+
+    private boolean isVisibleInMatchPool(User user) {
+        return user != null
+                && !"DISABLED".equalsIgnoreCase(user.getUserStatus())
+                && Boolean.TRUE.equals(user.getFellowshipEnabled())
+                && Boolean.TRUE.equals(user.getFellowshipMatchVisible());
     }
 }

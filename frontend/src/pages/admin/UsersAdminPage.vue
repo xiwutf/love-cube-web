@@ -18,6 +18,7 @@
             <th>角色</th>
             <th>认证</th>
             <th>状态</th>
+            <th>联谊</th>
             <th>注册时间</th>
             <th>操作</th>
           </tr>
@@ -33,6 +34,11 @@
             </td>
             <td>{{ item.verificationStatus || 'none' }}</td>
             <td><span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span></td>
+            <td>
+              <span class="admin-tag" :class="item.fellowshipEnabled ? 'active' : 'disabled'">
+                {{ item.fellowshipEnabled ? '已开通' : '未开通' }}
+              </span>
+            </td>
             <td>{{ formatDate(item.createdAt) }}</td>
             <td>
               <div class="admin-cell-actions">
@@ -46,6 +52,8 @@
                 </button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
                 <button class="admin-btn" type="button" @click="setStatus(item, 'banned')">封禁</button>
+                <button class="admin-btn" type="button" @click="setFellowship(item, true)">开通联谊</button>
+                <button class="admin-btn" type="button" @click="setFellowship(item, false)">关闭联谊</button>
                 <button
                   v-if="canForceDelete(item)"
                   class="admin-btn danger"
@@ -83,9 +91,12 @@
           </button>
         </div>
         <p class="admin-row-meta">认证：{{ item.verificationStatus || 'none' }} · 注册：{{ formatDate(item.createdAt) }}</p>
+        <p class="admin-row-meta">联谊：{{ item.fellowshipEnabled ? '已开通' : '未开通' }}</p>
         <div class="admin-toolbar">
           <button class="admin-btn" type="button" @click="setStatus(item, 'active')">解封</button>
           <button class="admin-btn" type="button" @click="setStatus(item, 'banned')">封禁</button>
+          <button class="admin-btn" type="button" @click="setFellowship(item, true)">开通联谊</button>
+          <button class="admin-btn" type="button" @click="setFellowship(item, false)">关闭联谊</button>
           <button v-if="canForceDelete(item)" class="admin-btn danger" type="button" @click="forceDelete(item)">强制删除</button>
         </div>
       </article>
@@ -97,7 +108,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
-import { forceDeleteAdminUser, getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from '@/api/adminContent.js'
+import {
+  forceDeleteAdminUser,
+  getAdminUsers,
+  updateAdminUserFellowshipStatus,
+  updateAdminUserRole,
+  updateAdminUserStatus
+} from '@/api/adminContent.js'
 import { useUserStore } from '@/stores/user.js'
 
 const loading = ref(false)
@@ -121,6 +138,7 @@ function normalizeUsers(rows) {
       role: normalizeRole(item.role || 'user'),
       verificationStatus: item.verificationStatus || 'none',
       status: item.status || 'active',
+      fellowshipEnabled: Boolean(item.fellowshipEnabled),
       createdAt: item.createdAt || null,
       canForceDelete: !!item.canForceDelete
     }))
@@ -165,6 +183,16 @@ async function setStatus(item, status) {
     const result = await updateAdminUserStatus(item.userId, status)
     item.status = result.status
     showToast({ type: 'success', message: result.message || '状态已更新' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '操作失败' })
+  }
+}
+
+async function setFellowship(item, fellowshipEnabled) {
+  try {
+    const result = await updateAdminUserFellowshipStatus(item.userId, fellowshipEnabled)
+    item.fellowshipEnabled = Boolean(result.fellowshipEnabled)
+    showToast({ type: 'success', message: result.message || '联谊状态已更新' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '操作失败' })
   }

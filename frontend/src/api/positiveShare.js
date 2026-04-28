@@ -12,6 +12,14 @@ export function fetchMyPositiveShares(params = {}) {
   return request.get('/positive-shares/my', { params })
 }
 
+export function fetchMyFavoritePositiveShares(params = {}) {
+  return request.get('/positive-shares/my/favorites', { params })
+}
+
+export function fetchMyPositiveShareDrafts(params = {}) {
+  return request.get('/positive-shares/my/drafts', { params })
+}
+
 export function likePositiveShare(id) {
   return request.post(`/positive-shares/${id}/like`)
 }

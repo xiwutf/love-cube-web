@@ -97,23 +97,40 @@ public class PositiveShareService {
             default -> sharePage = positiveShareRepository.findLatestPublic(pageable);
         }
 
-        List<PositiveShare> records = sharePage.getContent();
-        List<Long> userIds = records.stream().map(PositiveShare::getUserId).distinct().toList();
-        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getUserid, u -> u));
-        Set<Long> likedShareIds = resolveLikedShareIds(records, currentUserId);
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (PositiveShare record : records) {
-            items.add(buildShareItem(record, currentUserId, likedShareIds.contains(record.getId()), userMap));
-        }
+        return buildSharePageResponse(sharePage, currentUserId, safePage, safeSize);
+    }
 
-        return Map.of(
-                "list", items,
-                "pageNum", safePage,
-                "pageSize", safeSize,
-                "total", sharePage.getTotalElements(),
-                "hasMore", safePage * safeSize < sharePage.getTotalElements()
+    public Map<String, Object> listMyFavorites(Long userId, int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(pageSize, 1), 50);
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize);
+        Page<PositiveShareLike> likesPage = positiveShareLikeRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<Long> shareIds = likesPage.getContent().stream()
+                .map(PositiveShareLike::getShareId)
+                .toList();
+        if (shareIds.isEmpty()) {
+            return Map.of(
+                    "list", List.of(),
+                    "pageNum", safePage,
+                    "pageSize", safeSize,
+                    "total", likesPage.getTotalElements(),
+                    "hasMore", safePage * safeSize < likesPage.getTotalElements()
+            );
+        }
+        Page<PositiveShare> sharePage = positiveShareRepository.findByIdInAndNotDeleted(shareIds, pageable);
+        return buildSharePageResponse(sharePage, userId, safePage, safeSize);
+    }
+
+    public Map<String, Object> listMyDrafts(Long userId, int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(pageSize, 1), 50);
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize);
+        Page<PositiveShare> sharePage = positiveShareRepository.findByUserIdAndStatusInOrderByCreatedAtDesc(
+                userId,
+                List.of("PENDING", "REJECTED"),
+                pageable
         );
+        return buildSharePageResponse(sharePage, userId, safePage, safeSize);
     }
 
     @Transactional
@@ -287,6 +304,30 @@ public class PositiveShareService {
                 .stream()
                 .map(PositiveShareLike::getShareId)
                 .toList());
+    }
+
+    private Map<String, Object> buildSharePageResponse(
+            Page<PositiveShare> sharePage,
+            Long currentUserId,
+            int safePage,
+            int safeSize
+    ) {
+        List<PositiveShare> records = sharePage.getContent();
+        List<Long> userIds = records.stream().map(PositiveShare::getUserId).distinct().toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+        Set<Long> likedShareIds = resolveLikedShareIds(records, currentUserId);
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (PositiveShare record : records) {
+            items.add(buildShareItem(record, currentUserId, likedShareIds.contains(record.getId()), userMap));
+        }
+        return Map.of(
+                "list", items,
+                "pageNum", safePage,
+                "pageSize", safeSize,
+                "total", sharePage.getTotalElements(),
+                "hasMore", safePage * safeSize < sharePage.getTotalElements()
+        );
     }
 
     private Map<String, Object> listShareCommentsInternal(Long shareId, int page, int pageSize) {
