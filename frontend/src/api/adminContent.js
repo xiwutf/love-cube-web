@@ -129,11 +129,11 @@ export function getAdminPositiveShares(params = {}) {
 }
 
 export function reviewAdminPositiveShare(id, status) {
-  return request.patch(`/admin/positive-shares/${id}/review`, { status })
+  return request.post(`/admin/positive-shares/${id}/review`, { status })
 }
 
 export function batchReviewAdminPositiveShare(ids, status) {
-  return request.patch('/admin/positive-shares/batch-review', { ids, status })
+  return request.post('/admin/positive-shares/batch-review', { ids, status })
 }
 
 export function getAdminPositiveShareComments(id, params = {}) {

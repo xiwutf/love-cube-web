@@ -4,6 +4,7 @@ import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.PositiveShareService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -50,6 +51,15 @@ public class AdminPositiveShareController {
         return positiveShareService.reviewShare(id, status);
     }
 
+    @PostMapping("/{id}/review")
+    public Map<String, Object> reviewShareByPost(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload
+    ) {
+        return reviewShare(authHeader, id, payload);
+    }
+
     @PatchMapping("/batch-review")
     public Map<String, Object> batchReviewShares(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -61,6 +71,14 @@ public class AdminPositiveShareController {
         List<Long> ids = rawIds == null ? List.of() : rawIds.stream().map(Number::longValue).toList();
         String status = String.valueOf(payload.getOrDefault("status", ""));
         return positiveShareService.batchReviewShares(ids, status);
+    }
+
+    @PostMapping("/batch-review")
+    public Map<String, Object> batchReviewSharesByPost(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        return batchReviewShares(authHeader, payload);
     }
 
     @GetMapping("/{id}/comments")

@@ -1,8 +1,10 @@
 import axios from 'axios'
 import { storage } from '@/utils/storage.js'
 
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/admin'
+
 const request = axios.create({
-  baseURL: (import.meta.env.VITE_API_BASE_URL || '') + '/api',
+  baseURL: `${apiBase}/api`,
   timeout: 10000
 })
 

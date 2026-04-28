@@ -30,6 +30,7 @@
             <template v-if="userStore.isLoggedIn">
               <router-link to="/me" class="login-entry">{{ userStore.userInfo?.username || '平台个人中心' }}</router-link>
               <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
+              <button type="button" class="header-logout-btn" @click="handleLogout">退出</button>
             </template>
             <template v-else>
               <router-link to="/login" class="register-entry">登录 / 注册</router-link>
@@ -485,6 +486,24 @@ onBeforeUnmount(() => {
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.header-logout-btn {
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.96);
+  border-radius: 999px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
 .nav-action:hover,
