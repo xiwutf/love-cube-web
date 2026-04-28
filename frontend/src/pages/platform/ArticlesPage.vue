@@ -3,8 +3,8 @@
     <section class="featured-hero">
       <div class="hero-copy">
         <p class="hero-kicker">Featured Content</p>
-        <h1>精内容资</h1>
-        <p>мֵݣȡʵüRѶḻ罻</p>
+        <h1>精选内容</h1>
+        <p>精选攻略、平台动态与活动资讯，一站式浏览。</p>
       </div>
       <div class="hero-visual" aria-hidden="true">
         <img :src="heroImage" alt="" />
@@ -189,7 +189,7 @@ const categories = [
   { label: '活动指南', value: '活动指南' },
   { label: '活动中心', value: '活动中心' },
   { label: '平台攻略', value: '平台攻略' },
-  { label: 'AI宸ュ叿', value: 'AI宸ュ叿' },
+  { label: 'AI工具', value: 'AI工具' },
   { label: '本地服务', value: '本地服务' }
 ]
 

@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="home-config-admin">
     <header class="hc-head">
-      <h2>棣栭〉閰嶇疆</h2>
+      <h2>首页配置</h2>
       <p>配置首页 Hero、模块封面和能力图片，所有图片通过上传按钮管理，无需手动填写 URL。</p>
     </header>
 
@@ -15,24 +15,24 @@
           <input v-model="form.hero.title" class="admin-input" type="text">
         </label>
         <label class="field">
-          <span>副标</span>
+          <span>副标题</span>
           <textarea v-model="form.hero.subtitle" class="admin-textarea" rows="3"></textarea>
         </label>
         <div class="grid-2">
           <label class="field">
-            <span>主按钮文</span>
+            <span>主按钮文案</span>
             <input v-model="form.hero.primaryText" class="admin-input" type="text">
           </label>
           <label class="field">
-            <span>主按钮链</span>
+            <span>主按钮链接</span>
             <input v-model="form.hero.primaryLink" class="admin-input" type="text" placeholder="/modules">
           </label>
           <label class="field">
-            <span>次按钮文</span>
+            <span>次按钮文案</span>
             <input v-model="form.hero.secondaryText" class="admin-input" type="text">
           </label>
           <label class="field">
-            <span>次按钮链</span>
+            <span>次按钮链接</span>
             <input v-model="form.hero.secondaryLink" class="admin-input" type="text" placeholder="/articles">
           </label>
         </div>
@@ -53,7 +53,7 @@
             <strong>{{ item.title || item.moduleKey }}</strong>
             <label class="inline-check">
               <input v-model="item.enabled" type="checkbox">
-              灞曠ず
+              展示
             </label>
           </div>
           <label class="field">
@@ -70,10 +70,10 @@
               <input v-model.number="item.sortOrder" class="admin-input" type="number" min="0">
             </label>
             <label class="field">
-              <span>状</span>
+              <span>状态</span>
               <select v-model="item.status" class="admin-input">
-                <option value="active">已开</option>
-                <option value="planned">瑙勫垝涓</option>
+                <option value="active">已开启</option>
+                <option value="planned">规划中</option>
               </select>
             </label>
           </div>
@@ -87,7 +87,7 @@
 
     <section class="hc-panel">
       <div class="panel-head">
-        <h3>首页能力图配</h3>
+        <h3>首页能力图配置</h3>
       </div>
       <div class="list-grid list-grid-ability">
         <article v-for="item in form.abilities" :key="item.abilityKey" class="item-card">
@@ -95,7 +95,7 @@
             <strong>{{ item.title || item.abilityKey }}</strong>
             <label class="inline-check">
               <input v-model="item.enabled" type="checkbox">
-              灞曠ず
+              展示
             </label>
           </div>
           <label class="field">

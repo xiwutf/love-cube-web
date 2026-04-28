@@ -12,7 +12,8 @@ export const useFellowshipProfileStore = defineStore('fellowship-profile', () =>
   const loading = ref(false)
   const saving = ref(false)
 
-  async function fetchProfile() {
+  async function fetchProfile(force = false) {
+    if (!force && profile.value) return profile.value
     loading.value = true
     try {
       const data = await getMyFellowshipProfile()
@@ -34,7 +35,8 @@ export const useFellowshipProfileStore = defineStore('fellowship-profile', () =>
     }
   }
 
-  async function fetchCompletion() {
+  async function fetchCompletion(force = false) {
+    if (!force && completion.value.percent > 0) return completion.value
     const data = await getFellowshipProfileCompletion()
     completion.value = data
     return data

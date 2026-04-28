@@ -60,7 +60,7 @@
           <van-swipe-item v-if="!displayBanners.length">
             <div class="banner-fallback">
               <p class="banner-fallback-kicker">Love Cube Fellowship</p>
-              <p class="banner-fallback-title">立即弢始匹</p>
+              <p class="banner-fallback-title">立即开始匹配</p>
             </div>
           </van-swipe-item>
         </van-swipe>
@@ -165,6 +165,9 @@ import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 const router = useRouter()
 const profileStore = useFellowshipProfileStore()
 
+// Module-level cache persists across route navigations (stale-while-revalidate)
+const _cache = { banners: null, recommends: null, newcomers: null }
+
 const banners = ref([])
 const recommends = ref([])
 const newcomers = ref([])
@@ -211,6 +214,14 @@ onErrorCaptured((err) => {
 })
 
 onMounted(async () => {
+  // Show cached data immediately on subsequent visits
+  if (_cache.banners !== null) {
+    banners.value = _cache.banners
+    recommends.value = _cache.recommends
+    newcomers.value = _cache.newcomers
+    loadingHome.value = false
+  }
+
   try {
     const [b, r, n, c, p] = await Promise.allSettled([
       getBanners(),
@@ -219,9 +230,18 @@ onMounted(async () => {
       profileStore.fetchCompletion(),
       profileStore.fetchProfile()
     ])
-    if (b.status === 'fulfilled') banners.value = Array.isArray(b.value) ? b.value : []
-    if (r.status === 'fulfilled') recommends.value = Array.isArray(r.value) ? r.value : []
-    if (n.status === 'fulfilled') newcomers.value = Array.isArray(n.value) ? n.value : []
+    if (b.status === 'fulfilled') {
+      _cache.banners = Array.isArray(b.value) ? b.value : []
+      banners.value = _cache.banners
+    }
+    if (r.status === 'fulfilled') {
+      _cache.recommends = Array.isArray(r.value) ? r.value : []
+      recommends.value = _cache.recommends
+    }
+    if (n.status === 'fulfilled') {
+      _cache.newcomers = Array.isArray(n.value) ? n.value : []
+      newcomers.value = _cache.newcomers
+    }
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
     if (p.status === 'fulfilled') {
       const profile = p.value || {}

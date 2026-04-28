@@ -84,6 +84,10 @@ export function getFeedbacks() {
   return request.get('/admin/feedbacks')
 }
 
+export function getFeedbackSummary() {
+  return request.get('/admin/feedbacks/summary')
+}
+
 export function updateFeedback(id, payload) {
   return request.patch(`/admin/feedbacks/${id}`, payload)
 }

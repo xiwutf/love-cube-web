@@ -50,12 +50,12 @@
       </article>
       <article class="intro-feature-card">
         <span class="intro-feature-index">03</span>
-        <h3 class="intro-feature-title">绉佷俊浜掑姩</h3>
+        <h3 class="intro-feature-title">私信互动</h3>
         <p class="intro-feature-text">支持站内私信沟，消息提醒清晰，互动链路顺畅</p>
       </article>
       <article class="intro-feature-card">
         <span class="intro-feature-index">04</span>
-        <h3 class="intro-feature-title">涓炬姤娌荤悊</h3>
+        <h3 class="intro-feature-title">举报治理</h3>
         <p class="intro-feature-text">违规行为可举报与拉黑，持续维护健康交友环境</p>
       </article>
     </section>

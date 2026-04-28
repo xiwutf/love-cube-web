@@ -23,23 +23,25 @@
       <section v-show="!loadingPage" class="profile-card">
         <div class="profile-main">
           <div class="avatar-wrap" :class="{ disabled: avatarUploading }" @click="chooseAvatar">
-            <img class="avatar" :src="displayAvatar" alt="澶村儚" />
+            <img class="avatar" :src="displayAvatar" alt="头像" />
             <div class="avatar-camera">
               <van-icon name="photo-o" size="14" />
             </div>
           </div>
 
           <div class="profile-info">
-            <div class="name-row">
+            <div class="name-block">
               <h2 class="nickname">{{ displayName }}</h2>
-              <button class="verified-badge" :class="verificationLevel" type="button" @click="router.push('/fellowship/verify')">
-                <span class="verified-mark">V</span>
-                <span>{{ verificationLabel }}</span>
-              </button>
-              <button class="vip-medal" type="button" @click="router.push('/fellowship/vip')">
-                <span class="vip-crown">VIP</span>
-                <span>尊享</span>
-              </button>
+              <div class="badge-row">
+                <button class="verified-badge" :class="verificationLevel" type="button" @click="router.push('/fellowship/verify')">
+                  <span class="verified-mark">V</span>
+                  <span>{{ verificationLabel }}</span>
+                </button>
+                <button class="vip-medal" type="button" @click="router.push('/fellowship/vip')">
+                  <span class="vip-crown">VIP</span>
+                  <span>尊享</span>
+                </button>
+              </div>
             </div>
             <p class="base-info">{{ displayAge }}岁 · {{ displayCity }} · {{ displayJob }}</p>
             <p class="intro">{{ displayIntro }}</p>
@@ -325,12 +327,12 @@ async function onAvatarSelected(event) {
   try {
     const uploadRes = await uploadFellowshipAvatar(file)
     const url = parseUploadUrl(uploadRes)
-    if (!url) throw new Error('澶村儚涓婁紶杩斿洖涓虹┖')
+    if (!url) throw new Error('头像上传返回为空')
     await updateMyFellowshipProfile({ avatarUrl: url })
     profile.value.avatarUrl = url
     showToast({ type: 'success', message: '头像已更新' })
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '澶村儚涓婁紶澶辫触' })
+    showToast({ type: 'fail', message: err.message || '头像上传失败' })
   } finally {
     avatarUploading.value = false
   }
@@ -575,23 +577,37 @@ onMounted(async () => {
   flex: 1;
 }
 
-.name-row {
+.name-block {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-right: 96px;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding-right: 96px;
 }
 
 .nickname {
   margin: 0;
-  max-width: 130px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  align-self: stretch;
+  min-width: 0;
   font-size: 29px;
-  line-height: 1.05;
+  line-height: 1.15;
   font-weight: 700;
   color: #222334;
+  white-space: normal;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .verified-badge {

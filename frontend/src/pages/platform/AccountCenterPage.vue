@@ -18,7 +18,7 @@
     <main class="me-main">
       <div class="platform-card me-hero">
         <div class="me-user">
-          <img v-if="user?.avatar" :src="user.avatar" class="me-avatar" alt="澶村儚" />
+          <img v-if="user?.avatar" :src="user.avatar" class="me-avatar" alt="头像" />
           <div v-else class="me-avatar me-avatar-fallback">{{ avatarFallback }}</div>
           <div class="me-meta">
             <h1>{{ user?.username || '平台用户' }}</h1>

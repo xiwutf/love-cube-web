@@ -5,7 +5,6 @@
  */
 import { ActionSheet } from 'vant'
 import { createApp, h, ref } from 'vue'
-import 'vant/es/action-sheet/style/index'
 
 export function showActionSheet({ title = '', actions = [], cancelText = '取消' } = {}) {
   return new Promise((resolve, reject) => {

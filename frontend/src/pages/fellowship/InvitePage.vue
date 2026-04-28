@@ -59,7 +59,7 @@ async function loadData() {
     summary.value = summaryRes || summary.value
     invitees.value = Array.isArray(listRes) ? listRes : []
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '邢请码数据加载失败' })
+    showToast({ type: 'fail', message: err.message || '邀请码数据加载失败' })
   } finally {
     loading.value = false
   }
@@ -68,12 +68,12 @@ async function loadData() {
 async function copyCode() {
   const code = summary.value.inviteCode
   if (!code) {
-    showToast('暂无邢请码')
+    showToast('暂无邀请码')
     return
   }
   try {
     await navigator.clipboard.writeText(code)
-    showToast({ type: 'success', message: '邢请码已复刄17' })
+    showToast({ type: 'success', message: '邀请码已复制' })
   } catch {
     showToast({ type: 'fail', message: '复制失败，请手动复制' })
   }

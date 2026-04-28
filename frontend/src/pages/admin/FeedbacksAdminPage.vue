@@ -2,11 +2,23 @@
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">用户反馈</h1>
-      <p class="platform-subtitle">в鿴û뽨飬ִ֧Ⱥάע汾</p>
+      <p class="platform-subtitle">查看用户反馈并跟进处理，支持按状态维护处理进度。</p>
     </section>
 
     <div v-if="loading" class="admin-loading">加载中</div>
-    <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">閲嶈瘯</button></div>
+    <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">重试</button></div>
+
+    <section v-if="!loading && !error" class="platform-card summary-card">
+      <h2 class="platform-title">问卷统计概览</h2>
+      <p class="platform-subtitle">总样本 {{ summary.total }} 份</p>
+      <div v-if="summary.moduleRanking.length" class="summary-list">
+        <div v-for="item in summary.moduleRanking" :key="item.module" class="summary-item">
+          <span>{{ item.module }}</span>
+          <span>{{ item.percent }}%（{{ item.count }}）</span>
+        </div>
+      </div>
+      <p v-else class="admin-row-meta">暂无可用统计数据</p>
+    </section>
 
     <section v-else class="admin-table-wrap admin-desktop-only">
       <table class="admin-table">
@@ -15,8 +27,8 @@
             <th>用户</th>
             <th>联系方式</th>
             <th>反馈内容</th>
-            <th>状</th>
-            <th>澶勭悊澶囨敞</th>
+            <th>状态</th>
+            <th>处理备注</th>
             <th>提交时间</th>
             <th>操作</th>
           </tr>
@@ -28,12 +40,12 @@
             <td class="feedback-content">{{ item.content }}</td>
             <td>
               <select v-model="item.status" class="admin-select">
-                <option value="pending">待处</option>
-                <option value="processing">澶勭悊涓</option>
-                <option value="resolved">已解</option>
+                <option value="pending">待处理</option>
+                <option value="processing">处理中</option>
+                <option value="resolved">已解决</option>
               </select>
             </td>
-            <td><textarea v-model="item.adminNote" class="admin-textarea" placeholder="记录处理方案或发布时间计" ></textarea></td>
+            <td><textarea v-model="item.adminNote" class="admin-textarea" placeholder="记录处理方案或回访说明" ></textarea></td>
             <td><span class="admin-row-meta">{{ formatDate(item.createdAt) }}</span></td>
             <td>
               <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
@@ -54,7 +66,7 @@
         <p class="admin-row-meta">联系方式：{{ item.contact || '-' }}</p>
         <p class="admin-row-meta">提交时间：{{ formatDate(item.createdAt) }}</p>
         <select v-model="item.status" class="admin-select">
-          <option value="pending">待处</option>
+          <option value="pending">待处理</option>
           <option value="processing">处理中</option>
           <option value="resolved">已解决</option>
         </select>
@@ -71,20 +83,32 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { showToast } from 'vant'
-import { getFeedbacks, updateFeedback } from '@/api/adminContent.js'
+import { getFeedbacks, getFeedbackSummary, updateFeedback } from '@/api/adminContent.js'
 
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const items = ref([])
+const summary = ref({
+  total: 0,
+  moduleRanking: []
+})
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    items.value = await getFeedbacks()
+    const [feedbackList, feedbackSummary] = await Promise.all([
+      getFeedbacks(),
+      getFeedbackSummary().catch(() => ({ total: 0, moduleRanking: [] }))
+    ])
+    items.value = Array.isArray(feedbackList) ? feedbackList : []
+    summary.value = {
+      total: Number(feedbackSummary?.total || 0),
+      moduleRanking: Array.isArray(feedbackSummary?.moduleRanking) ? feedbackSummary.moduleRanking : []
+    }
   } catch (e) {
-    error.value = e.message || 'ʧ'
+    error.value = e.message || '加载失败'
   } finally {
     loading.value = false
   }
@@ -98,7 +122,7 @@ async function save(item) {
       adminNote: item.adminNote || ''
     })
     Object.assign(item, updated)
-    showToast({ message: '״Ѹ', type: 'success' })
+    showToast({ message: '状态已更新', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '保存失败', type: 'fail' })
   } finally {
@@ -107,7 +131,7 @@ async function save(item) {
 }
 
 function statusLabel(status) {
-  const map = { pending: '', processing: '', resolved: 'ѽ' }
+  const map = { pending: '待处理', processing: '处理中', resolved: '已解决' }
   return map[status] || status
 }
 
@@ -123,6 +147,26 @@ onMounted(load)
 .feedback-content {
   max-width: 320px;
   white-space: pre-wrap;
+}
+
+.summary-card {
+  margin-bottom: 12px;
+}
+
+.summary-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.summary-item {
+  border: 1px solid #eceff5;
+  border-radius: 10px;
+  background: #fafbfe;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
 }
 </style>
 

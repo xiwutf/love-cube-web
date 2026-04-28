@@ -135,7 +135,7 @@ const defaultPlatformModules = [
   { moduleKey: 'fellowship', title: '联谊交友', desc: '寻找心动的 TA', to: '/fellowship', status: 'active', icon: '❤', tone: 'tone-pink', sortOrder: 1 },
   { moduleKey: 'dynamic', title: '动态社区', desc: '分享生活，结识朋友', to: '/fellowship/dynamic', status: 'active', icon: '●', tone: 'tone-violet', sortOrder: 2 },
   { moduleKey: 'ai-tools', title: 'AI 工具', desc: '智能工具，提升效率', to: '/modules', status: 'planned', icon: 'AI', tone: 'tone-blue', sortOrder: 3 },
-  { moduleKey: 'announcements', title: '公告通知', desc: '¹棬ʱȡ', to: '/announcements', status: 'active', icon: '告', tone: 'tone-orange', sortOrder: 4 },
+  { moduleKey: 'announcements', title: '公告通知', desc: '及时获取重要通知', to: '/announcements', status: 'active', icon: '告', tone: 'tone-orange', sortOrder: 4 },
   { moduleKey: 'local-services', title: '本地服务', desc: '便捷生活，触手可及', to: '/modules', status: 'planned', icon: '位', tone: 'tone-green', sortOrder: 5 },
   { moduleKey: 'modules', title: '更多模块', desc: '更多精彩，敬请期待', to: '/modules', status: 'active', icon: '▦', tone: 'tone-purple', sortOrder: 6 }
 ]

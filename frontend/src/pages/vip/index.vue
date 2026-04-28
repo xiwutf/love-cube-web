@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="vip-page">
-    <NavBar title="VIP 浼氬憳" />
+    <NavBar title="VIP 会员" />
 
     <section class="vip-hero">
       <div class="hero-orbit" />
@@ -25,14 +25,14 @@
       <div class="hero-privileges">
         <span>金色身份标识</span>
         <span>推荐曝光加权</span>
-        <span>高意向用户优先触</span>
+        <span>高意向用户优先触达</span>
       </div>
     </section>
 
     <section class="section benefit-section">
       <div class="section-head">
         <p class="section-title">VIP 会员特权</p>
-        <span>弢通后立即生效</span>
+        <span>开通后立即生效</span>
       </div>
       <div class="benefits-grid">
         <div v-for="b in benefits" :key="b.title" class="benefit-item">
@@ -62,7 +62,7 @@
         >
           <span v-if="pkg.badge" class="package-badge">{{ pkg.badge }}</span>
           <div class="package-name">{{ pkg.name }}</div>
-          <div class="package-price"><small>楼</small>{{ pkg.price }}</div>
+          <div class="package-price"><small>¥</small>{{ pkg.price }}</div>
           <div class="package-desc">{{ pkg.desc }}</div>
         </div>
       </div>
@@ -70,7 +70,7 @@
 
     <section class="trust-panel">
       <div>
-        <p>认证 + VIP 双身份展</p>
+        <p>认证 + VIP 双身份展示</p>
         <span>资料页推荐卡片互动入口都会强化可信与优质感</span>
       </div>
       <van-icon name="certificate" size="30" />
@@ -140,10 +140,10 @@ async function handlePay() {
   try {
     await buyVip(pkg.id, pkg.name, pkg.price)
     closeToast()
-    showToast({ type: 'success', message: 'VIP 弢通成功！' })
+    showToast({ type: 'success', message: 'VIP 开通成功！' })
   } catch (e) {
     closeToast()
-    showToast({ type: 'fail', message: e?.message || '֧ʧܣ' })
+    showToast({ type: 'fail', message: e?.message || '支付失败，请重试' })
   } finally {
     paying.value = false
   }

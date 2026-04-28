@@ -143,7 +143,7 @@ const defaultModules = [
   {
     moduleKey:   'announcements',
     name:        '公告通知',
-    description: 'ƽ̨桢˵Ҫ֪ʵʱ',
+    description: '平台公告与重要通知实时送达',
     status:      'active',
     entryRoute:  '/announcements',
     icon:        ICONS.bell,
@@ -164,7 +164,7 @@ const defaultModules = [
   },
   {
     moduleKey:   'ai-tools',
-    name:        'AI 宸ュ叿',
+    name:        'AI 工具',
     description: '后续接入智能助手、内容生成效率工具等 AI 能力',
     status:      'planned',
     entryRoute:  null,

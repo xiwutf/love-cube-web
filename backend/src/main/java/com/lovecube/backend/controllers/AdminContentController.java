@@ -310,6 +310,37 @@ public class AdminContentController {
         return userFeedbackRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    @GetMapping("/feedbacks/summary")
+    public Map<String, Object> feedbackSummary(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        adminAuthService.requireAdmin(authHeader);
+        List<UserFeedback> feedbacks = userFeedbackRepository.findAllByOrderByCreatedAtDesc();
+        Map<String, Long> moduleCount = new HashMap<>();
+        long total = feedbacks.size();
+        for (UserFeedback feedback : feedbacks) {
+            String module = extractField(feedback.getContent(), "Q1-最关注模块：");
+            if (module.isBlank()) {
+                module = "未填写";
+            }
+            moduleCount.put(module, moduleCount.getOrDefault(module, 0L) + 1);
+        }
+
+        List<Map<String, Object>> ranking = moduleCount.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .map(entry -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("module", entry.getKey());
+                    item.put("count", entry.getValue());
+                    item.put("percent", total <= 0 ? 0 : Math.round(entry.getValue() * 10000.0 / total) / 100.0);
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("moduleRanking", ranking);
+        return result;
+    }
+
     @PostMapping("/reports")
     public ReportRecord saveReport(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -691,6 +722,19 @@ public class AdminContentController {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    private String extractField(String content, String prefix) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        String[] lines = content.split("\\r?\\n");
+        for (String line : lines) {
+            if (line != null && line.startsWith(prefix)) {
+                return line.substring(prefix.length()).trim();
+            }
+        }
+        return "";
     }
 
     private String normalizeRoleForView(String role, boolean isAdminFallback) {

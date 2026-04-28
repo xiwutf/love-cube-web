@@ -1,11 +1,19 @@
 ﻿import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import { VantResolver } from '@vant/auto-import-resolver'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   return {
-    plugins: [vue()],
+    plugins: [
+      vue(),
+      Components({
+        resolvers: [VantResolver({ importStyle: false })],
+        dts: false
+      })
+    ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -13,12 +21,24 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
-      port: 5173,
-      // 开发代理：将 /admin 请求转发到后端，避免本地浏览器跨域问题
+      // 固定端口 + strictPort：避免占用时静默改 5174，换电脑/多项目时地址一致
+      port: Number(env.VITE_DEV_PORT) || 5173,
+      strictPort: true,
       proxy: {
         '/admin': {
           target: env.VITE_BACKEND_ORIGIN || 'http://xifg.com.cn:8090',
           changeOrigin: true
+        }
+      }
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router', 'pinia'],
+            'vendor-vant': ['vant'],
+            'vendor-axios': ['axios']
+          }
         }
       }
     }

@@ -5,7 +5,7 @@
         <div class="logo-area">
           <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
-          <p class="logo-sub">登录后即可继续你的平台体</p>
+          <p class="logo-sub">登录后即可继续你的平台体验</p>
         </div>
 
         <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">
@@ -24,7 +24,7 @@
                 <van-field
                   v-model="loginForm.password"
                   name="password"
-                  label="瀵嗙爜"
+                  label="密码"
                   placeholder="请输入密码"
                   type="password"
                   :rules="[{ required: true, message: '请输入密码' }]"
@@ -38,7 +38,7 @@
             </van-form>
           </van-tab>
 
-          <van-tab title="娉ㄥ唽">
+          <van-tab title="注册">
             <van-form @submit="handleRegister" class="form-wrap">
               <van-cell-group inset>
                 <van-field
@@ -59,7 +59,7 @@
                 <van-field
                   v-model="regForm.password"
                   name="password"
-                  label="瀵嗙爜"
+                  label="密码"
                   placeholder="至少 6 位"
                   type="password"
                   :rules="[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少 6 位' }]"
@@ -67,16 +67,16 @@
                 <van-field
                   v-model="regForm.inviteCode"
                   name="inviteCode"
-                  label="邢请码"
+                  label="邀请码"
                   placeholder="请输入邀请码"
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
               </van-cell-group>
               <p class="register-tip">注册后即可使用联谊活动内容等平台能力</p>
-              <p class="invite-tip">Love Cube 当前采用邢请制注册，请填写邢请人提供的邀请码</p>
+              <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
-                  娉ㄥ唽
+                  注册
                 </van-button>
               </div>
             </van-form>

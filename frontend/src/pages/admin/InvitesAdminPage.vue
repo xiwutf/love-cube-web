@@ -1,23 +1,23 @@
 ﻿<template>
   <section class="admin-page">
     <section class="platform-card">
-      <h1 class="platform-title">邢请关</h1>
-      <p class="platform-subtitle">按邀请人、被邢请人、邀请码和时间筛选邀请注册记录</p>
+      <h1 class="platform-title">邀请管理</h1>
+      <p class="platform-subtitle">按邀请人、被邀请人、邀请码和时间筛选邀请注册记录</p>
     </section>
 
     <section class="platform-card filter-card" style="margin-top: 12px;">
       <div class="filter-grid">
-        <input v-model="filters.inviterUserId" placeholder="邢请人ID" />
+        <input v-model="filters.inviterUserId" placeholder="邀请人 ID" />
         <input v-model="filters.inviteeUserId" placeholder="被邀请人ID" />
-        <input v-model="filters.inviteCode" placeholder="邢请码" />
+        <input v-model="filters.inviteCode" placeholder="邀请码" />
         <select v-model="filters.status">
-          <option value="">全部状</option>
+          <option value="">全部状态</option>
           <option value="SUCCESS">SUCCESS</option>
           <option value="INVALID">INVALID</option>
           <option value="FAILED">FAILED</option>
           <option value="DISABLED">DISABLED</option>
         </select>
-        <input v-model="filters.startTime" type="date" placeholder="弢始日" />
+        <input v-model="filters.startTime" type="date" placeholder="开始日期" />
         <input v-model="filters.endTime" type="date" placeholder="结束日期" />
       </div>
       <div class="filter-actions">
@@ -31,11 +31,11 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>邢请码</th>
-            <th>邢请人</th>
+            <th>邀请码</th>
+            <th>邀请人</th>
             <th>被邀请人</th>
-            <th>状</th>
-            <th>娉ㄥ唽IP</th>
+            <th>状态</th>
+            <th>注册 IP</th>
             <th>设备信息</th>
             <th>注册时间</th>
           </tr>
@@ -53,7 +53,7 @@
           </tr>
         </tbody>
       </table>
-      <van-empty v-if="!loading && !rows.length" description="暂无邢请记" />
+      <van-empty v-if="!loading && !rows.length" description="暂无邀请记录" />
     </section>
 
     <div class="admin-list admin-mobile-only">
@@ -62,13 +62,13 @@
           <strong>{{ item.inviteCode }}</strong>
           <span class="admin-tag active">{{ item.status || '-' }}</span>
         </div>
-        <p class="admin-row-meta">邢请人：{{ item.inviterUserId }} / {{ item.inviterName || '-' }}</p>
+        <p class="admin-row-meta">邀请人：{{ item.inviterUserId }} / {{ item.inviterName || '-' }}</p>
         <p class="admin-row-meta">被邀请人：{{ item.inviteeUserId || '-' }} / {{ item.inviteeName || '-' }}</p>
         <p class="admin-row-meta">IP：{{ item.registerIp || '-' }}</p>
-        <p class="admin-row-meta">豸{{ item.registerUserAgent || '-' }}</p>
+        <p class="admin-row-meta">设备：{{ item.registerUserAgent || '-' }}</p>
         <p class="admin-row-meta">时间：{{ formatDate(item.createdAt) }}</p>
       </article>
-      <van-empty v-if="!loading && !rows.length" description="暂无邢请记" />
+      <van-empty v-if="!loading && !rows.length" description="暂无邀请记录" />
     </div>
   </section>
 </template>
@@ -106,7 +106,7 @@ async function loadInvites() {
     const data = await getAdminInvites(buildParams())
     rows.value = Array.isArray(data) ? data : []
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '邢请记录加载失' })
+    showToast({ type: 'fail', message: err.message || '邀请记录加载失败' })
   } finally {
     loading.value = false
   }

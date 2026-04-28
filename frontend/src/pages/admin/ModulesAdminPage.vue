@@ -3,7 +3,7 @@
     <header class="ma-header">
       <div>
         <h2 class="ma-title">模块管理</h2>
-        <p class="ma-desc">这里维护的模块会同步影响前台首页“平台模块和模块中心的展示排序状态与入口</p>
+        <p class="ma-desc">这里维护的模块会同步影响前台首页“平台模块”和“模块中心”的展示、排序、状态与入口。</p>
       </div>
       <div class="ma-actions">
         <button type="button" class="admin-btn" :disabled="loading" @click="loadModules">
@@ -23,7 +23,7 @@
             <th>排序</th>
             <th>模块标识</th>
             <th>模块名称</th>
-            <th>状</th>
+            <th>状态</th>
             <th>入口路由</th>
             <th>图标</th>
             <th>色调</th>
@@ -49,8 +49,8 @@
             </td>
             <td>
               <select v-model="mod.status" class="ma-input">
-                <option value="active">已开</option>
-                <option value="planned">瑙勫垝涓</option>
+                <option value="active">已开启</option>
+                <option value="planned">规划中</option>
               </select>
             </td>
             <td>
@@ -74,7 +74,7 @@
       </table>
     </div>
 
-    <p class="ma-tip">״Ϊ滮Сģǰ̨ʾΪɽ룻رաʾӹҳ</p>
+    <p class="ma-tip">状态为“规划中”的模块前台会显示“即将上线”；关闭展示后前台不再显示该模块。</p>
   </div>
 </template>
 
@@ -90,7 +90,7 @@ const modules = ref([])
 const toneOptions = [
   { value: 'tone-blue', label: '蓝色' },
   { value: 'tone-cyan', label: '青色' },
-  { value: 'tone-green', label: '缁胯壊' },
+  { value: 'tone-green', label: '绿色' },
   { value: 'tone-amber', label: '琥珀' },
   { value: 'tone-violet', label: '紫色' },
   { value: 'tone-rose', label: '玫红' }
@@ -131,7 +131,7 @@ async function saveModules() {
       .sort((a, b) => a.sortOrder - b.sortOrder)
     const result = await saveAdminModuleConfig(payload)
     modules.value = (result?.modules || payload).map(normalizeModule)
-    showToast({ type: 'success', message: '模块配置已保' })
+    showToast({ type: 'success', message: '模块配置已保存' })
   } catch (error) {
     showToast({ type: 'fail', message: error.message || '保存模块配置失败' })
   } finally {

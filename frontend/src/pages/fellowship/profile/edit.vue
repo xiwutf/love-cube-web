@@ -4,11 +4,11 @@
 
     <van-form class="form-wrap" @submit="handleSubmit">
       <van-cell-group inset>
-        <van-field v-model="form.nickname" label="昵称" placeholder="请输入昵" />
+        <van-field v-model="form.nickname" label="昵称" placeholder="请输入昵称" />
         <van-field
           :model-value="genderLabel"
           label="性别"
-          placeholder="请择性别"
+          placeholder="请选择性别"
           readonly
           is-link
           @click="showGenderPicker = true"
@@ -17,16 +17,16 @@
         <van-field
           :model-value="cityLabel"
           label="城市"
-          placeholder="请择城市"
+          placeholder="请选择城市"
           readonly
           is-link
           @click="showCityPicker = true"
         />
-        <van-field v-model="form.occupation" label="职业" placeholder="请输入职" />
+        <van-field v-model="form.occupation" label="职业" placeholder="请输入职业" />
         <van-field
           :model-value="educationLabel"
           label="学历"
-          placeholder="请择学历"
+          placeholder="请选择学历"
           readonly
           is-link
           @click="showEducationPicker = true"
@@ -34,8 +34,8 @@
         <van-field v-model="form.height" label="身高(cm)" type="number" placeholder="例如 170" />
         <van-field v-model="form.bio" label="自我介绍" type="textarea" rows="2" autosize />
         <van-field v-model="form.intention" label="交友意向" type="textarea" rows="2" autosize />
-        <van-field v-model="form.tags" label="标签" placeholder="多个标签用号分隔" />
-        <van-field v-model="form.avatarUrl" label="澶村儚URL" placeholder="请输入头像地坢" />
+        <van-field v-model="form.tags" label="标签" placeholder="多个标签用逗号分隔" />
+        <van-field v-model="form.avatarUrl" label="头像 URL" placeholder="请输入头像地址" />
       </van-cell-group>
 
       <div class="btn-wrap">

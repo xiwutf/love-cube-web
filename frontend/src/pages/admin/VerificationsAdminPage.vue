@@ -1,7 +1,7 @@
 ﻿<template>
   <section class="admin-page">
     <section class="platform-card">
-      <h1 class="platform-title">璁よ瘉瀹℃牳</h1>
+      <h1 class="platform-title">认证审核</h1>
       <p class="platform-subtitle">审核用户提交的真人头像与实名认证申请</p>
     </section>
 
@@ -10,13 +10,13 @@
       <select v-model="filterStatus" class="admin-select" style="margin-right:8px;">
         <option value="">全部状态</option>
         <option value="pending">待审核</option>
-        <option value="approved">宸查€氳繃</option>
+        <option value="approved">已通过</option>
         <option value="rejected">已驳回</option>
       </select>
       <select v-model="filterType" class="admin-select">
         <option value="">全部类型</option>
         <option value="PHOTO">真人头像</option>
-        <option value="REALNAME">瀹炲悕璁よ瘉</option>
+        <option value="REALNAME">实名认证</option>
         <option value="IDCARD">身份证</option>
       </select>
     </section>
@@ -29,10 +29,10 @@
         <thead>
           <tr>
             <th>申请</th>
-            <th>绫诲瀷</th>
+            <th>类型</th>
             <th>提交内容</th>
             <th>提交 / 审核</th>
-            <th>状</th>
+            <th>状态</th>
             <th>驳回原因</th>
             <th>操作</th>
           </tr>
@@ -48,7 +48,7 @@
             <td>
               <div class="admin-cell-actions">
                 <button class="admin-btn primary" type="button" :disabled="saving || item.status !== 'pending'" @click="approve(item)">通过</button>
-                <button class="admin-btn" type="button" :disabled="saving || item.status !== 'pending'" @click="reject(item)">椹冲洖</button>
+                <button class="admin-btn" type="button" :disabled="saving || item.status !== 'pending'" @click="reject(item)">驳回</button>
               </div>
             </td>
           </tr>
@@ -67,11 +67,11 @@
           </div>
         </div>
         <p class="admin-row-meta">{{ parseSubmitData(item) }}</p>
-        <p class="admin-row-meta">提交：{{ formatDate(item.submittedAt) }} 路 审核：{{ item.reviewedAt ? formatDate(item.reviewedAt) : '待审核' }}</p>
-        <textarea v-model="rejectMemo[item.id]" class="admin-textarea" placeholder="驳回原因（驳回时填写" ></textarea>
+        <p class="admin-row-meta">提交：{{ formatDate(item.submittedAt) }} / 审核：{{ item.reviewedAt ? formatDate(item.reviewedAt) : '待审核' }}</p>
+        <textarea v-model="rejectMemo[item.id]" class="admin-textarea" placeholder="驳回原因（驳回时填写）" ></textarea>
         <div class="admin-toolbar">
           <button class="admin-btn primary" type="button" :disabled="saving || item.status !== 'pending'" @click="approve(item)">通过</button>
-          <button class="admin-btn" type="button" :disabled="saving || item.status !== 'pending'" @click="reject(item)">椹冲洖</button>
+          <button class="admin-btn" type="button" :disabled="saving || item.status !== 'pending'" @click="reject(item)">驳回</button>
         </div>
       </article>
       <van-empty v-if="!filteredItems.length" description="暂无认证申请" />
@@ -130,7 +130,7 @@ async function reject(item) {
   try {
     const updated = await reviewVerification(item.id, 'reject', reason)
     Object.assign(item, updated)
-    showToast({ message: '已驳', type: 'success' })
+    showToast({ message: '已驳回', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '操作失败', type: 'fail' })
   } finally {
@@ -152,7 +152,7 @@ function parseSubmitData(item) {
     const parts = []
     if (item.realName) parts.push(`姓名：${item.realName}`)
     if (item.idNumber) parts.push(`证件：${item.idNumber}`)
-    return parts.join(' 路 ') || '--'
+    return parts.join(' / ') || '--'
   }
   try {
     const d = JSON.parse(item.submitData)
@@ -160,7 +160,7 @@ function parseSubmitData(item) {
     if (d.realName) parts.push(`姓名：${d.realName}`)
     if (d.idLast4) parts.push(`证件后四位：${d.idLast4}`)
     if (d.selfieUrl) parts.push('[已上传照片]')
-    return parts.join(' 路 ') || item.submitData.slice(0, 60)
+    return parts.join(' / ') || item.submitData.slice(0, 60)
   } catch {
     return item.submitData?.slice(0, 60) || '--'
   }

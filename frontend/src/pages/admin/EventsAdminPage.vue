@@ -2,13 +2,13 @@
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">活动管理</h1>
-      <p class="platform-subtitle">PC 端支持完整编辑；手机端仅做活动查看与状感知</p>
+      <p class="platform-subtitle">PC 端支持完整编辑；手机端仅做活动查看与状态感知</p>
 
       <div class="admin-toolbar admin-desktop-only">
         <input v-model="draft.title" class="admin-input" placeholder="活动名称" />
         <input v-model="draft.time" class="admin-input" placeholder="时间" />
         <input v-model="draft.location" class="admin-input" placeholder="地点" />
-        <input v-model="draft.category" class="admin-input" placeholder="分类（填" />
+        <input v-model="draft.category" class="admin-input" placeholder="分类（选填）" />
         <CoverUploadField v-model="draft.coverUrl" :disabled="saving" />
         <label class="admin-check"><input type="checkbox" v-model="draft.pinned" /> 置顶</label>
         <label class="admin-check"><input type="checkbox" v-model="draft.recommended" /> 推荐</label>
@@ -31,7 +31,7 @@
             <th>分类 / 封面</th>
             <th>标记</th>
             <th>报名</th>
-            <th>状</th>
+            <th>状态</th>
             <th>摘要</th>
             <th>内容编辑</th>
             <th>操作</th>
@@ -75,9 +75,9 @@
           <strong>{{ item.title }}</strong>
           <span class="admin-tag" :class="item.status">{{ item.status }}</span>
         </div>
-        <p class="admin-row-meta">{{ item.eventTime || item.time }} 路 {{ item.location }}</p>
+        <p class="admin-row-meta">{{ item.eventTime || item.time }} / {{ item.location }}</p>
         <p class="admin-row-meta">
-          <span v-if="item.category">{{ item.category }} 路 </span>
+          <span v-if="item.category">{{ item.category }} / </span>
           <span v-if="item.pinned">置顶 · </span>
           <span v-if="item.recommended">推荐 · </span>
           报名 {{ item.signupCount || 0 }} 人
@@ -169,7 +169,7 @@ async function toggle(item) {
     const newStatus = item.status === 'published' ? 'draft' : 'published'
     const updated = await saveEvent({ ...item, status: newStatus })
     Object.assign(item, updated)
-    showToast({ message: '状已更新', type: 'success' })
+    showToast({ message: '状态已更新', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '更新失败', type: 'fail' })
   } finally {
@@ -182,7 +182,7 @@ async function remove(item) {
   try {
     await deleteEvent(item.id)
     items.value = items.value.filter((entry) => entry.id !== item.id)
-    showToast({ message: '活动已删', type: 'success' })
+    showToast({ message: '活动已删除', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '删除失败', type: 'fail' })
   } finally {

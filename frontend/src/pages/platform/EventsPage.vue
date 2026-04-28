@@ -2,9 +2,9 @@
   <section class="events-page">
     <section class="events-hero" aria-labelledby="events-title">
       <div class="hero-copy">
-        <router-link to="/" class="back-link">?返回</router-link>
+        <router-link to="/" class="back-link">← 返回</router-link>
         <h1 id="events-title">活动中心<span aria-hidden="true">✓</span></h1>
-        <p>发现精彩活动，结识志同道合的朋友，丰富你的生活体</p>
+        <p class="hero-lead">发现精彩活动，结识志同道合的朋友，丰富你的生活体验</p>
 
         <div class="stats-grid" aria-label="活动数据概览">
           <article v-for="stat in stats" :key="stat.label" class="stat-card">
@@ -56,7 +56,7 @@
             :aria-expanded="filtersExpanded ? 'true' : 'false'"
             @click="filtersExpanded = !filtersExpanded"
           >
-            <span>绛涢€夋潯浠</span>
+            <span>筛选条件</span>
             <i :class="{ expanded: filtersExpanded }" aria-hidden="true">⌄</i>
           </button>
 
@@ -79,7 +79,7 @@
                 </select>
               </label>
               <label>
-                <span>绫诲瀷</span>
+                <span>类型</span>
                 <select v-model="typeFilter">
                   <option value="">全部类型</option>
                   <option v-for="type in typeOptions" :key="type" :value="type">{{ type }}</option>
@@ -135,7 +135,7 @@
             </router-link>
 
             <article v-if="!loading && !visibleList.length" class="empty-card">
-              <h3>暂无符合条件的活</h3>
+              <h3>暂无符合条件的活动</h3>
               <p>换一个筛选条件试试，新的活动也会持续补充</p>
             </article>
           </div>
@@ -148,7 +148,7 @@
         <section class="side-card">
           <div class="side-head">
             <h2>热门活动</h2>
-            <router-link to="/events">查看更多 </router-link>
+            <router-link to="/events">查看更多</router-link>
           </div>
           <router-link v-for="item in hotActivities" :key="item.id" :to="`/events/${item.id}`" class="hot-item">
             <img :src="item.coverUrl" :alt="item.title" loading="lazy">
@@ -162,9 +162,9 @@
 
         <section class="side-card publish-card">
           <div>
-            <h2>快发布活</h2>
-            <p>分享你的活动，吸引更多伙伴参</p>
-            <router-link to="/admin/events" class="publish-btn">?发布新活</router-link>
+            <h2>快速发布活动</h2>
+            <p>分享你的活动，吸引更多伙伴参与</p>
+            <router-link to="/admin/events" class="publish-btn">发布新活动</router-link>
           </div>
           <div class="mini-calendar" aria-hidden="true"></div>
         </section>
@@ -267,8 +267,8 @@ function setCategory(value) {
 }
 
 function parseCity(location = '') {
-  if (location.includes('涓婃捣')) return '涓婃捣'
-  if (location.includes('绾夸笂')) return '绾夸笂'
+  if (location.includes('上海')) return '上海'
+  if (location.includes('线上')) return '线上'
   return ''
 }
 
@@ -285,7 +285,7 @@ function formatEventTime(value) {
 }
 
 function formatShortTime(value) {
-  if (!value) return '寰呭畾'
+  if (!value) return '待定'
   const [date, time = ''] = String(value).split(' ')
   return `${date.slice(5)} ${time.slice(0, 5)}`
 }
@@ -598,11 +598,19 @@ onMounted(async () => {
   gap: var(--lc-space-6);
   min-height: 62px;
   align-items: center;
+  flex-wrap: nowrap;
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+  margin-inline: calc(-1 * var(--lc-space-5));
+  padding-inline: var(--lc-space-5);
 }
 
 .tabs button {
   position: relative;
+  flex-shrink: 0;
   border: 0;
   background: transparent;
   color: var(--lc-muted);
@@ -988,6 +996,8 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .events-hero {
     grid-template-columns: 1fr;
+    min-height: 0;
+    gap: var(--lc-space-4);
   }
 
   .hero-art {
@@ -1004,13 +1014,98 @@ onMounted(async () => {
     padding: 16px 12px 0;
   }
 
-  .activity-card,
-  .side-card,
+  .hero-copy h1 {
+    margin-top: var(--lc-space-2);
+    font-size: clamp(1.35rem, 6.2vw, 1.65rem);
+    line-height: 1.15;
+  }
+
+  .hero-copy h1 span {
+    font-size: 1rem;
+    margin-left: 4px;
+  }
+
+  .hero-lead {
+    margin-top: var(--lc-space-2);
+    font-size: 12px;
+    line-height: 1.45;
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 数据概览：单行紧凑条，避免多块大卡占满首屏 */
+  .stats-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    margin-top: 10px;
+    padding: 8px 6px;
+    gap: 0;
+    border: 1px solid rgba(226, 232, 240, 0.76);
+    border-radius: var(--lc-radius-sm);
+    background: rgba(255, 255, 255, 0.82);
+  }
+
   .stat-card {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6px 2px;
+    gap: 2px;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .stat-card:not(:first-child) {
+    border-left: 1px solid rgba(226, 232, 240, 0.9);
+  }
+
+  .stat-icon {
+    grid-row: auto;
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .stat-value {
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .stat-note {
+    display: none;
+  }
+
+  /* 固定展示项占屏宽，弱化营销类指标 */
+  .stat-card:nth-child(4) {
+    display: none;
+  }
+
+  .activity-card,
+  .side-card {
     box-shadow: none;
   }
 
-  .stats-grid,
   .activity-grid,
   .filters {
     grid-template-columns: 1fr;
@@ -1018,6 +1113,11 @@ onMounted(async () => {
 
   .tabs {
     gap: var(--lc-space-4);
+    scroll-snap-type: x proximity;
+  }
+
+  .tabs button {
+    scroll-snap-align: start;
   }
 
   .filter-toggle {

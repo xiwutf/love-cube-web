@@ -5,7 +5,6 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserFeedbackRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.utils.JwtUtil;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,26 +30,15 @@ public class FeedbackController {
         this.userFeedbackRepository = userFeedbackRepository;
     }
 
-    @PostMapping("")
+    @PostMapping({"", "/submit"})
     public ResponseEntity<?> submitFeedback(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> payload
     ) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "未提供或格式错误的 token"));
-        }
-
-        String token = authHeader.substring(7);
-        String openid = JwtUtil.getOpenIdFromToken(token);
-        if (openid == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "token 无效"));
-        }
-
-        User user = userRepository.findByOpenid(openid);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
-        }
-
+        User user = resolveCurrentUser(authHeader);
+        String module = safe(payload.get("module"), 128);
+        String goals = safe(payload.get("goals"), 256);
+        String missing = safe(payload.get("missing"), 128);
         String content = safe(payload.get("content"), 1000);
         if (content.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "反馈内容不能为空"));
@@ -59,17 +47,33 @@ public class FeedbackController {
 
         UserFeedback record = new UserFeedback();
         record.setId("feedback-" + UUID.randomUUID());
-        record.setUserId(user.getUserid());
-        record.setUsername(resolveUsername(user));
+        record.setUserId(user == null ? 0L : user.getUserid());
+        record.setUsername(user == null ? "共创访客" : resolveUsername(user));
         record.setContact(contact);
-        record.setContent(content);
+        record.setContent(buildQuestionnaireContent(module, goals, missing, content));
         record.setStatus("pending");
         userFeedbackRepository.save(record);
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", record.getId());
-        result.put("message", "反馈提交成功");
+        result.put("message", "感谢参与平台共建");
         return ResponseEntity.ok(result);
+    }
+
+    private User resolveCurrentUser(String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return null;
+            }
+            String token = authHeader.substring(7);
+            String openid = JwtUtil.getOpenIdFromToken(token);
+            if (openid == null) {
+                return null;
+            }
+            return userRepository.findByOpenid(openid);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String resolveUsername(User user) {
@@ -91,5 +95,20 @@ public class FeedbackController {
             return text;
         }
         return text.substring(0, maxLen);
+    }
+
+    private String buildQuestionnaireContent(String module, String goals, String missing, String content) {
+        StringBuilder builder = new StringBuilder();
+        if (!module.isBlank()) {
+            builder.append("Q1-最关注模块：").append(module).append('\n');
+        }
+        if (!goals.isBlank()) {
+            builder.append("Q2-来站目标：").append(goals).append('\n');
+        }
+        if (!missing.isBlank()) {
+            builder.append("Q3-当前最缺：").append(missing).append('\n');
+        }
+        builder.append(content);
+        return safe(builder.toString(), 1000);
     }
 }

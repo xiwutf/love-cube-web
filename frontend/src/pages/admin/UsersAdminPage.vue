@@ -2,7 +2,7 @@
   <section class="admin-page">
     <section class="platform-card">
       <h1 class="platform-title">用户管理</h1>
-      <p class="platform-subtitle">展示用户列表并支持角色与状管理</p>
+      <p class="platform-subtitle">展示用户列表并支持角色与状态管理</p>
     </section>
 
     <section class="platform-card" style="margin-top: 12px;">
@@ -15,9 +15,9 @@
           <tr>
             <th>用户</th>
             <th>手机</th>
-            <th>瑙掕壊</th>
-            <th>璁よ瘉</th>
-            <th>状</th>
+            <th>角色</th>
+            <th>认证</th>
+            <th>状态</th>
             <th>注册时间</th>
             <th>操作</th>
           </tr>
@@ -164,7 +164,7 @@ async function setStatus(item, status) {
   try {
     const result = await updateAdminUserStatus(item.userId, status)
     item.status = result.status
-    showToast({ type: 'success', message: result.message || '状已更新' })
+    showToast({ type: 'success', message: result.message || '状态已更新' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '操作失败' })
   }
@@ -172,7 +172,7 @@ async function setStatus(item, status) {
 
 async function saveRole(item) {
   if (!item?.userId) {
-    showToast({ type: 'fail', message: '缺少用户ID，无法保' })
+    showToast({ type: 'fail', message: '缺少用户ID，无法保存' })
     return
   }
   if (!canEditRole(item)) {
@@ -180,13 +180,13 @@ async function saveRole(item) {
     return
   }
   if (!['user', 'admin'].includes(item.role)) {
-    showToast({ type: 'fail', message: '浠呭彲璁剧疆 USER/ADMIN' })
+    showToast({ type: 'fail', message: '仅可设置 USER/ADMIN' })
     return
   }
   try {
     savingRoleUserId.value = item.userId
     await updateAdminUserRole(item.userId, item.role)
-    showToast({ type: 'success', message: '角色已更' })
+    showToast({ type: 'success', message: '角色已更新' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '角色更新失败' })
   } finally {
@@ -210,7 +210,7 @@ async function forceDelete(item) {
   try {
     const result = await forceDeleteAdminUser(item.userId)
     users.value = users.value.filter((u) => u.userId !== item.userId)
-    showToast({ type: 'success', message: result.message || '用户已删' })
+    showToast({ type: 'success', message: result.message || '用户已删除' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '强制删除失败' })
   }
