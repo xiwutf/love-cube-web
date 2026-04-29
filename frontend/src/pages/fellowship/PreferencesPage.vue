@@ -91,7 +91,7 @@ const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
 const form = reactive({
   minAge: Number(saved.minAge || 22),
   maxAge: Number(saved.maxAge || 32),
-  gender: saved.gender || 'female',
+  gender: saved.gender || 'any',
   city: saved.city || '',
   education: saved.education || '不限',
   marriagePlan: saved.marriagePlan || '一年内考虑',

@@ -39,9 +39,12 @@ const loading = ref(false)
 const refreshing = ref(false)
 const finished = ref(false)
 const pager = ref({ page: 1, size: 20 })
+/** van-list 触发 @load 前会把 loading 置为 true，不能用 loading 做「正在请求」守卫，否则会直接 return 且永远不执行 finally */
+const fetching = ref(false)
 
 async function loadMore() {
-  if (loading.value || finished.value) return
+  if (finished.value || fetching.value) return
+  fetching.value = true
   loading.value = true
   try {
     const res = await getOppositeGenderUsers({
@@ -55,7 +58,9 @@ async function loadMore() {
     pager.value.page += 1
   } catch (error) {
     showToast({ type: 'fail', message: error?.message || '加载失败，请稍后重试' })
+    finished.value = true
   } finally {
+    fetching.value = false
     loading.value = false
   }
 }

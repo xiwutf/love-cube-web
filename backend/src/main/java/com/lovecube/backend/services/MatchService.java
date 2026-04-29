@@ -57,8 +57,10 @@ public class MatchService
         User currentUser = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
         Integer oppositeGender = getOppositeGender(currentUser.getGender());
+        // 账号已标注性别时服务端固定按异性推荐；客户端传的 gender 若与异性不一致（例如误选「男生」实则想看同性）
+        // 不再整表返回空，避免用户以为「系统里没人」
         if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
-            return new ArrayList<>();
+            logger.debug("忽略与异性策略冲突的 gender 参数: 传入 {} 有效异性 {}", gender, oppositeGender);
         }
         Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 
@@ -171,7 +173,10 @@ public class MatchService
         User currentUser = userRepository.findById(currentUserId).orElse(null);
         Integer oppositeGender = currentUser == null ? null : getOppositeGender(currentUser.getGender());
         if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
-            return new ArrayList<>();
+            logger.debug(
+                    "列表性别参数 {} 与当前账号异性 {} 不一致，已忽略参数（仍按异性推荐）",
+                    gender,
+                    oppositeGender);
         }
         Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 

@@ -16,12 +16,12 @@
         <div class="row"><span>学历</span><span>{{ profile.education || '-' }}</span></div>
         <div class="row"><span>身高</span><span>{{ profile.height ? `${profile.height}cm` : '-' }}</span></div>
         <div class="row"><span>交友意向</span><span>{{ profile.intention || '-' }}</span></div>
-        <div class="row"><span>资料状</span><span>{{ profile.profileStatus || 'INCOMPLETE' }}</span></div>
+        <div class="row"><span>资料状态</span><span>{{ profile.profileStatus || 'INCOMPLETE' }}</span></div>
       </div>
 
       <div class="completion-card">
         <div class="completion-header">
-          <span>瀹屾暣搴</span>
+          <span>资料完整度</span>
           <strong>{{ completion.percent || 0 }}%</strong>
         </div>
         <van-progress :percentage="completion.percent || 0" color="#ff6b8a" stroke-width="8" />
