@@ -144,10 +144,9 @@ public class UserController {
     public ResponseEntity<?> activateFellowship(@RequestHeader("Authorization") String authHeader) {
         try {
             User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
-            if (!Boolean.TRUE.equals(currentUser.getFellowshipEnabled())) {
-                currentUser.setFellowshipEnabled(true);
-                userRepository.save(currentUser);
-            }
+            currentUser.setFellowshipEnabled(true);
+            currentUser.setFellowshipMatchVisible(true);
+            userRepository.save(currentUser);
             Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
             result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
             return ResponseEntity.ok(result);
@@ -162,10 +161,9 @@ public class UserController {
     public ResponseEntity<?> deactivateFellowship(@RequestHeader("Authorization") String authHeader) {
         try {
             User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
-            if (Boolean.TRUE.equals(currentUser.getFellowshipEnabled())) {
-                currentUser.setFellowshipEnabled(false);
-                userRepository.save(currentUser);
-            }
+            currentUser.setFellowshipEnabled(false);
+            currentUser.setFellowshipMatchVisible(false);
+            userRepository.save(currentUser);
             Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
             result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
             return ResponseEntity.ok(result);

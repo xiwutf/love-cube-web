@@ -39,7 +39,6 @@ const loading = ref(false)
 const refreshing = ref(false)
 const finished = ref(false)
 const pager = ref({ page: 1, size: 20 })
-/** van-list 触发 @load 前会把 loading 置为 true，不能用 loading 做「正在请求」守卫，否则会直接 return 且永远不执行 finally */
 const fetching = ref(false)
 
 async function loadMore() {

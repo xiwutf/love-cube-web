@@ -80,7 +80,6 @@
         </div>
         <div class="filter-block">
           <p class="filter-label">性别偏好</p>
-          <p class="filter-hint">「男生 / 女生」指希望看到的对方性别；与交友异性策略不一致时会自动按异性推荐。</p>
           <van-radio-group v-model="filter.gender" direction="horizontal" class="filter-radio-group">
             <van-radio name="" icon-size="16">不限</van-radio>
             <van-radio name="male" icon-size="16">男生</van-radio>
@@ -448,12 +447,6 @@ onMounted(loadCards)
   font-weight: 600;
   color: #5b6b8a;
   margin-bottom: 4px;
-}
-.filter-hint {
-  font-size: 12px;
-  color: #8898aa;
-  line-height: 1.45;
-  margin: 0 0 10px;
 }
 .filter-value {
   font-size: 15px;

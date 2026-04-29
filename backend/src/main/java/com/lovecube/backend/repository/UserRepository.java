@@ -48,6 +48,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "SELECT * FROM users ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
     List<User> findNewcomers(@Param("limit") int limit);
 
+    /**
+     * 首页「为你推荐」：仅在已开通联谊且允许展示的用户中随机，避免先随机再过滤导致常为 0 条。
+     */
+    @Query(value = "SELECT * FROM users WHERE (user_status IS NULL OR LOWER(user_status) <> 'disabled') "
+            + "AND fellowship_enabled = 1 AND fellowship_match_visible = 1 "
+            + "ORDER BY RAND() LIMIT :limit", nativeQuery = true)
+    List<User> findRandomVisibleFellowshipUsers(@Param("limit") int limit);
+
+    /**
+     * 首页「新人」：同上，按注册时间倒序取可见用户。
+     */
+    @Query(value = "SELECT * FROM users WHERE (user_status IS NULL OR LOWER(user_status) <> 'disabled') "
+            + "AND fellowship_enabled = 1 AND fellowship_match_visible = 1 "
+            + "ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
+    List<User> findNewcomersVisibleFellowshipUsers(@Param("limit") int limit);
+
     List<User> findByGenderAndUseridNot(Integer gender, Long userId);
 
     List<User> findByUseridNot(Long userId);

@@ -33,14 +33,14 @@ public class HomeService {
     }
 
     public List<Map<String, Object>> getRecommends() {
-        return userRepository.findRandomUsers(10).stream()
+        return userRepository.findRandomVisibleFellowshipUsers(10).stream()
                 .filter(this::isVisibleInMatchPool)
                 .map(this::convertUserToMap)
                 .collect(Collectors.toList());
     }
 
     public List<Map<String, Object>> getNewcomers() {
-        return userRepository.findNewcomers(10).stream()
+        return userRepository.findNewcomersVisibleFellowshipUsers(10).stream()
                 .filter(this::isVisibleInMatchPool)
                 .map(this::convertUserToMap)
                 .collect(Collectors.toList());

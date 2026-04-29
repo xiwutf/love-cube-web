@@ -191,7 +191,8 @@ public class UnifiedProfileService {
 
         String nickname = getText(payload, "nickname", main.getNickname(), user.getUsername());
         nickname = normalizeNickname(nickname);
-        String gender = normalizeGender(getText(payload, "gender", main.getGender(), fromGenderCode(user.getGender())));
+        String gender = normalizeGender(
+                getText(payload, "gender", fromGenderCode(user.getGender()), main.getGender()));
         Integer birthYear = getInteger(payload, "birthYear", legacy.getBirthYear(), user.getBirthDate() == null ? null : user.getBirthDate().getYear());
         Integer age = birthYear == null ? user.getAge() : calcAge(birthYear);
         String city = getText(payload, "city", main.getCity(), user.getLocation());
@@ -393,10 +394,10 @@ public class UnifiedProfileService {
                 user.getProfilePhoto()
         );
         String gender = normalizeGender(firstNonBlank(
-                legacy == null ? null : legacy.getGender(),
+                fromGenderCode(user.getGender()),
                 main == null ? null : main.getGender(),
-                userProfile == null ? null : userProfile.getGender(),
-                fromGenderCode(user.getGender())
+                legacy == null ? null : legacy.getGender(),
+                userProfile == null ? null : userProfile.getGender()
         ));
         Integer birthYear = firstNonNull(
                 legacy == null ? null : legacy.getBirthYear(),

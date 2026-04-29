@@ -57,8 +57,6 @@ public class MatchService
         User currentUser = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
         Integer oppositeGender = getOppositeGender(currentUser.getGender());
-        // 账号已标注性别时服务端固定按异性推荐；客户端传的 gender 若与异性不一致（例如误选「男生」实则想看同性）
-        // 不再整表返回空，避免用户以为「系统里没人」
         if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
             logger.debug("忽略与异性策略冲突的 gender 参数: 传入 {} 有效异性 {}", gender, oppositeGender);
         }

@@ -623,11 +623,13 @@ public class AdminContentController {
 
         boolean fellowshipEnabled = Boolean.parseBoolean(String.valueOf(payload.getOrDefault("fellowshipEnabled", false)));
         target.setFellowshipEnabled(fellowshipEnabled);
+        target.setFellowshipMatchVisible(fellowshipEnabled);
         userRepository.save(target);
 
         Map<String, Object> result = new HashMap<>();
         result.put("userId", userId);
         result.put("fellowshipEnabled", fellowshipEnabled);
+        result.put("fellowshipMatchVisible", Boolean.TRUE.equals(target.getFellowshipMatchVisible()));
         result.put("message", fellowshipEnabled ? "联谊模块已开通" : "联谊模块已关闭");
         return result;
     }
