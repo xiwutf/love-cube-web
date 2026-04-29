@@ -4,7 +4,12 @@
       <HomeNoticeBar class="home-block home-notice" :notice="notice" />
       <HomeHeroPortal class="home-block home-hero" :stats="heroStats" />
       <HomeModuleGrid class="home-block home-modules" :modules="coreModules" />
-      <HomeOfficialPanel class="home-block home-official" :official-items="officialItems" :changelog-items="changelogItems" />
+      <HomeOfficialPanel
+        class="home-block home-official"
+        :official-items="officialItems"
+        :changelog-items="changelogItems"
+        :pending-items="pendingItems"
+      />
       <div class="portal-split portal-split-accent home-block home-fellowship">
         <HomeFellowshipBanner />
         <HomeActivityPanel :events="activityItems" :stats="activityStats" />
@@ -132,6 +137,27 @@ const fallbackChangelog = [
   { version: 'v1.0.0', title: '平台正式上线，基础功能发布', date: '2026-04-01' }
 ]
 
+const fallbackPendingUpdates = [
+  {
+    id: 'pending-1',
+    title: '部分页面加载偏慢',
+    detail: '已定位到高峰时段响应波动，正在推进接口与缓存优化。',
+    status: '排查中'
+  },
+  {
+    id: 'pending-2',
+    title: '活动报名提醒不够及时',
+    detail: '计划新增站内消息与提醒频率设置，避免错过关键通知。',
+    status: '开发中'
+  },
+  {
+    id: 'pending-3',
+    title: '移动端个别机型排版错位',
+    detail: '正在补齐兼容性样式，逐步覆盖主流屏幕尺寸。',
+    status: '待发布'
+  }
+]
+
 const coreModules = [
   { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/modules', icon: '⚙', tone: 'pink' },
   { title: 'LoveCube', desc: '联谊交友专区\n真诚相遇，认真开始', to: '/fellowship-intro', icon: '♥', tone: 'pink' },
@@ -183,7 +209,14 @@ const officialItems = computed(() => {
 
 const changelogItems = computed(() => {
   const configured = Array.isArray(homeConfig.value?.changelog) ? homeConfig.value.changelog : []
-  return (configured.length ? configured : fallbackChangelog).slice(0, 5)
+  return (configured.length ? configured : fallbackChangelog).slice(0, 3)
+})
+
+const pendingItems = computed(() => {
+  const configured = Array.isArray(homeConfig.value?.pendingUpdates)
+    ? homeConfig.value.pendingUpdates
+    : []
+  return (configured.length ? configured : fallbackPendingUpdates).slice(0, 3)
 })
 
 const featuredItems = computed(() => {

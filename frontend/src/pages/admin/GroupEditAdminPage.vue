@@ -170,13 +170,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  approveAdminGroupRequest,
+  approveMember,
   fetchGroupDetail,
   fetchGroupMembers,
   fetchGroupNotices,
   fetchGroupPosts,
-  getAdminGroupJoinRequests,
-  rejectAdminGroupRequest,
+  rejectMember,
   removeAdminGroupMember,
   updateGroup
 } from '@/api/groups.js'
@@ -259,16 +258,16 @@ async function loadMembers(status = 'approved') {
   errors.members = ''
   try {
     if (status === 'pending') {
-      const data = await getAdminGroupJoinRequests(groupId, 'pending')
-      members.value = unwrapList(data).map(normalizeJoinRequest)
+      const data = await fetchGroupMembers(groupId, { status: 'pending' })
+      members.value = unwrapList(data).map(normalizeMember)
       pendingMembers.value = members.value
     } else if (status === 'all') {
       const [approvedResult, pendingResult] = await Promise.allSettled([
         fetchGroupMembers(groupId, { status: 'approved' }),
-        getAdminGroupJoinRequests(groupId, 'pending')
+        fetchGroupMembers(groupId, { status: 'pending' })
       ])
       const approved = approvedResult.status === 'fulfilled' ? unwrapList(approvedResult.value).map(normalizeMember) : []
-      const pending = pendingResult.status === 'fulfilled' ? unwrapList(pendingResult.value).map(normalizeJoinRequest) : []
+      const pending = pendingResult.status === 'fulfilled' ? unwrapList(pendingResult.value).map(normalizeMember) : []
       members.value = [...pending, ...approved]
       pendingMembers.value = pending
       if (approvedResult.status === 'rejected') throw approvedResult.reason
@@ -287,8 +286,8 @@ async function loadMembers(status = 'approved') {
 
 async function loadPendingCount() {
   try {
-    const data = await getAdminGroupJoinRequests(groupId, 'pending')
-    pendingMembers.value = unwrapList(data).map(normalizeJoinRequest)
+    const data = await fetchGroupMembers(groupId, { status: 'pending' })
+    pendingMembers.value = unwrapList(data).map(normalizeMember)
   } catch {
     pendingMembers.value = []
   }
@@ -358,7 +357,7 @@ async function toggleStatus() {
 async function approveMemberRecord(member) {
   saving.value = true
   try {
-    await approveAdminGroupRequest(groupId, member.id)
+    await approveMember(groupId, member.id)
     flash('成员申请已通过')
     await loadMembers(memberStatus.value)
     await loadDetail()
@@ -372,7 +371,7 @@ async function approveMemberRecord(member) {
 async function rejectMemberRecord(member) {
   saving.value = true
   try {
-    await rejectAdminGroupRequest(groupId, member.id)
+    await rejectMember(groupId, member.id)
     flash('成员申请已拒绝')
     await loadMembers(memberStatus.value)
     await loadPendingCount()
@@ -422,19 +421,6 @@ function normalizeMember(item) {
     status: item.status || 'approved',
     joinedAt: formatDateTime(item.joinedAt),
     requestedAt: formatDateTime(item.requestedAt || item.createdAt),
-    applyReason: item.applyReason || item.message || ''
-  }
-}
-
-function normalizeJoinRequest(item) {
-  return {
-    id: item.id,
-    userId: item.userId,
-    name: item.username || '未命名用户',
-    avatar: item.avatarUrl || DEFAULT_AVATAR,
-    role: 'member',
-    status: item.status || 'pending',
-    requestedAt: formatDateTime(item.requestedAt),
     applyReason: item.applyReason || item.message || ''
   }
 }

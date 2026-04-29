@@ -655,6 +655,9 @@ public class PlatformGroupController {
 
     private void requireManagerRole(Long groupId, String authHeader) {
         User user = adminAuthService.requireUser(authHeader);
+        if (adminAuthService.isAdmin(user)) {
+            return;
+        }
         memberRepository.findByGroupIdAndUserId(groupId, user.getUserid())
                 .filter(m -> "approved".equals(m.getStatus())
                         && ("owner".equals(m.getRole()) || "admin".equals(m.getRole())))

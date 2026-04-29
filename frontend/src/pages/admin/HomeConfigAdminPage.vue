@@ -128,6 +128,78 @@
       </div>
     </section>
 
+    <section class="hc-panel">
+      <div class="panel-head panel-head-with-action">
+        <h3>更新日志配置</h3>
+        <button type="button" class="admin-btn small" @click="addChangelogItem">新增日志</button>
+      </div>
+      <div class="list-grid list-grid-changelog">
+        <article v-for="(item, index) in form.changelog" :key="`${item.version || 'log'}-${index}`" class="item-card">
+          <div class="item-head">
+            <strong>{{ item.version || `日志 ${index + 1}` }}</strong>
+            <button type="button" class="text-btn danger" @click="removeChangelogItem(index)">删除</button>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>版本号</span>
+              <input v-model.trim="item.version" class="admin-input" type="text" placeholder="v1.5.0">
+            </label>
+            <label class="field">
+              <span>日期</span>
+              <input v-model.trim="item.date" class="admin-input" type="date">
+            </label>
+          </div>
+          <label class="field">
+            <span>更新标题</span>
+            <input v-model.trim="item.title" class="admin-input" type="text" placeholder="本次版本更新内容">
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>排序</span>
+              <input v-model.number="item.sortOrder" class="admin-input" type="number" min="0">
+            </label>
+            <label class="inline-check">
+              <input v-model="item.enabled" type="checkbox">
+              展示
+            </label>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="hc-panel">
+      <div class="panel-head panel-head-with-action">
+        <h3>待更新配置</h3>
+        <button type="button" class="admin-btn small" @click="addPendingUpdateItem">新增待更新</button>
+      </div>
+      <div class="list-grid list-grid-changelog">
+        <article v-for="(item, index) in form.pendingUpdates" :key="`${item.id || 'pending'}-${index}`" class="item-card">
+          <div class="item-head">
+            <strong>{{ item.title || `待更新 ${index + 1}` }}</strong>
+            <button type="button" class="text-btn danger" @click="removePendingUpdateItem(index)">删除</button>
+          </div>
+          <label class="field">
+            <span>标题</span>
+            <input v-model.trim="item.title" class="admin-input" type="text" placeholder="问题标题">
+          </label>
+          <label class="field">
+            <span>说明</span>
+            <textarea v-model.trim="item.detail" class="admin-textarea" rows="3" placeholder="告诉用户当前进展与计划"></textarea>
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>状态标签</span>
+              <input v-model.trim="item.status" class="admin-input" type="text" placeholder="排查中 / 开发中 / 待发布">
+            </label>
+            <label class="field">
+              <span>唯一 ID</span>
+              <input v-model.trim="item.id" class="admin-input" type="text" placeholder="pending-1">
+            </label>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <div class="actions">
       <button type="button" class="admin-btn" :disabled="loading" @click="loadConfig">
         {{ loading ? '加载中...' : '重新加载' }}
@@ -161,7 +233,9 @@ const form = reactive({
   abilities: [],
   foundation: {
     imageUrl: ''
-  }
+  },
+  changelog: [],
+  pendingUpdates: []
 })
 
 function applyConfig(data) {
@@ -169,6 +243,12 @@ function applyConfig(data) {
   form.modules = Array.isArray(data?.modules) ? data.modules.map(item => ({ ...item })) : []
   form.abilities = Array.isArray(data?.abilities) ? data.abilities.map(item => ({ ...item })) : []
   form.foundation = { ...form.foundation, ...(data?.foundation || {}) }
+  form.changelog = Array.isArray(data?.changelog)
+    ? data.changelog.map((item, index) => ({ ...item, sortOrder: Number(item?.sortOrder ?? index) }))
+    : []
+  form.pendingUpdates = Array.isArray(data?.pendingUpdates)
+    ? data.pendingUpdates.map((item, index) => ({ ...item, id: item?.id || `pending-${index + 1}` }))
+    : []
 }
 
 async function loadConfig() {
@@ -190,7 +270,9 @@ async function saveConfig() {
       hero: form.hero,
       modules: form.modules,
       abilities: form.abilities,
-      foundation: form.foundation
+      foundation: form.foundation,
+      changelog: form.changelog,
+      pendingUpdates: form.pendingUpdates
     }
     const result = await saveAdminHomeConfig(payload)
     applyConfig(result)
@@ -200,6 +282,35 @@ async function saveConfig() {
   } finally {
     saving.value = false
   }
+}
+
+function addChangelogItem() {
+  form.changelog.push({
+    version: '',
+    title: '',
+    date: '',
+    enabled: true,
+    sortOrder: form.changelog.length
+  })
+}
+
+function removeChangelogItem(index) {
+  if (index < 0 || index >= form.changelog.length) return
+  form.changelog.splice(index, 1)
+}
+
+function addPendingUpdateItem() {
+  form.pendingUpdates.push({
+    id: `pending-${form.pendingUpdates.length + 1}`,
+    title: '',
+    detail: '',
+    status: '排查中'
+  })
+}
+
+function removePendingUpdateItem(index) {
+  if (index < 0 || index >= form.pendingUpdates.length) return
+  form.pendingUpdates.splice(index, 1)
 }
 
 loadConfig()
@@ -236,6 +347,13 @@ loadConfig()
   margin: 0;
   font-size: 18px;
   color: #122039;
+}
+
+.panel-head-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .hero-form,
@@ -282,6 +400,10 @@ loadConfig()
   align-items: center;
 }
 
+.list-grid-changelog {
+  grid-template-columns: 1fr;
+}
+
 .inline-check {
   display: inline-flex;
   gap: 6px;
@@ -293,6 +415,24 @@ loadConfig()
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.admin-btn.small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.text-btn {
+  border: 0;
+  background: transparent;
+  color: #3b82f6;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.text-btn.danger {
+  color: #ef4444;
 }
 
 @media (max-width: 1023px) {

@@ -14,17 +14,35 @@
       </div>
     </div>
 
-    <div class="info-panel">
-      <header class="panel-head">
-        <h2>更新日志</h2>
-        <router-link to="/announcements">查看全部 →</router-link>
-      </header>
-      <div class="log-list">
-        <article v-for="item in changelogItems" :key="`${item.version}-${item.title}`" class="log-row">
-          <span>{{ item.version }}</span>
-          <strong>{{ item.title }}</strong>
-          <time>{{ item.date }}</time>
-        </article>
+    <div class="info-stack">
+      <div class="info-panel info-panel-compact">
+        <header class="panel-head">
+          <h2>更新日志</h2>
+          <router-link to="/announcements">查看全部 →</router-link>
+        </header>
+        <div class="log-list">
+          <article v-for="item in changelogItems" :key="`${item.version}-${item.title}`" class="log-row">
+            <span>{{ item.version }}</span>
+            <strong>{{ item.title }}</strong>
+            <time>{{ item.date }}</time>
+          </article>
+        </div>
+      </div>
+
+      <div class="info-panel info-panel-compact">
+        <header class="panel-head">
+          <h2>待更新</h2>
+          <router-link to="/announcements">查看全部 →</router-link>
+        </header>
+        <div class="pending-list">
+          <article v-for="item in pendingItems" :key="item.id || item.title" class="pending-row">
+            <div class="pending-headline">
+              <strong>{{ item.title }}</strong>
+              <em>{{ item.status || '处理中' }}</em>
+            </div>
+            <p>{{ item.detail || item.title }}</p>
+          </article>
+        </div>
       </div>
     </div>
   </section>
@@ -39,6 +57,10 @@ defineProps({
   changelogItems: {
     type: Array,
     required: true
+  },
+  pendingItems: {
+    type: Array,
+    required: true
   }
 })
 </script>
@@ -49,6 +71,11 @@ defineProps({
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--lc-space-5);
   margin-top: var(--lc-space-5);
+}
+
+.info-stack {
+  display: grid;
+  gap: var(--lc-space-3);
 }
 
 .info-panel {
@@ -65,13 +92,13 @@ defineProps({
   align-items: center;
   justify-content: space-between;
   gap: var(--lc-space-4);
-  margin-bottom: var(--lc-space-5);
+  margin-bottom: var(--lc-space-4);
 }
 
 .panel-head h2 {
   margin: 0;
   color: var(--lc-text);
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .panel-head a {
@@ -83,9 +110,10 @@ defineProps({
 }
 
 .official-list,
-.log-list {
+.log-list,
+.pending-list {
   display: grid;
-  gap: var(--lc-space-3);
+  gap: 10px;
 }
 
 .official-row,
@@ -94,7 +122,7 @@ defineProps({
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--lc-space-3);
   align-items: center;
-  min-height: 34px;
+  min-height: 30px;
   color: inherit;
   text-decoration: none;
 }
@@ -120,7 +148,7 @@ defineProps({
 .log-row strong {
   overflow: hidden;
   color: var(--lc-text);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -129,13 +157,67 @@ defineProps({
 .official-row time,
 .log-row time {
   color: var(--lc-subtle);
-  font-size: var(--lc-text-sm);
+  font-size: 12px;
 }
 
 .log-row span {
   color: var(--lc-green);
-  font-size: var(--lc-text-sm);
+  font-size: 13px;
   font-weight: 950;
+}
+
+.info-panel-compact {
+  padding: 14px 16px;
+}
+
+.info-panel-compact .panel-head {
+  margin-bottom: 10px;
+}
+
+.info-panel-compact .panel-head h2 {
+  font-size: 18px;
+}
+
+.pending-row {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--lc-border);
+}
+
+.pending-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.pending-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pending-headline strong {
+  color: var(--lc-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.pending-headline em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--lc-surface);
+  background: var(--lc-amber);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 800;
+}
+
+.pending-row p {
+  margin: 0;
+  color: var(--lc-subtle);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
@@ -151,7 +233,7 @@ defineProps({
     border-radius: 16px;
   }
 
-  .official-grid .info-panel:last-child {
+  .official-grid .info-stack {
     display: none;
   }
 

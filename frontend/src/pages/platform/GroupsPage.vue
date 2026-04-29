@@ -314,6 +314,7 @@ function normalizeGroup(item) {
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
     hasPendingRequest: Boolean(item.hasPendingRequest),
+    joinMode: item.joinMode || (item.joinType === 'open' ? 'free' : 'audit'),
     createdAt: item.createdAt || ''
   }
 }
@@ -331,8 +332,18 @@ function normalizeFeedItem(item) {
 
 async function applyJoin(group) {
   message.value = ''
+  let applyMessage = ''
+  if (group?.joinMode !== 'free') {
+    const input = window.prompt('请输入申请验证信息（必填）', '')
+    if (input === null) return
+    applyMessage = input.trim()
+    if (!applyMessage) {
+      flashMessage('请填写申请验证信息', 'error')
+      return
+    }
+  }
   try {
-    const res = await joinGroup(group.id)
+    const res = await joinGroup(group.id, applyMessage)
     const wasMember = group.isMember
     group.isMember = Boolean(res?.joined)
     group.hasPendingRequest = Boolean(res?.pending)

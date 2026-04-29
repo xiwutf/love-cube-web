@@ -15,7 +15,8 @@ public class HomeConfigService {
     private static final String GROUP_MODULE = "module";
     private static final String GROUP_ABILITY = "ability";
     private static final String GROUP_FOUNDATION = "foundation";
-    private static final List<String> ALL_GROUPS = List.of(GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION);
+    private static final String GROUP_CHANGELOG = "changelog";
+    private static final List<String> ALL_GROUPS = List.of(GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION, GROUP_CHANGELOG);
 
     private final HomeConfigRepository homeConfigRepository;
     private final ObjectMapper objectMapper;
@@ -39,11 +40,13 @@ public class HomeConfigService {
         List<Map<String, Object>> modules = toListOfMap(payload.get("modules"));
         List<Map<String, Object>> abilities = toListOfMap(payload.get("abilities"));
         Map<String, Object> foundation = toMap(payload.get("foundation"));
+        List<Map<String, Object>> changelog = toListOfMap(payload.get("changelog"));
 
         upsertSingle(GROUP_HERO, "hero-main", hero, 0, true);
         upsertList(GROUP_MODULE, modules, "moduleKey");
         upsertList(GROUP_ABILITY, abilities, "abilityKey");
         upsertSingle(GROUP_FOUNDATION, "foundation-main", foundation, 0, true);
+        upsertList(GROUP_CHANGELOG, changelog, "version");
 
         return getAdminHomeConfig();
     }
@@ -53,6 +56,7 @@ public class HomeConfigService {
         Map<String, Object> foundation = defaultFoundation();
         List<Map<String, Object>> modules = defaultModules();
         List<Map<String, Object>> abilities = defaultAbilities();
+        List<Map<String, Object>> changelog = defaultChangelog();
 
         Map<String, Map<String, Object>> moduleMap = new LinkedHashMap<>();
         for (Map<String, Object> item : modules) {
@@ -61,6 +65,10 @@ public class HomeConfigService {
         Map<String, Map<String, Object>> abilityMap = new LinkedHashMap<>();
         for (Map<String, Object> item : abilities) {
             abilityMap.put(String.valueOf(item.get("abilityKey")), new LinkedHashMap<>(item));
+        }
+        Map<String, Map<String, Object>> changelogMap = new LinkedHashMap<>();
+        for (Map<String, Object> item : changelog) {
+            changelogMap.put(String.valueOf(item.get("version")), new LinkedHashMap<>(item));
         }
 
         for (HomeConfig row : rows) {
@@ -85,6 +93,14 @@ public class HomeConfigService {
                 target.put("sortOrder", row.getSortOrder());
                 target.put("enabled", row.getEnabled());
                 abilityMap.put(key, target);
+            } else if (GROUP_CHANGELOG.equals(row.getConfigGroup())) {
+                String key = row.getConfigKey();
+                Map<String, Object> target = changelogMap.getOrDefault(key, new LinkedHashMap<>());
+                target.putAll(value);
+                target.put("version", key);
+                target.put("sortOrder", row.getSortOrder());
+                target.put("enabled", row.getEnabled());
+                changelogMap.put(key, target);
             }
         }
 
@@ -94,12 +110,16 @@ public class HomeConfigService {
         abilities = abilityMap.values().stream()
                 .sorted(Comparator.comparingInt(item -> toInt(item.get("sortOrder"), 0)))
                 .toList();
+        changelog = changelogMap.values().stream()
+                .sorted(Comparator.comparingInt(item -> toInt(item.get("sortOrder"), 0)))
+                .toList();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("hero", hero);
         result.put("modules", modules);
         result.put("abilities", abilities);
         result.put("foundation", foundation);
+        result.put("changelog", changelog);
         result.put("banners", List.of());
         return result;
     }
@@ -109,6 +129,7 @@ public class HomeConfigService {
         Map<String, Object> result = new LinkedHashMap<>(response);
         result.put("modules", filterEnabledList((List<Map<String, Object>>) result.get("modules")));
         result.put("abilities", filterEnabledList((List<Map<String, Object>>) result.get("abilities")));
+        result.put("changelog", filterEnabledList((List<Map<String, Object>>) result.get("changelog")));
         return result;
     }
 
@@ -123,7 +144,7 @@ public class HomeConfigService {
         for (int i = 0; i < list.size(); i++) {
             Map<String, Object> item = new LinkedHashMap<>(list.get(i));
             String key = String.valueOf(item.getOrDefault(keyField, "")).trim();
-            if (key.isEmpty()) continue;
+            if (key.isEmpty()) key = group + "-" + i;
             int sort = toInt(item.getOrDefault("sortOrder", i), i);
             boolean enabled = toBoolean(item.getOrDefault("enabled", true));
             item.remove("sortOrder");
@@ -182,6 +203,16 @@ public class HomeConfigService {
         return foundation;
     }
 
+    private List<Map<String, Object>> defaultChangelog() {
+        return List.of(
+                changelog("v1.4.0", "优化移动端体验，修复已知问题", "2026-04-29", 1),
+                changelog("v1.3.0", "新增问卷调查功能，支持匿名填写", "2026-04-26", 2),
+                changelog("v1.2.0", "上线每日心声板块，记录生活点滴", "2026-04-20", 3),
+                changelog("v1.1.0", "优化登录流程，提升系统稳定性", "2026-04-15", 4),
+                changelog("v1.0.0", "平台正式上线，基础功能发布", "2026-04-01", 5)
+        );
+    }
+
     private Map<String, Object> module(
             String key,
             String name,
@@ -231,6 +262,16 @@ public class HomeConfigService {
             default -> "能";
         });
         item.put("imageUrl", "");
+        item.put("enabled", true);
+        item.put("sortOrder", sortOrder);
+        return item;
+    }
+
+    private Map<String, Object> changelog(String version, String title, String date, int sortOrder) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("version", version);
+        item.put("title", title);
+        item.put("date", date);
         item.put("enabled", true);
         item.put("sortOrder", sortOrder);
         return item;
