@@ -19,6 +19,30 @@ export const DEFAULT_AVATAR = '/default-avatar.svg'
 
 /** 安全取头像 URL */
 export function getAvatar(user) {
-  const raw = user?.profilePhoto || user?.profile_photo || user?.avatar || user?.avatarUrl || ''
+  const raw =
+    user?.profilePhoto ||
+    user?.profile_photo ||
+    user?.avatar ||
+    user?.avatarUrl ||
+    resolveFirstPhoto(user) ||
+    ''
   return toFullUrl(raw) || DEFAULT_AVATAR
+}
+
+function resolveFirstPhoto(user) {
+  if (!user) return ''
+  const candidates = [
+    user?.photos,
+    user?.photoUrls,
+    user?.photo_urls,
+    user?.images,
+    user?.imageUrls
+  ]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      const first = candidate.find((item) => typeof item === 'string' && item.trim())
+      if (first) return first
+    }
+  }
+  return ''
 }

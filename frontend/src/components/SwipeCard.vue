@@ -9,7 +9,12 @@
   >
     <!-- 图片 -->
     <van-image :src="user.avatar" width="100%" height="100%" fit="cover" class="card-img">
-      <template #error><div class="card-placeholder">{{ (user.nickname||'?')[0] }}</div></template>
+      <template #error>
+        <div class="card-placeholder">
+          <span class="placeholder-initial">{{ (user.nickname || '?')[0] }}</span>
+          <p class="placeholder-tip">该用户暂未上传照片</p>
+        </div>
+      </template>
     </van-image>
 
     <!-- LIKE / NOPE 标签 -->
@@ -132,8 +137,22 @@ defineExpose({
 .card-placeholder {
   width: 100%; height: 100%;
   background: linear-gradient(135deg, #FFE8EE, #FFB3C1);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 80px; color: #fff; font-weight: 700;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px;
+  color: #fff;
+}
+
+.placeholder-initial {
+  font-size: 80px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.placeholder-tip {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
 }
 
 .stamp {

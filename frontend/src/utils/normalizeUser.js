@@ -8,6 +8,7 @@ import { formatAge } from './format.js'
 
 export function normalizeUser(raw) {
   if (!raw) return null
+  const normalizedPhotos = normalizePhotos(raw)
   return {
     userId:      raw.userId   ?? raw.userid   ?? raw.id,
     nickname:    raw.nickname ?? raw.username  ?? raw.name ?? '',
@@ -20,7 +21,7 @@ export function normalizeUser(raw) {
     occupation:  raw.occupation ?? '',
     height:      raw.height   ?? '',
     signature:   raw.signature ?? raw.bio ?? '',
-    photos:      Array.isArray(raw.photos) ? raw.photos : [],
+    photos:      normalizedPhotos,
     completionRate: raw.completionRate ?? 0,
     statistics:  raw.statistics ?? null,
 
@@ -40,6 +41,16 @@ export function normalizeUser(raw) {
     childPartnerRequirements:raw.childPartnerRequirements?? '',
     guardianContactVisible:  raw.guardianContactVisible  ?? true,
   }
+}
+
+function normalizePhotos(raw) {
+  const sources = [raw?.photos, raw?.photoUrls, raw?.photo_urls, raw?.images, raw?.imageUrls]
+  for (const source of sources) {
+    if (Array.isArray(source)) {
+      return source.filter((item) => typeof item === 'string' && item.trim())
+    }
+  }
+  return []
 }
 
 export function isGuardian(user) {
