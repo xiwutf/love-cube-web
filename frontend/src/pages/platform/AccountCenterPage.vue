@@ -71,6 +71,10 @@
               <span>注册时间: {{ registerDate }}</span>
               <span>{{ user?.location || '广州' }}</span>
             </div>
+            <div class="me-invite-line">
+              <span>邀请码: {{ inviteCodeDisplay }}</span>
+              <button type="button" :disabled="!inviteCode" @click="copyInviteCode">复制</button>
+            </div>
             <button type="button" class="me-edit-btn" @click="toggleEdit">
               {{ editOpen ? '收起编辑' : '编辑资料' }} >
             </button>
@@ -202,6 +206,7 @@ import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
+import { getMyInviteCode } from '@/api/invite.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 
 const userStore = useUserStore()
@@ -213,6 +218,7 @@ const saving = ref(false)
 const saveMessage = ref('')
 const saveError = ref(false)
 const { pickAndUpload, uploading } = useImageUpload()
+const inviteCode = ref('')
 const editForm = reactive({
   username: '',
   avatar: '',
@@ -249,6 +255,8 @@ const registerDate = computed(() => {
   if (!raw) return '--'
   return String(raw).replace('T', ' ').slice(0, 10)
 })
+
+const inviteCodeDisplay = computed(() => inviteCode.value || '--')
 
 const heroStats = computed(() => [
   { key: 'content', label: '内容发布', value: myContentCount.value, sub: '累计发布', icon: '▣', theme: 'blue' },
@@ -444,6 +452,27 @@ async function handleSaveProfile() {
   }
 }
 
+async function copyInviteCode() {
+  if (!inviteCode.value) return
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(inviteCode.value)
+    } else {
+      const input = document.createElement('input')
+      input.value = inviteCode.value
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
+    saveError.value = false
+    saveMessage.value = '邀请码已复制'
+  } catch (error) {
+    saveError.value = true
+    saveMessage.value = '复制失败，请手动复制邀请码'
+  }
+}
+
 onMounted(async () => {
   if (route.query?.panel === 'settings') {
     editOpen.value = true
@@ -451,9 +480,10 @@ onMounted(async () => {
   if (!user.value) {
     await userStore.refreshCurrentUser().catch(() => {})
   }
-  const [notifRes, statsRes] = await Promise.allSettled([
+  const [notifRes, statsRes, inviteRes] = await Promise.allSettled([
     getNotifUnreadCountCached(),
-    getUserStatsCached()
+    getUserStatsCached(),
+    getMyInviteCode()
   ])
   if (notifRes.status === 'fulfilled') {
     unreadCount.value = Number(notifRes.value?.count ?? notifRes.value?.unreadCount ?? 0)
@@ -462,6 +492,9 @@ onMounted(async () => {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
     myFavoriteCount.value = Number(statsRes.value.favoriteCount ?? 0)
+  }
+  if (inviteRes.status === 'fulfilled') {
+    inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
   }
 })
 </script>
@@ -1783,6 +1816,33 @@ onMounted(async () => {
   font-weight: 700;
 }
 
+.me-invite-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: #5f647b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.me-invite-line button {
+  border: 0;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #6d5dfc;
+  background: rgba(255, 255, 255, .78);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.me-invite-line button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .me-edit-btn {
   margin-top: 24px;
   min-width: 104px;
@@ -2390,6 +2450,11 @@ onMounted(async () => {
 
   .me-profile-line {
     color: #6d7487;
+  }
+
+  .me-invite-line {
+    margin-top: 6px;
+    font-size: 11px;
   }
 
   .me-edit-btn {
