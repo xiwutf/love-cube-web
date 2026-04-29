@@ -9,6 +9,7 @@ import {
   getMeCached,
   updateFellowshipMatchVisibility as updateFellowshipMatchVisibilityApi
 } from '@/api/user.js'
+import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 
 const REDIRECT_KEY = 'postLoginRedirect'
 
@@ -149,6 +150,7 @@ export const useUserStore = defineStore('user', () => {
     storage.remove('avatar')
     storage.remove(REDIRECT_KEY)
     clearMeCache()
+    useFellowshipProfileStore().clearProfile()
   }
 
   function setPostLoginRedirect(path) {

@@ -119,11 +119,41 @@ import visionImage from '@/assets/底部横幅 CTA.webp'
 
 @media (max-width: 680px) {
   .vision-panel {
-    padding: var(--lc-space-5);
+    gap: 14px;
+    min-height: 0;
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .vision-panel p {
+    font-size: 18px;
+  }
+
+  .vision-panel h2 {
+    margin-top: 8px;
+    font-size: 20px;
+    line-height: 1.42;
   }
 
   .vision-panel dl {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .vision-panel dl div {
+    padding: 10px 8px;
+    border-radius: 12px;
+  }
+
+  .vision-panel dt {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .vision-panel dd {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.35;
   }
 
   .vision-mark {
@@ -132,6 +162,29 @@ import visionImage from '@/assets/底部横幅 CTA.webp'
 
   .vision-art {
     display: none;
+  }
+}
+
+@media (max-width: 390px) {
+  .vision-panel {
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .vision-panel p {
+    font-size: 17px;
+  }
+
+  .vision-panel h2 {
+    font-size: 18px;
+  }
+
+  .vision-panel dt {
+    font-size: 13px;
+  }
+
+  .vision-panel dd {
+    font-size: 11px;
   }
 }
 </style>

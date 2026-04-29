@@ -158,17 +158,58 @@ defineProps({
 
 @media (max-width: 620px) {
   .featured-section {
-    padding: var(--lc-space-4);
+    padding: 16px 12px;
+    border-radius: 18px;
   }
 
   .section-head {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
   }
 
   .featured-grid {
-    grid-template-columns: 1fr;
-    gap: var(--lc-space-4);
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(160px, 180px);
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .content-card {
+    scroll-snap-align: start;
+  }
+
+  .content-cover {
+    height: 102px;
+    background-size: cover;
+  }
+
+  .content-body {
+    padding: 10px;
+  }
+
+  .content-body h3 {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .content-body p {
+    display: none;
+  }
+
+  .content-body small {
+    margin-top: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
   }
 }
 </style>

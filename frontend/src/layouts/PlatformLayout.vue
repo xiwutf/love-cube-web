@@ -37,7 +37,11 @@
             </template>
           </div>
 
-          <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单"><span></span><span></span><span></span></button>
+          <div class="mobile-header-actions">
+            <!-- 移动端搜索入口：保持顶部只显示图标，点击进入内容搜索页 -->
+            <button class="mobile-icon-btn" type="button" aria-label="搜索内容" @click="goMobileSearch">⌕</button>
+            <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单"><span></span><span></span><span></span></button>
+          </div>
         </div>
       </div>
     </header>
@@ -79,7 +83,13 @@
       </div>
     </transition>
 
-    <nav class="mobile-quick-nav"><router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link><router-link to="/platform/positive-share" :class="{ 'is-active': isActive('/platform/positive-share') }">每日心声</router-link><router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link><router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">内容</router-link><router-link to="/events" :class="{ 'is-active': isActive('/events') }">活动</router-link><router-link to="/fellowship-intro" :class="{ 'is-active': isActive('/fellowship-intro') }">联谊</router-link></nav>
+    <nav class="mobile-quick-nav">
+      <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
+      <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link>
+      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">动态</router-link>
+      <router-link to="/messages" :class="{ 'is-active': isActive('/messages') }">消息</router-link>
+      <router-link to="/me" :class="{ 'is-active': isActive('/me') }">我的</router-link>
+    </nav>
 
     <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
@@ -192,6 +202,11 @@ function handleSearch() {
     return
   }
   router.push({ path: '/articles', query: { keyword } })
+}
+
+function goMobileSearch() {
+  menuOpen.value = false
+  router.push('/articles')
 }
 
 function openCoCreationDialog() {
@@ -614,6 +629,26 @@ onBeforeUnmount(() => {
   justify-content: center;
   flex-direction: column;
   gap: 5px;
+}
+
+.mobile-header-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e1e8f2;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e3a8a;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .menu-toggle span {
@@ -1197,6 +1232,14 @@ onBeforeUnmount(() => {
     display: inline-flex;
   }
 
+  .mobile-header-actions {
+    display: inline-flex;
+  }
+
+  .mobile-icon-btn {
+    display: none;
+  }
+
   .footer-inner {
     grid-template-columns: 1fr;
   }
@@ -1257,10 +1300,12 @@ onBeforeUnmount(() => {
   .nav-wrap {
     grid-template-columns: 1fr auto;
     min-height: 56px;
-    padding: 0 10px;
+    padding: 0 12px;
     gap: 8px;
-    width: calc(100% - 16px);
-    border-radius: 10px;
+    width: 100%;
+    border-radius: 0;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
   }
 
   .brand-logo {
@@ -1278,12 +1323,20 @@ onBeforeUnmount(() => {
 
   .menu-toggle {
     display: inline-flex;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    gap: 4px;
   }
 
   .nav-links-desktop,
   .nav-search,
   .account-slot {
     display: none;
+  }
+
+  .mobile-header-actions {
+    display: inline-flex;
   }
 
   .platform-main {
@@ -1465,9 +1518,9 @@ onBeforeUnmount(() => {
     padding-bottom: env(safe-area-inset-bottom);
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.92);
     border-top: 1px solid #d6e0ed;
-    backdrop-filter: none;
+    backdrop-filter: blur(8px);
   }
 
   .mobile-quick-nav a {
@@ -1482,7 +1535,7 @@ onBeforeUnmount(() => {
 
   .mobile-quick-nav a.router-link-exact-active,
   .mobile-quick-nav a.is-active {
-    color: #e84f73;
+    color: #4f46e5;
   }
 
   .platform-footer {

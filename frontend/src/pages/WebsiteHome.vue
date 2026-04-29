@@ -1,15 +1,15 @@
 <template>
   <main class="portal-home">
     <div class="portal-shell">
-      <HomeNoticeBar :notice="notice" />
-      <HomeHeroPortal :stats="heroStats" />
-      <HomeModuleGrid :modules="coreModules" />
-      <HomeOfficialPanel :official-items="officialItems" :changelog-items="changelogItems" />
-      <HomeFeaturedContent :items="featuredItems" />
-      <div class="portal-split portal-split-accent">
+      <HomeNoticeBar class="home-block home-notice" :notice="notice" />
+      <HomeHeroPortal class="home-block home-hero" :stats="heroStats" />
+      <HomeModuleGrid class="home-block home-modules" :modules="coreModules" />
+      <HomeOfficialPanel class="home-block home-official" :official-items="officialItems" :changelog-items="changelogItems" />
+      <div class="portal-split portal-split-accent home-block home-fellowship">
         <HomeFellowshipBanner />
         <HomeActivityPanel :events="activityItems" :stats="activityStats" />
       </div>
+      <HomeFeaturedContent class="home-block home-featured" :items="featuredItems" />
       <div class="portal-split">
         <HomeCoBuildPanel />
         <HomeVisionPanel />
@@ -260,6 +260,7 @@ onMounted(async () => {
 
 <style scoped>
 .portal-home {
+  overflow-x: hidden;
   background:
     linear-gradient(180deg, #f3f7ff 0, var(--lc-bg) 520px, var(--lc-bg) 100%);
   color: var(--lc-text);
@@ -295,9 +296,29 @@ onMounted(async () => {
 }
 
 @media (max-width: 560px) {
+  .portal-home {
+    background: #f6f8ff;
+  }
+
   .portal-shell {
-    width: min(100% - 20px, 420px);
-    padding-bottom: var(--lc-space-10);
+    display: flex;
+    flex-direction: column;
+    width: min(100% - 32px, 420px);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  /* 移动端按原型顺序重排模块，避免桌面区块直接缩放 */
+  .home-notice { order: 1; }
+  .home-hero { order: 2; }
+  .home-modules { order: 3; }
+  .home-official { order: 4; }
+  .home-fellowship { order: 5; }
+  .home-featured { order: 6; }
+}
+
+@media (max-width: 390px) {
+  .portal-shell {
+    width: min(100% - 24px, 390px);
   }
 }
 </style>

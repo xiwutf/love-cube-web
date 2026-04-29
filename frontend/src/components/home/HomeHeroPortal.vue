@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <section class="hero-portal">
     <div class="hero-copy">
       <p class="portal-kicker">LOVE CUBE PLATFORM</p>
-      <h1>一个持续进化的多功能连接平台</h1>
+      <h1>一个持续进化的<br>多功能连接平台</h1>
       <p class="hero-subtitle">聚合内容资讯、活动服务、社交连接、本地服务与 AI 工具能力，为不同场景提供统一入口。</p>
       <div class="hero-actions">
         <router-link class="portal-btn portal-btn-primary" to="/modules">探索模块</router-link>
@@ -19,10 +19,17 @@
     <div class="hero-visual" aria-hidden="true">
       <img :src="heroImage" alt="">
       <div class="visual-float visual-float-chat">聊</div>
-      <div class="visual-bubble visual-bubble-heart">♡</div>
+      <div class="visual-bubble visual-bubble-heart">❤</div>
       <div class="visual-bubble visual-bubble-check">✓</div>
     </div>
   </section>
+
+  <dl class="hero-stats-mobile">
+    <div v-for="item in stats" :key="`mobile-${item.label}`">
+      <dt>{{ item.value }}</dt>
+      <dd>{{ item.label }}</dd>
+    </div>
+  </dl>
 </template>
 
 <script setup>
@@ -48,8 +55,7 @@ defineProps({
   padding: 46px 42px;
   border: 1px solid rgba(191, 219, 254, 0.9);
   border-radius: var(--lc-radius-sm);
-  background:
-    linear-gradient(90deg, rgba(239, 246, 255, 0.98) 0%, rgba(245, 249, 255, 0.8) 42%, rgba(219, 234, 254, 0.56) 100%);
+  background: linear-gradient(90deg, rgba(239, 246, 255, 0.98) 0%, rgba(245, 249, 255, 0.8) 42%, rgba(219, 234, 254, 0.56) 100%);
   box-shadow: 0 18px 56px rgba(37, 99, 235, 0.12);
   overflow: hidden;
 }
@@ -224,6 +230,10 @@ defineProps({
   color: var(--lc-green);
 }
 
+.hero-stats-mobile {
+  display: none;
+}
+
 @media (max-width: 1080px) {
   .hero-portal {
     grid-template-columns: 1fr;
@@ -242,32 +252,113 @@ defineProps({
 
 @media (max-width: 680px) {
   .hero-portal {
-    gap: var(--lc-space-6);
-    min-height: 0;
-    padding: var(--lc-space-6) var(--lc-space-4);
+    gap: var(--lc-space-5);
+    min-height: 300px;
+    max-height: 330px;
+    padding: 20px 16px;
+    border-radius: 18px;
   }
 
+  .hero-copy h1 {
+    max-width: 250px;
+    font-size: 42px;
+    line-height: 1.12;
+  }
+
+  .hero-subtitle {
+    max-width: 230px;
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .hero-actions {
+    flex-wrap: nowrap;
+    margin-top: 14px;
+  }
+
+  .portal-btn {
+    min-width: 0;
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .hero-stats {
+    display: none;
+  }
+
+  .hero-visual {
+    display: block;
+  }
+
+  .hero-visual img {
+    width: 62%;
+    opacity: 1;
+  }
+
+  /* 移动端增强文字可读性，避免背景图压字 */
+  .hero-portal::before {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.68) 40%, rgba(255, 255, 255, 0.12) 70%);
+  }
+
+  .visual-float,
+  .visual-bubble {
+    display: none;
+  }
+
+  .hero-stats-mobile {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 0;
+    padding: 14px 12px;
+    border: 1px solid var(--lc-border);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: var(--lc-shadow-sm);
+  }
+
+  .hero-stats-mobile div {
+    min-width: 0;
+  }
+
+  .hero-stats-mobile dt {
+    color: var(--lc-blue);
+    font-size: 34px;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .hero-stats-mobile dd {
+    margin: 4px 0 0;
+    color: var(--lc-subtle);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 390px) {
   .hero-copy h1 {
     font-size: 36px;
   }
 
-  .hero-actions,
-  .portal-btn {
-    width: 100%;
+  .hero-subtitle {
+    font-size: 13px;
   }
 
-  .hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--lc-space-4);
+  .hero-stats-mobile {
+    gap: 8px;
+    padding: 12px 10px;
   }
 
-  .hero-stats div {
-    border-right: 0;
-    padding-right: 0;
-  }
-
-  .hero-visual {
-    display: none;
+  .hero-stats-mobile dt {
+    font-size: 30px;
   }
 }
 </style>

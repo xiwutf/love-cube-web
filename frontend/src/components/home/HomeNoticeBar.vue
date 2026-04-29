@@ -79,21 +79,37 @@ defineProps({
 
 @media (max-width: 720px) {
   .notice-bar {
-    align-items: flex-start;
-    padding: var(--lc-space-3);
+    min-height: 44px;
+    margin: 12px 0;
+    padding: 0 12px;
+    border-radius: 12px;
   }
 
   .notice-bar p {
-    display: grid;
-    gap: 2px;
+    align-items: center;
+    gap: 6px;
   }
 
   .notice-bar em {
-    white-space: normal;
+    display: none;
+  }
+
+  .notice-bar span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .notice-bar a {
-    display: none;
+    display: inline-flex;
+    color: var(--lc-blue);
+    font-size: 0;
+  }
+
+  .notice-bar a::after {
+    content: '›';
+    font-size: 18px;
+    line-height: 1;
   }
 }
 </style>

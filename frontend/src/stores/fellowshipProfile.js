@@ -42,6 +42,11 @@ export const useFellowshipProfileStore = defineStore('fellowship-profile', () =>
     return data
   }
 
+  function clearProfile() {
+    profile.value = null
+    completion.value = { completed: false, percent: 0, missingFields: [] }
+  }
+
   return {
     profile,
     completion,
@@ -49,7 +54,8 @@ export const useFellowshipProfileStore = defineStore('fellowship-profile', () =>
     saving,
     fetchProfile,
     saveProfile,
-    fetchCompletion
+    fetchCompletion,
+    clearProfile
   }
 })
 

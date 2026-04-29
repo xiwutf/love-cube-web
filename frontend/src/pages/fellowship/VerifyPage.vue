@@ -78,13 +78,14 @@
               label="证件后四位"
               placeholder="身份证号后四位"
               maxlength="4"
-              type="digit"
+              type="text"
+              inputmode="text"
               class="verify-field"
             />
             <van-button
               round block color="#FF6B8A"
               :loading="submitting === 'REALNAME'"
-              :disabled="!realName.trim() || idLast4.length < 4"
+              :disabled="!realName.trim() || !isIdLast4Valid"
               @click="submitRealname"
             >提交实名认证</van-button>
           </div>
@@ -97,7 +98,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import { getMyVerifications, submitVerification } from '@/api/verification.js'
@@ -115,6 +116,13 @@ const realnameStatus       = ref('none')
 const realnameRejectReason = ref('')
 const realName = ref('')
 const idLast4  = ref('')
+
+watch(idLast4, (val) => {
+  const filtered = String(val || '').replace(/[^0-9xX]/g, '').toUpperCase().slice(0, 4)
+  if (filtered !== val) idLast4.value = filtered
+})
+
+const isIdLast4Valid = computed(() => /^[0-9]{3}[0-9X]$/.test(idLast4.value))
 
 function statusLabel(s) {
   return {
@@ -178,7 +186,7 @@ async function submitPhoto() {
 }
 
 async function submitRealname() {
-  if (!realName.value.trim() || idLast4.value.length < 4) return
+  if (!realName.value.trim() || !isIdLast4Valid.value) return
   submitting.value = 'REALNAME'
   try {
     const submitData = JSON.stringify({ realName: realName.value.trim(), idLast4: idLast4.value })
@@ -186,7 +194,7 @@ async function submitRealname() {
     realnameStatus.value = 'pending'
     realName.value = ''
     idLast4.value  = ''
-    showToast({ message: '宸叉彁浜わ紝绛夊緟瀹℃牳', type: 'success' })
+    showToast({ message: '已提交，等待审核', type: 'success' })
   } catch (e) {
     showToast({ message: e.response?.data?.message || e.message || '提交失败', type: 'fail' })
   } finally {

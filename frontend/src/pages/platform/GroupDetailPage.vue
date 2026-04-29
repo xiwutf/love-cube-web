@@ -125,6 +125,7 @@
                 <div>
                   <strong>{{ member.name }}</strong>
                   <span>{{ member.joinedAt || '未记录加入时间' }}</span>
+                  <p v-if="member.status === 'pending' && member.applyReason">申请说明：{{ member.applyReason }}</p>
                 </div>
                 <em>{{ member.roleLabel }}</em>
                 <b :class="member.status">{{ member.statusLabel }}</b>
@@ -315,9 +316,19 @@ async function loadRelatedData() {
 
 async function applyJoin() {
   if (joinDisabled.value || joining.value) return
+  let applyMessage = ''
+  if (group.value?.joinMode !== 'free') {
+    const input = window.prompt('请输入申请验证信息（必填）', '')
+    if (input === null) return
+    applyMessage = input.trim()
+    if (!applyMessage) {
+      flashMessage('请填写申请验证信息', 'error')
+      return
+    }
+  }
   joining.value = true
   try {
-    const res = await joinGroup(group.value.id)
+    const res = await joinGroup(group.value.id, applyMessage)
     group.value.isMember = Boolean(res?.joined)
     group.value.hasPendingRequest = Boolean(res?.pending)
     await loadDetail()
@@ -441,7 +452,8 @@ function normalizeMember(item) {
     roleLabel: role === 'owner' ? '团体负责人' : role === 'admin' ? '管理员' : '成员',
     status,
     statusLabel: status === 'approved' ? '已加入' : status === 'pending' ? '申请中' : status === 'left' ? '已退出' : status,
-    joinedAt: formatDate(item.joinedAt)
+    joinedAt: formatDate(item.joinedAt),
+    applyReason: item.applyReason || ''
   }
 }
 

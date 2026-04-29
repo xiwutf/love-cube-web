@@ -108,6 +108,7 @@
             <div>
               <strong>{{ member.name }}</strong>
               <p>{{ member.joinedAt || member.requestedAt || '未记录时间' }}</p>
+              <p v-if="member.status === 'pending' && member.applyReason">申请说明：{{ member.applyReason }}</p>
             </div>
             <span class="admin-tag" :class="member.role">{{ roleLabel(member.role) }}</span>
             <span class="admin-tag" :class="member.status">{{ memberStatusLabel(member.status) }}</span>
@@ -419,7 +420,9 @@ function normalizeMember(item) {
     avatar: item.avatarUrl || DEFAULT_AVATAR,
     role: item.role || 'member',
     status: item.status || 'approved',
-    joinedAt: formatDateTime(item.joinedAt)
+    joinedAt: formatDateTime(item.joinedAt),
+    requestedAt: formatDateTime(item.requestedAt || item.createdAt),
+    applyReason: item.applyReason || item.message || ''
   }
 }
 
@@ -431,7 +434,8 @@ function normalizeJoinRequest(item) {
     avatar: item.avatarUrl || DEFAULT_AVATAR,
     role: 'member',
     status: item.status || 'pending',
-    requestedAt: formatDateTime(item.requestedAt)
+    requestedAt: formatDateTime(item.requestedAt),
+    applyReason: item.applyReason || item.message || ''
   }
 }
 

@@ -147,17 +147,31 @@ defineProps({
 
 @media (max-width: 560px) {
   .info-panel {
-    padding: var(--lc-space-5);
+    padding: 14px 12px;
+    border-radius: 16px;
+  }
+
+  .official-grid .info-panel:last-child {
+    display: none;
   }
 
   .official-row,
   .log-row {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
   }
 
-  .official-row time,
-  .log-row time {
-    display: none;
+  .panel-head h2 {
+    font-size: 20px;
+  }
+
+  .official-row strong {
+    font-size: 14px;
+  }
+
+  .official-row time {
+    display: block;
+    font-size: 12px;
   }
 }
 </style>

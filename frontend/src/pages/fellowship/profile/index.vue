@@ -51,7 +51,7 @@ const profile = computed(() => store.profile || {})
 const completion = computed(() => store.completion || { percent: 0, missingFields: [] })
 
 onMounted(async () => {
-  await Promise.all([store.fetchProfile(), store.fetchCompletion()])
+  await Promise.all([store.fetchProfile(true), store.fetchCompletion(true)])
 })
 </script>
 

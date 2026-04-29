@@ -97,12 +97,56 @@ import fellowshipImage from '@/assets/联谊专区.webp'
 
 @media (max-width: 680px) {
   .fellowship-banner {
-    grid-template-columns: 1fr;
-    padding: var(--lc-space-5);
+    grid-template-columns: minmax(0, 1fr) 118px;
+    gap: 8px;
+    min-height: 172px;
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+
+  .banner-copy p {
+    font-size: 32px;
+  }
+
+  .banner-copy h2 {
+    font-size: 14px;
+  }
+
+  .banner-copy ul {
+    margin-top: 10px;
+    gap: 8px 12px;
+  }
+
+  .banner-copy li {
+    font-size: 12px;
+  }
+
+  .banner-copy a {
+    min-height: 34px;
+    margin-top: 12px;
+    padding: 0 14px;
+    font-size: 12px;
   }
 
   .banner-visual {
-    display: none;
+    min-height: 130px;
+  }
+
+  .banner-visual img {
+    height: 130px;
+    inset: auto -8px -8px auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .fellowship-banner {
+    grid-template-columns: 1fr 100px;
+    min-height: 164px;
+    padding: 14px 12px;
+  }
+
+  .banner-copy p {
+    font-size: 28px;
   }
 }
 </style>

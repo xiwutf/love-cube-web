@@ -315,6 +315,14 @@ public class PlatformGroupController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group is not joinable");
         }
 
+        String reason = payload != null ? String.valueOf(payload.getOrDefault("message", "")).trim() : "";
+        if (!"free".equals(group.getJoinMode()) && reason.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请验证信息不能为空");
+        }
+        if (reason.length() > 255) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请验证信息不能超过255个字符");
+        }
+
         Optional<PlatGroupMember> existing = memberRepository.findByGroupIdAndUserId(id, user.getUserid());
         if (existing.isPresent()) {
             PlatGroupMember m = existing.get();
@@ -325,7 +333,6 @@ public class PlatformGroupController {
                 return Map.of("joined", false, "pending", true, "message", "Request pending");
             }
             // left or rejected 闂?allow re-join/re-apply
-            String reason = payload != null ? String.valueOf(payload.getOrDefault("message", "")) : "";
             if ("free".equals(group.getJoinMode())) {
                 m.setStatus("approved");
                 m.setJoinedAt(LocalDateTime.now());
@@ -342,7 +349,6 @@ public class PlatformGroupController {
             return Map.of("joined", false, "pending", true, "message", "Request submitted, waiting for approval");
         }
 
-        String reason = payload != null ? String.valueOf(payload.getOrDefault("message", "")) : "";
         PlatGroupMember member = new PlatGroupMember();
         member.setGroupId(id);
         member.setUserId(user.getUserid());
@@ -423,6 +429,8 @@ public class PlatformGroupController {
             item.put("role", m.getRole());
             item.put("status", m.getStatus());
             item.put("joinedAt", m.getJoinedAt());
+            item.put("applyReason", m.getApplyReason());
+            item.put("requestedAt", m.getCreatedAt());
             item.put("username", u != null ? u.getUsername() : "");
             item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;

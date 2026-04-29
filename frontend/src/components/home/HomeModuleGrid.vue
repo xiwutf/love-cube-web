@@ -143,22 +143,62 @@ defineProps({
 
 @media (max-width: 640px) {
   .portal-section {
-    padding: var(--lc-space-4);
+    padding: 16px;
+    border-radius: 18px;
   }
 
   .module-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .module-card {
-    grid-template-columns: 52px minmax(0, 1fr) 28px;
-    min-height: 104px;
-    padding: var(--lc-space-4);
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 8px;
+    min-height: 122px;
+    padding: 14px 12px;
   }
 
   .module-icon {
-    width: 52px;
-    height: 52px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 18px;
+  }
+
+  .module-card strong {
+    display: block;
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .module-card p {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .module-card em {
+    justify-self: end;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 390px) {
+  .section-head h2 {
+    font-size: 20px;
+  }
+
+  .section-head p {
+    font-size: 12px;
+  }
+
+  .module-card {
+    min-height: 116px;
+    padding: 12px 10px;
   }
 }
 </style>

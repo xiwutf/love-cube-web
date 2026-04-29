@@ -39,7 +39,7 @@
       </van-cell-group>
 
       <div class="btn-wrap">
-        <van-button round block type="primary" native-type="submit" :loading="store.saving">
+        <van-button round block type="primary" native-type="submit" :loading="store.saving" :disabled="store.saving">
           保存资料
         </van-button>
       </div>
@@ -180,22 +180,28 @@ async function handleSubmit() {
     showToast({ message: '昵称最多 20 个字符', type: 'fail' })
     return
   }
-  await store.saveProfile({
-    nickname,
-    gender: form.gender,
-    birthYear: form.birthYear ? Number(form.birthYear) : null,
-    city: form.city,
-    occupation: form.occupation,
-    education: form.education,
-    height: form.height ? Number(form.height) : null,
-    bio: form.bio,
-    intention: form.intention,
-    tags: form.tags,
-    avatarUrl: form.avatarUrl
-  })
-  await store.fetchCompletion()
-  showToast({ message: '保存成功', type: 'success' })
-  router.replace('/fellowship/profile')
+  try {
+    await store.saveProfile({
+      nickname,
+      gender: form.gender,
+      birthYear: form.birthYear ? Number(form.birthYear) : null,
+      city: form.city,
+      occupation: form.occupation,
+      education: form.education,
+      height: form.height ? Number(form.height) : null,
+      bio: form.bio,
+      intention: form.intention,
+      tags: form.tags,
+      avatarUrl: form.avatarUrl
+    })
+    await store.fetchProfile(true)
+    await store.fetchCompletion()
+    showToast({ message: '保存成功', type: 'success' })
+    router.replace('/fellowship/profile')
+  } catch (e) {
+    console.error('[profile/edit] save failed:', e)
+    showToast({ message: e?.response?.data?.message || e?.message || '保存失败，请稍后重试', type: 'fail' })
+  }
 }
 </script>
 
