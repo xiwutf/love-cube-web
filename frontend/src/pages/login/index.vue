@@ -6,7 +6,7 @@
           <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
           <p class="logo-sub">登录后即可继续你的平台体验</p>
-          <p class="faith-tip">仅限教友注册和登录</p>
+          <p class="faith-tip">仅限 注册和登录</p>
         </div>
 
         <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">

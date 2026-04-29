@@ -1,0 +1,18 @@
+package com.lovecube.backend.repository;
+
+import com.lovecube.backend.entity.PlatGroupMember;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface PlatGroupMemberRepository extends JpaRepository<PlatGroupMember, Long> {
+
+    Optional<PlatGroupMember> findByGroupIdAndUserId(Long groupId, Long userId);
+
+    List<PlatGroupMember> findByGroupIdAndStatusOrderByJoinedAtAsc(Long groupId, String status);
+
+    List<PlatGroupMember> findByGroupIdOrderByJoinedAtAsc(Long groupId);
+
+    List<PlatGroupMember> findByUserId(Long userId);
+}

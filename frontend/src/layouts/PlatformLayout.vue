@@ -155,6 +155,7 @@ const navItems = [
   { to: '/announcements', label: '平台动态' },
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动' },
+  { to: '/platform/groups', label: '团体' },
   { to: '/fellowship-intro', label: '联谊介绍' }
 ]
 

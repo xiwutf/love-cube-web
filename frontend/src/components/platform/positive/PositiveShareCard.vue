@@ -73,7 +73,7 @@ const CAT_CONFIG = {
   '感恩': { bg: '#fee2e2', color: '#ef4444' },
   '鼓励': { bg: '#f3e8ff', color: '#a855f7' },
   '成长': { bg: '#dcfce7', color: '#16a34a' },
-  '信仰': { bg: '#dbeafe', color: '#2563eb' },
+  '理想': { bg: '#dbeafe', color: '#2563eb' },
   '生活': { bg: '#fce7f3', color: '#db2777' },
   '学习': { bg: '#ffedd5', color: '#ea580c' },
   '工作': { bg: '#f1f5f9', color: '#475569' },

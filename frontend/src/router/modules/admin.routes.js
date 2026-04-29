@@ -14,6 +14,10 @@ export default {
     { path: 'reports', component: () => import('@/pages/admin/ReportsAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'feedbacks', component: () => import('@/pages/admin/FeedbacksAdminPage.vue'), meta: { module: 'admin' } },
     { path: 'modules', component: () => import('@/pages/admin/ModulesAdminPage.vue'), meta: { module: 'admin' } },
-    { path: 'home-config', component: () => import('@/pages/admin/HomeConfigAdminPage.vue'), meta: { module: 'admin' } }
+    { path: 'home-config', component: () => import('@/pages/admin/HomeConfigAdminPage.vue'), meta: { module: 'admin' } },
+    { path: 'platform/groups', component: () => import('@/pages/admin/GroupsAdminPage.vue'), meta: { module: 'admin' } },
+    { path: 'platform/groups/create', component: () => import('@/pages/admin/GroupCreateAdminPage.vue'), meta: { module: 'admin' } },
+    { path: 'platform/groups/:id', component: () => import('@/pages/admin/GroupEditAdminPage.vue'), meta: { module: 'admin' } },
+    { path: 'platform/groups/:id/edit', redirect: to => `/admin/platform/groups/${to.params.id}` }
   ]
 }

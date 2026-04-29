@@ -62,7 +62,8 @@ const navItems = [
   { to: '/admin/reports', label: '举报处理', icon: '◒' },
   { to: '/admin/feedbacks', label: '用户反馈', icon: '◓' },
   { to: '/admin/modules', label: '模块管理', icon: '◇' },
-  { to: '/admin/home-config', label: '首页配置', icon: '◆' }
+  { to: '/admin/home-config', label: '首页配置', icon: '◆' },
+  { to: '/admin/platform/groups', label: '团体管理', icon: '◈' }
 ]
 
 const sectionMap = {
@@ -77,7 +78,8 @@ const sectionMap = {
   '/admin/reports': '举报处理',
   '/admin/feedbacks': '用户反馈',
   '/admin/modules': '模块管理',
-  '/admin/home-config': '首页配置'
+  '/admin/home-config': '首页配置',
+  '/admin/platform/groups': '团体管理'
 }
 
 const navHomePaths = computed(() => new Set(navItems.map(item => item.to)))

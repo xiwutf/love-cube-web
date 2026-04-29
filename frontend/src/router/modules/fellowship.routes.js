@@ -7,6 +7,7 @@ export default {
     { path: 'welcome', component: () => import('@/pages/welcome/index.vue'), meta: { module: 'auth' } },
 
     { path: 'discover', component: () => import('@/pages/fellowship/DiscoverPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'groups', component: () => import('@/pages/fellowship/GroupsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'match', component: () => import('@/pages/fellowship/MatchPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'messages', component: () => import('@/pages/fellowship/MessagePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'me', component: () => import('@/pages/fellowship/MePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },

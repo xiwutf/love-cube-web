@@ -277,14 +277,14 @@ const mainTabs = [
   { label: '热门', value: 'hot' },
   { label: '我的', value: 'my' },
 ]
-const filterCats = ['感恩', '鼓励', '信仰', '成长', '生活']
+const filterCats = ['感恩', '鼓励', '理想', '成长', '生活']
 const weekDays = ['一', '二', '三', '四', '五', '六', '日']
 
 const CAT_DOT_COLORS = {
   '感恩': '#ef4444',
   '鼓励': '#f97316',
   '成长': '#22c55e',
-  '信仰': '#3b82f6',
+  '理想': '#3b82f6',
   '生活': '#ec4899',
   '学习': '#a855f7',
   '工作': '#64748b',

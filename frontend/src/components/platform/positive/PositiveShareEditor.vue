@@ -58,7 +58,7 @@ const categories = [
   { value: '感恩', label: '感恩', icon: '♥', bgActive: '#fee2e2', colorActive: '#ef4444', borderActive: '#fca5a5' },
   { value: '鼓励', label: '鼓励', icon: '↑', bgActive: '#f3e8ff', colorActive: '#a855f7', borderActive: '#d8b4fe' },
   { value: '成长', label: '成长', icon: '🌿', bgActive: '#dcfce7', colorActive: '#16a34a', borderActive: '#86efac' },
-  { value: '信仰', label: '信仰', icon: '✦', bgActive: '#dbeafe', colorActive: '#2563eb', borderActive: '#93c5fd' },
+  { value: '理想', label: '理想', icon: '✦', bgActive: '#dbeafe', colorActive: '#2563eb', borderActive: '#93c5fd' },
   { value: '生活', label: '生活', icon: '🏠', bgActive: '#fce7f3', colorActive: '#db2777', borderActive: '#f9a8d4' },
   { value: '学习', label: '学习', icon: '📖', bgActive: '#ffedd5', colorActive: '#ea580c', borderActive: '#fdba74' },
   { value: '工作', label: '工作', icon: '💼', bgActive: '#f1f5f9', colorActive: '#475569', borderActive: '#cbd5e1' },

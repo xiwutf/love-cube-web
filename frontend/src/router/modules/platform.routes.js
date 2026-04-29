@@ -21,6 +21,16 @@ export default {
     { path: 'fellowship-intro', component: () => import('@/pages/platform/FellowshipIntroPage.vue'), meta: { module: 'platform' } },
     { path: 'modules', component: () => import('@/pages/platform/ModulesPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/positive-share', component: () => import('@/pages/platform/PositiveSharePage.vue'), meta: { module: 'platform' } },
-    { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue'), meta: { module: 'platform' } }
+    { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups', component: () => import('@/pages/platform/GroupsPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/my', component: () => import('@/pages/platform/MyGroupsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'platform/groups/:id', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/:id/feed', redirect: to => `/platform/groups/${to.params.id}/posts` },
+    { path: 'platform/groups/:id/members', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/:id/posts', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/:id/notices', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/:id/profile', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/:id/announcements', redirect: to => `/platform/groups/${to.params.id}/notices` },
+    { path: 'platform/groups/:id/materials', redirect: to => `/platform/groups/${to.params.id}/profile` }
   ]
 }

@@ -1,0 +1,11 @@
+package com.lovecube.backend.repository;
+
+import com.lovecube.backend.entity.GroupPost;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface GroupPostRepository extends JpaRepository<GroupPost, String> {
+
+    List<GroupPost> findByGroupIdOrderByCreatedAtDesc(String groupId);
+}
