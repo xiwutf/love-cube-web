@@ -1,0 +1,2 @@
+ALTER TABLE user_interactions
+    MODIFY COLUMN interaction_type VARCHAR(50) NOT NULL COMMENT '互动类型：LIKE, COMMENT, FOLLOW, GIFT, SUPER_LIKE, SKIP';

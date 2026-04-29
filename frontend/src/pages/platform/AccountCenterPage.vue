@@ -74,6 +74,7 @@
             <div class="me-invite-line">
               <span>邀请码: {{ inviteCodeDisplay }}</span>
               <button type="button" :disabled="!inviteCode" @click="copyInviteCode">复制</button>
+              <span v-if="copyFeedback" class="me-copy-feedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</span>
             </div>
             <button type="button" class="me-edit-btn" @click="toggleEdit">
               {{ editOpen ? '收起编辑' : '编辑资料' }} >
@@ -167,6 +168,12 @@
               <p>{{ card.desc }}</p>
             </div>
           </div>
+          <div class="me-card-list">
+            <router-link v-for="row in card.rows" :key="row.label" :to="row.to">
+              {{ row.label }}
+              <strong>{{ row.value }}</strong>
+            </router-link>
+          </div>
           <router-link :to="card.actionTo" class="me-card-action" :class="`is-${card.theme}`">{{ card.action }} ></router-link>
         </article>
       </div>
@@ -201,7 +208,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
@@ -219,6 +226,8 @@ const saveMessage = ref('')
 const saveError = ref(false)
 const { pickAndUpload, uploading } = useImageUpload()
 const inviteCode = ref('')
+const copyFeedback = ref('')
+const copyFeedbackError = ref(false)
 const editForm = reactive({
   username: '',
   avatar: '',
@@ -379,6 +388,15 @@ const mobileListItems = computed(() => [
   { title: '资料帮助', desc: '资料编辑相关说明', extra: '查看', icon: '?', theme: 'purple', to: accountSettingsRoute }
 ])
 
+async function refreshUnreadCount() {
+  const notifRes = await getNotifUnreadCountCached().catch(() => null)
+  unreadCount.value = Number(notifRes?.count ?? notifRes?.unreadCount ?? 0)
+}
+
+function handleNotifReadAll() {
+  unreadCount.value = 0
+}
+
 watch(
   () => user.value,
   (value) => {
@@ -454,6 +472,8 @@ async function handleSaveProfile() {
 
 async function copyInviteCode() {
   if (!inviteCode.value) return
+  copyFeedback.value = ''
+  copyFeedbackError.value = false
   try {
     if (navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(inviteCode.value)
@@ -465,29 +485,25 @@ async function copyInviteCode() {
       document.execCommand('copy')
       document.body.removeChild(input)
     }
-    saveError.value = false
-    saveMessage.value = '邀请码已复制'
-  } catch (error) {
-    saveError.value = true
-    saveMessage.value = '复制失败，请手动复制邀请码'
+    copyFeedback.value = '已复制'
+    setTimeout(() => { copyFeedback.value = '' }, 2000)
+  } catch {
+    copyFeedbackError.value = true
+    copyFeedback.value = '复制失败'
+    setTimeout(() => { copyFeedback.value = '' }, 2000)
   }
 }
 
 onMounted(async () => {
+  window.addEventListener('platform-notif-read-all', handleNotifReadAll)
   if (route.query?.panel === 'settings') {
     editOpen.value = true
   }
   if (!user.value) {
     await userStore.refreshCurrentUser().catch(() => {})
   }
-  const [notifRes, statsRes, inviteRes] = await Promise.allSettled([
-    getNotifUnreadCountCached(),
-    getUserStatsCached(),
-    getMyInviteCode()
-  ])
-  if (notifRes.status === 'fulfilled') {
-    unreadCount.value = Number(notifRes.value?.count ?? notifRes.value?.unreadCount ?? 0)
-  }
+  await refreshUnreadCount()
+  const [statsRes, inviteRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode()])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
@@ -496,6 +512,10 @@ onMounted(async () => {
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('platform-notif-read-all', handleNotifReadAll)
 })
 </script>
 
@@ -1710,7 +1730,7 @@ onMounted(async () => {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(460px, 1fr) 760px;
+  grid-template-columns: minmax(360px, 1fr) minmax(0, 1fr);
   gap: 28px;
   align-items: center;
   min-height: 246px;
@@ -1843,6 +1863,16 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
+.me-copy-feedback {
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.me-copy-feedback.is-error {
+  color: #dc2626;
+}
+
 .me-edit-btn {
   margin-top: 24px;
   min-width: 104px;
@@ -1863,6 +1893,12 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
+}
+
+@media (max-width: 1360px) {
+  .me-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .me-kpis article {

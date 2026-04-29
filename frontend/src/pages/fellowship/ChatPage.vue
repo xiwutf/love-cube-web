@@ -46,14 +46,14 @@
         class="input-field"
         @keyup.enter="handleSend"
       />
-      <van-button type="primary" size="small" :disabled="!inputText.trim()" @click="handleSend">发17</van-button>
+        <van-button type="primary" size="small" :disabled="!inputText.trim()" @click="handleSend">发送</van-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { showActionSheet } from '@/utils/vantActionSheet.js'
 import NavBar from '@/components/NavBar.vue'
@@ -67,6 +67,7 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useReport } from '@/composables/useReport.js'
 
 const route = useRoute()
+const router = useRouter()
 const receiverId = route.params.receiverId
 const myId = storage.get('userId')
 
@@ -108,10 +109,15 @@ const statusLabel = computed(() => {
 })
 
 onMounted(async () => {
+  if (!myId) {
+    router.replace({ path: '/fellowship/login', query: { redirect: encodeURIComponent(route.fullPath) } })
+    return
+  }
   try {
-    const [hist, partner] = await Promise.allSettled([
+    const [hist, partner, me] = await Promise.allSettled([
       getChatHistory(myId, receiverId),
-      request.get(`/users/${receiverId}`)
+      request.get(`/users/${receiverId}`),
+      request.get('/users/me')
     ])
     if (hist.status === 'fulfilled') {
       const msgs = Array.isArray(hist.value) ? hist.value : (hist.value?.messages || [])
@@ -129,7 +135,12 @@ onMounted(async () => {
       partnerName.value = user.nickname
       partnerAvatar.value = user.avatar
     }
-    await markChatRead(myId, receiverId)
+    if (me.status === 'fulfilled') {
+      const self = normalizeUser(me.value)
+      myName.value = self.nickname || myName.value
+      myAvatar.value = self.avatar || myAvatar.value
+    }
+    await markChatRead(myId, receiverId).catch(() => {})
   } finally {
     historyLoading.value = false
     scrollToBottom()
@@ -165,6 +176,13 @@ function handleSend() {
   }, 900)
   nextTick(scrollToBottom)
 }
+
+onBeforeUnmount(() => {
+  if (sendTipTimer) {
+    clearTimeout(sendTipTimer)
+    sendTipTimer = null
+  }
+})
 
 function scrollToBottom() {
   const node = msgListRef.value

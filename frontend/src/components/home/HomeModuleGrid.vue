@@ -3,9 +3,12 @@
     <header class="section-head">
       <div>
         <h2>核心模块</h2>
-        <p>探索我们提供的多样化功能与服务</p>
+        <p>第一次来可先看：活动中心、官方动态、用户中心</p>
       </div>
     </header>
+    <div class="module-tags" aria-label="模块清单">
+      <span v-for="item in modules" :key="`tag-${item.title}`">{{ item.title }}</span>
+    </div>
 
     <div class="module-grid">
       <router-link
@@ -69,6 +72,23 @@ defineProps({
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--lc-space-4);
+}
+
+.module-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -6px 0 var(--lc-space-4);
+}
+
+.module-tags span {
+  padding: 4px 10px;
+  border: 1px solid var(--lc-blue-border);
+  border-radius: 999px;
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .module-card {
@@ -150,6 +170,11 @@ defineProps({
   .module-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+  }
+
+  .module-tags {
+    gap: 6px;
+    margin-bottom: 12px;
   }
 
   .module-card {

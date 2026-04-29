@@ -95,7 +95,13 @@
             <p>{{ item.name }}</p>
             <span>{{ item.location }} · {{ item.members }} 人</span>
           </div>
-          <button type="button" @click="handleJoin(item)">{{ item.joined ? '已加入' : item.pending ? '申请中' : '申请' }}</button>
+          <button
+            type="button"
+            :disabled="!item.id || item.joined || item.pending"
+            @click="handleJoin(item)"
+          >
+            {{ !item.id ? '仅展示' : item.joined ? '已加入' : item.pending ? '申请中' : '申请' }}
+          </button>
         </div>
       </div>
     </section>
@@ -285,7 +291,7 @@ onMounted(() => {
 async function loadGroups() {
   loading.value = true
   try {
-    const data = await fetchGroups({ status: 'active' })
+    const data = await fetchGroups({ status: 'published' })
     remoteGroups.value = Array.isArray(data) ? data.map(normalizeGroup) : []
   } catch {
     remoteGroups.value = []
@@ -326,6 +332,10 @@ function showCreateTip() {
 
 async function handleJoin(group) {
   if (group.joined || group.pending) return
+  if (!group?.id) {
+    showToast('该团体当前仅展示，暂不支持直接申请')
+    return
+  }
   if (!remoteGroups.value.length) {
     showToast(`已提交加入${group.name}的申请`)
     return

@@ -16,7 +16,8 @@ public class HomeConfigService {
     private static final String GROUP_ABILITY = "ability";
     private static final String GROUP_FOUNDATION = "foundation";
     private static final String GROUP_CHANGELOG = "changelog";
-    private static final List<String> ALL_GROUPS = List.of(GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION, GROUP_CHANGELOG);
+    private static final String GROUP_PENDING = "pending";
+    private static final List<String> ALL_GROUPS = List.of(GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION, GROUP_CHANGELOG, GROUP_PENDING);
 
     private final HomeConfigRepository homeConfigRepository;
     private final ObjectMapper objectMapper;
@@ -41,12 +42,14 @@ public class HomeConfigService {
         List<Map<String, Object>> abilities = toListOfMap(payload.get("abilities"));
         Map<String, Object> foundation = toMap(payload.get("foundation"));
         List<Map<String, Object>> changelog = toListOfMap(payload.get("changelog"));
+        List<Map<String, Object>> pendingUpdates = toListOfMap(payload.get("pendingUpdates"));
 
         upsertSingle(GROUP_HERO, "hero-main", hero, 0, true);
         upsertList(GROUP_MODULE, modules, "moduleKey");
         upsertList(GROUP_ABILITY, abilities, "abilityKey");
         upsertSingle(GROUP_FOUNDATION, "foundation-main", foundation, 0, true);
         upsertList(GROUP_CHANGELOG, changelog, "version");
+        upsertList(GROUP_PENDING, pendingUpdates, "id");
 
         return getAdminHomeConfig();
     }
@@ -70,6 +73,7 @@ public class HomeConfigService {
         for (Map<String, Object> item : changelog) {
             changelogMap.put(String.valueOf(item.get("version")), new LinkedHashMap<>(item));
         }
+        Map<String, Map<String, Object>> pendingMap = new LinkedHashMap<>();
 
         for (HomeConfig row : rows) {
             Map<String, Object> value = parseJson(row.getConfigValue());
@@ -101,6 +105,14 @@ public class HomeConfigService {
                 target.put("sortOrder", row.getSortOrder());
                 target.put("enabled", row.getEnabled());
                 changelogMap.put(key, target);
+            } else if (GROUP_PENDING.equals(row.getConfigGroup())) {
+                String key = row.getConfigKey();
+                Map<String, Object> target = pendingMap.getOrDefault(key, new LinkedHashMap<>());
+                target.putAll(value);
+                target.put("id", key);
+                target.put("sortOrder", row.getSortOrder());
+                target.put("enabled", row.getEnabled());
+                pendingMap.put(key, target);
             }
         }
 
@@ -113,6 +125,9 @@ public class HomeConfigService {
         changelog = changelogMap.values().stream()
                 .sorted(Comparator.comparingInt(item -> toInt(item.get("sortOrder"), 0)))
                 .toList();
+        List<Map<String, Object>> pendingUpdates = pendingMap.values().stream()
+                .sorted(Comparator.comparingInt(item -> toInt(item.get("sortOrder"), 0)))
+                .toList();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("hero", hero);
@@ -120,6 +135,7 @@ public class HomeConfigService {
         result.put("abilities", abilities);
         result.put("foundation", foundation);
         result.put("changelog", changelog);
+        result.put("pendingUpdates", pendingUpdates);
         result.put("banners", List.of());
         return result;
     }
@@ -130,6 +146,7 @@ public class HomeConfigService {
         result.put("modules", filterEnabledList((List<Map<String, Object>>) result.get("modules")));
         result.put("abilities", filterEnabledList((List<Map<String, Object>>) result.get("abilities")));
         result.put("changelog", filterEnabledList((List<Map<String, Object>>) result.get("changelog")));
+        result.put("pendingUpdates", filterEnabledList((List<Map<String, Object>>) result.get("pendingUpdates")));
         return result;
     }
 

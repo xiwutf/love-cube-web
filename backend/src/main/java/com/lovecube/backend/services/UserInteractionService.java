@@ -219,6 +219,9 @@ public class UserInteractionService {
             case LIKE:
                 dto.put("target", "赞了你");
                 break;
+            case SKIP:
+                dto.put("target", "暂时略过了你");
+                break;
             case SUPER_LIKE:
                 dto.put("target", "超级喜欢你");
                 break;

@@ -18,15 +18,15 @@
     <div v-if="!keyword && !list.length && !loading" class="discover-state">
       <div class="discover-hint">
         <div class="discover-icon">🔍</div>
-        <p class="discover-title">探索新朋</p>
-        <p class="discover-desc">输入昵称，找到你感兴趣的</p>
+        <p class="discover-title">探索新朋友</p>
+        <p class="discover-desc">输入昵称，找到你感兴趣的人</p>
       </div>
       <div class="hot-tags">
         <span class="hot-tag">五象新区</span>
         <span class="hot-tag">在校学生</span>
         <span class="hot-tag">职场新人</span>
-        <span class="hot-tag">爱运</span>
-        <span class="hot-tag">爱旅</span>
+        <span class="hot-tag">爱运动</span>
+        <span class="hot-tag">爱旅行</span>
         <span class="hot-tag">摄影爱好</span>
       </div>
     </div>
@@ -70,26 +70,30 @@ const loading = ref(false)
 const noMore = ref(false)
 const searched = ref(false)
 let page = 0
+let searchSeq = 0
 
 async function fetchSearch(reset = false) {
+  const q = keyword.value.trim()
   if (reset) {
     page = 0
     list.value = []
     noMore.value = false
   }
 
-  if (!keyword.value.trim()) {
+  if (!q) {
     loading.value = false
     return
   }
   if (loading.value || noMore.value) return
 
+  const currentSeq = ++searchSeq
   loading.value = true
   searched.value = true
   try {
     const data = await request.get('/search', {
-      params: { keyword: keyword.value, page, size: 10 }
+      params: { keyword: q, page, size: 10 }
     })
+    if (currentSeq !== searchSeq) return
     const items = (Array.isArray(data) ? data : []).map(normalizeUser)
     list.value.push(...items)
     if (items.length < 10) noMore.value = true
@@ -113,8 +117,16 @@ function onCancel() {
 }
 
 const onInput = debounce(() => {
-  if (keyword.value.trim()) fetchSearch(true)
-  else loading.value = false
+  if (keyword.value.trim()) {
+    fetchSearch(true)
+  } else {
+    searchSeq++
+    list.value = []
+    searched.value = false
+    noMore.value = false
+    loading.value = false
+    page = 0
+  }
 }, 400)
 
 function loadMore() {

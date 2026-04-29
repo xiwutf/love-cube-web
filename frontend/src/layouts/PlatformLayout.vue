@@ -85,10 +85,11 @@
 
     <nav class="mobile-quick-nav">
       <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-      <router-link to="/modules" :class="{ 'is-active': isActive('/modules') }">模块</router-link>
-      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">动态</router-link>
-      <router-link to="/messages" :class="{ 'is-active': isActive('/messages') }">消息</router-link>
-      <router-link to="/me" :class="{ 'is-active': isActive('/me') }">我的</router-link>
+      <router-link to="/platform/positive-share" :class="{ 'is-active': isActive('/platform/positive-share') }">每日心声</router-link>
+      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
+      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
+      <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团队</router-link>
+      <router-link to="/me" :class="{ 'is-active': isActive('/me') }">个人中心</router-link>
     </nav>
 
     <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
@@ -1517,7 +1518,7 @@ onBeforeUnmount(() => {
     height: calc(52px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     background: rgba(255, 255, 255, 0.92);
     border-top: 1px solid #d6e0ed;
     backdrop-filter: blur(8px);
@@ -1528,7 +1529,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     color: #64748b;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-decoration: none;
   }

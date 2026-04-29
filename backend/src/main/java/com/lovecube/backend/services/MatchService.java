@@ -13,10 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -178,34 +179,18 @@ public class MatchService
         }
         Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 
-        List<Long> actedIds    = userInteractionRepository.findActedUserIdsByFromUserId(currentUserId);
+        Set<Long> actedIds    = new HashSet<>(userInteractionRepository.findActedUserIdsByFromUserId(currentUserId));
         List<Long> guardianIds = getGuardianUserIds();
         List<Long> blacklistIds = getBlacklistIds(currentUserId);
+        Set<Long> excludedIds = new HashSet<>();
+        excludedIds.addAll(guardianIds);
+        excludedIds.addAll(blacklistIds);
         boolean keepActedUsers = Boolean.TRUE.equals(includeActed);
 
-        if (effectiveGender != null) {
-            return userRepository.findByGenderAndUseridNot(effectiveGender, currentUserId)
-                .stream()
-                .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
-                .filter(this::isVisibleInMatchPool)
-                .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
-                .filter(u -> !guardianIds.contains(u.getUserid()))
-                .filter(u -> !blacklistIds.contains(u.getUserid()))
-                .filter(u -> minAge == null || (u.getAge() != null && u.getAge() >= minAge))
-                .filter(u -> maxAge == null || (u.getAge() != null && u.getAge() <= maxAge))
-                .filter(u -> location == null || location.isBlank() || (u.getLocation() != null && u.getLocation().contains(location)))
-                .collect(Collectors.toList());
-        }
-        return userRepository.findByUseridNot(currentUserId)
+        return userRepository.findMatchCandidates(currentUserId, effectiveGender, minAge, maxAge, location)
             .stream()
-            .filter(u -> !"DISABLED".equalsIgnoreCase(u.getUserStatus()))
-            .filter(this::isVisibleInMatchPool)
             .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
-            .filter(u -> !guardianIds.contains(u.getUserid()))
-            .filter(u -> !blacklistIds.contains(u.getUserid()))
-            .filter(u -> minAge == null || (u.getAge() != null && u.getAge() >= minAge))
-            .filter(u -> maxAge == null || (u.getAge() != null && u.getAge() <= maxAge))
-            .filter(u -> location == null || location.isBlank() || (u.getLocation() != null && u.getLocation().contains(location)))
+            .filter(u -> !excludedIds.contains(u.getUserid()))
             .collect(Collectors.toList());
     }
 

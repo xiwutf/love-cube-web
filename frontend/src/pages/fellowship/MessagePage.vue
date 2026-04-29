@@ -65,10 +65,10 @@
                 </van-image>
                 <div class="interact-info">
                   <p class="interact-name">
-                    {{ item.fromUser?.nickname || '用户' }}
+                    {{ getInteractName(item) }}
                     <span class="interact-action">{{ interactLabel(item.type) }}</span>
                   </p>
-                  <p class="interact-time">{{ formatTime(item.createdAt) }}</p>
+                  <p class="interact-time">{{ formatTime(item.createdAt || item.time) }}</p>
                 </div>
                 <div class="interact-type-icon">{{ interactIcon(item.type) }}</div>
               </div>
@@ -97,7 +97,7 @@
                 </div>
                 <div class="chat-info">
                   <div class="chat-row">
-                    <span class="chat-name">{{ item.visitor?.nickname || '神秘访客' }}</span>
+                    <span class="chat-name">{{ getVisitorName(item) }}</span>
                     <span class="chat-time">{{ formatTime(item.visitTime) }}</span>
                   </div>
                   <p class="chat-last visitor-label">来查看了你的主页</p>
@@ -203,7 +203,7 @@ async function loadChat() {
       avatar: getAvatar(item),
       lastMessage: item.lastMessage || item.content || '',
       lastTime: item.lastTime || item.timestamp || item.updatedAt || item.createdAt,
-      unread: Number(item.unreadCount || 0)
+      unread: Number(item.unreadCount || item.unread || 0)
     }))
     // 进入聊天列表即认为已查看消息中心入口，先清掉底部“消息”角标
     msgStore.clearChat()
@@ -217,7 +217,17 @@ async function loadInteract() {
   loadingInteract.value = true
   try {
     const data = await getInteractList()
-    interactList.value = Array.isArray(data) ? data : []
+    interactList.value = Array.isArray(data)
+      ? data.map((item) => ({
+        ...item,
+        fromUser: item.fromUser || {
+          nickname: item.nickname || '用户',
+          avatar: item.avatar || '',
+          userId: item.userId || null
+        },
+        createdAt: item.createdAt || item.time || null
+      }))
+      : []
     await markInteractRead()
     msgStore.clearInteract()
   } finally {
@@ -230,7 +240,17 @@ async function loadVisitor() {
   loadingVisitor.value = true
   try {
     const data = await getVisitorList()
-    visitorList.value = Array.isArray(data) ? data : []
+    visitorList.value = Array.isArray(data)
+      ? data.map((item) => ({
+        ...item,
+        visitorId: item.visitorId || item.userId || null,
+        visitor: item.visitor || {
+          nickname: item.nickname || '神秘访客',
+          avatar: item.avatar || '',
+          userId: item.userId || null
+        }
+      }))
+      : []
     await markVisitorRead()
     msgStore.clearVisitor()
   } finally {
@@ -327,6 +347,14 @@ onMounted(async () => {
 
 function goChat(item) {
   router.push(`/fellowship/chat/${item.userId}`)
+}
+
+function getInteractName(item) {
+  return item?.fromUser?.nickname || item?.nickname || '用户'
+}
+
+function getVisitorName(item) {
+  return item?.visitor?.nickname || item?.nickname || '神秘访客'
 }
 
 async function handleDeleteChat(item) {

@@ -79,15 +79,20 @@ defineProps({
 
 @media (max-width: 720px) {
   .notice-bar {
-    min-height: 44px;
-    margin: 12px 0;
-    padding: 0 12px;
+    min-height: 40px;
+    margin: 8px 0 6px;
+    padding: 0 10px;
     border-radius: 12px;
   }
 
   .notice-bar p {
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+  }
+
+  .notice-bar strong,
+  .notice-bar span {
+    font-size: 12px;
   }
 
   .notice-bar em {

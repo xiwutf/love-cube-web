@@ -122,19 +122,23 @@ const educationLabel = computed(() => form.education || '')
 const cityLabel = computed(() => form.city || '')
 
 onMounted(async () => {
-  const data = await store.fetchProfile()
-  form.nickname = data.nickname || ''
-  form.gender = data.gender || ''
-  form.birthYear = data.birthYear || ''
-  form.city = data.city || ''
-  form.occupation = data.occupation || ''
-  form.education = data.education || ''
-  form.height = data.height || ''
-  form.bio = data.bio || ''
-  form.intention = data.intention || ''
-  form.tags = data.tags || ''
-  form.avatarUrl = data.avatarUrl || ''
-  cityCode.value = findCityCodeByName(form.city)
+  try {
+    const data = await store.fetchProfile()
+    form.nickname = data.nickname || ''
+    form.gender = data.gender || ''
+    form.birthYear = data.birthYear || ''
+    form.city = data.city || ''
+    form.occupation = data.occupation || ''
+    form.education = data.education || ''
+    form.height = data.height || ''
+    form.bio = data.bio || ''
+    form.intention = data.intention || ''
+    form.tags = data.tags || ''
+    form.avatarUrl = data.avatarUrl || ''
+    cityCode.value = findCityCodeByName(form.city)
+  } catch (e) {
+    showToast({ message: e?.message || '资料加载失败，请稍后重试', type: 'fail' })
+  }
 })
 
 function onGenderConfirm({ selectedValues }) {
@@ -195,7 +199,7 @@ async function handleSubmit() {
       avatarUrl: form.avatarUrl
     })
     await store.fetchProfile(true)
-    await store.fetchCompletion()
+    await store.fetchCompletion(true)
     showToast({ message: '保存成功', type: 'success' })
     router.replace('/fellowship/profile')
   } catch (e) {

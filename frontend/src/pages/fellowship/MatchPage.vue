@@ -25,16 +25,16 @@
         <p class="loading-hint">正在为你匹配...</p>
       </div>
 
-      <template v-else-if="cardStack.length">
+      <template v-else-if="visibleStack.length">
         <div
-          v-for="(user, i) in cardStack.slice(0, 2)"
+          v-for="(user, i) in visibleStack.slice(0, 2)"
           :key="user.userId"
           class="card-wrapper"
-          :style="{ zIndex: cardStack.length - i, transform: i === 1 ? 'scale(0.95) translateY(12px)' : '' }"
+          :style="{ zIndex: visibleStack.length - i, transform: i === 1 ? 'scale(0.95) translateY(12px)' : '' }"
         >
           <SwipeCard
             v-if="i === 0"
-            :ref="el => topCardRef = el"
+            :ref="setTopCardRef"
             :user="user"
             @view-profile="goUserProfile(user.userId)"
             @like="onAction('like')"
@@ -128,7 +128,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
@@ -144,7 +144,7 @@ const showFilter = ref(false)
 const showMatched = ref(false)
 const pager = reactive({
   page: 1,
-  size: 20,
+  size: 8,
   hasMore: true,
   loadingMore: false
 })
@@ -156,6 +156,7 @@ const filter = reactive({
   region: '',
   verifiedOnly: false
 })
+const visibleStack = computed(() => cardStack.value.filter((user) => user && user.userId))
 
 async function loadCards() {
   pageLoading.value = true
@@ -172,7 +173,12 @@ async function loadCards() {
     })
     const list = Array.isArray(result?.list) ? result.list : []
     cardStack.value = list.map(normalizeUser)
+    sanitizeStack()
+    pager.page = Number(result?.page || 1)
     pager.hasMore = Boolean(result?.hasMore)
+    if (cardStack.value.length > 0 && pager.hasMore) {
+      loadMore()
+    }
   } catch {
     showToast({ message: '加载失败', type: 'fail' })
   } finally {
@@ -181,6 +187,7 @@ async function loadCards() {
 }
 
 async function onAction(action) {
+  sanitizeStack()
   const top = cardStack.value[0]
   if (!top) return
 
@@ -197,7 +204,10 @@ async function onAction(action) {
       showMatched.value = true
     }
   } catch {
-    // ignore and continue browsing
+    // 请求失败时回滚卡片，避免用户无感丢卡
+    cardStack.value.unshift(top)
+    showToast({ message: '操作失败，请稍后重试', type: 'fail' })
+    return
   }
 
   if (cardStack.value.length <= 3) loadMore()
@@ -216,9 +226,12 @@ async function loadMore() {
       page: nextPage,
       size: pager.size
     })
-    const items = (Array.isArray(result?.list) ? result.list : []).map(normalizeUser)
+    const items = (Array.isArray(result?.list) ? result.list : [])
+      .map(normalizeUser)
+      .filter((user) => user && user.userId)
     const existing = new Set(cardStack.value.map(u => u.userId))
     cardStack.value.push(...items.filter(u => !existing.has(u.userId)))
+    sanitizeStack()
     pager.page = nextPage
     pager.hasMore = Boolean(result?.hasMore)
   } catch {
@@ -245,6 +258,14 @@ function goUserProfile(userId) {
 
 function goAllOppositeUsers() {
   router.push('/fellowship/match/all')
+}
+
+function setTopCardRef(el) {
+  topCardRef.value = el
+}
+
+function sanitizeStack() {
+  cardStack.value = cardStack.value.filter((user) => user && user.userId)
 }
 
 onMounted(loadCards)

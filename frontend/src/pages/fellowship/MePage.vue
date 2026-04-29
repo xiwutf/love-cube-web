@@ -68,9 +68,9 @@
 
       <section v-show="!loadingPage" class="status-panel">
         <div class="completion-cell">
-          <p class="cell-title">资料完整度 80%</p>
+          <p class="cell-title">资料完整度 {{ completionPercent }}%</p>
           <div class="progress-track">
-            <div class="progress-bar" />
+            <div class="progress-bar" :style="{ width: `${completionPercent}%` }" />
           </div>
           <p class="cell-sub">再完善 1 项，匹配率提升 30%</p>
           <button class="minor-link" @click="router.push('/fellowship/profile/edit')">去完善</button>
@@ -229,6 +229,10 @@ const displayCity = computed(() => profile.value.city || '保定市')
 const displayJob = computed(() => profile.value.job || '产品经理')
 const displayIntro = computed(() => profile.value.bio || '认真生活、真诚交友，期待遇见对的人。')
 const displayPhotos = computed(() => photoList.value.slice(0, 4))
+const completionPercent = computed(() => {
+  const value = Number(completion.value?.percent || 0)
+  return Math.min(100, Math.max(0, value))
+})
 const verificationStatus = computed(() => userInfo.value?.verificationStatus || profile.value.reviewStatus || 'none')
 const verificationLabel = computed(() => {
   if (verificationStatus.value === 'approved') return '真人已核验'
@@ -297,7 +301,11 @@ async function loadPageData() {
     if (p.status === 'fulfilled') normalizeProfile(p.value)
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
     if (photosRes.status === 'fulfilled') {
-      const photos = Array.isArray(photosRes.value?.photos) ? photosRes.value.photos : []
+      const photos = Array.isArray(photosRes.value?.photos)
+        ? photosRes.value.photos
+        : Array.isArray(photosRes.value)
+          ? photosRes.value
+          : []
       photoList.value = photos.map((url, idx) => ({ id: `${idx}-${url}`, url }))
     }
   } catch (err) {
@@ -347,10 +355,10 @@ async function onPhotoSelected(event) {
     const uploadResults = await Promise.all(files.map((file) => uploadFellowshipPhoto(file)))
     const uploadedUrls = uploadResults.map(parseUploadUrl).filter(Boolean)
     if (!uploadedUrls.length) throw new Error('照片上传返回为空')
-    const next = [...uploadedUrls, ...photoList.value.map((item) => item.url)]
-    await saveFellowshipPhotos(next.slice(0, 9))
+    const next = [...uploadedUrls, ...photoList.value.map((item) => item.url)].slice(0, 9)
+    await saveFellowshipPhotos(next)
     photoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
-    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照牄17` })
+    showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照片` })
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '照片上传失败' })
   } finally {

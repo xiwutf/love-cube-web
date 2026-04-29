@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="settings-page">
-    <NavBar title="璁剧疆" />
+    <NavBar title="设置" />
 
     <van-cell-group inset title="账号" class="group">
       <van-cell title="统一账号中心" is-link @click="router.push('/account')" />
@@ -23,8 +23,8 @@
       />
     </van-cell-group>
 
-    <van-cell-group inset title="瀛樺偍" class="group">
-      <van-cell title="娓呯悊缂撳瓨" is-link :value="cacheSize" @click="handleClearCache" />
+    <van-cell-group inset title="存储" class="group">
+      <van-cell title="清理缓存" is-link :value="cacheSize" @click="handleClearCache" />
     </van-cell-group>
 
     <van-cell-group inset title="关于" class="group">

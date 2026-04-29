@@ -1,44 +1,60 @@
 ﻿<template>
-  <section class="hero-portal">
-    <div class="hero-copy">
-      <p class="portal-kicker">LOVE CUBE PLATFORM</p>
-      <h1>一个持续进化的<br>多功能连接平台</h1>
-      <p class="hero-subtitle">聚合内容资讯、活动服务、社交连接、本地服务与 AI 工具能力，为不同场景提供统一入口。</p>
-      <div class="hero-actions">
-        <router-link class="portal-btn portal-btn-primary" to="/modules">探索模块</router-link>
-        <router-link class="portal-btn portal-btn-light" to="/fellowship-intro">了解 LoveCube</router-link>
-      </div>
-      <dl class="hero-stats">
-        <div v-for="item in stats" :key="item.label">
-          <dt>{{ item.value }}</dt>
-          <dd>{{ item.label }}</dd>
+  <div>
+    <section class="hero-portal">
+      <div class="hero-copy">
+        <p class="portal-kicker">LOVE CUBE PLATFORM</p>
+        <h1>一个持续进化的<br>多功能连接平台</h1>
+        <nav class="quick-links" aria-label="快速入口">
+          <router-link
+            v-for="item in quickLinks"
+            :key="`quick-${item.label}`"
+            :to="item.to"
+            class="quick-link-chip"
+          >
+            {{ item.label }}
+          </router-link>
+        </nav>
+        <p class="hero-subtitle">聚合内容资讯、活动服务、社交连接、本地服务与 AI 工具能力，为不同场景提供统一入口。</p>
+        <div class="hero-actions">
+          <router-link class="portal-btn portal-btn-primary" to="/modules">探索模块</router-link>
+          <router-link class="portal-btn portal-btn-light" to="/fellowship-intro">了解 LoveCube</router-link>
         </div>
-      </dl>
-    </div>
+        <dl class="hero-stats">
+          <div v-for="item in stats" :key="item.label">
+            <dt>{{ item.value }}</dt>
+            <dd>{{ item.label }}</dd>
+          </div>
+        </dl>
+      </div>
 
-    <div class="hero-visual" aria-hidden="true">
-      <img :src="heroImage" alt="">
-      <div class="visual-float visual-float-chat">聊</div>
-      <div class="visual-bubble visual-bubble-heart">❤</div>
-      <div class="visual-bubble visual-bubble-check">✓</div>
-    </div>
-  </section>
+      <div class="hero-visual" aria-hidden="true">
+        <img :src="heroImage" alt="">
+        <div class="visual-float visual-float-chat">聊</div>
+        <div class="visual-bubble visual-bubble-heart">❤</div>
+        <div class="visual-bubble visual-bubble-check">✓</div>
+      </div>
+    </section>
 
-  <dl class="hero-stats-mobile">
-    <div v-for="item in stats" :key="`mobile-${item.label}`">
-      <dt>{{ item.value }}</dt>
-      <dd>{{ item.label }}</dd>
-    </div>
-  </dl>
+    <dl class="hero-stats-mobile">
+      <div v-for="item in stats" :key="`mobile-${item.label}`">
+        <dt>{{ item.value }}</dt>
+        <dd>{{ item.label }}</dd>
+      </div>
+    </dl>
+  </div>
 </template>
 
 <script setup>
 import heroImage from '@/assets/首页首屏右侧大图.webp'
 
-defineProps({
+const props = defineProps({
   stats: {
     type: Array,
     required: true
+  },
+  quickLinks: {
+    type: Array,
+    default: () => []
   }
 })
 </script>
@@ -104,7 +120,7 @@ defineProps({
   display: flex;
   flex-wrap: wrap;
   gap: var(--lc-space-3);
-  margin-top: var(--lc-space-8);
+  margin-top: var(--lc-space-5);
 }
 
 .portal-btn {
@@ -166,6 +182,24 @@ defineProps({
   color: var(--lc-muted);
   font-size: var(--lc-text-sm);
   font-weight: 800;
+}
+
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.quick-link-chip {
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  color: var(--lc-text);
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .hero-visual {
@@ -252,40 +286,52 @@ defineProps({
 
 @media (max-width: 680px) {
   .hero-portal {
-    gap: var(--lc-space-5);
-    min-height: 300px;
-    max-height: 330px;
-    padding: 20px 16px;
-    border-radius: 18px;
+    gap: 10px;
+    min-height: 248px;
+    margin-top: 6px;
+    padding: 14px 12px;
+    border-radius: 16px;
   }
 
   .hero-copy h1 {
-    max-width: 250px;
-    font-size: 42px;
-    line-height: 1.12;
+    max-width: 220px;
+    font-size: 34px;
+    line-height: 1.08;
   }
 
   .hero-subtitle {
-    max-width: 230px;
-    margin-top: 10px;
-    font-size: 14px;
-    line-height: 1.5;
+    max-width: 210px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.35;
     display: -webkit-box;
     overflow: hidden;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
   }
 
   .hero-actions {
     flex-wrap: nowrap;
-    margin-top: 14px;
+    margin-top: 8px;
+  }
+
+  .quick-links {
+    margin-top: 4px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+
+  .quick-link-chip {
+    flex: 0 0 auto;
+    font-size: 12px;
   }
 
   .portal-btn {
     min-width: 0;
-    min-height: 38px;
-    padding: 0 12px;
-    font-size: 13px;
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
   .hero-stats {
@@ -314,11 +360,11 @@ defineProps({
   .hero-stats-mobile {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin: 12px 0 0;
-    padding: 14px 12px;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 10px 9px;
     border: 1px solid var(--lc-border);
-    border-radius: 16px;
+    border-radius: 14px;
     background: #ffffff;
     box-shadow: var(--lc-shadow-sm);
   }
@@ -329,36 +375,38 @@ defineProps({
 
   .hero-stats-mobile dt {
     color: var(--lc-blue);
-    font-size: 34px;
+    font-size: 28px;
     font-weight: 950;
     line-height: 1;
   }
 
   .hero-stats-mobile dd {
-    margin: 4px 0 0;
+    margin: 3px 0 0;
     color: var(--lc-subtle);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 1.25;
   }
 }
 
 @media (max-width: 390px) {
   .hero-copy h1 {
-    font-size: 36px;
+    max-width: 204px;
+    font-size: 30px;
   }
 
   .hero-subtitle {
-    font-size: 13px;
+    max-width: 196px;
+    font-size: 11px;
   }
 
   .hero-stats-mobile {
-    gap: 8px;
-    padding: 12px 10px;
+    gap: 6px;
+    padding: 9px 8px;
   }
 
   .hero-stats-mobile dt {
-    font-size: 30px;
+    font-size: 24px;
   }
 }
 </style>

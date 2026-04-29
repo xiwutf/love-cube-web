@@ -1,8 +1,25 @@
 <template>
   <main class="portal-home">
     <div class="portal-shell">
+      <section class="home-live-feed" aria-label="实时动态">
+        <span class="home-live-feed-label">实时动态</span>
+        <div class="home-live-feed-track">
+          <div class="home-live-feed-list">
+            <p
+              v-for="(item, index) in homeRollingFeed"
+              :key="`home-live-${index}-${item.text}`"
+            >
+              {{ item.text }}
+            </p>
+          </div>
+        </div>
+      </section>
       <HomeNoticeBar class="home-block home-notice" :notice="notice" />
-      <HomeHeroPortal class="home-block home-hero" :stats="heroStats" />
+      <HomeHeroPortal
+        class="home-block home-hero"
+        :stats="heroStats"
+        :quick-links="quickActionLinks"
+      />
       <HomeModuleGrid class="home-block home-modules" :modules="coreModules" />
       <HomeOfficialPanel
         class="home-block home-official"
@@ -15,7 +32,7 @@
         <HomeActivityPanel :events="activityItems" :stats="activityStats" />
       </div>
       <HomeFeaturedContent class="home-block home-featured" :items="featuredItems" />
-      <div class="portal-split">
+      <div class="portal-split home-cobuild-vision">
         <HomeCoBuildPanel />
         <HomeVisionPanel />
       </div>
@@ -184,7 +201,7 @@ const heroStats = computed(() => [
   },
   {
     label: '内容发布',
-    value: formatStat(platformStats.value.dynamicsCount || platformStats.value.articleViewCount, '58+')
+    value: formatStat(platformStats.value.dynamicsCount, '58+')
   },
   {
     label: '功能模块',
@@ -195,6 +212,35 @@ const heroStats = computed(() => [
     value: '持续'
   }
 ])
+
+const quickActionLinks = computed(() => [
+  { label: '先看活动', to: '/events' },
+  { label: '查看公告', to: '/announcements' },
+  { label: '进入交友区', to: '/fellowship-intro' },
+  { label: '个人中心', to: '/me' }
+])
+
+const heroLiveFeed = computed(() => {
+  const source = [
+    ...announcements.value.slice(0, 3).map((item) => ({
+      text: `公告更新：${item.title || '平台公告'}`
+    })),
+    ...events.value.slice(0, 3).map((item) => ({
+      text: `活动上新：${item.title || '平台活动'}`
+    })),
+    ...articles.value.slice(0, 2).map((item) => ({
+      text: `内容发布：${item.title || '精选内容'}`
+    }))
+  ]
+  if (source.length) return source
+  return [
+    { text: '新用户指南：从活动中心开始更容易上手' },
+    { text: '官方公告已更新，建议先看最近的变化' },
+    { text: '内容专区持续更新，欢迎浏览精选文章' }
+  ]
+})
+
+const homeRollingFeed = computed(() => [...heroLiveFeed.value, ...heroLiveFeed.value])
 
 const officialItems = computed(() => {
   const source = announcements.value.length ? announcements.value : fallbackAnnouncements
@@ -247,8 +293,8 @@ const activityItems = computed(() => {
 
 const activityStats = computed(() => [
   { value: events.value.length || 3, label: '进行中' },
-  { value: platformStats.value.eventSignupCount || 5, label: '即将开始' },
-  { value: 12, label: '已结束' }
+  { value: platformStats.value.eventSignupCount || 5, label: '报名人次' },
+  { value: platformStats.value.citiesCount || 3, label: '覆盖城市' }
 ])
 
 function formatStat(value, fallback) {
@@ -312,6 +358,54 @@ onMounted(async () => {
   margin-top: var(--lc-space-5);
 }
 
+.home-live-feed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--lc-space-5);
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.home-live-feed-label {
+  flex: 0 0 auto;
+  color: var(--lc-blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.home-live-feed-track {
+  position: relative;
+  height: 20px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.home-live-feed-list {
+  display: flex;
+  flex-direction: column;
+  animation: homeTicker 14s linear infinite;
+}
+
+.home-live-feed-list p {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+@keyframes homeTicker {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
 .portal-split-accent {
   align-items: stretch;
 }
@@ -326,6 +420,10 @@ onMounted(async () => {
     grid-template-columns: 1fr;
     gap: var(--lc-space-4);
   }
+
+  .home-live-feed {
+    margin-top: var(--lc-space-4);
+  }
 }
 
 @media (max-width: 560px) {
@@ -337,16 +435,37 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     width: min(100% - 32px, 420px);
+    padding-top: 4px;
     padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 
+  .home-live-feed {
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .home-live-feed-label {
+    font-size: 11px;
+  }
+
+  .home-live-feed-track {
+    height: 18px;
+  }
+
+  .home-live-feed-list p {
+    font-size: 12px;
+    line-height: 18px;
+  }
+
   /* 移动端按原型顺序重排模块，避免桌面区块直接缩放 */
-  .home-notice { order: 1; }
-  .home-hero { order: 2; }
-  .home-modules { order: 3; }
-  .home-official { order: 4; }
-  .home-fellowship { order: 5; }
-  .home-featured { order: 6; }
+  .home-live-feed { order: 1; }
+  .home-notice { order: 2; }
+  .home-hero { order: 3; }
+  .home-modules { order: 4; }
+  .home-official { order: 5; }
+  .home-fellowship { order: 6; }
+  .home-featured { order: 7; }
+  .home-cobuild-vision { order: 9; }
 }
 
 @media (max-width: 390px) {

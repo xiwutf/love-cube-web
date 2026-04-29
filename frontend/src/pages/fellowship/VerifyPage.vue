@@ -125,12 +125,13 @@ watch(idLast4, (val) => {
 const isIdLast4Valid = computed(() => /^[0-9]{3}[0-9X]$/.test(idLast4.value))
 
 function statusLabel(s) {
+  const status = String(s || '').toLowerCase()
   return {
     approved: '已认证',
     pending: '审核中',
     rejected: '未过',
     none: '未认证'
-  }[s] || '未认证'
+  }[status] || '未认证'
 }
 
 function latestByType(list, type) {
@@ -147,11 +148,11 @@ async function load() {
       const photo    = latestByType(list, 'PHOTO')
       const realname = latestByType(list, 'REALNAME')
       if (photo) {
-        photoStatus.value       = photo.status || 'none'
+        photoStatus.value       = String(photo.status || 'none').toLowerCase()
         photoRejectReason.value = photo.rejectReason || ''
       }
       if (realname) {
-        realnameStatus.value       = realname.status || 'none'
+        realnameStatus.value       = String(realname.status || 'none').toLowerCase()
         realnameRejectReason.value = realname.rejectReason || ''
       }
     }
@@ -175,6 +176,7 @@ async function submitPhoto() {
     if (!selfieUrl) throw new Error('上传失败，未获取图片地址')
     await submitVerification('PHOTO', JSON.stringify({ selfieUrl }))
     photoStatus.value = 'pending'
+    photoRejectReason.value = ''
     photoFiles.value  = []
     photoFile.value   = null
     showToast({ message: '已提交，等待审核', type: 'success' })
@@ -192,6 +194,7 @@ async function submitRealname() {
     const submitData = JSON.stringify({ realName: realName.value.trim(), idLast4: idLast4.value })
     await submitVerification('REALNAME', submitData)
     realnameStatus.value = 'pending'
+    realnameRejectReason.value = ''
     realName.value = ''
     idLast4.value  = ''
     showToast({ message: '已提交，等待审核', type: 'success' })

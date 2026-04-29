@@ -82,7 +82,7 @@
       </div>
     </template>
 
-    <van-empty v-else description="用户不存" />
+    <van-empty v-else description="用户不存在" />
   </div>
 </template>
 
@@ -132,9 +132,9 @@ onMounted(async () => {
 async function handleLike() {
   if (liked.value) return
   try {
-    await likeUser(route.params.id)
-    liked.value = true
-      showToast({ message: '已喜欢 ❤️', type: 'success' })
+    const res = await likeUser(route.params.id)
+    liked.value = Boolean(res?.isLiked ?? true)
+    showToast({ message: liked.value ? '已喜欢 ❤️' : '已取消喜欢', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '操作失败', type: 'fail' })
   }
@@ -143,7 +143,7 @@ async function handleLike() {
 function handleChat() {
   const myId = storage.get('userId')
   if (!myId) {
-    router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    router.push(`/fellowship/login?redirect=${encodeURIComponent(route.fullPath)}`)
     return
   }
   router.push(`/fellowship/chat/${route.params.id}`)

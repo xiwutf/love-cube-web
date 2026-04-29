@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getNotifications, getNotificationsByType } from '@/api/notification.js'
+import { getNotifications, getNotificationsByType, markAllNotifRead } from '@/api/notification.js'
 
 const activeTab = ref(0)
 const platformNotices = ref([])
@@ -97,6 +97,13 @@ function normalizeNotif(item, index, fallbackTitle) {
 }
 
 onMounted(async () => {
+  try {
+    await markAllNotifRead()
+  } catch (error) {
+    // ignore mark-all failure and keep loading message list
+  }
+  window.dispatchEvent(new CustomEvent('platform-notif-read-all'))
+
   const [platformRes, eventRes, interactionRes] = await Promise.allSettled([
     getNotifications(30),
     getNotificationsByType('event', 20),

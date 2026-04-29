@@ -64,6 +64,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
     List<User> findNewcomersVisibleFellowshipUsers(@Param("limit") int limit);
 
+    @Query("SELECT u FROM User u " +
+            "WHERE u.userid <> :currentUserId " +
+            "AND (u.userStatus IS NULL OR LOWER(u.userStatus) <> 'disabled') " +
+            "AND u.fellowshipEnabled = true " +
+            "AND u.fellowshipMatchVisible = true " +
+            "AND (:gender IS NULL OR u.gender = :gender) " +
+            "AND (:minAge IS NULL OR (u.age IS NOT NULL AND u.age >= :minAge)) " +
+            "AND (:maxAge IS NULL OR (u.age IS NOT NULL AND u.age <= :maxAge)) " +
+            "AND (:location IS NULL OR :location = '' OR (u.location IS NOT NULL AND u.location LIKE CONCAT('%', :location, '%')))")
+    List<User> findMatchCandidates(
+            @Param("currentUserId") Long currentUserId,
+            @Param("gender") Integer gender,
+            @Param("minAge") Integer minAge,
+            @Param("maxAge") Integer maxAge,
+            @Param("location") String location);
+
     List<User> findByGenderAndUseridNot(Integer gender, Long userId);
 
     List<User> findByUseridNot(Long userId);
