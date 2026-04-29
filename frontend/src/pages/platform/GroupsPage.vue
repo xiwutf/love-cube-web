@@ -333,9 +333,14 @@ async function applyJoin(group) {
   message.value = ''
   try {
     const res = await joinGroup(group.id)
+    const wasMember = group.isMember
     group.isMember = Boolean(res?.joined)
     group.hasPendingRequest = Boolean(res?.pending)
+    if (!wasMember && group.isMember) {
+      group.memberCount += 1
+    }
     syncGroupStatus(group)
+    await Promise.all([loadGroups(), loadHotGroups()])
     flashMessage(res?.message || (group.isMember ? '加入成功' : '申请已提交'), 'success')
   } catch (error) {
     flashMessage(error.message || '申请加入失败，请确认已登录并稍后重试。', 'error')

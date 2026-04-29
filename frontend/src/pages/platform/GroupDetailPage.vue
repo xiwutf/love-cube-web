@@ -128,6 +128,10 @@
                 </div>
                 <em>{{ member.roleLabel }}</em>
                 <b :class="member.status">{{ member.statusLabel }}</b>
+                <div v-if="canAuditMember(member)" class="member-actions">
+                  <button type="button" :disabled="moderatingMemberId === member.id" @click="approvePendingMember(member)">通过</button>
+                  <button type="button" :disabled="moderatingMemberId === member.id" @click="rejectPendingMember(member)">拒绝</button>
+                </div>
               </article>
             </div>
             <div v-else class="empty-inline">暂无成员</div>
@@ -176,7 +180,16 @@
 <script setup>
 import { computed, defineComponent, h, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { createGroupPost, fetchGroupDetail, fetchGroupMembers, fetchGroupNotices, fetchGroupPosts, joinGroup } from '@/api/groups.js'
+import {
+  approveMember,
+  createGroupPost,
+  fetchGroupDetail,
+  fetchGroupMembers,
+  fetchGroupNotices,
+  fetchGroupPosts,
+  joinGroup,
+  rejectMember
+} from '@/api/groups.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
@@ -191,6 +204,7 @@ const roleFilter = ref('')
 const expandedNoticeId = ref(null)
 const joining = ref(false)
 const posting = ref(false)
+const moderatingMemberId = ref(null)
 const message = ref('')
 const messageType = ref('success')
 
@@ -258,7 +272,8 @@ async function loadMembers() {
   loading.members = true
   errors.members = ''
   try {
-    rawMembers.value = unwrapList(await fetchGroupMembers(group.value.id))
+    const status = group.value?.managed ? 'all' : 'approved'
+    rawMembers.value = unwrapList(await fetchGroupMembers(group.value.id, { status }))
   } catch (error) {
     rawMembers.value = []
     errors.members = error.message || '成员接口加载失败'
@@ -305,6 +320,8 @@ async function applyJoin() {
     const res = await joinGroup(group.value.id)
     group.value.isMember = Boolean(res?.joined)
     group.value.hasPendingRequest = Boolean(res?.pending)
+    await loadDetail()
+    await loadRelatedData()
     flashMessage(res?.message || '申请已提交')
   } catch (error) {
     flashMessage(error.message || '申请加入失败', 'error')
@@ -329,6 +346,39 @@ async function submitPost() {
     flashMessage(error.message || '动态发布失败', 'error')
   } finally {
     posting.value = false
+  }
+}
+
+function canAuditMember(member) {
+  return group.value?.managed && member.status === 'pending'
+}
+
+async function approvePendingMember(member) {
+  if (!canAuditMember(member) || moderatingMemberId.value) return
+  moderatingMemberId.value = member.id
+  try {
+    const res = await approveMember(group.value.id, member.id)
+    await loadDetail()
+    await loadMembers()
+    flashMessage(res?.message || '已通过申请')
+  } catch (error) {
+    flashMessage(error.message || '审核通过失败', 'error')
+  } finally {
+    moderatingMemberId.value = null
+  }
+}
+
+async function rejectPendingMember(member) {
+  if (!canAuditMember(member) || moderatingMemberId.value) return
+  moderatingMemberId.value = member.id
+  try {
+    const res = await rejectMember(group.value.id, member.id)
+    await loadMembers()
+    flashMessage(res?.message || '已拒绝申请')
+  } catch (error) {
+    flashMessage(error.message || '拒绝申请失败', 'error')
+  } finally {
+    moderatingMemberId.value = null
   }
 }
 
@@ -1033,7 +1083,7 @@ onMounted(async () => {
 
 .member-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto auto;
   gap: var(--lc-space-3);
   align-items: center;
   padding: var(--lc-space-3);
@@ -1042,6 +1092,31 @@ onMounted(async () => {
 .member-item b.pending {
   color: var(--lc-amber);
   background: var(--lc-amber-light);
+}
+
+.member-actions {
+  display: flex;
+  gap: var(--lc-space-2);
+}
+
+.member-actions button {
+  height: 30px;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  padding: 0 var(--lc-space-3);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.member-actions button:last-child {
+  color: var(--lc-red);
+}
+
+.member-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .info-list {
@@ -1127,6 +1202,10 @@ onMounted(async () => {
 
   .member-item {
     grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .member-actions {
+    grid-column: 2;
   }
 }
 </style>

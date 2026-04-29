@@ -10,6 +10,8 @@ public interface PlatGroupRepository extends JpaRepository<PlatGroup, Long> {
 
     List<PlatGroup> findByStatusOrderByMemberCountDescCreatedAtDesc(String status);
 
+    List<PlatGroup> findAllByOrderByMemberCountDescCreatedAtDesc();
+
     List<PlatGroup> findTop5ByStatusOrderByMemberCountDesc(String status);
 
     Optional<PlatGroup> findBySlug(String slug);

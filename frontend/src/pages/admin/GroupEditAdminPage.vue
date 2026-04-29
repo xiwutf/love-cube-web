@@ -70,10 +70,17 @@
               <option value="disabled">已禁用</option>
             </select>
           </label>
-          <label class="form-field">
-            <span>封面图 URL</span>
-            <input v-model.trim="form.coverUrl" class="admin-input" placeholder="https://...">
-          </label>
+          <div class="form-field full-width cover-upload-field">
+            <span>上传封面图</span>
+            <CoverUploadField
+              v-model="form.coverUrl"
+              :disabled="saving"
+              :allow-manual-input="false"
+              :show-remove="false"
+              empty-label="上传封面"
+              change-label="更换封面"
+            />
+          </div>
           <label class="form-field full-width">
             <span>团体简介</span>
             <textarea v-model.trim="form.description" class="admin-textarea" rows="5" placeholder="团体简介"></textarea>
@@ -163,15 +170,16 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   approveAdminGroupRequest,
+  fetchGroupDetail,
   fetchGroupMembers,
   fetchGroupNotices,
   fetchGroupPosts,
-  getAdminGroupDetail,
   getAdminGroupJoinRequests,
   rejectAdminGroupRequest,
   removeAdminGroupMember,
-  updateAdminGroup
+  updateGroup
 } from '@/api/groups.js'
+import CoverUploadField from '@/components/admin/CoverUploadField.vue'
 
 const route = useRoute()
 const groupId = String(route.params.id)
@@ -216,8 +224,10 @@ async function loadDetail() {
   loading.detail = true
   errors.detail = ''
   try {
-    const data = await getAdminGroupDetail(groupId)
+    const response = await fetchGroupDetail(groupId)
+    const data = unwrapDetail(response)
     if (!data) {
+      console.warn('[AdminGroupDetail] empty detail response', response)
       errors.detail = '团体不存在或后台详情接口未返回该团体'
       group.value = null
       return
@@ -318,10 +328,18 @@ async function saveInfo() {
   }
   saving.value = true
   try {
-    const payload = { ...form, location: form.region }
-    const updated = await updateAdminGroup(groupId, payload)
-    group.value = normalizeGroup({ ...group.value, ...updated, region: form.region })
-    syncForm(group.value)
+    const saveId = getCurrentNumericGroupId()
+    const payload = {
+      name: form.name,
+      region: form.region,
+      type: group.value?.type || undefined,
+      description: form.description,
+      coverUrl: form.coverUrl,
+      joinMode: joinTypeToJoinMode(form.joinType),
+      status: form.status
+    }
+    await updateGroup(saveId, payload)
+    await loadDetail()
     flash('基础信息已保存')
   } catch (err) {
     flash(err.message || '保存失败', 'error')
@@ -433,6 +451,28 @@ function unwrapList(res) {
   if (Array.isArray(res)) return res
   if (Array.isArray(res?.data)) return res.data
   return []
+}
+
+function unwrapDetail(res) {
+  if (!res) return null
+  if (Object.prototype.hasOwnProperty.call(res, 'data')) {
+    const payload = res.data
+    if (payload?.data) return payload.data
+    return payload || null
+  }
+  return res
+}
+
+function getCurrentNumericGroupId() {
+  const id = group.value?.id
+  if (!/^\d+$/.test(String(id || ''))) {
+    throw new Error('当前团体缺少数字 ID，无法保存')
+  }
+  return id
+}
+
+function joinTypeToJoinMode(value) {
+  return value === 'open' ? 'free' : 'audit'
 }
 
 function parseImages(value) {

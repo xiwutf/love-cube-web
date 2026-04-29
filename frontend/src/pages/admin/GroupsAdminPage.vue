@@ -9,7 +9,7 @@
         <router-link to="/admin/platform/groups/create" class="admin-btn primary create-btn">新建团体</router-link>
       </div>
 
-      <div class="filters">
+      <form class="filters" @submit.prevent="load">
         <label class="search-box">
           <span>搜索</span>
           <input v-model.trim="keyword" class="admin-input" type="search" placeholder="团体名称、简介">
@@ -20,9 +20,9 @@
         </label>
         <label>
           <span>类型</span>
-          <select v-model="category" class="admin-input">
+          <select v-model="type" class="admin-input">
             <option value="">全部类型</option>
-            <option v-for="item in categories" :key="item" :value="item">{{ item }}</option>
+            <option v-for="item in typeOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
           </select>
         </label>
         <label>
@@ -31,11 +31,17 @@
             <option value="">全部状态</option>
             <option value="active">启用</option>
             <option value="inactive">禁用</option>
-            <option value="published">已发布</option>
-            <option value="disabled">已禁用</option>
           </select>
         </label>
-      </div>
+        <label>
+          <span>排序</span>
+          <select v-model="sort" class="admin-input">
+            <option value="members">成员数优先</option>
+            <option value="newest">最新创建</option>
+          </select>
+        </label>
+        <button class="admin-btn primary" type="submit">查询</button>
+      </form>
     </section>
 
     <div v-if="message" class="admin-message" :class="{ error: messageType === 'error' }">{{ message }}</div>
@@ -83,9 +89,6 @@
             <td>
               <div class="admin-cell-actions">
                 <router-link :to="`/admin/platform/groups/${item.id}`" class="admin-btn">详情</router-link>
-                <button class="admin-btn" type="button" :disabled="saving" @click="toggleStatus(item)">
-                  {{ isEnabled(item.status) ? '禁用' : '启用' }}
-                </button>
               </div>
             </td>
           </tr>
@@ -104,7 +107,6 @@
         <p class="admin-row-meta">{{ joinTypeLabel(item.joinType) }}<span v-if="item.pendingRequestCount"> · 待审核 {{ item.pendingRequestCount }}</span></p>
         <div class="admin-cell-actions">
           <router-link :to="`/admin/platform/groups/${item.id}`" class="admin-btn">详情</router-link>
-          <button class="admin-btn" type="button" :disabled="saving" @click="toggleStatus(item)">{{ isEnabled(item.status) ? '禁用' : '启用' }}</button>
         </div>
       </article>
       <div v-if="!filteredItems.length" class="empty-hint">暂无符合条件的团体</div>
@@ -114,23 +116,27 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getAdminGroups, updateAdminGroup } from '@/api/groups.js'
+import { fetchGroupMembers, fetchGroups } from '@/api/groups.js'
 
 const loading = ref(true)
-const saving = ref(false)
 const error = ref('')
 const message = ref('')
 const messageType = ref('success')
 const items = ref([])
 const keyword = ref('')
 const region = ref('')
-const category = ref('')
+const type = ref('')
 const status = ref('')
+const sort = ref('members')
 
-const categories = computed(() => {
-  const values = items.value.map(item => item.category).filter(Boolean)
-  return [...new Set(values)]
-})
+const typeOptions = [
+  { label: '地区团体', value: 'region' },
+  { label: '教会团体', value: 'church' },
+  { label: '学习小组', value: 'study' },
+  { label: '兴趣团体', value: 'interest' },
+  { label: '生活团契', value: 'family' },
+  { label: '事工团队', value: 'service' }
+]
 
 const filteredItems = computed(() => {
   const kw = keyword.value.toLowerCase()
@@ -138,7 +144,7 @@ const filteredItems = computed(() => {
   return items.value.filter((item) => {
     const byKeyword = !kw || item.name.toLowerCase().includes(kw) || item.description.toLowerCase().includes(kw)
     const byRegion = !area || item.region.toLowerCase().includes(area)
-    const byCategory = !category.value || item.category === category.value
+    const byCategory = !type.value || item.type === type.value
     const byStatus = !status.value || item.status === status.value
     return byKeyword && byRegion && byCategory && byStatus
   })
@@ -148,8 +154,9 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await getAdminGroups()
-    items.value = unwrapList(data).map(normalizeGroup)
+    const data = await fetchGroups(buildListParams())
+    const groups = unwrapList(data).map(normalizeGroup)
+    items.value = await withPendingCounts(groups)
   } catch (err) {
     items.value = []
     error.value = err.message || '团体列表加载失败'
@@ -158,18 +165,26 @@ async function load() {
   }
 }
 
-async function toggleStatus(item) {
-  saving.value = true
-  const nextStatus = isEnabled(item.status) ? disabledStatus(item.status) : enabledStatus(item.status)
-  try {
-    const updated = await updateAdminGroup(item.id, { status: nextStatus })
-    Object.assign(item, normalizeGroup({ ...item, ...updated }))
-    flash(`${item.name} 已${isEnabled(item.status) ? '启用' : '禁用'}`)
-  } catch (err) {
-    flash(err.message || '状态更新失败', 'error')
-  } finally {
-    saving.value = false
+function buildListParams() {
+  return {
+    keyword: keyword.value || undefined,
+    region: region.value || undefined,
+    type: type.value || undefined,
+    status: status.value || undefined,
+    sort: sort.value === 'newest' ? 'newest' : undefined
   }
+}
+
+async function withPendingCounts(groups) {
+  const results = await Promise.all(groups.map(async (group) => {
+    try {
+      const pending = unwrapList(await fetchGroupMembers(group.id, { status: 'pending' }))
+      return { ...group, pendingRequestCount: pending.length }
+    } catch {
+      return group
+    }
+  }))
+  return results
 }
 
 function normalizeGroup(item) {
@@ -178,9 +193,10 @@ function normalizeGroup(item) {
     name: item.name || '未命名团体',
     description: item.description || '',
     region: item.region || item.location || '',
+    type: item.type || '',
     category: item.category || item.typeName || item.type || '',
     coverUrl: item.coverUrl || '',
-    status: item.status || 'active',
+    status: normalizeStatus(item.status),
     joinType: item.joinType || (item.joinMode === 'free' ? 'open' : 'approval'),
     memberCount: Number(item.memberCount || 0),
     pendingRequestCount: Number(item.pendingRequestCount || 0),
@@ -196,16 +212,14 @@ function unwrapList(res) {
   return []
 }
 
+function normalizeStatus(value) {
+  if (value === 'published') return 'active'
+  if (value === 'disabled') return 'inactive'
+  return value || 'active'
+}
+
 function isEnabled(value) {
-  return value === 'active' || value === 'published'
-}
-
-function enabledStatus(value) {
-  return value === 'disabled' ? 'published' : 'active'
-}
-
-function disabledStatus(value) {
-  return value === 'published' ? 'disabled' : 'inactive'
+  return value === 'active'
 }
 
 function statusClass(value) {

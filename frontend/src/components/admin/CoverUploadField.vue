@@ -4,7 +4,7 @@
       <img :src="modelValue" alt="封面图预览" class="cover-preview" />
       <div class="cover-actions">
         <label class="admin-btn cover-upload-btn" :class="{ disabled: disabled || uploading }">
-          {{ uploading ? '上传中...' : '更换图片' }}
+          {{ uploading ? '上传中...' : changeLabel }}
           <input
             type="file"
             class="cover-file-input"
@@ -13,15 +13,15 @@
             @change="onFileChange"
           />
         </label>
-        <button type="button" class="admin-btn danger" :disabled="disabled || uploading" @click="clearImage">
+        <button v-if="showRemove" type="button" class="admin-btn danger" :disabled="disabled || uploading" @click="clearImage">
           删除
         </button>
       </div>
     </div>
 
     <div v-else class="cover-empty">
-      <label class="admin-btn cover-upload-btn primary" :class="{ disabled: disabled || uploading }">
-        {{ uploading ? '上传中...' : '上传封面图' }}
+      <label class="cover-placeholder" :class="{ disabled: disabled || uploading }">
+        {{ uploading ? '上传中...' : emptyLabel }}
         <input
           type="file"
           class="cover-file-input"
@@ -30,7 +30,7 @@
           @change="onFileChange"
         />
       </label>
-      <span class="cover-tip">支持 jpg/png/webp，建议小于 5MB</span>
+      <span class="cover-tip">{{ tip }}</span>
     </div>
 
     <button v-if="allowManualInput" type="button" class="cover-advanced-toggle" @click="advancedOpen = !advancedOpen">
@@ -70,6 +70,22 @@ const props = defineProps({
   allowManualInput: {
     type: Boolean,
     default: true
+  },
+  showRemove: {
+    type: Boolean,
+    default: true
+  },
+  emptyLabel: {
+    type: String,
+    default: '上传封面图'
+  },
+  changeLabel: {
+    type: String,
+    default: '更换图片'
+  },
+  tip: {
+    type: String,
+    default: '支持 jpg/png/webp，建议小于 5MB'
   }
 })
 
@@ -155,9 +171,9 @@ async function onFileChange(event) {
   max-width: 220px;
   aspect-ratio: 16 / 9;
   border-radius: 8px;
-  border: 1px solid #d6e0ee;
+  border: 1px solid var(--lc-border);
   object-fit: cover;
-  background: #f8fafc;
+  background: var(--lc-bg);
 }
 
 .cover-actions {
@@ -171,8 +187,27 @@ async function onFileChange(event) {
   gap: 6px;
 }
 
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  width: min(100%, 240px);
+  aspect-ratio: 16 / 9;
+  border: 1px dashed var(--lc-border);
+  border-radius: 8px;
+  color: var(--lc-muted);
+  background: var(--lc-bg);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cover-placeholder.disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+  pointer-events: none;
+}
+
 .cover-tip {
-  color: #64748b;
+  color: var(--lc-muted);
   font-size: 12px;
 }
 
@@ -197,7 +232,7 @@ async function onFileChange(event) {
 .cover-advanced-toggle {
   border: 0;
   background: transparent;
-  color: #4f46e5;
+  color: var(--lc-blue);
   font-size: 12px;
   font-weight: 600;
   padding: 0;

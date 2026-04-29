@@ -7,7 +7,7 @@ export function fetchGroups(params = {}) {
 }
 
 export function fetchMyGroups() {
-  return request.get('/platform/groups')
+  return request.get('/platform/groups/my')
 }
 
 export function fetchGroupDetail(id) {
@@ -46,6 +46,10 @@ export function createGroup(payload) {
   return request.post('/platform/groups', payload)
 }
 
+export function updateGroup(id, payload) {
+  return request.put(`/platform/groups/${id}`, payload)
+}
+
 export function createGroupPost(id, payload) {
   return request.post(`/platform/groups/${id}/posts`, payload)
 }
@@ -69,9 +73,7 @@ export function getAdminGroups() {
 }
 
 export async function getAdminGroupDetail(id) {
-  const groups = await getAdminGroups()
-  const list = Array.isArray(groups) ? groups : Array.isArray(groups?.data) ? groups.data : []
-  return list.find(item => String(item.id) === String(id)) || null
+  return fetchGroupDetail(id)
 }
 
 export function createAdminGroup(payload) {
