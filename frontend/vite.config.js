@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/admin': {
           target: env.VITE_BACKEND_ORIGIN || 'http://xifg.com.cn:8090',
-          changeOrigin: true
+          changeOrigin: true,
+          ws: true
         }
       }
     },

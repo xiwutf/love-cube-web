@@ -5,9 +5,11 @@ import com.lovecube.backend.entity.Banner;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.BannerRepository;
 import com.lovecube.backend.repository.UserRepository;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,30 +35,48 @@ public class HomeService {
     }
 
     public List<Map<String, Object>> getRecommends() {
-        return userRepository.findRandomVisibleFellowshipUsers(10).stream()
-                .filter(this::isVisibleInMatchPool)
-                .map(this::convertUserToMap)
+        List<User> pool = new ArrayList<>(userRepository.findVisibleFellowshipUserPool(50));
+        Collections.shuffle(pool);
+        return pool.stream()
+                .limit(5)
+                .map(this::convertUserToCard)
                 .collect(Collectors.toList());
     }
 
     public List<Map<String, Object>> getNewcomers() {
-        return userRepository.findNewcomersVisibleFellowshipUsers(10).stream()
-                .filter(this::isVisibleInMatchPool)
-                .map(this::convertUserToMap)
+        return userRepository.findNewcomersVisibleFellowshipUsers(5).stream()
+                .map(this::convertUserToCard)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 首页一次性初始化接口：banners + recommends + newcomers + profile + completion 合并为单次 HTTP 往返。
+     * profile/completion 仅在 authHeader 合法时返回，token 无效时静默忽略（不影响公开内容加载）。
+     */
+    public Map<String, Object> getHomeInit(String authHeader) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("banners", getBanners());
+        result.put("recommends", getRecommends());
+        result.put("newcomers", getNewcomers());
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            try {
+                User user = unifiedProfileService.requireCurrentUser(authHeader);
+                Map<String, Object> profile = unifiedProfileService.buildFellowshipPayload(user);
+                result.put("profile", profile);
+                result.put("completion", unifiedProfileService.extractCompletion(profile));
+            } catch (Exception ignored) {
+                // 未登录或 token 失效 — 公开内容仍正常返回
+            }
+        }
+        return result;
     }
 
     public List<User> searchUsers(String keyword, int page, int size) {
         if (keyword == null || keyword.trim().isEmpty()) {
-            return userRepository.findAll(PageRequest.of(page, size)).getContent();
+            return userRepository.findNewcomersVisibleFellowshipUsers(size);
         }
-        String k = keyword.toLowerCase();
-        return userRepository.findAll(PageRequest.of(page, size)).getContent().stream()
-                .filter(user ->
-                        (user.getUsername() != null && user.getUsername().toLowerCase().contains(k)) ||
-                                (user.getLocation() != null && user.getLocation().toLowerCase().contains(k)) ||
-                                (user.getOccupation() != null && user.getOccupation().toLowerCase().contains(k)))
-                .collect(Collectors.toList());
+        return userRepository.searchByKeyword(keyword.trim(), page * size, size);
     }
 
     public List<User> filterUsers(UserFilterDTO filterDTO) {
@@ -68,23 +88,20 @@ public class HomeService {
         );
     }
 
-    private Map<String, Object> convertUserToMap(User user) {
-        Map<String, Object> merged = unifiedProfileService.buildLegacyUserPayload(user);
-        merged.put("userid", user.getUserid());
-        merged.put("username", merged.getOrDefault("nickname", user.getUsername()));
-        merged.put("profilePhoto", merged.getOrDefault("avatar", user.getProfilePhoto()));
-        merged.put("avatar", merged.getOrDefault("avatar", user.getProfilePhoto()));
-        merged.put("location", merged.getOrDefault("location", user.getLocation()));
-        merged.put("occupation", merged.getOrDefault("occupation", user.getOccupation()));
-        merged.put("bio", merged.getOrDefault("bio", user.getBio()));
-        merged.put("lifePhotos", merged.getOrDefault("photos", List.of()));
-        return merged;
-    }
-
-    private boolean isVisibleInMatchPool(User user) {
-        return user != null
-                && !"DISABLED".equalsIgnoreCase(user.getUserStatus())
-                && Boolean.TRUE.equals(user.getFellowshipEnabled())
-                && Boolean.TRUE.equals(user.getFellowshipMatchVisible());
+    /**
+     * 首页列表卡片：仅读取 users 表已有字段，不触发任何额外查询。
+     * 首页卡片只展示头像/昵称/年龄/地区，无需调用 buildUnifiedProfile。
+     */
+    private Map<String, Object> convertUserToCard(User user) {
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("userId", user.getUserid());
+        card.put("userid", user.getUserid());
+        card.put("nickname", user.getUsername());
+        card.put("username", user.getUsername());
+        card.put("profilePhoto", user.getProfilePhoto());
+        card.put("avatar", user.getProfilePhoto());
+        card.put("age", user.getAge());
+        card.put("location", user.getLocation());
+        return card;
     }
 }

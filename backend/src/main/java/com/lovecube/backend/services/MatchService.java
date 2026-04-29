@@ -10,9 +10,13 @@ import com.lovecube.backend.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -63,16 +67,8 @@ public class MatchService
         }
         Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 
-        // 构建查询条件
-        List<User> potentialMatches = userRepository.findAll().stream()
-            .filter(user -> !user.getUserid().equals(userId))
-            .filter(user -> !"DISABLED".equalsIgnoreCase(user.getUserStatus()))
-            .filter(this::isVisibleInMatchPool)
-            .filter(user -> minAge == null || user.getAge() >= minAge)
-            .filter(user -> maxAge == null || user.getAge() <= maxAge)
-            .filter(user -> effectiveGender == null || user.getGender().equals(effectiveGender))
-            .filter(user -> location == null || user.getLocation().contains(location))
-            .collect(Collectors.toList());
+        List<User> potentialMatches = userRepository.findMatchCandidates(
+                userId, effectiveGender, minAge, maxAge, location);
 
         logger.info("初步筛选 - 找到 {} 个潜在匹配", potentialMatches.size());
 
@@ -90,17 +86,28 @@ public class MatchService
         }
 
 
-        // 仅为新用户创建匹配记录（跳过已存在的，避免重复写入）
+        // 批量查出已存在的匹配记录，再批量写入新记录（避免 N+1）
         try {
-            for (User user : potentialMatches) {
-                boolean exists = !matchRecordRepository
-                    .findByUserIdAndMatchedUserId(userId, user.getUserid()).isEmpty();
-                if (exists) continue;
-                MatchRecord record = new MatchRecord();
-                record.setUserId(userId);
-                record.setMatchedUserId(user.getUserid());
-                record.setMatchScore(calculateMatchScore(currentUser, user));
-                matchRecordRepository.save(record);
+            List<Long> candidateIds = potentialMatches.stream()
+                    .map(User::getUserid)
+                    .collect(Collectors.toList());
+            Set<Long> existingIds = candidateIds.isEmpty()
+                    ? new HashSet<>()
+                    : new HashSet<>((Collection<Long>) matchRecordRepository
+                            .findExistingMatchedUserIds(userId, candidateIds));
+
+            List<MatchRecord> toSave = potentialMatches.stream()
+                    .filter(u -> !existingIds.contains(u.getUserid()))
+                    .map(u -> {
+                        MatchRecord r = new MatchRecord();
+                        r.setUserId(userId);
+                        r.setMatchedUserId(u.getUserid());
+                        r.setMatchScore(calculateMatchScore(currentUser, u));
+                        return r;
+                    })
+                    .collect(Collectors.toList());
+            if (!toSave.isEmpty()) {
+                matchRecordRepository.saveAll(toSave);
             }
         } catch (Exception e) {
             logger.warn("保存匹配记录部分失败（忽略，不影响返回结果）: {}", e.getMessage());
@@ -179,7 +186,7 @@ public class MatchService
         }
         Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
 
-        Set<Long> actedIds    = new HashSet<>(userInteractionRepository.findActedUserIdsByFromUserId(currentUserId));
+        Set<Long> actedIds = new HashSet<>(userInteractionRepository.findActedUserIdsByFromUserId(currentUserId));
         List<Long> guardianIds = getGuardianUserIds();
         List<Long> blacklistIds = getBlacklistIds(currentUserId);
         Set<Long> excludedIds = new HashSet<>();
@@ -188,10 +195,52 @@ public class MatchService
         boolean keepActedUsers = Boolean.TRUE.equals(includeActed);
 
         return userRepository.findMatchCandidates(currentUserId, effectiveGender, minAge, maxAge, location)
-            .stream()
-            .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
-            .filter(u -> !excludedIds.contains(u.getUserid()))
-            .collect(Collectors.toList());
+                .stream()
+                .filter(u -> keepActedUsers || !actedIds.contains(u.getUserid()))
+                .filter(u -> !excludedIds.contains(u.getUserid()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 匹配列表（数据库分页 + 排序）：避免先拉全量再在内存分页。
+     */
+    public Page<User> getAllUsersPage(
+            Long currentUserId,
+            Integer gender,
+            Integer minAge,
+            Integer maxAge,
+            String location,
+            Boolean includeActed,
+            boolean verifiedOnly,
+            int pageIndex,
+            int pageSize) {
+        User currentUser = userRepository.findById(currentUserId).orElse(null);
+        Integer oppositeGender = currentUser == null ? null : getOppositeGender(currentUser.getGender());
+        if (gender != null && oppositeGender != null && !gender.equals(oppositeGender)) {
+            logger.debug(
+                    "列表性别参数 {} 与当前账号异性 {} 不一致，已忽略参数（仍按异性推荐）",
+                    gender,
+                    oppositeGender);
+        }
+        Integer effectiveGender = oppositeGender != null ? oppositeGender : gender;
+        int genderFilter = effectiveGender != null ? effectiveGender : -999;
+        int minAgeFilter = minAge != null ? minAge : -1;
+        int maxAgeFilter = maxAge != null ? maxAge : -1;
+        String locationPattern = (location == null || location.isBlank())
+                ? null
+                : ("%" + location.trim() + "%");
+        int includeActedInt = Boolean.TRUE.equals(includeActed) ? 1 : 0;
+        int verifiedOnlyInt = verifiedOnly ? 1 : 0;
+        Pageable pageable = PageRequest.of(Math.max(pageIndex, 0), pageSize);
+        return userRepository.findMatchCandidatesPage(
+                currentUserId,
+                genderFilter,
+                minAgeFilter,
+                maxAgeFilter,
+                locationPattern,
+                includeActedInt,
+                verifiedOnlyInt,
+                pageable);
     }
 
     private Integer getOppositeGender(Integer gender) {
@@ -199,11 +248,6 @@ public class MatchService
         if (gender.equals(1)) return 2;
         if (gender.equals(2)) return 1;
         return null;
-    }
-
-    private boolean isVisibleInMatchPool(User user) {
-        return Boolean.TRUE.equals(user.getFellowshipEnabled())
-                && Boolean.TRUE.equals(user.getFellowshipMatchVisible());
     }
 
     private List<Long> getBlacklistIds(Long userId) {

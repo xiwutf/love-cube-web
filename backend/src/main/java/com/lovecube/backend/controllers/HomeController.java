@@ -1,8 +1,8 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.dto.UserFilterDTO;
 import com.lovecube.backend.entity.Banner;
 import com.lovecube.backend.models.User;
-import com.lovecube.backend.dto.UserFilterDTO;
 import com.lovecube.backend.services.HomeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +17,12 @@ public class HomeController {
 
     @Autowired
     private HomeService homeService;
+
+    @GetMapping("/home/init")
+    public ResponseEntity<Map<String, Object>> getHomeInit(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return ResponseEntity.ok(homeService.getHomeInit(authHeader));
+    }
 
     @GetMapping("/banners")
     public ResponseEntity<List<Banner>> getBanners() {

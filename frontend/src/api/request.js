@@ -33,7 +33,10 @@ request.interceptors.response.use(
       }, 100)
     }
 
-    return Promise.reject(new Error(message))
+    const requestError = new Error(message)
+    requestError.status = status
+    requestError.data = err.response?.data
+    return Promise.reject(requestError)
   }
 )
 

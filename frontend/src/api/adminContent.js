@@ -26,6 +26,10 @@ export function getAdminStats() {
   return request.get('/admin/stats')
 }
 
+export function getAdminAuthContext() {
+  return request.get('/admin/auth-context')
+}
+
 // Announcements
 export function getAnnouncements() {
   return request.get('/admin/announcements')
@@ -71,7 +75,7 @@ export function getVerifications() {
 }
 
 export function reviewVerification(id, action, reason) {
-  return request.patch(`/admin/verifications/${id}/review`, { action, reason })
+  return request.post(`/admin/verifications/${id}/review`, { action, reason })
 }
 
 // Reports

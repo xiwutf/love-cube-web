@@ -46,6 +46,7 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref(null)
 
   function setAuth(newToken, newUserId) {
+    clearMeCache()
     token.value = newToken
     userId.value = String(newUserId)
     storage.set('token', newToken)

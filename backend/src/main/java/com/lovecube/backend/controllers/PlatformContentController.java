@@ -201,6 +201,34 @@ public class PlatformContentController {
         );
     }
 
+    @GetMapping("/events/my-signups")
+    public List<Map<String, Object>> getMyEventSignups(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        List<EventSignup> signups = eventSignupRepository.findByUserIdOrderByCreatedAtDesc(user.getUserid());
+        List<String> eventIds = signups.stream().map(EventSignup::getEventId).toList();
+        Map<String, PlatformEvent> eventMap = platformEventRepository.findAllById(eventIds).stream()
+                .collect(java.util.stream.Collectors.toMap(PlatformEvent::getId, e -> e));
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (EventSignup signup : signups) {
+            PlatformEvent event = eventMap.get(signup.getEventId());
+            if (event == null) {
+                continue;
+            }
+            rows.add(Map.of(
+                    "eventId", event.getId(),
+                    "title", event.getTitle(),
+                    "summary", event.getSummary() == null ? "" : event.getSummary(),
+                    "location", event.getLocation() == null ? "" : event.getLocation(),
+                    "eventTime", event.getEventTime(),
+                    "signupAt", signup.getCreatedAt()
+            ));
+        }
+        return rows;
+    }
+
     @GetMapping("/platform/stats")
     public Map<String, Object> getPlatformStats() {
         long userCount = userRepository.count();

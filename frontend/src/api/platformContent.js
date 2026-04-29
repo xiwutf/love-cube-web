@@ -32,6 +32,10 @@ export function signupEvent(id) {
   return request.post(`/events/${id}/signup`)
 }
 
+export function getMyEventSignups() {
+  return request.get('/events/my-signups')
+}
+
 export function fetchHomeConfig() {
   return request.get('/home/config')
 }

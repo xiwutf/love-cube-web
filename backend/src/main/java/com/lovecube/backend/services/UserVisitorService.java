@@ -15,8 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +33,9 @@ public class UserVisitorService {
     
     @Autowired
     private UserInteractionRepository interactionRepository;
+
+    @Autowired
+    private UnifiedProfileService unifiedProfileService;
     
     /**
      * 记录访客访问
@@ -91,7 +96,16 @@ public class UserVisitorService {
         }
         
         List<UserVisitor> pagedVisitors = visitors.subList(start, end);
-        return pagedVisitors.stream().map(this::convertToVisitorDTO).collect(Collectors.toList());
+        List<Long> visitorUserIds = pagedVisitors.stream()
+                .map(UserVisitor::getVisitorUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> usersById = userRepository.findAllById(visitorUserIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u, (a, b) -> a));
+        Map<Long, Map<String, String>> senderSummaries = unifiedProfileService.buildInboxSenderSummaries(visitorUserIds);
+        return pagedVisitors.stream()
+                .map(v -> convertToVisitorDTO(v, usersById, senderSummaries))
+                .collect(Collectors.toList());
     }
     
     /**
@@ -167,27 +181,52 @@ public class UserVisitorService {
     /**
      * 转换为前端需要的DTO格式
      */
-    private Map<String, Object> convertToVisitorDTO(UserVisitor visitor) {
+    private Map<String, Object> convertToVisitorDTO(UserVisitor visitor,
+                                                    Map<Long, User> usersById,
+                                                    Map<Long, Map<String, String>> senderSummaries) {
         Map<String, Object> dto = new HashMap<>();
-        
-        // 获取访客用户信息
-        User visitorUser = userRepository.findById(visitor.getVisitorUserId())
-                .orElse(null);
-        
+        Long visitorUserId = visitor.getVisitorUserId();
+        User visitorUser = usersById.get(visitorUserId);
+
         dto.put("id", visitor.getId());
         dto.put("visitTime", visitor.getCreatedAt());
         dto.put("visitType", visitor.getVisitType().name().toLowerCase());
         dto.put("visitSource", visitor.getVisitSource() != null ? visitor.getVisitSource().name().toLowerCase() : null);
         dto.put("isNewVisitor", visitor.getIsNewVisitor());
-        
+
         if (visitorUser != null) {
-            dto.put("userId", visitorUser.getUserid());
-            dto.put("nickname", visitorUser.getUsername() != null ? visitorUser.getUsername() : "匿名用户");
-            dto.put("avatar", visitorUser.getProfilePhoto() != null ? visitorUser.getProfilePhoto() : "/images/default-avatar.png");
+            Long uid = visitorUser.getUserid();
+            Map<String, String> summary = senderSummaries != null ? senderSummaries.get(visitorUserId) : null;
+            String nickname;
+            String avatar;
+            if (summary != null) {
+                nickname = Objects.toString(summary.get("nickname"), "").trim();
+                if (nickname.isEmpty()) {
+                    nickname = "神秘访客";
+                }
+                avatar = Objects.toString(summary.get("avatar"), "").trim();
+                if (avatar.isEmpty()) {
+                    avatar = visitorUser.getProfilePhoto() != null ? visitorUser.getProfilePhoto() : "/images/default-avatar.png";
+                }
+            } else {
+                String u = visitorUser.getUsername() != null ? visitorUser.getUsername().trim() : "";
+                nickname = u.isEmpty() ? "神秘访客" : u;
+                avatar = visitorUser.getProfilePhoto() != null ? visitorUser.getProfilePhoto() : "/images/default-avatar.png";
+            }
+
+            dto.put("visitorId", uid);
+            dto.put("userId", uid);
+            dto.put("nickname", nickname);
+            dto.put("avatar", avatar);
             dto.put("age", visitorUser.getAge());
             dto.put("location", visitorUser.getLocation());
-            
-            // 生成用户标签
+
+            Map<String, Object> visitorMap = new LinkedHashMap<>();
+            visitorMap.put("userId", uid);
+            visitorMap.put("nickname", nickname);
+            visitorMap.put("avatar", avatar);
+            dto.put("visitor", visitorMap);
+
             dto.put("tags", generateUserTags(visitorUser));
         }
         

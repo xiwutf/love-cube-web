@@ -4,7 +4,7 @@ CREATE TABLE `user_visitors` (
   `visitor_user_id` bigint NOT NULL COMMENT '访客用户ID',
   `visited_user_id` bigint NOT NULL COMMENT '被访问的用户ID',
   `visit_type` varchar(50) NOT NULL COMMENT '访问类型：PROFILE, PHOTO, DETAIL, QUICK_VIEW',
-  `visit_source` varchar(50) NULL COMMENT '访问来源：SEARCH, RECOMMEND, MATCH, LINK, DISCOVER',
+  `visit_source` varchar(50) NULL COMMENT '访问来源：SEARCH, RECOMMEND, MATCH, LINK, DISCOVER, PROFILE_PAGE',
   `duration_seconds` int NULL COMMENT '访问时长（秒）',
   `is_new_visitor` boolean NOT NULL DEFAULT TRUE COMMENT '是否是新访客（首次访问）',
   `ip_address` varchar(45) NULL COMMENT '访问IP地址',

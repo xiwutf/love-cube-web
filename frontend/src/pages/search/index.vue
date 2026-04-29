@@ -22,12 +22,14 @@
         <p class="discover-desc">输入昵称，找到你感兴趣的人</p>
       </div>
       <div class="hot-tags">
-        <span class="hot-tag">五象新区</span>
-        <span class="hot-tag">在校学生</span>
-        <span class="hot-tag">职场新人</span>
-        <span class="hot-tag">爱运动</span>
-        <span class="hot-tag">爱旅行</span>
-        <span class="hot-tag">摄影爱好</span>
+        <span
+          v-for="tag in hotTags"
+          :key="tag"
+          class="hot-tag"
+          @click="onHotTagClick(tag)"
+        >
+          {{ tag }}
+        </span>
       </div>
     </div>
 
@@ -69,6 +71,7 @@ const list = ref([])
 const loading = ref(false)
 const noMore = ref(false)
 const searched = ref(false)
+const hotTags = ['五象新区', '在校学生', '职场新人', '爱运动', '爱旅行', '摄影爱好']
 let page = 0
 let searchSeq = 0
 
@@ -104,6 +107,11 @@ async function fetchSearch(reset = false) {
 }
 
 function doSearch() {
+  fetchSearch(true)
+}
+
+function onHotTagClick(tag) {
+  keyword.value = tag
   fetchSearch(true)
 }
 
@@ -224,4 +232,3 @@ function loadMore() {
   border-bottom: none;
 }
 </style>
-

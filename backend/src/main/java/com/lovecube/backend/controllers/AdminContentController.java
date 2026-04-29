@@ -97,6 +97,17 @@ public class AdminContentController {
         return homeConfigService.getAdminHomeConfig();
     }
 
+    @GetMapping("/auth-context")
+    public Map<String, Object> getAuthContext(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        User user = adminAuthService.requireUser(authHeader);
+        return Map.of(
+                "userId", user.getUserid(),
+                "role", user.getRole() == null ? "" : user.getRole(),
+                "userStatus", user.getUserStatus() == null ? "" : user.getUserStatus(),
+                "isAdmin", adminAuthService.isAdmin(user)
+        );
+    }
+
     @PutMapping("/home-config")
     public Map<String, Object> saveHomeConfig(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -574,6 +585,15 @@ public class AdminContentController {
             } catch (Exception ignored) {}
         }
         return record;
+    }
+
+    @PostMapping("/verifications/{id}/review")
+    public UserVerification reviewVerificationByPost(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload
+    ) {
+        return reviewVerification(authHeader, id, payload);
     }
 
     @PutMapping("/users/{userId}/status")

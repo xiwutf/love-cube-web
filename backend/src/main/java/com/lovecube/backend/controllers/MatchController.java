@@ -7,6 +7,7 @@ import com.lovecube.backend.services.VerificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,31 +50,25 @@ public class MatchController {
             int safePage = page == null || page < 1 ? 1 : page;
             int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 50);
 
-            List<User> users = matchService.getAllUsers(currentUserId, gender, minAge, maxAge, location, includeActed);
-            if (Boolean.TRUE.equals(verifiedOnly) && !users.isEmpty()) {
-                List<Long> allUserIds = users.stream().map(User::getUserid).collect(Collectors.toList());
-                Map<Long, Map<String, Boolean>> allVerifyMap = verificationService.getBatchSummary(allUserIds);
-                users = users.stream().filter(u -> {
-                    Map<String, Boolean> badges = allVerifyMap.getOrDefault(u.getUserid(), Map.of());
-                    boolean photoVerified = badges.getOrDefault("photoVerified", false);
-                    boolean realnameVerified = badges.getOrDefault("realnameVerified", false);
-                    return photoVerified || realnameVerified;
-                }).collect(Collectors.toList());
-            }
-            int total = users.size();
-            int fromIndex = Math.min((safePage - 1) * safeSize, total);
-            int toIndex = Math.min(fromIndex + safeSize, total);
-            List<User> pageUsers = users.subList(fromIndex, toIndex);
+            Page<User> pageResult = matchService.getAllUsersPage(
+                    currentUserId,
+                    gender,
+                    minAge,
+                    maxAge,
+                    location,
+                    includeActed,
+                    Boolean.TRUE.equals(verifiedOnly),
+                    safePage - 1,
+                    safeSize);
+            List<User> pageUsers = pageResult.getContent();
+            long total = pageResult.getTotalElements();
             List<Long> userIds = pageUsers.stream().map(User::getUserid).collect(Collectors.toList());
             Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
 
-            List<Map<String, Object>> enriched = pageUsers.stream().map(u -> {
-                Map<String, Object> payload = unifiedProfileService.buildLegacyUserPayload(u);
-                Map<String, Boolean> badges = verifyMap.getOrDefault(u.getUserid(), Map.of());
-                payload.put("photoVerified",    badges.getOrDefault("photoVerified",    false));
-                payload.put("realnameVerified", badges.getOrDefault("realnameVerified", false));
-                return payload;
-            }).collect(Collectors.toList());
+            List<Map<String, Object>> enriched = pageUsers.stream().map(u ->
+                unifiedProfileService.buildMatchCardPayload(
+                    u, verifyMap.getOrDefault(u.getUserid(), Map.of()))
+            ).collect(Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -81,7 +76,7 @@ public class MatchController {
             response.put("page", safePage);
             response.put("size", safeSize);
             response.put("total", total);
-            response.put("hasMore", toIndex < total);
+            response.put("hasMore", pageResult.hasNext());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -117,13 +112,10 @@ public class MatchController {
             List<Long> userIds = filteredUsers.stream().map(User::getUserid).collect(Collectors.toList());
             Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
 
-            List<Map<String, Object>> enriched = filteredUsers.stream().map(u -> {
-                Map<String, Object> payload = unifiedProfileService.buildLegacyUserPayload(u);
-                Map<String, Boolean> badges = verifyMap.getOrDefault(u.getUserid(), Map.of());
-                payload.put("photoVerified",    badges.getOrDefault("photoVerified",    false));
-                payload.put("realnameVerified", badges.getOrDefault("realnameVerified", false));
-                return payload;
-            }).collect(Collectors.toList());
+            List<Map<String, Object>> enriched = filteredUsers.stream().map(u ->
+                unifiedProfileService.buildMatchCardPayload(
+                    u, verifyMap.getOrDefault(u.getUserid(), Map.of()))
+            ).collect(Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

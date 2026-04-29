@@ -1,8 +1,10 @@
 import request from './request.js'
+import { storage } from '@/utils/storage.js'
 
 let meCache = null
 let meCacheAt = 0
 let mePending = null
+let meCacheToken = ''
 
 let userStatsCache = null
 let userStatsCacheAt = 0
@@ -26,12 +28,14 @@ export function updateFellowshipMatchVisibility(visible) {
 
 export async function getMeCached(maxAgeMs = 15000) {
   const now = Date.now()
-  if (meCache && now - meCacheAt < maxAgeMs) return meCache
+  const currentToken = storage.get('token') || ''
+  if (meCache && meCacheToken === currentToken && now - meCacheAt < maxAgeMs) return meCache
   if (mePending) return mePending
   mePending = getMe()
     .then((res) => {
       meCache = res
       meCacheAt = Date.now()
+      meCacheToken = currentToken
       return res
     })
     .finally(() => {
@@ -44,6 +48,7 @@ export function clearMeCache() {
   meCache = null
   meCacheAt = 0
   mePending = null
+  meCacheToken = ''
 }
 
 export function updateProfile(data) {

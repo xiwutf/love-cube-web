@@ -121,7 +121,8 @@ public class UserVisitor {
         RECOMMEND("推荐"),
         MATCH("匹配"),
         LINK("链接"),
-        DISCOVER("发现");
+        DISCOVER("发现"),
+        PROFILE_PAGE("资料页");
         
         private final String description;
         

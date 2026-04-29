@@ -153,9 +153,8 @@
 <script setup>
 import { computed, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
-import { getBanners, getRecommends, getNewcomers } from '@/api/home.js'
+import { getHomeInit } from '@/api/home.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.webp'
 import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.webp'
@@ -165,8 +164,9 @@ import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 const router = useRouter()
 const profileStore = useFellowshipProfileStore()
 
-// Module-level cache persists across route navigations (stale-while-revalidate)
-const _cache = { banners: null, recommends: null, newcomers: null }
+// Module-level cache: stale-while-revalidate, 5-min TTL
+const CACHE_TTL_MS = 5 * 60 * 1000
+const _cache = { banners: null, recommends: null, newcomers: null, ts: 0 }
 
 const banners = ref([])
 const recommends = ref([])
@@ -214,8 +214,9 @@ onErrorCaptured((err) => {
 })
 
 onMounted(async () => {
-  // Show cached data immediately on subsequent visits
-  if (_cache.banners !== null) {
+  // 有未过期缓存时立即展示，同时在后台刷新（stale-while-revalidate）
+  const isFresh = _cache.banners !== null && (Date.now() - _cache.ts) < CACHE_TTL_MS
+  if (isFresh) {
     banners.value = _cache.banners
     recommends.value = _cache.recommends
     newcomers.value = _cache.newcomers
@@ -223,33 +224,34 @@ onMounted(async () => {
   }
 
   try {
-    const [b, r, n, c, p] = await Promise.allSettled([
-      getBanners(),
-      getRecommends(),
-      getNewcomers(),
-      profileStore.fetchCompletion(),
-      profileStore.fetchProfile()
-    ])
-    if (b.status === 'fulfilled') {
-      _cache.banners = Array.isArray(b.value) ? b.value : []
-      banners.value = _cache.banners
+    // 单次请求获取全部首页数据，避免 5 个串行 RTT
+    const res = await getHomeInit()
+
+    if (Array.isArray(res?.banners)) {
+      _cache.banners = res.banners
+      banners.value = res.banners
     }
-    if (r.status === 'fulfilled') {
-      _cache.recommends = Array.isArray(r.value) ? r.value : []
-      recommends.value = _cache.recommends
+    if (Array.isArray(res?.recommends)) {
+      _cache.recommends = res.recommends
+      recommends.value = res.recommends
     }
-    if (n.status === 'fulfilled') {
-      _cache.newcomers = Array.isArray(n.value) ? n.value : []
-      newcomers.value = _cache.newcomers
+    if (Array.isArray(res?.newcomers)) {
+      _cache.newcomers = res.newcomers
+      newcomers.value = res.newcomers
     }
-    if (c.status === 'fulfilled') completion.value = c.value || completion.value
-    if (p.status === 'fulfilled') {
-      const profile = p.value || {}
-      verificationStatus.value =
-        profile.reviewStatus || profile.verificationStatus || profile.verified || 'none'
+    _cache.ts = Date.now()
+
+    if (res?.completion) {
+      completion.value = res.completion
+      profileStore.completion = res.completion
+    }
+    if (res?.profile) {
+      profileStore.profile = res.profile
+      const raw = res.profile.reviewStatus || res.profile.verificationStatus || res.profile.verified
+      verificationStatus.value = raw === true ? 'approved' : String(raw || 'none')
     }
   } catch {
-    showToast({ message: '页面加载失败，请稍后重试', type: 'fail' })
+    // init 失败时缓存内容已展示，不阻塞页面
   } finally {
     loadingHome.value = false
   }

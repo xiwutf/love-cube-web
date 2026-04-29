@@ -10,6 +10,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVisitorRepository;
 import com.lovecube.backend.services.BlacklistService;
 import com.lovecube.backend.services.UnifiedProfileService;
+import com.lovecube.backend.services.UserVisitorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,7 @@ public class FellowshipUserController {
     private final UserRepository userRepository;
     private final BlacklistService blacklistService;
     private final UserVisitorRepository userVisitorRepository;
+    private final UserVisitorService userVisitorService;
     private final UserInteractionRepository userInteractionRepository;
     private final MatchRecordRepository matchRecordRepository;
     private final UserBlacklistRepository userBlacklistRepository;
@@ -37,6 +39,7 @@ public class FellowshipUserController {
                                     UserRepository userRepository,
                                     BlacklistService blacklistService,
                                     UserVisitorRepository userVisitorRepository,
+                                    UserVisitorService userVisitorService,
                                     UserInteractionRepository userInteractionRepository,
                                     MatchRecordRepository matchRecordRepository,
                                     UserBlacklistRepository userBlacklistRepository,
@@ -45,6 +48,7 @@ public class FellowshipUserController {
         this.userRepository = userRepository;
         this.blacklistService = blacklistService;
         this.userVisitorRepository = userVisitorRepository;
+        this.userVisitorService = userVisitorService;
         this.userInteractionRepository = userInteractionRepository;
         this.matchRecordRepository = matchRecordRepository;
         this.userBlacklistRepository = userBlacklistRepository;
@@ -87,7 +91,22 @@ public class FellowshipUserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<?> getUserDetail(@PathVariable Long userId) {
+    public ResponseEntity<?> getUserDetail(
+            @PathVariable Long userId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            userVisitorService.recordVisit(
+                    currentUser.getUserid(),
+                    userId,
+                    com.lovecube.backend.entity.UserVisitor.VisitType.PROFILE,
+                    com.lovecube.backend.entity.UserVisitor.VisitSource.PROFILE_PAGE,
+                    null,
+                    null
+            );
+        } catch (Exception ignored) {
+            // Keep profile reading compatible when auth is absent/invalid; just skip visitor recording.
+        }
         return ResponseEntity.ok(unifiedProfileService.buildPublicProfile(userId));
     }
 

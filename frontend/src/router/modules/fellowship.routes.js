@@ -24,6 +24,8 @@ export default {
     { path: 'blacklist', component: () => import('@/pages/fellowship/BlacklistPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'invite', component: () => import('@/pages/fellowship/InvitePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'my-likes', component: () => import('@/pages/personal/MyLikesPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'liked-me', component: () => import('@/pages/personal/LikedMePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'event-signups', component: () => import('@/pages/fellowship/EventSignupsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'following', component: () => import('@/pages/personal/FollowingPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'privacy', component: () => import('@/pages/personal/PrivacySettingsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'help', component: () => import('@/pages/personal/HelpFeedbackPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },

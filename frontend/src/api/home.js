@@ -11,7 +11,15 @@ function unwrapList(res) {
   return []
 }
 
-/** 首页轮播图 */
+/**
+ * 首页一次性初始化：banners + recommends + newcomers + profile + completion 合并为单次请求。
+ * 返回 { banners, recommends, newcomers, profile?, completion? }
+ */
+export async function getHomeInit() {
+  return request.get('/home/init')
+}
+
+/** 首页轮播图（独立接口，供其他场景按需调用） */
 export async function getBanners() {
   const res = await request.get('/banners')
   return unwrapList(res)

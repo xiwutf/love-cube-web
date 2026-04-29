@@ -212,6 +212,19 @@ public class InteractionController {
     }
 
     /**
+     * 喜欢我的人
+     */
+    @GetMapping("/likes/received")
+    public ResponseEntity<?> getReceivedLikes(@RequestHeader("Authorization") String authHeader) {
+        User currentUser = getCurrentUser(authHeader);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "鐢ㄦ埛璁よ瘉澶辫触"));
+        }
+        List<Map<String, Object>> list = interactionService.getReceivedLikeUsers(currentUser.getUserid());
+        return ResponseEntity.ok(list);
+    }
+
+    /**
      * 我的关注
      */
     @GetMapping("/following")

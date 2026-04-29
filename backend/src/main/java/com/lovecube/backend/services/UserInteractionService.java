@@ -17,17 +17,30 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class UserInteractionService {
 
+    /** 消息中心「互动」Tab：只展示正向反馈（喜欢、超级喜欢、关注、礼物、评论），不展示「跳过」等 */
+    private static final List<UserInteraction.InteractionType> INTERACTION_INBOX_TYPES = List.of(
+            UserInteraction.InteractionType.LIKE,
+            UserInteraction.InteractionType.SUPER_LIKE,
+            UserInteraction.InteractionType.FOLLOW,
+            UserInteraction.InteractionType.GIFT,
+            UserInteraction.InteractionType.COMMENT
+    );
+
     @Autowired
     private UserInteractionRepository interactionRepository;
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UnifiedProfileService unifiedProfileService;
 
     public UserInteraction createInteraction(Long fromUserId, Long toUserId,
                                              UserInteraction.InteractionType type,
@@ -71,12 +84,21 @@ public class UserInteractionService {
 
     public List<Map<String, Object>> getInteractionList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        List<UserInteraction> interactions = interactionRepository.findByToUserIdOrderByCreatedAtDesc(userId, pageable);
-        return interactions.stream().map(this::convertToInteractionDTO).collect(Collectors.toList());
+        List<UserInteraction> interactions = interactionRepository
+                .findByToUserIdAndInteractionTypeInOrderByCreatedAtDesc(userId, INTERACTION_INBOX_TYPES, pageable);
+        List<Long> fromIds = interactions.stream()
+                .map(UserInteraction::getFromUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, Map<String, String>> senderSummaries = unifiedProfileService.buildInboxSenderSummaries(fromIds);
+        return interactions.stream()
+                .map(i -> convertToInteractionDTO(i, senderSummaries))
+                .collect(Collectors.toList());
     }
 
     public Long getUnreadInteractionCount(Long userId) {
-        return interactionRepository.countByToUserIdAndIsReadFalse(userId);
+        Long n = interactionRepository.countByToUserIdAndIsReadFalseAndInteractionTypeIn(userId, INTERACTION_INBOX_TYPES);
+        return n != null ? n : 0L;
     }
 
     public void markAllInteractionsAsRead(Long userId) {
@@ -130,6 +152,29 @@ public class UserInteractionService {
             }
         }
         return buildUserSummaryList(mutual, true);
+    }
+
+    public List<Map<String, Object>> getReceivedLikeUsers(Long userId) {
+        List<UserInteraction> likes = interactionRepository.findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
+            userId, UserInteraction.InteractionType.LIKE);
+        Map<Long, Map<String, Object>> users = new LinkedHashMap<>();
+        for (UserInteraction interaction : likes) {
+            Long fromUserId = interaction.getFromUserId();
+            if (users.containsKey(fromUserId)) continue;
+            User fromUser = userRepository.findById(fromUserId).orElse(null);
+            if (fromUser == null) continue;
+
+            Map<String, Object> row = new HashMap<>();
+            row.put("userId", fromUser.getUserid());
+            row.put("nickname", fromUser.getUsername());
+            row.put("avatar", fromUser.getProfilePhoto());
+            row.put("age", fromUser.getAge());
+            row.put("location", fromUser.getLocation());
+            row.put("occupation", fromUser.getOccupation());
+            row.put("createdAt", interaction.getCreatedAt());
+            users.put(fromUserId, row);
+        }
+        return new ArrayList<>(users.values());
     }
 
     public List<Map<String, Object>> getFollowingUsers(Long userId) {
@@ -199,20 +244,56 @@ public class UserInteractionService {
         return interactionRepository.save(interaction);
     }
 
-    private Map<String, Object> convertToInteractionDTO(UserInteraction interaction) {
+    private Map<String, Object> convertToInteractionDTO(UserInteraction interaction,
+                                                        Map<Long, Map<String, String>> senderSummaries) {
         Map<String, Object> dto = new HashMap<>();
-        User fromUser = userRepository.findById(interaction.getFromUserId()).orElse(null);
+        Long fromId = interaction.getFromUserId();
 
         dto.put("id", interaction.getId());
         dto.put("type", interaction.getInteractionType().name().toLowerCase());
         dto.put("action", getActionText(interaction.getInteractionType()));
         dto.put("time", interaction.getCreatedAt());
+        dto.put("createdAt", interaction.getCreatedAt());
         dto.put("isRead", interaction.getIsRead());
 
-        if (fromUser != null) {
-            dto.put("userId", fromUser.getUserid());
-            dto.put("nickname", fromUser.getUsername() != null ? fromUser.getUsername() : "匿名用户");
-            dto.put("avatar", fromUser.getProfilePhoto() != null ? fromUser.getProfilePhoto() : "/images/default-avatar.png");
+        Map<String, String> summary = senderSummaries != null ? senderSummaries.get(fromId) : null;
+        User fromUser = null;
+        if (summary == null) {
+            fromUser = userRepository.findById(fromId).orElse(null);
+        }
+
+        String nickname = "用户";
+        String avatar = "/images/default-avatar.png";
+        Long uid = fromId;
+
+        if (summary != null) {
+            nickname = Objects.toString(summary.get("nickname"), "").trim();
+            if (nickname.isEmpty()) {
+                nickname = "用户";
+            }
+            avatar = Objects.toString(summary.get("avatar"), "").trim();
+            if (avatar.isEmpty()) {
+                avatar = "/images/default-avatar.png";
+            }
+        } else if (fromUser != null) {
+            uid = fromUser.getUserid();
+            String u = fromUser.getUsername() != null ? fromUser.getUsername().trim() : "";
+            nickname = u.isEmpty() ? "用户" : u;
+            avatar = fromUser.getProfilePhoto() != null && !fromUser.getProfilePhoto().isBlank()
+                    ? fromUser.getProfilePhoto()
+                    : "/images/default-avatar.png";
+        }
+
+        if (summary != null || fromUser != null) {
+            dto.put("userId", uid);
+            dto.put("nickname", nickname);
+            dto.put("avatar", avatar);
+
+            Map<String, Object> fromUserMap = new LinkedHashMap<>();
+            fromUserMap.put("userId", uid);
+            fromUserMap.put("nickname", nickname);
+            fromUserMap.put("avatar", avatar);
+            dto.put("fromUser", fromUserMap);
         }
 
         switch (interaction.getInteractionType()) {

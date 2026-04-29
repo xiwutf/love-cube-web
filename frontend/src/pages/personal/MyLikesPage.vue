@@ -30,10 +30,10 @@
             @click="goProfile(u.userId)"
           >
             <template #action>
-              <van-button size="small" type="primary" @click.stop="goChat(u.userId)">去聊处17</van-button>
+              <van-button size="small" type="primary" @click.stop="goChat(u.userId)">去聊天</van-button>
             </template>
           </UserCard>
-          <van-empty v-if="!mutualLikes.length" description="暂时还没有互相喜" />
+          <van-empty v-if="!mutualLikes.length" description="暂时还没有互相喜欢" />
         </template>
       </van-tab>
     </van-tabs>
@@ -90,7 +90,7 @@ async function cancelLike(user) {
     await likeUser(user.userId)
     sentLikes.value = sentLikes.value.filter((u) => String(u.userId) !== String(user.userId))
     mutualLikes.value = mutualLikes.value.filter((u) => String(u.userId) !== String(user.userId))
-    showToast({ type: 'success', message: '已取消喜欄17' })
+    showToast({ type: 'success', message: '已取消喜欢' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '操作失败' })
   }
@@ -121,5 +121,4 @@ onMounted(async () => {
   padding: 32px 0;
 }
 </style>
-
 

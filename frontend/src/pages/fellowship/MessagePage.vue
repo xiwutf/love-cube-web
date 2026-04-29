@@ -57,20 +57,31 @@
         <van-pull-refresh v-model="refreshingInteract" @refresh="loadInteract">
           <div class="tab-content">
             <van-list v-model:loading="loadingInteract" :finished="true" finished-text="">
-              <div v-for="item in interactList" :key="item.id" class="interact-item">
-                <van-image round width="46" height="46" :src="getAvatar(item.fromUser)" fit="cover">
+              <div
+                v-for="item in interactList"
+                :key="item.id"
+                class="interact-item"
+                role="button"
+                tabindex="0"
+                @click="goInteractProfile(item)"
+              >
+                <van-image round width="46" height="46" :src="getAvatar(interactFromUser(item))" fit="cover">
                   <template #error>
-                    <div class="avatar-fb size46">{{ (item.fromUser?.nickname || '?')[0] }}</div>
+                    <div class="avatar-fb size46">{{ interactInitial(item) }}</div>
                   </template>
                 </van-image>
                 <div class="interact-info">
-                  <p class="interact-name">
-                    {{ getInteractName(item) }}
+                  <div class="interact-row">
+                    <span class="interact-name">{{ getInteractName(item) }}</span>
+                    <span class="interact-time">{{ formatTime(item.createdAt || item.time) }}</span>
+                  </div>
+                  <p class="interact-sub">
                     <span class="interact-action">{{ interactLabel(item.type) }}</span>
+                    <span v-if="interactPreview(item)" class="interact-preview">{{ interactPreview(item) }}</span>
                   </p>
-                  <p class="interact-time">{{ formatTime(item.createdAt || item.time) }}</p>
                 </div>
                 <div class="interact-type-icon">{{ interactIcon(item.type) }}</div>
+                <van-icon name="arrow" class="interact-chevron" />
               </div>
               <van-empty v-if="!loadingInteract && !interactList.length" description="暂无互动消息" image-size="70" />
             </van-list>
@@ -218,15 +229,19 @@ async function loadInteract() {
   try {
     const data = await getInteractList()
     interactList.value = Array.isArray(data)
-      ? data.map((item) => ({
-        ...item,
-        fromUser: item.fromUser || {
-          nickname: item.nickname || '用户',
-          avatar: item.avatar || '',
-          userId: item.userId || null
-        },
-        createdAt: item.createdAt || item.time || null
-      }))
+      ? data.map((item) => {
+          const uid = item.fromUser?.userId ?? item.userId ?? null
+          const mergedFrom = {
+            userId: uid,
+            nickname: item.fromUser?.nickname || item.nickname || '',
+            avatar: item.fromUser?.avatar || item.avatar || ''
+          }
+          return {
+            ...item,
+            fromUser: Object.keys(item.fromUser || {}).length ? { ...mergedFrom, ...item.fromUser } : mergedFrom,
+            createdAt: item.createdAt || item.time || null
+          }
+        })
       : []
     await markInteractRead()
     msgStore.clearInteract()
@@ -349,8 +364,38 @@ function goChat(item) {
   router.push(`/fellowship/chat/${item.userId}`)
 }
 
+function interactFromUser(item) {
+  return item?.fromUser || { nickname: item?.nickname, avatar: item?.avatar, userId: item?.userId }
+}
+
+function interactUserId(item) {
+  const u = interactFromUser(item)
+  return u?.userId ?? item?.userId ?? null
+}
+
+function interactInitial(item) {
+  const n = getInteractName(item)
+  return (n && n !== '用户' ? n : '?')[0]
+}
+
+function goInteractProfile(item) {
+  const id = interactUserId(item)
+  if (!id) {
+    showToast('暂时无法查看该用户')
+    return
+  }
+  router.push(`/fellowship/user-profile/${id}`)
+}
+
+function interactPreview(item) {
+  const text = (item.content || item.message || '').trim()
+  if (!text) return ''
+  return text.length > 36 ? `${text.slice(0, 36)}…` : text
+}
+
 function getInteractName(item) {
-  return item?.fromUser?.nickname || item?.nickname || '用户'
+  const n = (item?.fromUser?.nickname || item?.nickname || '').trim()
+  return n || '用户'
 }
 
 function getVisitorName(item) {
@@ -389,19 +434,27 @@ function notifIcon(type) {
 function interactLabel(type) {
   const map = {
     like: '喜欢了你',
+    super_like: '超级喜欢了你',
     follow: '关注了你',
     greet: '向你打了招呼',
-    match: '和你匹配成功'
+    match: '和你匹配成功',
+    gift: '给你送了礼物',
+    comment: '给你留了言',
+    skip: '在推荐中跳过了你'
   }
-  return map[type] || '与你有新的互动'
+  return map[type] || (typeof type === 'string' && type ? `互动：${type}` : '与你有新的互动')
 }
 
 function interactIcon(type) {
   const map = {
     like: '❤',
+    super_like: '💖',
     follow: '⭐',
     greet: '👋',
-    match: '🎉'
+    match: '🎉',
+    gift: '🎁',
+    comment: '💬',
+    skip: '⏭'
   }
   return map[type] || '💬'
 }
@@ -567,9 +620,15 @@ function interactIcon(type) {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 12px 12px 16px;
   background: #fff;
   border-bottom: 1px solid #f1f4f8;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interact-item:active {
+  background: #f8fafc;
 }
 
 .interact-info {
@@ -577,29 +636,55 @@ function interactIcon(type) {
   min-width: 0;
 }
 
+.interact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
 .interact-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: #1a2236;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.interact-sub {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #5a6a80;
 }
 
 .interact-action {
-  font-weight: 400;
+  font-weight: 500;
   color: #ff5f84;
+}
+
+.interact-preview {
+  color: #8898aa;
   margin-left: 4px;
 }
 
 .interact-time {
-  font-size: 12px;
+  font-size: 11px;
   color: #c0cad8;
-  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .interact-type-icon {
   font-size: 22px;
+  flex-shrink: 0;
+}
+
+.interact-chevron {
+  font-size: 14px;
+  color: #c9d4e3;
   flex-shrink: 0;
 }
 

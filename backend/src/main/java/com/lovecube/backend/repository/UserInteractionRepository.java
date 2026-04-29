@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,18 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      * 获取用户收到的所有互动（分页）
      */
     List<UserInteraction> findByToUserIdOrderByCreatedAtDesc(Long toUserId, Pageable pageable);
+
+    /**
+     * 消息中心「互动」：仅展示正向类型（不含跳过等）
+     */
+    List<UserInteraction> findByToUserIdAndInteractionTypeInOrderByCreatedAtDesc(
+            Long toUserId, Collection<UserInteraction.InteractionType> types, Pageable pageable);
+
+    /**
+     * 正向互动未读数（与消息中心列表口径一致）
+     */
+    Long countByToUserIdAndIsReadFalseAndInteractionTypeIn(
+            Long toUserId, Collection<UserInteraction.InteractionType> types);
     
     /**
      * 获取用户收到的未读互动数量

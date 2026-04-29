@@ -25,9 +25,27 @@
     <div v-else-if="error" class="admin-error">{{ error }} <button class="admin-btn" @click="load">重试</button></div>
 
     <section v-else class="admin-table-wrap admin-desktop-only">
+      <div class="batch-toolbar">
+        <label class="batch-select-all">
+          <input
+            type="checkbox"
+            :checked="allFilteredPendingSelected"
+            :disabled="!pendingFilteredItems.length || saving"
+            @change="toggleAllFilteredPending"
+          />
+          选择本页待审核
+        </label>
+        <span class="batch-count">已选 {{ selectedPendingItems.length }} 项</span>
+        <div class="batch-actions">
+          <button class="admin-btn primary" type="button" :disabled="saving || !selectedPendingItems.length" @click="batchApprove">批量通过</button>
+          <button class="admin-btn" type="button" :disabled="saving || !selectedPendingItems.length" @click="batchReject">批量驳回</button>
+          <button class="admin-btn" type="button" :disabled="saving || !selectedPendingItems.length" @click="clearSelection">清空选择</button>
+        </div>
+      </div>
       <table class="admin-table">
         <thead>
           <tr>
+            <th>选择</th>
             <th>申请</th>
             <th>类型</th>
             <th>提交内容</th>
@@ -39,6 +57,14 @@
         </thead>
         <tbody>
           <tr v-for="item in filteredItems" :key="item.id">
+            <td>
+              <input
+                type="checkbox"
+                :checked="selectedIds.has(item.id)"
+                :disabled="saving || item.status !== 'pending'"
+                @change="toggleSelection(item)"
+              />
+            </td>
             <td>用户 {{ item.userId }}</td>
             <td><span class="admin-tag" :class="item.verifyType?.toLowerCase()">{{ typeLabel(item.verifyType) }}</span></td>
             <td class="submit-data-cell">{{ parseSubmitData(item) }}</td>
@@ -58,9 +84,31 @@
     </section>
 
     <div v-if="!loading && !error" class="admin-list admin-mobile-only">
+      <div class="batch-toolbar mobile">
+        <label class="batch-select-all">
+          <input
+            type="checkbox"
+            :checked="allFilteredPendingSelected"
+            :disabled="!pendingFilteredItems.length || saving"
+            @change="toggleAllFilteredPending"
+          />
+          选择待审核
+        </label>
+        <span class="batch-count">已选 {{ selectedPendingItems.length }} 项</span>
+        <button class="admin-btn primary" type="button" :disabled="saving || !selectedPendingItems.length" @click="batchApprove">批量通过</button>
+        <button class="admin-btn" type="button" :disabled="saving || !selectedPendingItems.length" @click="batchReject">批量驳回</button>
+      </div>
       <article v-for="item in filteredItems" :key="item.id" class="admin-row">
         <div class="admin-row-head">
-          <strong>用户 {{ item.userId }}</strong>
+          <label class="batch-row-select">
+            <input
+              type="checkbox"
+              :checked="selectedIds.has(item.id)"
+              :disabled="saving || item.status !== 'pending'"
+              @change="toggleSelection(item)"
+            />
+            <strong>用户 {{ item.userId }}</strong>
+          </label>
           <div style="display:flex;gap:6px;align-items:center;">
             <span class="admin-tag" :class="item.verifyType?.toLowerCase()">{{ typeLabel(item.verifyType) }}</span>
             <span class="admin-tag" :class="item.status">{{ statusLabel(item.status) }}</span>
@@ -82,12 +130,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
-import { getVerifications, reviewVerification } from '@/api/adminContent.js'
+import { getAdminAuthContext, getVerifications, reviewVerification } from '@/api/adminContent.js'
 
 const loading = ref(true)
 const saving  = ref(false)
 const error   = ref('')
 const items   = ref([])
+const selectedIds = ref(new Set())
 const rejectMemo  = reactive({})
 const filterStatus = ref('')
 const filterType   = ref('')
@@ -98,12 +147,21 @@ const filteredItems = computed(() =>
     (!filterType.value   || (i.verifyType || '').toUpperCase() === filterType.value)
   )
 )
+const pendingFilteredItems = computed(() => filteredItems.value.filter(item => item.status === 'pending'))
+const selectedPendingItems = computed(() =>
+  pendingFilteredItems.value.filter(item => selectedIds.value.has(item.id))
+)
+const allFilteredPendingSelected = computed(() =>
+  pendingFilteredItems.value.length > 0 &&
+  pendingFilteredItems.value.every(item => selectedIds.value.has(item.id))
+)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
     items.value = await getVerifications()
+    clearSelection()
   } catch (e) {
     error.value = e.message || '加载失败'
   } finally {
@@ -118,7 +176,7 @@ async function approve(item) {
     Object.assign(item, updated)
     showToast({ message: '审核通过', type: 'success' })
   } catch (e) {
-    showToast({ message: e.message || '操作失败', type: 'fail' })
+    showToast({ message: await buildReviewErrorMessage(e), type: 'fail' })
   } finally {
     saving.value = false
   }
@@ -132,9 +190,85 @@ async function reject(item) {
     Object.assign(item, updated)
     showToast({ message: '已驳回', type: 'success' })
   } catch (e) {
-    showToast({ message: e.message || '操作失败', type: 'fail' })
+    showToast({ message: await buildReviewErrorMessage(e), type: 'fail' })
   } finally {
     saving.value = false
+  }
+}
+
+function toggleSelection(item) {
+  if (item.status !== 'pending') return
+  const next = new Set(selectedIds.value)
+  if (next.has(item.id)) {
+    next.delete(item.id)
+  } else {
+    next.add(item.id)
+  }
+  selectedIds.value = next
+}
+
+function toggleAllFilteredPending() {
+  const next = new Set(selectedIds.value)
+  if (allFilteredPendingSelected.value) {
+    pendingFilteredItems.value.forEach(item => next.delete(item.id))
+  } else {
+    pendingFilteredItems.value.forEach(item => next.add(item.id))
+  }
+  selectedIds.value = next
+}
+
+function clearSelection() {
+  selectedIds.value = new Set()
+}
+
+async function batchApprove() {
+  await runBatchReview('approve')
+}
+
+async function batchReject() {
+  const reason = window.prompt('请输入批量驳回原因', '资料不完整，请补充后重新提交。')
+  if (reason === null) return
+  await runBatchReview('reject', reason.trim() || '资料不完整，请补充后重新提交。')
+}
+
+async function runBatchReview(action, reason = '') {
+  const targets = selectedPendingItems.value.slice()
+  if (!targets.length) return
+  saving.value = true
+  let successCount = 0
+  let failedMessage = ''
+  try {
+    for (const item of targets) {
+      try {
+        const updated = await reviewVerification(item.id, action, action === 'reject' ? reason : undefined)
+        Object.assign(item, updated)
+        selectedIds.value.delete(item.id)
+        successCount += 1
+      } catch (e) {
+        failedMessage = failedMessage || await buildReviewErrorMessage(e)
+      }
+    }
+    selectedIds.value = new Set(selectedIds.value)
+    if (failedMessage) {
+      showToast({ message: `已处理 ${successCount} 项，失败：${failedMessage}`, type: 'fail' })
+    } else {
+      showToast({ message: `已处理 ${successCount} 项`, type: 'success' })
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+async function buildReviewErrorMessage(error) {
+  const baseMessage = error?.message || '操作失败'
+  if (!/403|Forbidden|无管理员权限/.test(baseMessage)) {
+    return baseMessage
+  }
+  try {
+    const auth = await getAdminAuthContext()
+    return `${baseMessage}；当前 token 用户 ${auth.userId}，role=${auth.role || '-'}，isAdmin=${auth.isAdmin}`
+  } catch {
+    return baseMessage
   }
 }
 
@@ -179,6 +313,35 @@ onMounted(load)
 .admin-tag.photo    { background: #e8f4ff; color: #1989fa; }
 .admin-tag.realname { background: #e8f8f0; color: #07c160; }
 .admin-tag.idcard   { background: #fff8e1; color: #ff9800; }
+.batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8edf5;
+  background: #f8fbff;
+}
+.batch-toolbar.mobile {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  border: 1px solid #e8edf5;
+  border-radius: 12px;
+}
+.batch-select-all,
+.batch-row-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.batch-count {
+  color: #58708f;
+  font-size: 14px;
+}
+.batch-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
 </style>
 
 

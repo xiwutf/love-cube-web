@@ -5,11 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface FellowshipProfileRepository extends JpaRepository<FellowshipProfile, Long> {
     Optional<FellowshipProfile> findByUserId(Long userId);
+
+    List<FellowshipProfile> findByUserIdIn(Collection<Long> userIds);
 
     List<FellowshipProfile> findByIdentityRoleIn(List<String> roles);
 

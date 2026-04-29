@@ -259,9 +259,9 @@ const menuItems = computed(() => {
   return [
     { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
     { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
-    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/my-likes', theme: 'yellow' },
+    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/liked-me', theme: 'yellow' },
     { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
-    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/fellowship/messages?tab=event', theme: 'green' },
+    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/fellowship/event-signups', theme: 'green' },
     { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
     { key: 'blacklist', title: '黑名单', sub: s.blacklistCount > 0 ? `${s.blacklistCount}人` : '管理黑名单', icon: 'shield', to: '/fellowship/blacklist', theme: 'indigo' },
     { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: '/fellowship/privacy', theme: 'gray' }

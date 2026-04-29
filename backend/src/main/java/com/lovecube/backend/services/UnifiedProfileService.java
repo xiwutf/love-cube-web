@@ -24,12 +24,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -124,6 +127,59 @@ public class UnifiedProfileService {
         result.put("birthday", merged.getOrDefault("birthday", ""));
         result.put("birthDate", merged.get("birthDate"));
         return result;
+    }
+
+    /**
+     * 消息中心等列表场景：批量解析展示昵称与头像，避免对每条记录调用 {@link #buildLegacyUserPayload} 造成 N+1 查询。
+     */
+    public Map<Long, Map<String, String>> buildInboxSenderSummaries(Collection<Long> userIds) {
+        Map<Long, Map<String, String>> out = new LinkedHashMap<>();
+        if (userIds == null || userIds.isEmpty()) {
+            return out;
+        }
+        Set<Long> ids = userIds.stream().filter(Objects::nonNull).collect(Collectors.toCollection(LinkedHashSet::new));
+        if (ids.isEmpty()) {
+            return out;
+        }
+
+        Map<Long, User> usersById = userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u, (a, b) -> a));
+
+        Map<Long, UserProfile> profileByUid = userProfileRepository.findByUserIdIn(ids).stream()
+                .collect(Collectors.toMap(UserProfile::getUserId, p -> p, (a, b) -> a));
+
+        Map<Long, FellowshipProfileMain> mainByUid = fellowshipProfileMainRepository.findByUserIdIn(ids).stream()
+                .collect(Collectors.toMap(FellowshipProfileMain::getUserId, m -> m, (a, b) -> a));
+
+        Map<Long, FellowshipProfile> legacyByUid = legacyFellowshipProfileRepository.findByUserIdIn(ids).stream()
+                .collect(Collectors.toMap(FellowshipProfile::getUserId, p -> p, (a, b) -> a));
+
+        for (Long uid : ids) {
+            User user = usersById.get(uid);
+            if (user == null) {
+                continue;
+            }
+            FellowshipProfile legacy = legacyByUid.get(uid);
+            FellowshipProfileMain main = mainByUid.get(uid);
+            UserProfile userProfile = profileByUid.get(uid);
+            String nickname = firstNonBlank(
+                    legacy == null ? null : legacy.getNickname(),
+                    main == null ? null : main.getNickname(),
+                    userProfile == null ? null : userProfile.getNickname(),
+                    user.getUsername()
+            );
+            String avatar = firstNonBlank(
+                    legacy == null ? null : legacy.getAvatarUrl(),
+                    main == null ? null : main.getAvatar(),
+                    userProfile == null ? null : userProfile.getAvatar(),
+                    user.getProfilePhoto()
+            );
+            Map<String, String> row = new LinkedHashMap<>();
+            row.put("nickname", defaultText(nickname, ""));
+            row.put("avatar", defaultText(avatar, ""));
+            out.put(uid, row);
+        }
+        return out;
     }
 
     @Transactional
@@ -302,7 +358,44 @@ public class UnifiedProfileService {
     }
 
     public Map<String, Object> buildFellowshipCompletion(User user) {
-        Map<String, Object> p = buildFellowshipPayload(user);
+        return extractCompletion(buildFellowshipPayload(user));
+    }
+
+    /**
+     * 匹配列表卡片精简构建器：仅读取 User 实体（已由分页查询加载），零额外 SQL。
+     * 适用于 /matches/list 等列表场景，比 buildLegacyUserPayload 少 7 条查询/用户。
+     */
+    public Map<String, Object> buildMatchCardPayload(User user, Map<String, Boolean> verifyBadges) {
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("userId",       user.getUserid());
+        card.put("userid",       user.getUserid());
+        card.put("id",           user.getUserid());
+        card.put("nickname",     defaultText(user.getUsername(), ""));
+        card.put("username",     defaultText(user.getUsername(), ""));
+        card.put("avatar",       defaultText(user.getProfilePhoto(), ""));
+        card.put("profilePhoto", defaultText(user.getProfilePhoto(), ""));
+        card.put("age",          user.getAge());
+        card.put("location",     defaultText(user.getLocation(), ""));
+        card.put("occupation",   defaultText(user.getOccupation(), ""));
+        card.put("height",       user.getHeight());
+        card.put("bio",          defaultText(user.getBio(), ""));
+        card.put("signature",    defaultText(user.getBio(), ""));
+        card.put("gender",       fromGenderCode(user.getGender()));
+        String bday = user.getBirthDate() == null ? "" : user.getBirthDate().toLocalDate().toString();
+        card.put("birthday",     bday);
+        card.put("birthDate",    user.getBirthDate());
+        card.put("constellation", user.getBirthDate() == null ? "" : getConstellation(user.getBirthDate().toLocalDate()));
+        card.put("photos",       List.of());
+        card.put("completionRate", 0);
+        card.put("identityRole", "self");
+        card.put("guardianRole", "");
+        card.put("photoVerified",    verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified")));
+        card.put("realnameVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
+        return card;
+    }
+
+    /** 从已有的 fellowshipPayload 中提取完整度，避免重复调用 buildUnifiedProfile。 */
+    public Map<String, Object> extractCompletion(Map<String, Object> p) {
         List<String> missing = new ArrayList<>();
         checkMissing(missing, "nickname", p.get("nickname"));
         checkMissing(missing, "gender", p.get("gender"));
