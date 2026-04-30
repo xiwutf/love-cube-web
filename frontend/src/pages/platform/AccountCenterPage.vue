@@ -1,169 +1,113 @@
 ﻿<template>
   <section class="platform-page me-page">
-    <div class="me-mobile" aria-label="平台个人中心（移动端 UI）">
-      <main class="me-shell" aria-label="平台个人中心">
-        <header class="me-header">
-          <div>
-            <h1>个人中心</h1>
-            <p>管理你的内容、团队、通知与账号资料</p>
+    <div class="me-mobile" aria-label="平台个人中心（移动端）">
+      <!-- 用户信息卡片 -->
+      <div class="mh-hero">
+        <div class="mh-hero-inner">
+          <div class="mh-avatar-wrap">
+            <img v-if="user?.avatar" :src="user.avatar" class="mh-avatar" alt="头像" />
+            <div v-else class="mh-avatar mh-avatar-fb">{{ avatarFallback }}</div>
+            <span class="mh-lv-pill">Lv.{{ mobileGrowthLevel.level }}</span>
           </div>
-          <button type="button" class="icon-button" aria-label="账号设置" @click="openSettingsPanel">⚙</button>
-        </header>
-
-        <div class="me-layout" aria-label="个人中心主体布局">
-          <section class="dashboard-card profile-card">
-            <div class="profile-main">
-              <img v-if="user?.avatar" :src="user.avatar" class="profile-avatar" alt="头像" />
-              <div v-else class="profile-avatar avatar-fallback">{{ avatarFallback }}</div>
-
-              <div class="profile-info">
-                <div class="profile-name-row">
-                  <h2>{{ displayName }}</h2>
-                  <span class="creator-tag">平台创作者</span>
-                </div>
-                <p>ID：{{ userIdDisplay }}</p>
-                <p>注册地：{{ locationDisplay }}</p>
-                <div class="invite-row">
-                  <span>邀请码：{{ inviteCodeDisplay }}</span>
-                  <button type="button" :disabled="!inviteCodeDisplay" @click="copyInviteCode">复制</button>
-                  <em v-if="copyFeedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</em>
-                </div>
-              </div>
-
-              <div class="profile-badges" aria-label="平台徽章">
-                <span class="tone-amber">☆</span>
-                <span class="tone-rose">♨</span>
-                <span class="tone-blue">◇</span>
-              </div>
+          <div class="mh-hero-info">
+            <div class="mh-hero-name">{{ displayName }}</div>
+            <div class="mh-hero-tags">
+              <span class="mh-verify-tag" :class="{ 'is-verified': user?.verificationStatus === 'approved' }">{{ verifyLabel }}</span>
+              <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
+            <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
+          </div>
+          <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
+        </div>
+        <div class="mh-hero-stats">
+          <span v-for="item in profileLightStats" :key="item.label" class="mh-hero-stat">
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.label }}</small>
+          </span>
+        </div>
+      </div>
 
-            <div class="profile-light-stats">
-              <span v-for="item in profileLightStats" :key="item.label">
-                <small>{{ item.label }}</small>
-                <strong>{{ item.value }}</strong>
-              </span>
-            </div>
-
-            <div class="profile-actions">
-              <button type="button" class="outline-action profile-edit-action" @click="openEditPanel">编辑资料</button>
-              <router-link class="primary-action fellowship-action" to="/fellowship">切换联谊中心</router-link>
-            </div>
-          </section>
-
-          <aside class="me-aside">
-            <section class="dashboard-card growth-card">
-              <div class="section-head">
-                <h2>成长等级</h2>
-                <router-link to="/modules">成长记录 ></router-link>
-              </div>
-              <div class="growth-body">
-                <div class="level-badge">Lv.{{ growthLevel.level }}</div>
-                <div class="level-content">
-                  <h3>{{ growthLevel.name }}</h3>
-                  <p>再获得 {{ growthLevel.nextExp - growthLevel.currentExp }} 经验可升级 Lv.{{ growthLevel.level + 1 }}</p>
-                  <div class="progress-track">
-                    <span :style="{ width: growthProgress }"></span>
-                  </div>
-                  <div class="progress-meta">
-                    <span>{{ growthLevel.currentExp }} / {{ growthLevel.nextExp }}</span>
-                  </div>
-                </div>
-                <ul class="exp-list" aria-label="经验来源">
-                  <li v-for="item in growthLevel.sources" :key="item.label">
-                    <span>{{ item.label }}</span>
-                    <strong>+{{ item.exp }} 经验</strong>
-                  </li>
-                </ul>
-              </div>
-            </section>
-
-            <section class="dashboard-card task-card">
-              <div class="section-head task-head">
-                <div>
-                  <h2>今日任务 <span>每日 0 点刷新</span></h2>
-                </div>
-                <p>已完成 {{ completedTaskCount }}/{{ dailyTasks.length }} <b aria-hidden="true">礼</b></p>
-              </div>
-              <div class="task-grid">
-                <article v-for="task in dailyTasks" :key="task.title" class="task-item" :class="{ 'is-done': task.done }">
-                  <div class="task-check">{{ task.done ? '✓' : task.current }}</div>
-                  <h3>{{ task.title }}</h3>
-                  <p>+{{ task.exp }} 经验</p>
-                  <div v-if="!task.done" class="mini-progress">
-                    <span :style="{ width: `${Math.min(100, (task.current / task.total) * 100)}%` }"></span>
-                  </div>
-                  <small>{{ task.done ? '已完成' : `${task.current}/${task.total}` }}</small>
-                  <router-link :to="task.to">{{ task.done ? '已完成' : '去完成' }}</router-link>
-                </article>
-              </div>
-            </section>
-          </aside>
-
-          <div class="me-main-stack">
-            <section class="workspace-grid">
-              <router-link v-for="item in workspaceItems" :key="item.title" :to="item.to" class="workspace-item dashboard-card">
-                <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.desc }}</small>
-                <em>{{ item.value }} ></em>
-              </router-link>
-            </section>
-
-            <section class="dashboard-card overview-card">
-              <div class="section-head">
-                <h2>数据概览</h2>
-                <router-link to="/modules">全部数据 ></router-link>
-              </div>
-              <div class="overview-row">
-                <router-link v-for="item in overviewItems" :key="item.label" :to="item.to" class="overview-item">
-                  <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
-                  <strong>{{ item.value }}</strong>
-                  <small>{{ item.label }}</small>
-                </router-link>
-              </div>
-            </section>
-
-            <section class="dashboard-card group-card">
-              <div class="section-head">
-                <h2>我的团体</h2>
-                <router-link to="/platform/me/groups">全部团体 ></router-link>
-              </div>
-              <div class="group-summary">
-                <div class="group-avatar" aria-hidden="true">团</div>
-                <div>
-                  <h3>{{ groupInfo.name }} <span>{{ groupInfo.role }}</span></h3>
-                  <p>成员 {{ groupInfo.members }} 人 <i></i> 活跃度：{{ groupInfo.activity }}</p>
-                  <p>本周贡献 {{ groupInfo.weekExp }} 经验</p>
-                </div>
-              </div>
-              <div class="group-actions">
-                <router-link class="group-enter-action" to="/platform/me/groups">进入团体</router-link>
-                <router-link class="group-post-action" to="/platform/groups">发布公告</router-link>
-                <router-link class="group-member-action" to="/platform/me/groups">成员管理</router-link>
-              </div>
-              <div class="ranking-head">
-                <h3>团体活跃榜（本周）</h3>
-                <router-link to="/platform/groups">查看完整榜单 ></router-link>
-              </div>
-              <ol class="ranking-list">
-                <li v-for="item in groupRanking" :key="item.name">
-                  <span class="rank-medal">{{ item.rank }}</span>
-                  <strong>{{ item.name }}</strong>
-                  <small>活跃度 {{ item.activity }}</small>
-                </li>
-              </ol>
-            </section>
-
-            <section class="quick-grid">
-              <router-link v-for="item in quickActions" :key="item.title" :to="item.to" class="quick-item dashboard-card">
-                <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.desc }}</small>
-              </router-link>
-            </section>
+      <!-- 成长信息 -->
+      <div class="mh-card mh-growth-card">
+        <div class="mh-growth-left">
+          <div class="mh-growth-name-row">
+            <span class="mh-growth-name">{{ mobileGrowthLevel.name }}</span>
+            <span class="mh-growth-hint">还差 {{ Math.max(0, mobileGrowthLevel.nextExp - mobileGrowthLevel.currentExp) }} 经验升级</span>
+          </div>
+          <div class="mh-exp-bar">
+            <div class="mh-exp-fill" :style="{ width: mobileGrowthProgress }"></div>
+          </div>
+          <div class="mh-exp-label">{{ mobileGrowthLevel.currentExp }} / {{ mobileGrowthLevel.nextExp }} EXP</div>
+        </div>
+        <div class="mh-growth-right">
+          <div class="mh-growth-stat">
+            <strong>{{ mobileCompletedCount }}/{{ mobileDailyTasks.length }}</strong>
+            <small>今日任务</small>
+          </div>
+          <div class="mh-growth-stat">
+            <strong>{{ badges.length || 0 }}</strong>
+            <small>我的徽章</small>
           </div>
         </div>
-      </main>
+      </div>
+
+      <!-- 常用功能入口 -->
+      <div class="mh-card mh-func-card">
+        <div class="mh-func-grid">
+          <router-link v-for="item in mobileGridItems" :key="item.title" :to="item.to" class="mh-func-item">
+            <span class="mh-func-icon" :class="`mh-tone-${item.tone}`">{{ item.icon }}</span>
+            <strong class="mh-func-title">{{ item.title }}</strong>
+          </router-link>
+        </div>
+      </div>
+
+      <!-- 今日任务 -->
+      <div class="mh-card mh-task-card">
+        <div class="mh-card-head">
+          <span class="mh-card-title">今日任务</span>
+          <span class="mh-card-meta">已完成 {{ mobileCompletedCount }}/{{ mobileDailyTasks.length }} · 每日 0 点刷新</span>
+        </div>
+        <div class="mh-task-list">
+          <div v-for="task in mobileDailyTasks" :key="task.title" class="mh-task-row" :class="{ done: task.done }">
+            <div class="mh-task-check">{{ task.done ? '✓' : '' }}</div>
+            <div class="mh-task-body">
+              <div class="mh-task-name">{{ task.title }}</div>
+              <div class="mh-task-exp">+{{ task.exp }} 经验</div>
+            </div>
+            <router-link :to="task.to" class="mh-task-action" :class="{ done: task.done }">{{ task.done ? '已完成' : '去完成' }}</router-link>
+          </div>
+        </div>
+      </div>
+
+      <!-- 设置列表 -->
+      <div class="mh-card mh-settings-card">
+        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+          <span class="mh-setting-icon">🪪</span>
+          <span class="mh-setting-label">实名认证</span>
+          <span class="mh-setting-value">{{ verifyLabel }}</span>
+          <span class="mh-setting-arrow">›</span>
+        </button>
+        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+          <span class="mh-setting-icon">🔒</span>
+          <span class="mh-setting-label">隐私设置</span>
+          <span class="mh-setting-arrow">›</span>
+        </button>
+        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+          <span class="mh-setting-icon">🔔</span>
+          <span class="mh-setting-label">消息通知</span>
+          <span class="mh-setting-arrow">›</span>
+        </button>
+        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+          <span class="mh-setting-icon">💬</span>
+          <span class="mh-setting-label">帮助与反馈</span>
+          <span class="mh-setting-arrow">›</span>
+        </button>
+        <button type="button" class="mh-setting-row mh-setting-danger" @click="handleLogout">
+          <span class="mh-setting-icon">🚪</span>
+          <span class="mh-setting-label">退出登录</span>
+          <span class="mh-setting-arrow">›</span>
+        </button>
+      </div>
     </div>
 
     <DesktopDashboard
@@ -263,6 +207,7 @@ import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
+import { getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 
@@ -290,6 +235,61 @@ const editForm = reactive({
 const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
+const growthInfo = ref(null)
+const badges = ref([])
+
+const mobileGrowthLevel = computed(() => {
+  const d = growthInfo.value
+  return {
+    level: Number(d?.level ?? 2),
+    name: d?.title || '新手创作者',
+    currentExp: Number(d?.exp ?? 120),
+    nextExp: Number(d?.nextLevelExp ?? 300)
+  }
+})
+
+const mobileDailyTasks = computed(() => {
+  const codeToRoute = {
+    DAILY_LOGIN: '/me',
+    DAILY_POST: '/platform/positive-share',
+    DAILY_VIEW: '/articles',
+    DAILY_LIKE: '/platform/positive-share'
+  }
+  const rows = growthInfo.value?.dailyTasks
+  if (Array.isArray(rows) && rows.length) {
+    return rows.map(item => ({
+      title: item.name || item.code,
+      exp: Number(item.rewardExp ?? 0),
+      done: Boolean(item.completed),
+      to: codeToRoute[item.code] || '/me'
+    }))
+  }
+  return [
+    { title: '每日签到', exp: 2, done: false, to: '/me' },
+    { title: '完善资料', exp: 5, done: false, to: { path: '/me', query: { panel: 'edit' } } },
+    { title: '发布动态', exp: 10, done: false, to: '/platform/positive-share' },
+    { title: '浏览内容', exp: 1, done: false, to: '/articles' }
+  ]
+})
+
+const mobileGrowthProgress = computed(() => {
+  const next = Math.max(1, mobileGrowthLevel.value.nextExp)
+  const cur = mobileGrowthLevel.value.currentExp
+  return `${Math.min(100, Math.round((cur / next) * 100))}%`
+})
+
+const mobileCompletedCount = computed(() => mobileDailyTasks.value.filter(t => t.done).length)
+
+const mobileGridItems = [
+  { title: '我的资料', icon: '👤', tone: 'violet', to: { path: '/me', query: { panel: 'edit' } } },
+  { title: '我的团体', icon: '🏠', tone: 'blue', to: '/platform/groups' },
+  { title: '我的动态', icon: '📝', tone: 'rose', to: '/platform/positive-share' },
+  { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
+  { title: '今日任务', icon: '✅', tone: 'green', to: '/platform/positive-share' },
+  { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/platform/positive-share' },
+  { title: '账号安全', icon: '🔐', tone: 'blue', to: { path: '/me', query: { panel: 'settings' } } },
+  { title: '意见反馈', icon: '💡', tone: 'violet', to: '/platform/positive-share' }
+]
 
 const growthLevel = {
   level: 2,
@@ -523,7 +523,7 @@ onMounted(async () => {
   if (route.query?.panel === 'edit') openEditPanel()
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
-  const [statsRes, inviteRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode()])
+  const [statsRes, inviteRes, growthRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode(), getMyGrowth()])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
@@ -531,6 +531,10 @@ onMounted(async () => {
   }
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
+  }
+  if (growthRes.status === 'fulfilled') {
+    growthInfo.value = growthRes.value || null
+    badges.value = Array.isArray(growthRes.value?.badges) ? growthRes.value.badges : []
   }
 })
 
@@ -990,6 +994,11 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--me-muted);
   font-size: 13px;
+}
+
+.level-content h3,
+.level-content p {
+  word-break: keep-all;
 }
 
 .progress-track,
@@ -1575,6 +1584,26 @@ onBeforeUnmount(() => {
   .me-shell {
     padding-top: calc(12px + env(safe-area-inset-top));
   }
+
+  .growth-body {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .exp-list {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--me-border);
+    border-left: 0;
+  }
+
+  .level-badge {
+    width: 80px;
+    height: 80px;
+    font-size: 22px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -1800,6 +1829,503 @@ onBeforeUnmount(() => {
 
   .profile-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile personal center redesign  (mh-* namespace)
+   Only applies inside .me-mobile, hidden on ≥ 1024 px
+   ═══════════════════════════════════════════════════════════ */
+
+.me-mobile {
+  padding: calc(18px + env(safe-area-inset-top)) 14px calc(84px + env(safe-area-inset-bottom));
+  background: #f6f7fb;
+  min-height: 100vh;
+}
+
+/* ── Hero card ─────────────────────────────────────────── */
+.mh-hero {
+  border-radius: 20px;
+  background: linear-gradient(135deg, #6d5dfb 0%, #4f46e5 55%, #4338ca 100%);
+  padding: 20px 18px 16px;
+  margin-bottom: 14px;
+}
+
+.mh-hero-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.mh-avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mh-avatar {
+  display: block;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.55);
+}
+
+.mh-avatar-fb {
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.mh-lv-pill {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  color: var(--me-primary);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.mh-hero-info {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.mh-hero-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mh-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.mh-verify-tag,
+.mh-role-tag {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mh-verify-tag {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mh-verify-tag.is-verified {
+  background: rgba(16, 185, 129, 0.28);
+  color: #a7f3d0;
+}
+
+.mh-role-tag {
+  background: rgba(255, 255, 255, 0.13);
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.mh-hero-id {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mh-edit-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.mh-edit-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mh-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mh-hero-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.mh-hero-stat + .mh-hero-stat {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mh-hero-stat strong {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.mh-hero-stat small {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Shared card base ────────────────────────────────────── */
+.mh-card {
+  margin-bottom: 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #eef0f4;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+  padding: 16px;
+}
+
+/* ── Growth card ─────────────────────────────────────────── */
+.mh-growth-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mh-growth-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.mh-growth-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mh-growth-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.mh-growth-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.mh-exp-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #edf0f5;
+  overflow: hidden;
+}
+
+.mh-exp-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7c6aff, #4f46e5);
+  transition: width 0.5s ease;
+}
+
+.mh-exp-label {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: right;
+}
+
+.mh-growth-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.mh-growth-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: #f6f7fb;
+  gap: 2px;
+  min-width: 68px;
+  text-align: center;
+}
+
+.mh-growth-stat strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.mh-growth-stat small {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ── Function grid ───────────────────────────────────────── */
+.mh-func-card {
+  padding: 14px 8px 10px;
+}
+
+.mh-func-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.mh-func-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 4px 10px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mh-func-item:active {
+  background: #f1f5f9;
+}
+
+.mh-func-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.mh-func-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.mh-tone-violet { background: #f1efff; }
+.mh-tone-blue   { background: #eff6ff; }
+.mh-tone-rose   { background: #fdf2f8; }
+.mh-tone-amber  { background: #fffbeb; }
+.mh-tone-green  { background: #ecfdf5; }
+
+/* ── Task card ───────────────────────────────────────────── */
+.mh-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.mh-card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.mh-card-meta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.mh-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.mh-task-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #eef0f4;
+}
+
+.mh-task-row.done {
+  background: #f0fdf4;
+  border-color: #d1fae5;
+}
+
+.mh-task-check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #dfe4ee;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  color: transparent;
+}
+
+.mh-task-row.done .mh-task-check {
+  background: #059669;
+  border-color: #059669;
+  color: #fff;
+}
+
+.mh-task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mh-task-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mh-task-exp {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.mh-task-action {
+  flex: 0 0 auto;
+  border: 1px solid #cfd4ff;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mh-task-action.done {
+  border-color: #d1fae5;
+  color: #059669;
+  background: #f0fdf4;
+}
+
+/* ── Settings card ───────────────────────────────────────── */
+.mh-settings-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.mh-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mh-setting-row:last-child {
+  border-bottom: 0;
+}
+
+.mh-setting-row:active {
+  background: #f8fafc;
+}
+
+.mh-setting-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.mh-setting-label {
+  flex: 1;
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.mh-setting-value {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.mh-setting-arrow {
+  font-size: 20px;
+  color: #cbd5e1;
+  line-height: 1;
+}
+
+.mh-setting-danger .mh-setting-label {
+  color: #dc2626;
+}
+
+/* ── Responsive tweaks (≤ 375 px) ───────────────────────── */
+@media (max-width: 375px) {
+  .me-mobile {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mh-hero {
+    padding: 16px 14px 14px;
+  }
+
+  .mh-avatar {
+    width: 58px;
+    height: 58px;
+  }
+
+  .mh-avatar-fb {
+    font-size: 20px;
+  }
+
+  .mh-func-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 19px;
+  }
+
+  .mh-func-title {
+    font-size: 11px;
   }
 }
 </style>

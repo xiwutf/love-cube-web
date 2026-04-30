@@ -589,20 +589,20 @@ onBeforeUnmount(() => {
 .me-shell {
   width: min(100%, 560px);
   margin: 0 auto;
-  padding: 12px 10px calc(72px + env(safe-area-inset-bottom));
+  padding: 8px 8px calc(68px + env(safe-area-inset-bottom));
 }
 
 .me-layout {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .me-aside,
 .me-main-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .me-layout .growth-card,
@@ -618,23 +618,23 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 8px 12px;
+  gap: 10px;
+  padding: 6px 6px 8px;
 }
 
 .me-header h1 {
   margin: 0;
-  font-size: 40px;
+  font-size: 26px;
   line-height: 1.12;
   font-weight: 800;
   letter-spacing: 0;
 }
 
 .me-header p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--me-muted);
-  font-size: 18px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .icon-button {
@@ -650,20 +650,20 @@ onBeforeUnmount(() => {
 
 .dashboard-card {
   border: 1px solid var(--me-border);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--me-card);
   box-shadow: var(--me-shadow);
 }
 
 .profile-card {
-  padding: 10px 10px;
+  padding: 8px;
   position: relative;
 }
 
 .profile-main {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: start;
 }
 
@@ -687,15 +687,15 @@ onBeforeUnmount(() => {
 
 .profile-info {
   min-width: 0;
-  padding-right: 118px;
+  padding-right: 106px;
 }
 
 .profile-badges {
   position: absolute;
-  right: 12px;
-  top: 14px;
+  right: 8px;
+  top: 10px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .profile-badges span {
@@ -744,9 +744,9 @@ onBeforeUnmount(() => {
 
 .profile-info p,
 .invite-row {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--me-muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .invite-row {
@@ -782,10 +782,10 @@ onBeforeUnmount(() => {
 .profile-light-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  margin: 8px 0 0;
-  padding: 4px 6px;
+  margin: 6px 0 0;
+  padding: 3px 5px;
   border: 1px solid rgba(226, 232, 240, 0.72);
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.76));
@@ -827,12 +827,12 @@ onBeforeUnmount(() => {
 .group-actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .profile-actions {
-  margin-top: 6px;
+  margin-top: 5px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -844,9 +844,9 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  border-radius: 10px;
-  font-size: 12px;
+  min-height: 34px;
+  border-radius: 9px;
+  font-size: 11px;
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
@@ -881,13 +881,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: 10px;
+  margin-bottom: 5px;
 }
 
 .section-head h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -905,15 +905,15 @@ onBeforeUnmount(() => {
 .badge-card,
 .overview-card,
 .group-card {
-  margin-top: 8px;
-  padding: 9px;
+  margin-top: 6px;
+  padding: 8px;
 }
 
 .growth-body {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr) 120px;
+  grid-template-columns: 70px minmax(0, 1fr);
   gap: 8px;
-  align-items: center;
+  align-items: start;
 }
 
 .level-badge {
@@ -933,6 +933,10 @@ onBeforeUnmount(() => {
 
 .level-content h3 { margin: 4px 0 6px; font-size: 14px; }
 .level-content p { margin: 0; color: var(--me-muted); font-size: 10px; }
+.level-content h3,
+.level-content p {
+  word-break: keep-all;
+}
 
 .progress-track,
 .mini-progress {
@@ -962,9 +966,11 @@ onBeforeUnmount(() => {
 .exp-list {
   display: grid;
   gap: 4px;
-  margin: 0;
-  padding: 2px 0 2px 8px;
-  border-left: 1px solid var(--me-border);
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--me-border);
+  border-left: 0;
   list-style: none;
 }
 
@@ -1081,8 +1087,8 @@ onBeforeUnmount(() => {
 .workspace-grid,
 .quick-grid {
   display: grid;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .workspace-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1099,8 +1105,8 @@ onBeforeUnmount(() => {
 }
 
 .workspace-item {
-  min-height: 72px;
-  padding: 8px 6px;
+  min-height: 68px;
+  padding: 7px 6px;
 }
 
 .workspace-item .soft-icon {
@@ -1142,7 +1148,7 @@ onBeforeUnmount(() => {
 .overview-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
 }
 
@@ -1163,7 +1169,7 @@ onBeforeUnmount(() => {
 .group-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .group-avatar {
@@ -1179,7 +1185,7 @@ onBeforeUnmount(() => {
   font-weight: 900;
 }
 
-.group-summary h3 { margin: 0 0 4px; font-size: 12px; line-height: 1.2; }
+.group-summary h3 { margin: 0 0 3px; font-size: 11px; line-height: 1.18; }
 .group-summary h3 {
   display: flex;
   align-items: center;
@@ -1196,7 +1202,7 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.group-summary p { margin: 1px 0 0; color: var(--me-muted); font-size: 9px; line-height: 1.2; }
+.group-summary p { margin: 1px 0 0; color: var(--me-muted); font-size: 8px; line-height: 1.2; }
 .group-summary p {
   white-space: nowrap;
   overflow: hidden;
@@ -1215,8 +1221,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .ranking-head h3 { margin: 0; font-size: 11px; }
@@ -1224,8 +1230,8 @@ onBeforeUnmount(() => {
 .ranking-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin: 8px 0 0;
+  gap: 5px;
+  margin: 6px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -1234,9 +1240,9 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 48px;
-  padding: 4px;
+  padding: 3px;
   border: 1px solid var(--me-border);
   border-radius: 12px;
   background: var(--me-bg-soft);
@@ -1266,8 +1272,8 @@ onBeforeUnmount(() => {
 
 .quick-item {
   justify-items: center;
-  min-height: 64px;
-  padding: 6px 3px;
+  min-height: 60px;
+  padding: 5px 3px;
   text-align: center;
 }
 
@@ -1371,18 +1377,17 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 420px) {
-  .me-shell { padding-right: 8px; padding-left: 8px; }
+  .me-shell { padding-right: 6px; padding-left: 6px; }
 
-  .me-header h1 { font-size: 34px; }
-  .me-header p { font-size: 14px; }
+  .me-header h1 { font-size: 24px; }
+  .me-header p { font-size: 12px; }
   .profile-main { grid-template-columns: 58px minmax(0, 1fr); gap: 8px; }
   .profile-avatar { width: 58px; height: 58px; }
   .profile-badges { gap: 6px; }
   .profile-badges span { width: 26px; height: 26px; font-size: 11px; border-radius: 9px; }
-  .profile-info { padding-right: 96px; }
+  .profile-info { padding-right: 88px; }
 
   .growth-body { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
-  .exp-list { grid-column: 1 / -1; padding: 8px 0 0; border-top: 1px solid var(--me-border); border-left: 0; }
   .level-badge { width: 58px; height: 58px; font-size: 15px; }
 
   .task-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
