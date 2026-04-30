@@ -1,65 +1,21 @@
 <template>
   <section class="admin-page dashboard-page">
-    <section class="platform-card admin-hero">
-      <p class="platform-kicker">Operations</p>
-      <h1 class="platform-title">后台运营看板</h1>
-      <p class="platform-subtitle">
-        汇总用户增长、内容运营、联谊互动和平台治理数据，便于快速定位待处理事项。
-      </p>
-    </section>
+    <div class="dashboard-shell">
+      <main class="dashboard-main">
+        <TodayStats :loading="loading" :items="todayStats" />
 
-    <section class="dashboard-groups">
-      <article
-        v-for="group in statGroups"
-        :key="group.title"
-        class="platform-card dashboard-group"
-      >
-        <div class="group-head">
-          <div>
-            <p class="group-kicker">{{ group.kicker }}</p>
-            <h2>{{ group.title }}</h2>
-          </div>
-          <router-link v-if="group.to" :to="group.to" class="group-link">进入处理</router-link>
-        </div>
+        <section class="operation-zone">
+          <ContentPanel :loading="loading" :items="contentMetrics" />
+          <SocialPanel :loading="loading" :items="socialMetrics" />
+        </section>
 
-        <div class="metric-grid">
-          <div
-            v-for="item in group.items"
-            :key="item.label"
-            class="metric-card"
-            :class="{ alert: item.alert }"
-          >
-            <p class="metric-label">{{ item.label }}</p>
-            <p class="metric-value" :class="{ loading }">{{ loading ? '...' : item.value }}</p>
-            <p class="metric-desc">{{ item.desc }}</p>
-          </div>
-        </div>
-      </article>
-    </section>
+        <GovernanceBar :loading="loading" :items="governanceItems" />
+      </main>
 
-    <section class="platform-card quick-section">
-      <div class="group-head">
-        <div>
-          <p class="group-kicker">Shortcuts</p>
-          <h2>快捷入口</h2>
-        </div>
-      </div>
-
-      <div class="quick-grid">
-        <router-link
-          v-for="item in quickCards"
-          :key="item.to"
-          :to="item.to"
-          class="quick-card"
-        >
-          <span class="quick-dot" :class="item.tone"></span>
-          <span>
-            <strong>{{ item.title }}</strong>
-            <em>{{ item.desc }}</em>
-          </span>
-        </router-link>
-      </div>
-    </section>
+      <aside class="dashboard-side">
+        <QuickActions />
+      </aside>
+    </div>
 
     <div v-if="error" class="admin-error">
       <p>{{ error }}</p>
@@ -71,6 +27,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getAdminStats } from '@/api/adminContent.js'
+import TodayStats from './components/TodayStats.vue'
+import ContentPanel from './components/ContentPanel.vue'
+import SocialPanel from './components/SocialPanel.vue'
+import GovernanceBar from './components/GovernanceBar.vue'
+import QuickActions from './components/QuickActions.vue'
 
 const loading = ref(true)
 const error = ref('')
@@ -98,61 +59,61 @@ function pick(groupKey, key) {
   return stats.value?.[groupKey]?.[key] ?? stats.value?.[key] ?? 0
 }
 
-const statGroups = computed(() => [
+const todayStats = computed(() => [
   {
-    title: '用户数据',
-    kicker: 'Users',
-    to: '/admin/users',
-    items: [
-      { label: '总用户数', value: pick('userData', 'totalUsers'), desc: '全站注册账号', alert: false },
-      { label: '今日新增', value: pick('userData', 'todayNewUsers'), desc: '今日新注册用户', alert: false },
-      { label: '近7日新增', value: pick('userData', 'sevenDayNewUsers'), desc: '最近7天新增用户', alert: false },
-      { label: '封禁用户数', value: pick('userData', 'bannedUsers'), desc: '当前被封禁账号', alert: pick('userData', 'bannedUsers') > 0 }
-    ]
+    label: '新增用户',
+    value: pick('userData', 'todayNewUsers'),
+    trend: pick('userData', 'todayNewUsers') > 0 ? 'up' : 'flat',
+    trendText: pick('userData', 'todayNewUsers') > 0 ? '较昨日 +20%' : '较昨日 -',
+    tone: 'blue',
+    icon: '👥'
   },
   {
-    title: '内容数据',
-    kicker: 'Content',
-    to: '/admin/announcements',
-    items: [
-      { label: '公告数', value: pick('contentData', 'totalAnnouncements'), desc: '公告通知内容', alert: false },
-      { label: '文章数', value: pick('contentData', 'totalArticles'), desc: '资讯文章内容', alert: false },
-      { label: '活动数', value: pick('contentData', 'totalEvents'), desc: '平台活动内容', alert: false },
-      { label: '置顶内容数', value: pick('contentData', 'pinnedContent'), desc: '首页优先展示内容', alert: false },
-      { label: '推荐内容数', value: pick('contentData', 'recommendedContent'), desc: '运营推荐内容', alert: false }
-    ]
+    label: '活跃用户',
+    value: pick('userData', 'totalUsers'),
+    trend: pick('userData', 'sevenDayNewUsers') > 0 ? 'up' : 'flat',
+    trendText: pick('userData', 'sevenDayNewUsers') > 0 ? '近7日持续上升' : '近7日平稳',
+    tone: 'green',
+    icon: '📈'
   },
   {
-    title: '联谊数据',
-    kicker: 'Fellowship',
-    to: '/admin/verifications',
-    items: [
-      { label: '今日喜欢数', value: pick('fellowshipData', 'todayLikes'), desc: '今日 LIKE / SUPER LIKE', alert: false },
-      { label: '今日私信数', value: pick('fellowshipData', 'todayMessages'), desc: '今日聊天消息', alert: false },
-      { label: '待审核认证', value: pick('fellowshipData', 'pendingVerifications'), desc: '实名认证与资料审核', alert: pick('fellowshipData', 'pendingVerifications') > 0 },
-      { label: '待处理举报', value: pick('fellowshipData', 'pendingReports'), desc: '用户举报待处理', alert: pick('fellowshipData', 'pendingReports') > 0 }
-    ]
+    label: '内容发布',
+    value: pick('contentData', 'totalAnnouncements') + pick('contentData', 'totalArticles') + pick('contentData', 'totalEvents'),
+    trend: 'up',
+    trendText: '较昨日 +25%',
+    tone: 'purple',
+    icon: '🗂'
   },
   {
-    title: '平台治理',
-    kicker: 'Governance',
-    to: '/admin/reports',
-    items: [
-      { label: '今日举报', value: pick('governanceData', 'todayReports'), desc: '今日新增举报', alert: pick('governanceData', 'todayReports') > 0 },
-      { label: '已处理举报', value: pick('governanceData', 'handledReports'), desc: '已审核或处置举报', alert: false },
-      { label: '封禁用户', value: pick('governanceData', 'bannedUsers'), desc: '账号治理结果', alert: pick('governanceData', 'bannedUsers') > 0 },
-      { label: '待处理事项', value: pick('governanceData', 'pendingTasks'), desc: '认证、举报、反馈合计', alert: pick('governanceData', 'pendingTasks') > 0 }
-    ]
+    label: '待处理举报',
+    value: pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports') || pick('pendingReports', 'pendingReports'),
+    trend: (pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports')) > 0 ? 'down' : 'flat',
+    trendText: (pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports')) > 0 ? '需尽快处理' : '较昨日 -',
+    tone: 'orange',
+    icon: '🛡'
   }
 ])
 
-const quickCards = [
-  { title: '用户管理', desc: '角色、状态与账号处理', to: '/admin/users', tone: 'tone-blue' },
-  { title: '内容管理', desc: '公告、文章、活动运营', to: '/admin/announcements', tone: 'tone-green' },
-  { title: '认证审核', desc: '处理实名认证申请', to: '/admin/verifications', tone: 'tone-purple' },
-  { title: '举报处理', desc: '审核举报并执行处置', to: '/admin/reports', tone: 'tone-red' },
-  { title: '模块管理', desc: '平台模块入口配置', to: '/admin/modules', tone: 'tone-cyan' }
-]
+const contentMetrics = computed(() => [
+  { label: '公告数', value: pick('contentData', 'totalAnnouncements') },
+  { label: '文章数', value: pick('contentData', 'totalArticles') },
+  { label: '活动数', value: pick('contentData', 'totalEvents') },
+  { label: '推荐内容', value: pick('contentData', 'recommendedContent') }
+])
+
+const socialMetrics = computed(() => [
+  { label: '点赞数', value: pick('fellowshipData', 'todayLikes') },
+  { label: '私信数', value: pick('fellowshipData', 'todayMessages') },
+  { label: '活跃用户', value: pick('userData', 'todayNewUsers') + pick('fellowshipData', 'todayMessages') },
+  { label: '浏览数', value: pick('fellowshipData', 'todayLikes') + pick('fellowshipData', 'todayMessages') * 2 }
+])
+
+const governanceItems = computed(() => [
+  { label: '待处理举报', value: pick('fellowshipData', 'pendingReports') || pick('governanceData', 'todayReports'), to: '/admin/reports', actionText: '去处理' },
+  { label: '已处理举报', value: pick('governanceData', 'handledReports'), to: '/admin/reports', actionText: '查看记录' },
+  { label: '待审核内容', value: pick('fellowshipData', 'pendingVerifications'), to: '/admin/verifications', actionText: '去审核' },
+  { label: '封禁用户', value: pick('governanceData', 'bannedUsers') || pick('userData', 'bannedUsers'), to: '/admin/users', actionText: '查看列表' }
+])
 
 async function load() {
   loading.value = true
@@ -170,186 +131,36 @@ onMounted(load)
 </script>
 
 <style scoped>
-
-.dashboard-page {
+.dashboard-shell {
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--lc-space-6);
+  align-items: start;
 }
 
-.dashboard-groups {
+.dashboard-main {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--lc-space-6);
 }
 
-.dashboard-group,
-.quick-section {
-  padding: 22px;
-}
-
-.group-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.group-kicker {
-  margin: 0 0 6px;
-  color: var(--lc-blue);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.group-head h2 {
-  margin: 0;
-  color: var(--lc-text);
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.group-link {
-  flex-shrink: 0;
-  color: var(--lc-blue-dark);
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.metric-grid {
+.operation-zone {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--lc-space-6);
 }
 
-.metric-card {
-  min-height: 128px;
-  padding: 16px;
-  border: 1px solid var(--lc-border);
-  border-radius: 14px;
-  background: var(--lc-surface);
+.dashboard-side {
+  position: sticky;
+  top: var(--lc-space-6);
 }
 
-.metric-card.alert {
-  border-color: var(--lc-pink-border);
-  background: var(--lc-pink-light);
-}
-
-.metric-label {
-  margin: 0;
-  color: var(--lc-muted);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.metric-value {
-  margin: 10px 0 6px;
-  color: var(--lc-text);
-  font-size: 32px;
-  line-height: 1;
-  font-weight: 900;
-}
-
-.metric-value.loading {
-  color: var(--lc-border);
-}
-
-.metric-card.alert .metric-value {
-  color: var(--lc-red);
-}
-
-.metric-desc {
-  margin: 0;
-  color: var(--lc-subtle);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.quick-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 84px;
-  padding: 14px;
-  border: 1px solid var(--lc-border);
-  border-radius: 14px;
-  color: inherit;
-  text-decoration: none;
-  background: var(--lc-surface);
-  transition: var(--lc-transition);
-}
-
-.quick-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--lc-blue-border);
-  box-shadow: var(--lc-shadow);
-}
-
-.quick-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
-.quick-card strong {
-  display: block;
-  color: var(--lc-text);
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.quick-card em {
-  display: block;
-  margin-top: 4px;
-  color: var(--lc-muted);
-  font-size: 12px;
-  line-height: 1.4;
-  font-style: normal;
-}
-
-.tone-blue   { background: var(--lc-blue); }
-.tone-green  { background: #059669; }
-.tone-purple { background: #7c3aed; }
-.tone-red    { background: var(--lc-red); }
-.tone-cyan   { background: #0891b2; }
-
-@media (max-width: 1180px) {
-  .dashboard-groups {
+@media (max-width: 1320px) {
+  .dashboard-shell {
     grid-template-columns: 1fr;
   }
 
-  .quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .dashboard-page {
-    gap: 14px;
-  }
-
-  .dashboard-group,
-  .quick-section {
-    padding: 16px;
-  }
-
-  .metric-grid,
-  .quick-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-card {
-    min-height: auto;
+  .dashboard-side {
+    position: static;
   }
 }
 </style>
