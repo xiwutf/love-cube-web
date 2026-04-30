@@ -1,0 +1,283 @@
+<template>
+  <section class="card" aria-label="我的团体">
+    <div class="top-row">
+      <div class="info-side">
+        <div class="badge" aria-hidden="true">团</div>
+        <div class="info">
+          <div class="info-top">
+            <strong class="gname">{{ groupInfo.name }}</strong>
+            <span class="role">{{ groupInfo.role }}</span>
+          </div>
+          <div class="meta">
+            <span>成员 {{ groupInfo.members }} 人</span>
+            <span class="sep" aria-hidden="true"></span>
+            <span>活跃度：{{ groupInfo.activity }}</span>
+            <span class="sep" aria-hidden="true"></span>
+            <span>本周贡献 {{ groupInfo.weekExp }} 经验</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-side">
+        <router-link class="btn btn-enter" to="/platform/me/groups">进入团体</router-link>
+        <router-link class="btn btn-post" to="/platform/groups">发布公告</router-link>
+        <router-link class="btn btn-member" to="/platform/me/groups">成员管理</router-link>
+        <router-link class="more-link" to="/platform/me/groups">全部团体 ></router-link>
+      </div>
+    </div>
+
+    <div class="rank-section">
+      <div class="rank-head">
+        <h3>团体活跃榜（本周）</h3>
+        <router-link class="rank-more" to="/platform/groups">查看完整榜单 ></router-link>
+      </div>
+
+      <ol class="rank-grid">
+        <li v-for="item in groupRanking" :key="item.name" class="rank-card">
+          <span class="medal" :class="`medal-${item.rank}`">{{ item.rank }}</span>
+          <div class="rank-info">
+            <strong>{{ item.name }}</strong>
+            <small>活跃度 {{ item.activity }}</small>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+</template>
+
+<script setup>
+defineProps({
+  groupInfo: { type: Object, required: true },
+  groupRanking: { type: Array, required: true },
+})
+</script>
+
+<style scoped>
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+  padding: 22px 24px;
+}
+
+.top-row {
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  gap: 30px;
+  align-items: center;
+}
+
+.info-side {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 20px;
+  flex: 0 0 auto;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.22);
+}
+
+.info {
+  min-width: 0;
+}
+
+.info-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gname {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.role {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.10);
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.sep {
+  width: 1px;
+  height: 12px;
+  background: rgba(203, 213, 225, 0.9);
+  flex: 0 0 auto;
+}
+
+.action-side {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn:hover {
+  opacity: 0.82;
+}
+
+.btn-enter {
+  border: 0;
+  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
+  color: #ffffff;
+}
+
+.btn-post,
+.btn-member {
+  border: 1px solid #e7ebf2;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.more-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border: 1px solid #e7ebf2;
+  border-radius: 10px;
+  color: #7a8699;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rank-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1f7;
+}
+
+.rank-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.rank-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.rank-more {
+  color: #7a8699;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rank-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rank-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid #edf1f7;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbfcff, #ffffff);
+  min-height: 62px;
+  transition: background 0.12s;
+}
+
+.rank-card:hover {
+  background: #f4f6fb;
+}
+
+.medal {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 13px;
+  flex: 0 0 auto;
+  color: #9a6700;
+  background: #fff1c2;
+}
+
+.medal-2 { color: #64748b; background: #e7edf7; }
+.medal-3 { color: #f97316; background: #ffead6; }
+
+.rank-info {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.rank-info strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rank-info small {
+  font-size: 12px;
+  color: #64748b;
+}
+
+@media (max-width: 1180px) {
+  .top-row,
+  .action-side {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

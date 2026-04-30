@@ -36,7 +36,10 @@
           <div class="group-card-body">
             <div class="group-card-title-row">
               <strong class="group-card-name">{{ item.name }}</strong>
-              <span class="role-badge" :class="`role-${item.userRole?.toLowerCase()}`">
+              <span
+                class="role-badge"
+                :class="item.regulatingAsPlatformAdmin ? 'role-platform' : `role-${(item.userRole || 'owner').toLowerCase()}`"
+              >
                 {{ item.userRoleName || '团长' }}
               </span>
             </div>
@@ -133,6 +136,7 @@ async function load() {
 }
 
 function normalizeGroup(item) {
+  const regulating = Boolean(item.regulatingAsPlatformAdmin)
   return {
     id: String(item.id || ''),
     name: item.name || '未命名团体',
@@ -142,9 +146,10 @@ function normalizeGroup(item) {
     joinType: item.joinType || 'approval',
     memberCount: Number(item.memberCount || 0),
     pendingRequestCount: Number(item.pendingRequestCount || 0),
-    userRole: item.userRole || 'OWNER',
-    userRoleName: item.userRoleName || '团长',
-    userPermissions: item.userPermissions || []
+    userRole: item.userRole ?? (regulating ? null : 'OWNER'),
+    userRoleName: regulating ? '平台监管' : (item.userRoleName || '团长'),
+    userPermissions: item.userPermissions || [],
+    regulatingAsPlatformAdmin: regulating
   }
 }
 
@@ -261,6 +266,11 @@ onMounted(load)
 .role-badge.role-reviewer {
   background: #f1f5f9;
   color: #475569;
+}
+
+.role-badge.role-platform {
+  background: #ede9fe;
+  color: #5b21b6;
 }
 
 .group-card-meta {

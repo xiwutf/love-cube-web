@@ -82,10 +82,19 @@ public class AdminGroupController {
             Map<String, Object> item = buildGroupDetail(g);
             item.put("pendingRequestCount",
                     joinRequestRepository.findByGroupIdAndStatusOrderByRequestedAtDesc(g.getId(), "pending").size());
-            String role = adminAuthService.getGroupRole(user, g.getId());
-            item.put("userRole", role != null ? role : GroupAdminRoleConstants.OWNER);
-            item.put("userRoleName", GroupAdminRoleConstants.displayName(role));
-            item.put("userPermissions", buildGroupPermissions(role));
+            String tableRole = adminAuthService.getGroupRole(user, g.getId());
+            if (tableRole == null && manageAll) {
+                item.put("userRole", null);
+                item.put("userRoleName", "平台监管");
+                item.put("userPermissions", buildGroupPermissions(GroupAdminRoleConstants.OWNER));
+                item.put("regulatingAsPlatformAdmin", true);
+            } else {
+                String norm = tableRole != null ? tableRole : GroupAdminRoleConstants.OWNER;
+                item.put("userRole", norm);
+                item.put("userRoleName", GroupAdminRoleConstants.displayName(norm));
+                item.put("userPermissions", buildGroupPermissions(norm));
+                item.put("regulatingAsPlatformAdmin", false);
+            }
             return item;
         }).collect(Collectors.toList());
     }
@@ -101,17 +110,26 @@ public class AdminGroupController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
         adminAuthService.requireGroupAdmin(authHeader, id);
         Map<String, Object> item = buildGroupDetail(g);
-        String role = adminAuthService.getGroupRole(user, id);
-        String norm = role != null ? role : GroupAdminRoleConstants.OWNER;
-        item.put("userRole", norm);
-        item.put("userRoleName", GroupAdminRoleConstants.displayName(norm));
-        item.put("userPermissions", buildGroupPermissions(norm));
+        String tableRole = adminAuthService.getGroupRole(user, id);
+        if (tableRole == null && adminAuthService.hasGroupManageAll(user)) {
+            item.put("userRole", null);
+            item.put("userRoleName", "平台监管");
+            item.put("userPermissions", buildGroupPermissions(GroupAdminRoleConstants.OWNER));
+            item.put("regulatingAsPlatformAdmin", true);
+        } else {
+            String norm = tableRole != null ? tableRole : GroupAdminRoleConstants.OWNER;
+            item.put("userRole", norm);
+            item.put("userRoleName", GroupAdminRoleConstants.displayName(norm));
+            item.put("userPermissions", buildGroupPermissions(norm));
+            item.put("regulatingAsPlatformAdmin", false);
+        }
         return item;
     }
 
     // ── 团体 CRUD ──────────────────────────────────────────────────────────────
 
     @PostMapping
+    @Transactional
     public PlatformGroup createGroup(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> payload
@@ -129,12 +147,24 @@ public class AdminGroupController {
         group.setCoverUrl(String.valueOf(payload.getOrDefault("coverUrl", "")));
         group.setStatus(String.valueOf(payload.getOrDefault("status", "active")));
         group.setJoinType(String.valueOf(payload.getOrDefault("joinType", "approval")));
-        group.setMemberCount(0);
+        group.setMemberCount(1);
         group.setPinned(Boolean.parseBoolean(String.valueOf(payload.getOrDefault("pinned", "false"))));
         group.setCreatedBy(admin.getUserid());
+        group.setOwnerUserId(admin.getUserid());
         group.setCreatedAt(LocalDateTime.now());
         group.setUpdatedAt(LocalDateTime.now());
-        return groupRepository.save(group);
+        PlatformGroup saved = groupRepository.save(group);
+
+        adminAuthService.upsertPlatformGroupAdmin(saved.getId(), admin.getUserid(), GroupAdminRoleConstants.OWNER);
+
+        GroupMember creatorMember = new GroupMember();
+        creatorMember.setGroupId(saved.getId());
+        creatorMember.setUserId(admin.getUserid());
+        creatorMember.setRole("owner");
+        creatorMember.setJoinedAt(LocalDateTime.now());
+        memberRepository.save(creatorMember);
+
+        return saved;
     }
 
     /** OWNER / ADMIN 可编辑团体资料 */
@@ -447,6 +477,7 @@ public class AdminGroupController {
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
         item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
         item.put("createdBy", g.getCreatedBy());
+        item.put("ownerUserId", g.getOwnerUserId());
         item.put("createdAt", g.getCreatedAt());
         item.put("updatedAt", g.getUpdatedAt());
         return item;

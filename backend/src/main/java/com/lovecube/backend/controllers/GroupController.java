@@ -11,6 +11,7 @@ import com.lovecube.backend.repository.GroupPostRepository;
 import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GroupAdminRoleConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
 
 @RestController
 @RequestMapping("/api/groups")
@@ -48,17 +50,125 @@ public class GroupController {
     }
 
     @GetMapping
-    public List<Map<String, Object>> listGroups(
+    public Map<String, Object> listGroups(
             @RequestParam(defaultValue = "active") String status,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String joinMode,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int pageSize,
             @RequestHeader(value = "Authorization", required = false) String authHeader
     ) {
+        String categoryFilter = (category != null && !category.isBlank()) ? category : type;
         List<PlatformGroup> groups = groupRepository.findByStatusOrderByPinnedDescCreatedAtDesc(status);
-        if (category != null && !category.isBlank()) {
-            groups = groups.stream().filter(g -> category.equals(g.getCategory())).collect(Collectors.toList());
+        if (categoryFilter != null && !categoryFilter.isBlank()) {
+            groups = groups.stream().filter(g -> categoryFilter.equals(g.getCategory())).collect(Collectors.toList());
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = keyword.trim().toLowerCase();
+            groups = groups.stream()
+                    .filter(g -> g.getName().toLowerCase().contains(kw)
+                            || (g.getDescription() != null && g.getDescription().toLowerCase().contains(kw)))
+                    .collect(Collectors.toList());
+        }
+        if (joinMode != null && !joinMode.isBlank()) {
+            groups = groups.stream()
+                    .filter(g -> matchesJoinModeForList(g.getJoinType(), joinMode))
+                    .collect(Collectors.toList());
+        }
+        if ("newest".equals(sort)) {
+            groups = groups.stream()
+                    .sorted(Comparator.comparing(PlatformGroup::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .collect(Collectors.toList());
+        } else {
+            groups = groups.stream()
+                    .sorted(Comparator.comparing(PlatformGroup::getMemberCount, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .collect(Collectors.toList());
         }
         Long currentUserId = resolveOptionalUserId(authHeader);
-        return groups.stream().map(g -> buildGroupSummary(g, currentUserId)).collect(Collectors.toList());
+        List<Map<String, Object>> summaries = groups.stream()
+                .map(g -> buildGroupSummary(g, currentUserId))
+                .collect(Collectors.toList());
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(100, Math.max(1, pageSize));
+        int total = summaries.size();
+        int from = Math.min((safePage - 1) * safeSize, total);
+        int to = Math.min(from + safeSize, total);
+        List<Map<String, Object>> items = from < total ? summaries.subList(from, to) : Collections.emptyList();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", items);
+        body.put("total", total);
+        body.put("page", safePage);
+        body.put("pageSize", safeSize);
+        return body;
+    }
+
+    /** 登录用户创建团体：写入 platform_groups + platform_group_admin(OWNER) + 创建者为成员 */
+    @PostMapping
+    @Transactional
+    public Map<String, Object> createGroupForUser(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        String name = String.valueOf(payload.getOrDefault("name", "")).trim();
+        if (name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "团体名称不能为空");
+        }
+        PlatformGroup group = new PlatformGroup();
+        group.setId("group-" + UUID.randomUUID());
+        group.setName(name);
+        group.setDescription(String.valueOf(payload.getOrDefault("description", "")));
+        Object typeObj = payload.containsKey("type") ? payload.get("type") : payload.get("category");
+        group.setCategory(typeObj != null ? String.valueOf(typeObj) : "");
+        group.setCoverUrl(payload.get("coverUrl") != null ? String.valueOf(payload.get("coverUrl")) : "");
+        group.setStatus("active");
+        String jm = String.valueOf(payload.getOrDefault("joinMode", "audit"));
+        group.setJoinType("open".equals(jm) ? "open" : "approval");
+        group.setMemberCount(1);
+        group.setPinned(false);
+        group.setCreatedBy(user.getUserid());
+        group.setOwnerUserId(user.getUserid());
+        group.setCreatedAt(LocalDateTime.now());
+        group.setUpdatedAt(LocalDateTime.now());
+        PlatformGroup saved = groupRepository.save(group);
+
+        adminAuthService.upsertPlatformGroupAdmin(saved.getId(), user.getUserid(), GroupAdminRoleConstants.OWNER);
+
+        GroupMember member = new GroupMember();
+        member.setGroupId(saved.getId());
+        member.setUserId(user.getUserid());
+        member.setRole("owner");
+        member.setJoinedAt(LocalDateTime.now());
+        memberRepository.save(member);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", saved.getId());
+        out.put("message", "创建成功");
+        return out;
+    }
+
+    private static boolean matchesJoinModeForList(String joinType, String filter) {
+        if (joinType == null) return false;
+        if ("open".equals(filter)) return "open".equals(joinType);
+        if ("audit".equals(filter) || "invite".equals(filter)) {
+            return "approval".equals(joinType) || "audit".equals(joinType);
+        }
+        return true;
+    }
+
+    @GetMapping("/hot")
+    public List<Map<String, Object>> hotGroups(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Long currentUserId = resolveOptionalUserId(authHeader);
+        List<PlatformGroup> all = groupRepository.findByStatusOrderByPinnedDescCreatedAtDesc("active");
+        List<PlatformGroup> top = all.stream()
+                .sorted(Comparator.comparing(PlatformGroup::getMemberCount, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(5)
+                .collect(Collectors.toList());
+        return top.stream().map(g -> buildGroupSummary(g, currentUserId)).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
@@ -71,6 +181,19 @@ public class GroupController {
         Long currentUserId = resolveOptionalUserId(authHeader);
         Map<String, Object> result = buildGroupSummary(group, currentUserId);
         result.put("description", group.getDescription());
+        Long ou = group.getOwnerUserId() != null ? group.getOwnerUserId() : group.getCreatedBy();
+        List<Map<String, Object>> adminList = new ArrayList<>();
+        if (ou != null) {
+            userRepository.findById(ou).ifPresent(u -> {
+                Map<String, Object> a = new LinkedHashMap<>();
+                a.put("userId", u.getUserid());
+                a.put("name", u.getUsername());
+                a.put("role", "owner");
+                a.put("avatar", u.getProfilePhoto());
+                adminList.add(a);
+            });
+        }
+        result.put("admins", adminList);
         return result;
     }
 
@@ -114,6 +237,35 @@ public class GroupController {
             item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
+    }
+
+    @PostMapping("/{id}/posts")
+    @Transactional
+    public GroupPost createMemberPost(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        if (!memberRepository.existsByGroupIdAndUserId(id, user.getUserid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅限团体成员发布动态");
+        }
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        if (content.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "内容不能为空");
+        }
+        GroupPost post = new GroupPost();
+        post.setId("gpost-" + UUID.randomUUID());
+        post.setGroupId(id);
+        post.setUserId(user.getUserid());
+        post.setType(String.valueOf(payload.getOrDefault("type", "post")));
+        post.setContent(content);
+        post.setLikeCount(0);
+        post.setCreatedAt(LocalDateTime.now());
+        post.setUpdatedAt(LocalDateTime.now());
+        return postRepository.save(post);
     }
 
     @PostMapping("/{id}/join")
@@ -185,20 +337,41 @@ public class GroupController {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", g.getId());
         item.put("name", g.getName());
+        item.put("description", g.getDescription());
         item.put("category", g.getCategory());
         item.put("coverUrl", g.getCoverUrl());
         item.put("status", g.getStatus());
-        item.put("joinType", g.getJoinType());
+        String jt = g.getJoinType();
+        item.put("joinType", jt);
+        boolean isOpen = "open".equals(jt);
+        item.put("joinMode", isOpen ? "free" : "audit");
+        item.put("joinModeKey", isOpen ? "open" : "audit");
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
         item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
         item.put("createdAt", g.getCreatedAt());
+        Long ownerUid = g.getOwnerUserId() != null ? g.getOwnerUserId() : g.getCreatedBy();
+        String ownerName = "";
+        if (ownerUid != null) {
+            ownerName = userRepository.findById(ownerUid).map(User::getUsername).orElse("");
+        }
+        item.put("ownerName", ownerName);
+        item.put("tags", "");
         if (currentUserId != null) {
             item.put("isMember", memberRepository.existsByGroupIdAndUserId(g.getId(), currentUserId));
             item.put("hasPendingRequest", joinRequestRepository.existsByGroupIdAndUserIdAndStatus(
                     g.getId(), currentUserId, "pending"));
+            User cu = userRepository.findById(currentUserId).orElse(null);
+            boolean managed = cu != null && adminAuthService.getGroupRoleFromTable(cu, g.getId()) != null;
+            item.put("managed", managed);
+            Optional<GroupMember> gm = memberRepository.findByGroupIdAndUserId(g.getId(), currentUserId);
+            boolean isOwnerMember = gm.map(x -> "owner".equalsIgnoreCase(x.getRole())).orElse(false);
+            boolean isOwnerUid = ownerUid != null && ownerUid.equals(currentUserId);
+            item.put("isOwner", isOwnerMember || isOwnerUid || managed);
         } else {
             item.put("isMember", false);
             item.put("hasPendingRequest", false);
+            item.put("managed", false);
+            item.put("isOwner", false);
         }
         return item;
     }

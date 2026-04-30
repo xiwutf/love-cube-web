@@ -1,7 +1,6 @@
 package com.lovecube.backend.services;
 
-import com.lovecube.backend.entity.AdminRolePermission;
-import com.lovecube.backend.entity.AdminUserRole;
+import com.lovecube.backend.entity.PlatformGroupAdmin;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AdminRolePermissionRepository;
 import com.lovecube.backend.repository.AdminUserRoleRepository;
@@ -11,7 +10,9 @@ import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -89,74 +90,128 @@ public class AdminAuthService {
 
     // ── 团体角色方法 ────────────────────────────────────────────────────────────
 
+    /** 全站「监管全部团体」权限 */
+    public boolean hasGroupManageAll(User user) {
+        return getUserPermissions(user).contains(PermissionConstants.GROUP_MANAGE_ALL);
+    }
+
     /**
-     * 获取用户在指定团体的角色。
-     * 拥有 group.manage.all 权限的用户视为 OWNER。
-     * 返回 null 表示无任何团体权限。
+     * 团体内角色，仅来自 platform_group_admin。
+     * 超级管理员若无记录则返回 null（不代表该团体的 OWNER）。
      */
-    public String getGroupRole(User user, String groupId) {
-        if (getUserPermissions(user).contains(PermissionConstants.GROUP_MANAGE_ALL)) {
-            return GroupAdminRoleConstants.OWNER;
-        }
+    public String getGroupRoleFromTable(User user, String groupId) {
         return platformGroupAdminRepository.findByGroupIdAndUserId(groupId, user.getUserid())
                 .map(a -> GroupAdminRoleConstants.normalize(a.getRole()))
                 .orElse(null);
     }
 
+    /** 与 {@link #getGroupRoleFromTable} 相同，供外部语义使用 */
+    public String getGroupRole(User user, String groupId) {
+        return getGroupRoleFromTable(user, groupId);
+    }
+
     /**
-     * 要求用户在指定团体拥有指定角色之一（全站管理员直接通过）。
-     * allowedRoles 为空时拒绝所有。
+     * 要求用户在 platform_group_admin 中拥有指定角色之一。
+     * 拥有 group.manage.all 的用户可监管任意团体（不等同于团体内 OWNER）。
      */
     public User requireGroupRole(String authHeader, String groupId, String... allowedRoles) {
         User user = requireUser(authHeader);
-        String role = getGroupRole(user, groupId);
-        if (role == null) {
+        if (hasGroupManageAll(user)) {
+            return user;
+        }
+        String tableRole = getGroupRoleFromTable(user, groupId);
+        if (tableRole == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无该团体的访问权限");
         }
         Set<String> allowed = Set.of(allowedRoles);
-        if (!allowed.contains(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "权限不足，当前角色：" + GroupAdminRoleConstants.displayName(role));
+        if (!allowed.contains(tableRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "权限不足，当前角色：" + GroupAdminRoleConstants.displayName(tableRole));
         }
         return user;
     }
 
-    /** 任意团体角色（OWNER / ADMIN / REVIEWER）均可通过 */
+    /** 本团体管理员（platform_group_admin 任一角）或全站团体监管员 */
     public User requireGroupAdmin(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        String role = getGroupRole(user, groupId);
-        if (role == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无该团体的管理权限");
-        }
-        return user;
-    }
-
-    /** 仅 OWNER */
-    public User requireGroupOwner(String authHeader, String groupId) {
-        return requireGroupRole(authHeader, groupId, GroupAdminRoleConstants.OWNER);
-    }
-
-    /** OWNER / ADMIN：可编辑资料、公告、动态、管理成员 */
-    public User requireGroupManagePermission(String authHeader, String groupId) {
-        return requireGroupRole(authHeader, groupId, GroupAdminRoleConstants.OWNER, GroupAdminRoleConstants.ADMIN);
-    }
-
-    /** OWNER / ADMIN / REVIEWER：可审核成员入团申请 */
-    public User requireGroupReviewPermission(String authHeader, String groupId) {
-        return requireGroupRole(authHeader, groupId,
-                GroupAdminRoleConstants.OWNER, GroupAdminRoleConstants.ADMIN, GroupAdminRoleConstants.REVIEWER);
-    }
-
-    /** SUPER_ADMIN（group.manage.all）或 OWNER 均可删除团体 */
-    public User requireGroupOwnerOrSuperAdmin(String authHeader, String groupId) {
-        User user = requireUser(authHeader);
-        if (getUserPermissions(user).contains(PermissionConstants.GROUP_MANAGE_ALL)) {
+        if (getGroupRoleFromTable(user, groupId) != null) {
             return user;
         }
-        String role = getGroupRole(user, groupId);
-        if (!GroupAdminRoleConstants.isOwner(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有团体拥有者或超级管理员可删除团体");
+        if (hasGroupManageAll(user)) {
+            return user;
         }
-        return user;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无该团体的管理权限");
+    }
+
+    /** 团体 OWNER（表中角色）或全站团体监管员 */
+    public User requireGroupOwner(String authHeader, String groupId) {
+        User user = requireUser(authHeader);
+        if (hasGroupManageAll(user)) {
+            return user;
+        }
+        String tableRole = getGroupRoleFromTable(user, groupId);
+        if (GroupAdminRoleConstants.isOwner(tableRole)) {
+            return user;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "需要团体拥有者权限");
+    }
+
+    /** OWNER / ADMIN（表中）或全站监管 */
+    public User requireGroupManagePermission(String authHeader, String groupId) {
+        User user = requireUser(authHeader);
+        if (hasGroupManageAll(user)) {
+            return user;
+        }
+        String r = getGroupRoleFromTable(user, groupId);
+        if (r != null && (GroupAdminRoleConstants.OWNER.equals(r) || GroupAdminRoleConstants.ADMIN.equals(r))) {
+            return user;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无编辑该团体的权限");
+    }
+
+    /** 可审核入团：OWNER / ADMIN / REVIEWER 或全站监管 */
+    public User requireGroupReviewPermission(String authHeader, String groupId) {
+        User user = requireUser(authHeader);
+        if (hasGroupManageAll(user)) {
+            return user;
+        }
+        String r = getGroupRoleFromTable(user, groupId);
+        if (GroupAdminRoleConstants.canReview(r)) {
+            return user;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无成员审核权限");
+    }
+
+    /** 表中 OWNER 或全站监管（删除团体） */
+    public User requireGroupOwnerOrSuperAdmin(String authHeader, String groupId) {
+        User user = requireUser(authHeader);
+        if (hasGroupManageAll(user)) {
+            return user;
+        }
+        String tableRole = getGroupRoleFromTable(user, groupId);
+        if (GroupAdminRoleConstants.isOwner(tableRole)) {
+            return user;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有团体拥有者或超级管理员可删除团体");
+    }
+
+    /**
+     * 写入或更新 platform_group_admin；重复 group_id + user_id 时更新角色。
+     * 并确保用户具备后台 GROUP_OWNER 入口角色码。
+     */
+    @Transactional
+    public void upsertPlatformGroupAdmin(String groupId, Long userId, String role) {
+        String norm = GroupAdminRoleConstants.normalize(role);
+        Optional<PlatformGroupAdmin> existing = platformGroupAdminRepository.findByGroupIdAndUserId(groupId, userId);
+        PlatformGroupAdmin ga = existing.orElseGet(() -> {
+            PlatformGroupAdmin n = new PlatformGroupAdmin();
+            n.setGroupId(groupId);
+            n.setUserId(userId);
+            n.setCreatedAt(LocalDateTime.now());
+            return n;
+        });
+        ga.setRole(norm);
+        platformGroupAdminRepository.save(ga);
+        ensureGroupOwnerRole(userId);
     }
 
     public boolean isAdmin(User user) {

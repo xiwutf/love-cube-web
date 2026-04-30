@@ -47,7 +47,6 @@
     </header>
 
     <RouteBackButton v-if="showRouteBackButton" class="platform-route-back" />
-
     <main class="platform-main"><router-view /></main>
 
     <aside class="co-creation-toolbar" aria-label="平台工具栏">

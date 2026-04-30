@@ -24,7 +24,18 @@ public final class GroupAdminRoleConstants {
         };
     }
 
-    public static boolean isOwner(String role)    { return OWNER.equals(normalize(role)); }
-    public static boolean canManage(String role)  { return isOwner(role) || ADMIN.equals(normalize(role)); }
-    public static boolean canReview(String role)  { return canManage(role) || REVIEWER.equals(normalize(role)); }
+    public static boolean isOwner(String role) {
+        if (role == null || role.isBlank()) return false;
+        return OWNER.equals(normalize(role));
+    }
+
+    public static boolean canManage(String role) {
+        if (role == null || role.isBlank()) return false;
+        return isOwner(role) || ADMIN.equals(normalize(role));
+    }
+
+    public static boolean canReview(String role) {
+        if (role == null || role.isBlank()) return false;
+        return canManage(role) || REVIEWER.equals(normalize(role));
+    }
 }

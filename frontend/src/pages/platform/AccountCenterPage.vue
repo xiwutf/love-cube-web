@@ -1,250 +1,254 @@
 ﻿<template>
-  <section class="platform-page me-layout">
-    <aside class="me-sidebar">
-      <h2>平台个人中心</h2>
-      <nav class="me-menu" aria-label="平台个人中心导航">
-        <router-link to="/me" class="me-menu-item is-active">
-          <span class="me-menu-icon is-pink">⌂</span>
-          <span>个人中心首页</span>
-        </router-link>
-        <div class="me-menu-group">
-          <router-link to="/platform/positive-share" class="me-menu-item">
-            <span class="me-menu-icon">▣</span>
-            <span>内容中心</span>
-            <span class="me-menu-caret">⌃</span>
-          </router-link>
-          <router-link to="/platform/positive-share" class="me-sub-item">我的内容</router-link>
-          <router-link to="/platform/positive-share" class="me-sub-item">每日心声</router-link>
-          <router-link to="/messages" class="me-sub-item">消息中心</router-link>
-          <router-link to="/me/favorites" class="me-sub-item">收藏夹</router-link>
-          <router-link to="/me/drafts" class="me-sub-item">草稿箱</router-link>
-        </div>
-        <router-link to="/events" class="me-menu-item">
-          <span class="me-menu-icon">□</span>
-          <span>活动中心</span>
-        </router-link>
-        <router-link to="/platform/me/groups" class="me-menu-item">
-          <span class="me-menu-icon">◈</span>
-          <span>我的团体</span>
-        </router-link>
-        <router-link to="/modules" class="me-menu-item">
-          <span class="me-menu-icon">◇</span>
-          <span>模块中心</span>
-        </router-link>
-        <router-link to="/messages" class="me-menu-item">
-          <span class="me-menu-icon">♧</span>
-          <span>通知中心</span>
-          <span v-if="unreadCount > 0" class="me-dot">{{ unreadCount }}</span>
-        </router-link>
-        <router-link :to="accountSettingsRoute" class="me-menu-item">
-          <span class="me-menu-icon">⚙</span>
-          <span>账号设置</span>
-        </router-link>
-      </nav>
-      <div class="me-fellowship-card">
-        <p>切换到联谊中心</p>
-        <span>管理你的联谊资料、匹配、聊天记录等</span>
-        <router-link to="/fellowship">进入联谊中心 ></router-link>
-      </div>
-    </aside>
+  <section class="platform-page me-page">
+    <div class="me-mobile" aria-label="平台个人中心（移动端 UI）">
+      <main class="me-shell" aria-label="平台个人中心">
+        <header class="me-header">
+          <div>
+            <h1>个人中心</h1>
+            <p>管理你的内容、团队、通知与账号资料</p>
+          </div>
+          <button type="button" class="icon-button" aria-label="账号设置" @click="openSettingsPanel">⚙</button>
+        </header>
 
-    <main class="me-main">
-      <header class="mobile-me-header mobile-only">
-        <h1>平台个人中心</h1>
-        <div class="mobile-header-actions">
-          <button type="button" class="mobile-header-icon" aria-label="编辑资料" @click="openSettingsPanel">⚙</button>
-        </div>
-      </header>
+        <div class="me-layout" aria-label="个人中心主体布局">
+          <section class="dashboard-card profile-card">
+            <div class="profile-main">
+              <img v-if="user?.avatar" :src="user.avatar" class="profile-avatar" alt="头像" />
+              <div v-else class="profile-avatar avatar-fallback">{{ avatarFallback }}</div>
 
-      <div class="me-hero">
-        <div class="me-user">
-          <img v-if="user?.avatar" :src="user.avatar" class="me-avatar" alt="头像" />
-          <div v-else class="me-avatar me-avatar-fallback">{{ avatarFallback }}</div>
-          <div class="me-meta">
-            <div class="me-title-row">
-              <h1>{{ user?.username || '平台用户' }}</h1>
-              <span class="me-level">平台创作者</span>
+              <div class="profile-info">
+                <div class="profile-name-row">
+                  <h2>{{ displayName }}</h2>
+                  <span class="creator-tag">平台创作者</span>
+                </div>
+                <p>ID：{{ userIdDisplay }}</p>
+                <p>注册地：{{ locationDisplay }}</p>
+                <div class="invite-row">
+                  <span>邀请码：{{ inviteCodeDisplay }}</span>
+                  <button type="button" :disabled="!inviteCodeDisplay" @click="copyInviteCode">复制</button>
+                  <em v-if="copyFeedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</em>
+                </div>
+              </div>
+
+              <div class="profile-badges" aria-label="平台徽章">
+                <span class="tone-amber">☆</span>
+                <span class="tone-rose">♨</span>
+                <span class="tone-blue">◇</span>
+              </div>
             </div>
-            <p class="me-bio">{{ user?.bio || '分享美好，连接你我' }} <button type="button" @click="openEditPanel">✎</button></p>
-            <div class="me-profile-line">
-              <span>ID: {{ user?.id || '--' }}</span>
-              <span>注册时间: {{ registerDate }}</span>
-              <span>{{ user?.location || '广州' }}</span>
+
+            <div class="profile-light-stats">
+              <span v-for="item in profileLightStats" :key="item.label">
+                <small>{{ item.label }}</small>
+                <strong>{{ item.value }}</strong>
+              </span>
             </div>
-            <div class="me-invite-line">
-              <span>邀请码: {{ inviteCodeDisplay }}</span>
-              <button type="button" :disabled="!inviteCode" @click="copyInviteCode">复制</button>
-              <span v-if="copyFeedback" class="me-copy-feedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</span>
+
+            <div class="profile-actions">
+              <button type="button" class="outline-action profile-edit-action" @click="openEditPanel">编辑资料</button>
+              <router-link class="primary-action fellowship-action" to="/fellowship">切换联谊中心</router-link>
             </div>
-            <button type="button" class="me-edit-btn" @click="openEditPanel">
-              编辑资料 >
-            </button>
-            <router-link to="/fellowship" class="mobile-fellowship-pill mobile-only">♡ 切换联谊中心 ></router-link>
+          </section>
+
+          <aside class="me-aside">
+            <section class="dashboard-card growth-card">
+              <div class="section-head">
+                <h2>成长等级</h2>
+                <router-link to="/modules">成长记录 ></router-link>
+              </div>
+              <div class="growth-body">
+                <div class="level-badge">Lv.{{ growthLevel.level }}</div>
+                <div class="level-content">
+                  <h3>{{ growthLevel.name }}</h3>
+                  <p>再获得 {{ growthLevel.nextExp - growthLevel.currentExp }} 经验可升级 Lv.{{ growthLevel.level + 1 }}</p>
+                  <div class="progress-track">
+                    <span :style="{ width: growthProgress }"></span>
+                  </div>
+                  <div class="progress-meta">
+                    <span>{{ growthLevel.currentExp }} / {{ growthLevel.nextExp }}</span>
+                  </div>
+                </div>
+                <ul class="exp-list" aria-label="经验来源">
+                  <li v-for="item in growthLevel.sources" :key="item.label">
+                    <span>{{ item.label }}</span>
+                    <strong>+{{ item.exp }} 经验</strong>
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="dashboard-card task-card">
+              <div class="section-head task-head">
+                <div>
+                  <h2>今日任务 <span>每日 0 点刷新</span></h2>
+                </div>
+                <p>已完成 {{ completedTaskCount }}/{{ dailyTasks.length }} <b aria-hidden="true">礼</b></p>
+              </div>
+              <div class="task-grid">
+                <article v-for="task in dailyTasks" :key="task.title" class="task-item" :class="{ 'is-done': task.done }">
+                  <div class="task-check">{{ task.done ? '✓' : task.current }}</div>
+                  <h3>{{ task.title }}</h3>
+                  <p>+{{ task.exp }} 经验</p>
+                  <div v-if="!task.done" class="mini-progress">
+                    <span :style="{ width: `${Math.min(100, (task.current / task.total) * 100)}%` }"></span>
+                  </div>
+                  <small>{{ task.done ? '已完成' : `${task.current}/${task.total}` }}</small>
+                  <router-link :to="task.to">{{ task.done ? '已完成' : '去完成' }}</router-link>
+                </article>
+              </div>
+            </section>
+          </aside>
+
+          <div class="me-main-stack">
+            <section class="workspace-grid">
+              <router-link v-for="item in workspaceItems" :key="item.title" :to="item.to" class="workspace-item dashboard-card">
+                <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.desc }}</small>
+                <em>{{ item.value }} ></em>
+              </router-link>
+            </section>
+
+            <section class="dashboard-card overview-card">
+              <div class="section-head">
+                <h2>数据概览</h2>
+                <router-link to="/modules">全部数据 ></router-link>
+              </div>
+              <div class="overview-row">
+                <router-link v-for="item in overviewItems" :key="item.label" :to="item.to" class="overview-item">
+                  <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
+                  <strong>{{ item.value }}</strong>
+                  <small>{{ item.label }}</small>
+                </router-link>
+              </div>
+            </section>
+
+            <section class="dashboard-card group-card">
+              <div class="section-head">
+                <h2>我的团体</h2>
+                <router-link to="/platform/me/groups">全部团体 ></router-link>
+              </div>
+              <div class="group-summary">
+                <div class="group-avatar" aria-hidden="true">团</div>
+                <div>
+                  <h3>{{ groupInfo.name }} <span>{{ groupInfo.role }}</span></h3>
+                  <p>成员 {{ groupInfo.members }} 人 <i></i> 活跃度：{{ groupInfo.activity }}</p>
+                  <p>本周贡献 {{ groupInfo.weekExp }} 经验</p>
+                </div>
+              </div>
+              <div class="group-actions">
+                <router-link class="group-enter-action" to="/platform/me/groups">进入团体</router-link>
+                <router-link class="group-post-action" to="/platform/groups">发布公告</router-link>
+                <router-link class="group-member-action" to="/platform/me/groups">成员管理</router-link>
+              </div>
+              <div class="ranking-head">
+                <h3>团体活跃榜（本周）</h3>
+                <router-link to="/platform/groups">查看完整榜单 ></router-link>
+              </div>
+              <ol class="ranking-list">
+                <li v-for="item in groupRanking" :key="item.name">
+                  <span class="rank-medal">{{ item.rank }}</span>
+                  <strong>{{ item.name }}</strong>
+                  <small>活跃度 {{ item.activity }}</small>
+                </li>
+              </ol>
+            </section>
+
+            <section class="quick-grid">
+              <router-link v-for="item in quickActions" :key="item.title" :to="item.to" class="quick-item dashboard-card">
+                <span class="soft-icon" :class="`tone-${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.desc }}</small>
+              </router-link>
+            </section>
           </div>
         </div>
-        <div class="me-kpis">
-          <article v-for="item in heroStats" :key="item.key">
-            <span class="me-kpi-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-            <p>{{ item.label }}</p>
-            <strong>{{ item.value }}</strong>
-            <small>{{ item.sub }}</small>
-          </article>
-        </div>
-      </div>
+      </main>
+    </div>
 
-      <section class="mobile-shortcut-card mobile-only">
-        <router-link v-for="item in mobileShortcutItems" :key="item.title" :to="item.to" class="mobile-shortcut-item">
-          <span class="mobile-shortcut-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-          <strong>{{ item.title }}</strong>
-          <small>{{ item.desc }}</small>
-        </router-link>
-      </section>
-
-      <section class="mobile-data-card mobile-only">
-        <div class="mobile-section-head">
-          <h2>我的数据</h2>
-          <router-link to="/modules">全部数据 ></router-link>
-        </div>
-        <div class="mobile-data-row">
-          <router-link v-for="item in mobileDataItems" :key="item.title" :to="item.to" class="mobile-data-item">
-            <span class="mobile-data-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-            <strong>{{ item.value }}</strong>
-            <small>{{ item.title }}</small>
-          </router-link>
-        </div>
-      </section>
-
-      <section class="mobile-list-card mobile-only">
-        <router-link v-for="item in mobileListItems" :key="item.title" :to="item.to" class="mobile-list-item">
-          <span class="mobile-list-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-          <strong>{{ item.title }}</strong>
-          <small>{{ item.desc }}</small>
-          <em>{{ item.extra }} ></em>
-        </router-link>
-      </section>
-
-      <div class="me-center-grid">
-        <article v-for="card in centerCards" :key="card.key" class="me-center-card">
-          <div class="me-card-head">
-            <span class="me-card-icon" :class="`is-${card.theme}`">{{ card.icon }}</span>
-            <div>
-              <h3>{{ card.title }}</h3>
-              <p>{{ card.desc }}</p>
-            </div>
-          </div>
-          <div class="me-card-list">
-            <router-link v-for="row in card.rows" :key="row.label" :to="row.to">
-              {{ row.label }}
-              <strong>{{ row.value }}</strong>
-            </router-link>
-          </div>
-          <router-link :to="card.actionTo" class="me-card-action" :class="`is-${card.theme}`">{{ card.action }} ></router-link>
-        </article>
-      </div>
-
-      <section class="me-recommend-panel">
-        <h3>为你推荐</h3>
-        <div class="me-recommend-list">
-          <router-link v-for="item in recommendItems" :key="item.title" :to="item.to" class="me-recommend-item">
-            <span class="me-recommend-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-            <span>
-              <strong>{{ item.title }}</strong>
-              <small>{{ item.desc }}</small>
-              <em>{{ item.action }} →</em>
-            </span>
-          </router-link>
-        </div>
-      </section>
-
-      <section class="mobile-recommend-card mobile-only">
-        <h2>为你推荐</h2>
-        <div class="mobile-recommend-grid">
-          <router-link v-for="item in recommendItems" :key="item.title" :to="item.to" class="mobile-recommend-item">
-            <span class="mobile-recommend-icon" :class="`is-${item.theme}`">{{ item.icon }}</span>
-            <strong>{{ item.title }}</strong>
-            <small>{{ item.desc }}</small>
-            <em>{{ item.action }}</em>
-          </router-link>
-        </div>
-      </section>
-    </main>
+    <DesktopDashboard
+      class="me-desktop"
+      :user="user"
+      :display-name="displayName"
+      :user-id-display="userIdDisplay"
+      :location-display="locationDisplay"
+      :invite-code-display="inviteCodeDisplay"
+      :copy-feedback="copyFeedback"
+      :copy-feedback-error="copyFeedbackError"
+      :profile-light-stats="profileLightStats"
+      :growth-level="growthLevel"
+      :growth-progress="growthProgress"
+      :completed-task-count="completedTaskCount"
+      :daily-tasks="dailyTasks"
+      :overview-items="overviewItems"
+      :group-info="groupInfo"
+      :group-ranking="groupRanking"
+      :quick-actions="quickActions"
+      :on-open-settings="openSettingsPanel"
+      :on-open-edit="openEditPanel"
+      :on-copy-invite="copyInviteCode"
+    />
 
     <div v-if="editOpen" class="me-modal-backdrop" @click.self="closeEditPanel">
-      <section class="me-modal me-edit-card" role="dialog" aria-modal="true" aria-label="编辑个人资料">
+      <section class="me-modal" role="dialog" aria-modal="true" aria-label="编辑个人资料">
         <div class="me-modal-head">
           <h3>编辑个人资料</h3>
-          <button type="button" class="me-modal-close" aria-label="关闭" @click="closeEditPanel">×</button>
+          <button type="button" aria-label="关闭" @click="closeEditPanel">×</button>
         </div>
         <form class="me-edit-form" @submit.prevent="handleSaveProfile">
           <label>
             <span>昵称</span>
-            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称（最多20字）" />
+            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称" />
           </label>
           <label>
             <span>头像</span>
-            <div class="me-avatar-uploader">
-              <img v-if="editForm.avatar" :src="editForm.avatar" class="me-avatar-upload-preview" alt="头像预览" />
-              <div v-else class="me-avatar-upload-preview me-avatar-upload-fallback">{{ avatarFallback }}</div>
-              <div class="me-avatar-upload-actions">
-                <button type="button" class="me-avatar-upload-btn" :disabled="uploading || saving" @click="handlePickAvatar">
-                  {{ uploading ? '上传中...' : '选择图片' }}
-                </button>
-                <p class="me-avatar-upload-tip">支持常见图片格式，选择后自动上传并填充头像</p>
-              </div>
+            <div class="avatar-uploader">
+              <img v-if="editForm.avatar" :src="editForm.avatar" alt="头像预览" />
+              <div v-else>{{ avatarFallback }}</div>
+              <button type="button" :disabled="uploading || saving" @click="handlePickAvatar">
+                {{ uploading ? '上传中...' : '选择图片' }}
+              </button>
             </div>
           </label>
           <label>
             <span>所在地</span>
-            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：上海·浦东" />
+            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：河北省 保定市" />
           </label>
           <label>
             <span>个人简介</span>
             <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
           </label>
-          <p v-if="saveMessage" :class="['me-save-message', { 'is-error': saveError }]">{{ saveMessage }}</p>
-          <div class="me-edit-actions">
-            <button type="button" class="me-edit-cancel" :disabled="saving" @click="resetEditForm">重置</button>
-            <button type="submit" class="me-edit-submit" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
+          <p v-if="saveMessage" class="save-message" :class="{ 'is-error': saveError }">{{ saveMessage }}</p>
+          <div class="modal-actions">
+            <button type="button" class="outline-action" :disabled="saving" @click="resetEditForm">重置</button>
+            <button type="submit" class="primary-action" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
           </div>
         </form>
       </section>
     </div>
 
     <div v-if="settingsOpen" class="me-modal-backdrop" @click.self="closeSettingsPanel">
-      <section class="me-modal me-settings-modal" role="dialog" aria-modal="true" aria-label="账号设置">
+      <section class="me-modal" role="dialog" aria-modal="true" aria-label="账号设置">
         <div class="me-modal-head">
           <h3>账号设置</h3>
-          <button type="button" class="me-modal-close" aria-label="关闭" @click="closeSettingsPanel">×</button>
+          <button type="button" aria-label="关闭" @click="closeSettingsPanel">×</button>
         </div>
-        <div class="me-account-summary">
-          <img v-if="user?.avatar" :src="user.avatar" class="me-account-avatar" alt="头像" />
-          <div v-else class="me-account-avatar me-account-avatar-fallback">{{ avatarFallback }}</div>
+        <div class="settings-summary">
+          <div class="profile-avatar avatar-fallback">{{ avatarFallback }}</div>
           <div>
-            <strong>{{ user?.username || '平台用户' }}</strong>
+            <strong>{{ displayName }}</strong>
             <span>{{ roleLabel }}</span>
           </div>
         </div>
-        <div class="me-settings-list">
-          <div class="me-settings-row">
-            <span>账号 ID</span>
-            <strong>{{ user?.id || '--' }}</strong>
-          </div>
-          <div class="me-settings-row">
-            <span>手机号</span>
-            <strong>{{ user?.phone || '未绑定' }}</strong>
-          </div>
-          <div class="me-settings-row">
-            <span>认证状态</span>
-            <strong>{{ verifyLabel }}</strong>
-          </div>
-          <div class="me-settings-row">
-            <span>注册时间</span>
-            <strong>{{ registerDate }}</strong>
-          </div>
+        <div class="settings-list">
+          <div><span>账号 ID</span><strong>{{ userIdDisplay }}</strong></div>
+          <div><span>手机号</span><strong>{{ user?.phone || '未绑定' }}</strong></div>
+          <div><span>认证状态</span><strong>{{ verifyLabel }}</strong></div>
+          <div><span>注册时间</span><strong>{{ registerDate }}</strong></div>
         </div>
-        <div class="me-settings-actions">
-          <button type="button" class="me-edit-submit" @click="openEditPanel">编辑个人资料</button>
-          <button type="button" class="me-logout-btn" @click="handleLogout">退出登录</button>
+        <div class="modal-actions">
+          <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
         </div>
       </section>
     </div>
@@ -259,6 +263,7 @@ import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
+import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -284,13 +289,48 @@ const editForm = reactive({
 const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
-const accountSettingsRoute = { path: '/me', query: { panel: 'settings' } }
-const profileEditRoute = { path: '/me', query: { panel: 'edit' } }
 
-const avatarFallback = computed(() => {
-  const name = user.value?.username || ''
-  return name.slice(0, 1).toUpperCase() || 'U'
-})
+const growthLevel = {
+  level: 2,
+  name: '新手创作者',
+  currentExp: 120,
+  nextExp: 300,
+  sources: [
+    { label: '发布内容', exp: 10 },
+    { label: '每日心声', exp: 5 },
+    { label: '创建团体', exp: 20 },
+    { label: '获得点赞', exp: 2 }
+  ]
+}
+
+const dailyTasks = [
+  { title: '发布一条每日心声', exp: 5, current: 1, total: 1, done: true, to: '/platform/positive-share' },
+  { title: '浏览 3 条内容', exp: 2, current: 1, total: 3, done: false, to: '/articles' },
+  { title: '点赞 1 条内容', exp: 1, current: 0, total: 1, done: false, to: '/platform/positive-share' },
+  { title: '分享 1 条内容', exp: 2, current: 0, total: 1, done: false, to: '/articles' }
+]
+
+const groupInfo = {
+  name: 'LoveCube 官方团队',
+  role: '管理员',
+  members: 23,
+  activity: '中等',
+  weekExp: 120
+}
+
+const groupRanking = [
+  { rank: 1, name: 'LoveCube 官方团队', activity: 320 },
+  { rank: 2, name: '星空联谊社', activity: 280 },
+  { rank: 3, name: '绿来是你', activity: 210 }
+]
+
+const displayName = computed(() => user.value?.username || user.value?.nickname || 'LoveCube 官方团队')
+const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '1')
+const locationDisplay = computed(() => user.value?.location || '河北省 保定市')
+const avatarFallback = computed(() => String(displayName.value || 'L').slice(0, 1).toUpperCase())
+const inviteCodeDisplay = computed(() => inviteCode.value || 'LC69UWM')
+const growthProgress = computed(() => `${Math.round((growthLevel.currentExp / growthLevel.nextExp) * 100)}%`)
+const completedTaskCount = computed(() => dailyTasks.filter(item => item.done).length)
 
 const roleLabel = computed(() => {
   const role = String(user.value?.role || '').toLowerCase()
@@ -312,127 +352,34 @@ const registerDate = computed(() => {
   return String(raw).replace('T', ' ').slice(0, 10)
 })
 
-const inviteCodeDisplay = computed(() => inviteCode.value || '--')
-
-const heroStats = computed(() => [
-  { key: 'content', label: '内容发布', value: myContentCount.value, sub: '累计发布', icon: '▣', theme: 'blue' },
-  { key: 'activity', label: '活动参与', value: myEventCount.value, sub: '累计参与', icon: '□', theme: 'purple' },
-  { key: 'favorite', label: '收藏内容', value: myFavoriteCount.value, sub: '收藏总数', icon: '★', theme: 'amber' },
-  { key: 'like', label: '互动热度', value: '--', sub: '待接入', icon: '👍', theme: 'orange' }
-])
-
-const centerCards = computed(() => [
-  {
-    key: 'content',
-    title: '内容中心',
-    desc: '管理你的内容创作',
-    icon: '▣',
-    theme: 'purple',
-    action: '去创作',
-    actionTo: '/platform/positive-share',
-    rows: [
-      { label: '我的内容', value: myContentCount.value, to: '/platform/positive-share' },
-      { label: '每日心声', value: Math.min(myContentCount.value, 7), to: '/platform/positive-share' },
-      { label: '消息中心', value: unreadCount.value, to: '/messages' },
-      { label: '收藏夹', value: myFavoriteCount.value, to: '/me/favorites' },
-      { label: '草稿箱', value: '--', to: '/me/drafts' }
-    ]
-  },
-  {
-    key: 'activity',
-    title: '活动中心',
-    desc: '浏览并参与平台活动',
-    icon: '□',
-    theme: 'orange',
-    action: '查看活动',
-    actionTo: '/events',
-    rows: [
-      { label: '活动报名', value: myEventCount.value, to: '/events' },
-      { label: '活动记录', value: myEventCount.value, to: '/events' },
-      { label: '活动收藏', value: Math.min(myFavoriteCount.value, 2), to: '/events' }
-    ]
-  },
-  {
-    key: 'growth',
-    title: '模块中心',
-    desc: '查看平台模块与成长信息',
-    icon: '◇',
-    theme: 'teal',
-    action: '查看模块',
-    actionTo: '/modules',
-    rows: [
-      { label: '当前等级', value: '--', to: '/modules' },
-      { label: '经验值', value: '--', to: '/modules' },
-      { label: '积分余额', value: '--', to: '/modules' },
-      { label: '勋章墙', value: '--', to: '/modules' }
-    ]
-  },
-  {
-    key: 'account',
-    title: '账号设置',
-    desc: '登录状态与账号信息',
-    icon: '⚙',
-    theme: 'blue',
-    action: '查看设置',
-    actionTo: accountSettingsRoute,
-    rows: [
-      { label: '编辑资料', value: '>', to: profileEditRoute },
-      { label: '账号角色', value: roleLabel.value, to: accountSettingsRoute },
-      { label: '通知消息', value: unreadCount.value, to: '/messages' },
-      { label: '认证状态', value: verifyLabel.value, to: accountSettingsRoute }
-    ]
-  }
-])
-
-const recommendItems = [
-  {
-    title: '发布今日心声',
-    desc: '记录此刻的想法，分享你的心情',
-    action: '去发布',
-    icon: '✎',
-    theme: 'pink',
-    to: '/platform/positive-share'
-  },
-  {
-    title: '参加热门活动',
-    desc: '发现有趣的活动，结识新朋友',
-    action: '去看看',
-    icon: '□',
-    theme: 'blue',
-    to: '/events'
-  },
-  {
-    title: '完善个人资料',
-    desc: '完善资料可提升曝光和互动',
-    action: '去完善',
-    icon: '●',
-    theme: 'orange',
-    to: profileEditRoute
-  }
+const profileLightStats = [
+  { label: '关注', value: '12' },
+  { label: '粉丝', value: '236' },
+  { label: '获赞', value: '1,234' }
 ]
 
-const mobileShortcutItems = computed(() => [
-  { title: '我的内容', desc: `${myContentCount.value} 篇内容`, icon: '▣', theme: 'purple', to: '/platform/positive-share' },
-  { title: '每日心声', desc: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', theme: 'pink', to: '/platform/positive-share' },
-  { title: '活动中心', desc: `${myEventCount.value} 个活动`, icon: '□', theme: 'orange', to: '/events' },
-  { title: '消息中心', desc: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '♧', theme: 'blue', to: '/messages' }
+const workspaceItems = computed(() => [
+  { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
+  { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
+  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
+  { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
 ])
 
-const mobileDataItems = computed(() => [
-  { title: '发布内容', value: myContentCount.value, icon: '▣', theme: 'purple', to: '/platform/positive-share' },
-  { title: '活动参与', value: myEventCount.value, icon: '□', theme: 'pink', to: '/events' },
-  { title: '收藏内容', value: myFavoriteCount.value, icon: '★', theme: 'amber', to: '/me/favorites' },
-  { title: '互动热度', value: '--', icon: '👍', theme: 'teal', to: '/platform/positive-share' },
-  { title: '当前等级', value: '--', icon: '◇', theme: 'blue', to: '/modules' }
+const overviewItems = computed(() => [
+  { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
+  { label: '收藏内容', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
+  { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },
+  { label: '当前等级', value: `Lv.${growthLevel.level}`, icon: '◇', tone: 'blue', to: '/modules' }
 ])
 
-const mobileListItems = computed(() => [
-  { title: '内容中心', desc: '管理我的内容创作', extra: `${myContentCount.value} 篇内容`, icon: '▣', theme: 'purple', to: '/platform/positive-share' },
-  { title: '模块中心', desc: '创作者成长体系', extra: '待接入', icon: '♕', theme: 'amber', to: '/modules' },
-  { title: '通知中心', desc: '平台消息与评论', extra: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '♧', theme: 'pink', to: '/messages' },
-  { title: '账号设置', desc: '登录状态与账号信息', extra: verifyLabel.value, icon: '⚙', theme: 'teal', to: accountSettingsRoute },
-  { title: '邀请码', desc: '邀请好友得奖励', extra: '去邀请', icon: '✉', theme: 'blue', to: '/fellowship/invite' },
-  { title: '编辑资料', desc: '编辑头像昵称简介', extra: '修改', icon: '◇', theme: 'purple', to: profileEditRoute }
+const quickActions = computed(() => [
+  { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: '/platform/positive-share' },
+  { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: '/modules' },
+  { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: '/messages' },
+  { title: '账号设置', desc: '账号与安全', icon: '◇', tone: 'green', to: { path: '/me', query: { panel: 'settings' } } },
+  { title: '邀请码', desc: '邀请好友加入', icon: '▭', tone: 'amber', to: '/fellowship/invite' },
+  { title: '编辑资料', desc: '修改个人资料', icon: '✎', tone: 'blue', to: { path: '/me', query: { panel: 'edit' } } }
 ])
 
 async function refreshUnreadCount() {
@@ -492,9 +439,7 @@ async function handlePickAvatar() {
   saveError.value = false
   try {
     const avatarUrl = await pickAndUpload({ quality: 0.8 })
-    if (!avatarUrl) {
-      throw new Error('上传失败，请重试')
-    }
+    if (!avatarUrl) throw new Error('上传失败，请重试')
     editForm.avatar = avatarUrl
   } catch (error) {
     saveError.value = true
@@ -526,7 +471,7 @@ async function handleSaveProfile() {
     })
     await userStore.refreshCurrentUser().catch(() => {})
     saveMessage.value = '资料已更新'
-    setTimeout(() => {
+    window.setTimeout(() => {
       if (!saveError.value) closeEditPanel()
     }, 600)
   } catch (error) {
@@ -543,39 +488,34 @@ function handleLogout() {
 }
 
 async function copyInviteCode() {
-  if (!inviteCode.value) return
+  if (!inviteCodeDisplay.value) return
   copyFeedback.value = ''
   copyFeedbackError.value = false
   try {
     if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(inviteCode.value)
+      await navigator.clipboard.writeText(inviteCodeDisplay.value)
     } else {
       const input = document.createElement('input')
-      input.value = inviteCode.value
+      input.value = inviteCodeDisplay.value
       document.body.appendChild(input)
       input.select()
       document.execCommand('copy')
       document.body.removeChild(input)
     }
     copyFeedback.value = '已复制'
-    setTimeout(() => { copyFeedback.value = '' }, 2000)
+    window.setTimeout(() => { copyFeedback.value = '' }, 2000)
   } catch {
     copyFeedbackError.value = true
     copyFeedback.value = '复制失败'
-    setTimeout(() => { copyFeedback.value = '' }, 2000)
+    window.setTimeout(() => { copyFeedback.value = '' }, 2000)
   }
 }
 
 onMounted(async () => {
   window.addEventListener('platform-notif-read-all', handleNotifReadAll)
-  if (route.query?.panel === 'settings') {
-    openSettingsPanel()
-  } else if (route.query?.panel === 'edit') {
-    openEditPanel()
-  }
-  if (!user.value) {
-    await userStore.refreshCurrentUser().catch(() => {})
-  }
+  if (route.query?.panel === 'settings') openSettingsPanel()
+  if (route.query?.panel === 'edit') openEditPanel()
+  if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
   const [statsRes, inviteRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode()])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
@@ -591,11 +531,8 @@ onMounted(async () => {
 watch(
   () => route.query?.panel,
   (panel) => {
-    if (panel === 'settings') {
-      openSettingsPanel()
-    } else if (panel === 'edit') {
-      openEditPanel()
-    }
+    if (panel === 'settings') openSettingsPanel()
+    if (panel === 'edit') openEditPanel()
   }
 )
 
@@ -605,2397 +542,1254 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.me-page {
+  --me-bg: #f6f7fb;
+  --me-bg-soft: #f8fafc;
+  --me-card: #ffffff;
+  --me-border: #eef0f4;
+  --me-text: #0f172a;
+  --me-muted: #64748b;
+  --me-primary: #6d5dfb;
+  --me-primary-dark: #4f46e5;
+  --me-white: #ffffff;
+  --me-success: #059669;
+  --me-danger: #dc2626;
+  --me-text-soft: #334155;
+  --me-border-strong: #dfe4ee;
+  --me-violet: #4f46e5;
+  --me-rose: #db2777;
+  --me-amber: #d97706;
+  --me-blue: #2563eb;
+  --me-medal: #9a6700;
+  --me-orange: #f97316;
+  --me-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  min-height: 100vh;
+  background: var(--me-bg);
+  color: var(--me-text);
+}
+
+:global(.platform-route-back) {
+  display: none !important;
+}
+
+.me-desktop {
+  display: none;
+}
+
+.me-shell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 24px 18px calc(92px + env(safe-area-inset-bottom));
+}
+
 .me-layout {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 20px;
-}
-
-.me-sidebar {
-  position: sticky;
-  top: 88px;
-  height: fit-content;
-}
-
-.me-sidebar h2 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.me-menu {
-  margin-top: 14px;
-  display: grid;
-  gap: 6px;
-}
-
-.me-menu-item {
   display: flex;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 10px;
-  color: var(--lc-muted);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.me-menu-item.is-active,
-.me-menu-item:hover {
-  background: #feeef3;
-  color: #e11d48;
-}
-
-.me-dot {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.me-main {
-  display: grid;
-  gap: 14px;
-}
-
-.me-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  flex-direction: column;
   gap: 16px;
-  background: linear-gradient(100deg, #f8a2ce, #5a8ff2);
 }
 
-.me-user {
+.me-aside,
+.me-main-stack {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.me-layout .growth-card,
+.me-layout .task-card,
+.me-main-stack .workspace-grid,
+.me-main-stack .overview-card,
+.me-main-stack .group-card,
+.me-main-stack .quick-grid {
+  margin-top: 0;
+}
+
+.me-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 4px 16px;
+}
+
+.me-header h1 {
+  margin: 0;
+  font-size: clamp(26px, 7vw, 30px);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.me-header p {
+  margin: 8px 0 0;
+  color: var(--me-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.icon-button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--me-text);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.dashboard-card {
+  border: 1px solid var(--me-border);
+  border-radius: 20px;
+  background: var(--me-card);
+  box-shadow: var(--me-shadow);
+}
+
+.profile-card {
+  padding: 22px 24px;
+}
+
+.profile-main {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 20px;
   align-items: center;
 }
 
-.me-avatar {
+.profile-avatar {
   width: 84px;
   height: 84px;
+  flex: 0 0 auto;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.16);
 }
 
-.me-avatar-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--me-white);
+  background: linear-gradient(135deg, var(--me-primary), var(--me-primary-dark));
   font-size: 28px;
   font-weight: 800;
 }
 
-.me-meta {
+.profile-info {
+  flex: 1;
   min-width: 0;
 }
 
-.me-meta h1 {
-  margin: 0;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.me-meta p {
-  margin: 6px 0;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.me-tags {
+.profile-badges {
   display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.profile-badges span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 24px rgba(15, 23, 42, 0.08);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.profile-badges span::after {
+  position: absolute;
+  inset: 7px 9px auto;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  content: "";
+  pointer-events: none;
+}
+
+.profile-badges .tone-amber {
+  background: linear-gradient(145deg, #fff8e8, #fff0c9);
+}
+
+.profile-badges .tone-rose {
+  background: linear-gradient(145deg, #fff1f7, #ffe3ef);
+}
+
+.profile-badges .tone-blue {
+  background: linear-gradient(145deg, #eef6ff, #e1edff);
+}
+
+.profile-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
-.me-tag {
-  padding: 3px 10px;
-  border-radius: 999px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 12px;
+.profile-name-row h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
 }
 
-.me-edit-btn {
-  margin-top: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.52);
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+.creator-tag {
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 4px 9px;
+  color: var(--me-primary-dark);
+  background: #f1efff;
   font-size: 12px;
   font-weight: 700;
+}
+
+.profile-info p,
+.invite-row {
+  margin: 7px 0 0;
+  color: var(--me-muted);
+  font-size: 13px;
+}
+
+.invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.invite-row button {
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 11px;
+  color: var(--me-primary-dark);
+  background: #f0efff;
+  font-size: 12px;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.me-kpis {
+.invite-row em,
+.save-message {
+  color: var(--me-success);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.invite-row em.is-error,
+.save-message.is-error {
+  color: var(--me-danger);
+}
+
+.profile-light-stats {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: min(100%, 330px);
+  margin: -2px 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.72);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.76));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
-.me-kpis article {
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.92);
+.profile-light-stats span {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  text-align: center;
 }
 
-.me-kpis p {
-  margin: 0;
-  color: var(--lc-muted);
+.profile-light-stats span + span::before {
+  position: absolute;
+  left: -5px;
+  top: 7px;
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0), #dbe1ea, rgba(226, 232, 240, 0));
+  content: "";
+}
+
+.profile-light-stats small,
+.overview-item small,
+.quick-item small,
+.workspace-item small {
+  color: var(--me-muted);
   font-size: 12px;
 }
 
-.me-kpis strong {
-  font-size: 26px;
+.profile-light-stats strong {
+  font-size: 17px;
 }
 
-.me-grid {
+.profile-actions,
+.modal-actions,
+.group-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.profile-actions {
+  margin-top: 24px;
+}
+
+.primary-action,
+.outline-action,
+.danger-action,
+.group-actions a,
+.task-item a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-edit-action::before {
+  margin-right: 8px;
+  content: "✎";
+  font-size: 15px;
+}
+
+.fellowship-action::before {
+  margin-right: 8px;
+  content: "♡";
+  font-size: 16px;
+}
+
+.group-enter-action::before,
+.group-post-action::before,
+.group-member-action::before {
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+.group-enter-action::before {
+  content: "↗";
+}
+
+.group-post-action::before {
+  content: "✈";
+}
+
+.group-member-action::before {
+  content: "♙";
+}
+
+.primary-action {
+  border: 0;
+  color: var(--me-white);
+  background: linear-gradient(135deg, var(--me-primary), var(--me-primary-dark));
+}
+
+.outline-action,
+.group-actions a {
+  border: 1px solid #dfe4ee;
+  color: var(--me-text);
+  background: #ffffff;
+}
+
+.danger-action {
+  border: 1px solid #fecaca;
+  color: var(--me-danger);
+  background: #fff5f5;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.section-head a,
+.ranking-head a {
+  color: var(--me-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.growth-card,
+.task-card,
+.overview-card,
+.group-card {
+  margin-top: 16px;
+  padding: 22px 24px;
+}
+
+.growth-body {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 210px;
+  gap: 24px;
+  align-items: center;
+}
+
+.level-badge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  color: var(--me-white);
+  background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(145deg, #9b8cff 0%, var(--me-primary) 48%, var(--me-primary-dark) 100%);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+  font-size: 25px;
+  font-weight: 900;
+  text-shadow: 0 1px 8px rgba(40, 33, 160, 0.22);
+  filter: drop-shadow(0 14px 22px rgba(79, 70, 229, 0.22));
+}
+
+.level-badge::before {
+  position: absolute;
+  inset: -9px;
+  z-index: -1;
+  background: linear-gradient(145deg, #e8e4ff, #cfc7ff);
+  clip-path: inherit;
+  content: "";
+}
+
+.level-badge::after {
+  position: absolute;
+  inset: 12px 20px auto;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  content: "";
+  pointer-events: none;
+}
+
+.level-content h3 {
+  margin: 6px 0 8px;
+  font-size: 18px;
+}
+
+.level-content p {
+  margin: 0;
+  color: var(--me-muted);
+  font-size: 13px;
+}
+
+.progress-track,
+.mini-progress {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: #edf0f5;
+}
+
+.progress-track {
+  margin-top: 16px;
+}
+
+.progress-track span,
+.mini-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--me-primary);
+}
+
+.progress-meta {
+  margin-top: 8px;
+  color: var(--me-muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+.exp-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 0 8px 24px;
+  border-left: 1px solid var(--me-border);
+  list-style: none;
+}
+
+.exp-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--me-muted);
+  font-size: 13px;
+}
+
+.exp-list li::before {
+  width: 20px;
+  flex: 0 0 auto;
+  color: var(--me-primary);
+  font-size: 15px;
+  font-weight: 900;
+  content: "▧";
+}
+
+.exp-list li:nth-child(2)::before {
+  color: var(--me-rose);
+  content: "♡";
+}
+
+.exp-list li:nth-child(3)::before {
+  content: "♙";
+}
+
+.exp-list li:nth-child(4)::before {
+  content: "♧";
+}
+
+.growth-card .exp-list li {
+  align-items: center;
+}
+
+.growth-card .exp-list li::before {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--me-border);
+  border-radius: 9px;
+  background: linear-gradient(145deg, #f3f1ff, #ffffff);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 16px rgba(79, 70, 229, 0.08);
+  font-size: 13px;
+}
+
+.growth-card .exp-list li:nth-child(2)::before {
+  background: linear-gradient(145deg, #fff0f7, #ffffff);
+}
+
+.growth-card .exp-list li:nth-child(3)::before {
+  background: linear-gradient(145deg, #f2f0ff, #ffffff);
+}
+
+.growth-card .exp-list li:nth-child(4)::before {
+  color: var(--me-blue);
+  background: linear-gradient(145deg, #eef6ff, #ffffff);
+}
+
+.exp-list li span {
+  flex: 1;
+}
+
+.exp-list strong {
+  color: var(--me-muted);
+}
+
+.task-head h2 span {
+  margin-left: 6px;
+  color: var(--me-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.task-head p {
+  margin: 0;
+  color: var(--me-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.task-head b {
+  color: var(--me-primary);
+  font-weight: 900;
+}
+
+.task-grid {
+  display: flex;
   gap: 14px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  scrollbar-width: none;
+}
+
+.task-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.task-item {
+  display: grid;
+  box-sizing: border-box;
+  flex: 0 0 calc((100% - 14px) / 2);
+  justify-items: center;
+  width: auto;
+  min-width: 0;
+  padding: 16px 14px 14px;
+  border: 1px solid var(--me-border);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fbfcff, #ffffff);
+  text-align: center;
+}
+
+.task-item:nth-child(n + 2) {
+  background: linear-gradient(145deg, #fffaf2, #fffdf8);
+}
+
+.task-item.is-done {
+  background: linear-gradient(145deg, #f8faff, #ffffff);
+}
+
+.task-check {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--me-white);
+  background: var(--me-primary);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.task-item h3 {
+  margin: 9px 0 4px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.task-item p,
+.task-item small {
+  margin: 0;
+  color: var(--me-muted);
+  font-size: 12px;
+}
+
+.mini-progress {
+  width: 100%;
+  height: 6px;
+  margin: 10px 0 6px;
+}
+
+.task-item a {
+  min-height: 30px;
+  width: 100%;
+  margin-top: 9px;
+  border: 1px solid #cfd4ff;
+  color: var(--me-primary-dark);
+  background: #ffffff;
+}
+
+.task-item.is-done a {
+  color: var(--me-muted);
+  border-color: var(--me-border-strong);
+}
+
+.workspace-grid,
+.quick-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.workspace-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quick-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.workspace-item,
+.quick-item,
+.overview-item {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.workspace-item {
+  min-height: 136px;
+  padding: 18px 16px;
+}
+
+.workspace-item .soft-icon {
+  color: var(--me-white);
+  box-shadow: 0 12px 20px rgba(79, 70, 229, 0.16);
+}
+
+.workspace-item .tone-violet {
+  background: linear-gradient(135deg, #7c66ff, var(--me-primary-dark));
+}
+
+.workspace-item .tone-rose {
+  background: linear-gradient(135deg, #ff5fa8, #ec4899);
+}
+
+.workspace-item .tone-amber {
+  background: linear-gradient(135deg, #ffae3d, #f97316);
+}
+
+.workspace-item .tone-blue {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+}
+
+.workspace-item strong,
+.quick-item strong {
+  font-size: 15px;
+}
+
+.workspace-item em {
+  color: var(--me-muted);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.soft-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.tone-violet { color: var(--me-violet); background: #f1efff; }
+.tone-rose { color: var(--me-rose); background: #fdf2f8; }
+.tone-amber { color: var(--me-amber); background: #fffbeb; }
+.tone-blue { color: var(--me-blue); background: #eff6ff; }
+.tone-green { color: var(--me-success); background: #ecfdf5; }
+
+.overview-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(62px, 1fr));
+  gap: 16px;
+  overflow: hidden;
+}
+
+.overview-item {
+  min-width: 0;
+  justify-items: center;
+  padding: 6px 2px;
+  text-align: center;
+}
+
+.overview-item strong {
+  font-size: 22px;
+}
+
+.group-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.group-avatar {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: var(--me-white);
+  background: linear-gradient(135deg, var(--me-primary), var(--me-primary-dark));
+  box-shadow: 0 10px 18px rgba(109, 93, 251, 0.22);
+  font-weight: 900;
+}
+
+.group-summary h3 {
+  margin: 0 0 7px;
+  font-size: 17px;
+}
+
+.group-summary h3 span {
+  margin-left: 6px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--me-primary-dark);
+  background: #f1efff;
+  font-size: 12px;
+}
+
+.group-summary p {
+  margin: 4px 0 0;
+  color: var(--me-muted);
+  font-size: 13px;
+}
+
+.group-summary i {
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  margin: 0 8px;
+  background: #dbe1ea;
+}
+
+.group-actions {
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  max-width: 360px;
+  margin-left: auto;
+}
+
+.group-actions a {
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.ranking-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ranking-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ranking-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 0 12px;
+  border: 1px solid var(--me-border);
+  border-radius: 12px;
+  background: var(--me-bg-soft);
+}
+
+.rank-medal {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--me-medal);
+  background: #fff1c2;
+  font-weight: 900;
+}
+
+.ranking-list li:nth-child(2) .rank-medal {
+  color: var(--me-muted);
+  background: #e7edf7;
+}
+
+.ranking-list li:nth-child(3) .rank-medal {
+  color: var(--me-orange);
+  background: #ffead6;
+}
+
+.ranking-list small {
+  grid-column: 2;
+  color: var(--me-muted);
+}
+
+.quick-item {
+  justify-items: center;
+  min-height: 108px;
+  padding: 16px 8px;
+  text-align: center;
+}
+
+.quick-item .soft-icon {
+  width: 36px;
+  height: 36px;
 }
 
 .me-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, .42);
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.42);
 }
 
 .me-modal {
-  width: min(100%, 520px);
-  max-height: min(86vh, 720px);
-  overflow-y: auto;
-  border: 1px solid rgba(226, 232, 240, .92);
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .24);
+  width: min(100%, 430px);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
 
 .me-modal-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 18px 20px 12px;
-  background: #fff;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .me-modal-head h3 {
   margin: 0;
-  color: #0f172a;
   font-size: 18px;
 }
 
-.me-modal-close {
+.me-modal-head button {
+  width: 34px;
+  height: 34px;
   border: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  color: #64748b;
+  border-radius: 50%;
   background: #f1f5f9;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.me-edit-card h3 {
-  margin-top: 0;
-}
-
-.me-edit-card {
-  padding: 0 20px 20px;
+  font-size: 20px;
 }
 
 .me-edit-form {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .me-edit-form label {
   display: grid;
-  gap: 6px;
-}
-
-.me-edit-form span {
+  gap: 7px;
+  color: var(--me-text-soft);
   font-size: 13px;
-  font-weight: 700;
-  color: #334155;
+  font-weight: 800;
 }
 
 .me-edit-form input,
 .me-edit-form textarea {
   width: 100%;
-  border: 1px solid #d7e0ed;
-  border-radius: 8px;
-  padding: 10px;
+  border: 1px solid #dfe4ee;
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--me-text);
+  background: #ffffff;
   font: inherit;
-  color: #0f172a;
-  background: #fff;
+  outline: 0;
 }
 
-.me-edit-form textarea {
-  resize: vertical;
-}
-
-.me-avatar-uploader {
+.avatar-uploader {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.me-avatar-upload-preview {
-  width: 64px;
-  height: 64px;
+.avatar-uploader img,
+.avatar-uploader div {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #d7e0ed;
-}
-
-.me-avatar-upload-fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  background: #f8fafc;
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.me-avatar-upload-actions {
-  display: grid;
-  gap: 6px;
-}
-
-.me-avatar-upload-btn {
-  width: fit-content;
-  border: 1px solid #d7e0ed;
-  border-radius: 8px;
-  background: #fff;
-  color: #334155;
-  padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.me-avatar-upload-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.me-avatar-upload-tip {
-  margin: 0;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.me-save-message {
-  margin: 0;
-  color: #16a34a;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.me-save-message.is-error {
-  color: #dc2626;
-}
-
-.me-edit-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.me-edit-cancel,
-.me-edit-submit {
-  border: 1px solid #d7e0ed;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.me-edit-cancel {
-  background: #fff;
-  color: #334155;
-}
-
-.me-edit-submit {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #fff;
-}
-
-.me-settings-modal {
-  padding: 0 20px 20px;
-}
-
-.me-account-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 14px;
-  background: #f8fafc;
-}
-
-.me-account-avatar {
-  width: 54px;
-  height: 54px;
-  border-radius: 999px;
-  object-fit: cover;
-}
-
-.me-account-avatar-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #2563eb;
-  background: #dbeafe;
+  color: var(--me-white);
+  background: linear-gradient(135deg, var(--me-primary), var(--me-primary-dark));
   font-weight: 900;
 }
 
-.me-account-summary strong,
-.me-account-summary span {
+.avatar-uploader button {
+  border: 1px solid #dfe4ee;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--me-text);
+  background: #ffffff;
+}
+
+.settings-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.settings-summary .profile-avatar {
+  width: 52px;
+  height: 52px;
+  font-size: 20px;
+}
+
+.settings-summary strong,
+.settings-summary span {
   display: block;
 }
 
-.me-account-summary strong {
-  color: #0f172a;
-  font-size: 16px;
-}
-
-.me-account-summary span {
+.settings-summary span {
   margin-top: 4px;
-  color: #64748b;
+  color: var(--me-muted);
   font-size: 13px;
 }
 
-.me-settings-list {
-  display: grid;
-  gap: 0;
-  margin-top: 14px;
-  border: 1px solid #e2e8f0;
+.settings-list {
+  border: 1px solid var(--me-border);
   border-radius: 14px;
   overflow: hidden;
 }
 
-.me-settings-row {
+.settings-list div {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  min-height: 46px;
-  padding: 0 14px;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--me-border);
+  color: var(--me-muted);
+  font-size: 13px;
 }
 
-.me-settings-row:last-child {
+.settings-list div:last-child {
   border-bottom: 0;
 }
 
-.me-settings-row span {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.me-settings-row strong {
-  color: #0f172a;
-  font-size: 13px;
-  text-align: right;
-}
-
-.me-settings-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.me-logout-btn {
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 8px 14px;
-  color: #dc2626;
-  background: #fef2f2;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.me-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.me-shortcuts a {
-  border: 1px solid var(--lc-border);
-  border-radius: 10px;
-  padding: 10px;
-  color: var(--lc-text);
-  text-decoration: none;
-  text-align: center;
-}
-
-@media (max-width: 1023px) {
-  .me-layout {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .me-sidebar {
-    position: static;
-  }
-
-  .me-hero,
-  .me-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .me-kpis strong {
-    font-size: 22px;
-  }
-}
-
-@media (max-width: 767px) {
-  .me-layout {
-    gap: 10px;
-  }
-
-  .me-layout .platform-card {
-    padding: 12px;
-    border-radius: 12px;
-  }
-
-  .me-sidebar h2 {
-    font-size: 20px;
-  }
-
-  .me-menu {
-    margin-top: 10px;
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .me-menu::-webkit-scrollbar {
-    display: none;
-  }
-
-  .me-menu-item {
-    flex: 0 0 auto;
-    min-height: 36px;
-    padding: 7px 12px;
-    border-radius: 999px;
-    background: #f8fafc;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .me-dot {
-    margin-left: 6px;
-  }
-
-  .me-main {
-    gap: 10px;
-  }
-
-  .me-hero {
-    gap: 12px;
-    border-radius: 12px;
-  }
-
-  .me-user {
-    align-items: flex-start;
-  }
-
-  .me-avatar {
-    width: 64px;
-    height: 64px;
-  }
-
-  .me-avatar-fallback {
-    font-size: 24px;
-  }
-
-  .me-meta h1 {
-    font-size: 22px;
-    white-space: normal;
-    line-height: 1.2;
-  }
-
-  .me-meta p {
-    margin: 4px 0;
-    font-size: 13px;
-  }
-
-  .me-tags {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .me-tag {
-    font-size: 11px;
-    padding: 2px 8px;
-  }
-
-  .me-edit-btn {
-    margin-top: 6px;
-    min-height: 32px;
-    padding: 0 12px;
-  }
-
-  .me-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .me-kpis article {
-    padding: 8px 10px;
-  }
-
-  .me-kpis p {
-    font-size: 11px;
-  }
-
-  .me-kpis strong {
-    font-size: 20px;
-  }
-
-  .me-edit-form {
-    gap: 10px;
-  }
-
-  .me-avatar-uploader {
-    align-items: flex-start;
-  }
-
-  .me-avatar-upload-preview {
-    width: 56px;
-    height: 56px;
-  }
-
-  .me-avatar-upload-fallback {
-    font-size: 20px;
-  }
-
-  .me-edit-actions {
-    justify-content: stretch;
-  }
-
-  .me-edit-cancel,
-  .me-edit-submit {
-    flex: 1;
-    min-height: 36px;
-  }
-
-  .me-shortcuts {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .me-shortcuts a {
-    text-align: left;
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-}
-
-.me-layout {
-  width: calc(100% - 56px);
-  margin: var(--lc-space-6) auto var(--lc-space-8);
-  grid-template-columns: 196px minmax(0, 1fr);
-  gap: var(--lc-space-5);
-  color: var(--lc-text);
-}
-
-.me-sidebar {
-  top: 84px;
-  padding: var(--lc-space-5) var(--lc-space-4);
-  border: 1px solid rgba(226, 232, 240, .82);
-  border-radius: var(--lc-radius);
-  background: rgba(255, 255, 255, .92);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, .08);
-}
-
-.me-sidebar h2 {
-  margin: 0 0 var(--lc-space-4);
-  font-size: var(--lc-text-xl);
-  letter-spacing: -.02em;
-}
-
-.me-menu {
-  margin: 0;
-  gap: var(--lc-space-1);
-}
-
-.me-menu-group {
-  display: grid;
-  gap: 2px;
-}
-
-.me-menu-item,
-.me-sub-item {
-  display: grid;
-  align-items: center;
-  min-height: 38px;
-  color: #40516b;
-  text-decoration: none;
-}
-
-.me-menu-item {
-  grid-template-columns: 22px 1fr auto;
-  gap: var(--lc-space-2);
-  padding: 0 var(--lc-space-3);
-  border-radius: var(--lc-radius-sm);
-  font-size: var(--lc-text-base);
-}
-
-.me-menu-item.is-active,
-.me-menu-item:hover {
-  background: linear-gradient(90deg, rgba(236, 72, 153, .12), rgba(236, 72, 153, .05));
-  color: var(--lc-pink);
-}
-
-.me-menu-icon {
-  color: #75839a;
-  font-size: var(--lc-text-md);
-  text-align: center;
-}
-
-.me-menu-icon.is-pink,
-.me-menu-item.is-active .me-menu-icon {
-  color: var(--lc-pink);
-}
-
-.me-menu-caret {
-  color: var(--lc-subtle);
-  font-size: var(--lc-text-xs);
-}
-
-.me-sub-item {
-  margin-left: 34px;
-  padding: 0 var(--lc-space-2);
-  border-radius: var(--lc-radius-xs);
-  font-size: var(--lc-text-sm);
-}
-
-.me-sub-item:hover {
-  background: var(--lc-soft);
-  color: var(--lc-blue);
-}
-
-.me-dot {
-  width: 18px;
-  min-width: 18px;
-  height: 18px;
-  background: var(--lc-red);
-  font-size: 10px;
-}
-
-.me-fellowship-card {
-  position: relative;
-  overflow: hidden;
-  margin-top: var(--lc-space-6);
-  min-height: 128px;
-  padding: var(--lc-space-4);
-  border-radius: var(--lc-radius-sm);
-  background:
-    radial-gradient(circle at 86% 76%, rgba(236, 72, 153, .32), transparent 26%),
-    radial-gradient(circle at 100% 94%, rgba(37, 99, 235, .22), transparent 28%),
-    linear-gradient(135deg, #f5efff 0%, #eef3ff 100%);
-}
-
-.me-fellowship-card p {
-  margin: 0 0 var(--lc-space-2);
-  color: #5b48d6;
-  font-weight: 800;
-}
-
-.me-fellowship-card span {
-  display: block;
-  max-width: 142px;
-  color: #66728a;
-  font-size: var(--lc-text-xs);
-  line-height: 1.6;
-}
-
-.me-fellowship-card a {
-  display: inline-flex;
-  margin-top: var(--lc-space-4);
-  padding: 7px 12px;
-  border: 1px solid rgba(91, 72, 214, .18);
-  border-radius: 999px;
-  color: #5b48d6;
-  background: rgba(255, 255, 255, .62);
-  font-size: var(--lc-text-xs);
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.me-main {
-  gap: var(--lc-space-5);
-}
-
-.me-hero {
-  position: relative;
-  overflow: hidden;
-  grid-template-columns: minmax(280px, 1fr) minmax(360px, 560px);
-  align-items: center;
-  min-height: 208px;
-  padding: var(--lc-space-6) var(--lc-space-8);
-  border: 1px solid rgba(255, 255, 255, .76);
-  border-radius: var(--lc-radius-lg);
-  background:
-    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, .72), transparent 24%),
-    radial-gradient(circle at 88% 20%, rgba(103, 122, 255, .26), transparent 32%),
-    linear-gradient(105deg, #ffd8f0 0%, #f6dcff 42%, #b8c8ff 100%);
-  box-shadow: 0 18px 42px rgba(91, 107, 193, .18);
-}
-
-.me-hero::after {
-  position: absolute;
-  right: -44px;
-  bottom: -72px;
-  width: 240px;
-  height: 180px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .26);
-  content: "";
-}
-
-.me-user {
-  position: relative;
-  z-index: 1;
-  gap: var(--lc-space-5);
-}
-
-.me-avatar {
-  width: 116px;
-  height: 116px;
-  border: 5px solid rgba(255, 255, 255, .9);
-  box-shadow: 0 16px 34px rgba(89, 55, 136, .24);
-}
-
-.me-avatar-fallback {
-  color: var(--lc-blue);
-  background: linear-gradient(135deg, #ffffff, #eef3ff);
-  font-size: 44px;
-}
-
-.me-title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--lc-space-2);
-}
-
-.me-meta h1 {
-  color: #1f2442;
-  font-size: 28px;
-  font-weight: 900;
-}
-
-.me-level {
-  padding: 4px 9px;
-  border-radius: 999px;
-  color: #5661d9;
-  background: rgba(255, 255, 255, .72);
-  font-size: var(--lc-text-xs);
-  font-weight: 800;
-}
-
-.me-bio {
-  display: flex;
-  align-items: center;
-  gap: var(--lc-space-2);
-  margin: var(--lc-space-2) 0 var(--lc-space-3);
-  color: #5f6380;
-}
-
-.me-bio button {
-  border: 0;
-  color: #6670d9;
-  background: transparent;
-  cursor: pointer;
-}
-
-.me-profile-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--lc-space-4);
-  color: #66728a;
-  font-size: var(--lc-text-xs);
-}
-
-.me-edit-btn {
-  margin-top: var(--lc-space-4);
-  border: 0;
-  color: #5b48d6;
-  background: rgba(255, 255, 255, .72);
-  box-shadow: 0 8px 18px rgba(91, 72, 214, .12);
-}
-
-.me-kpis {
-  position: relative;
-  z-index: 1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--lc-space-4);
-}
-
-.me-kpis article {
-  display: grid;
-  min-height: 122px;
-  padding: var(--lc-space-4);
-  border: 1px solid rgba(255, 255, 255, .72);
-  border-radius: var(--lc-radius);
-  background: rgba(255, 255, 255, .78);
-  box-shadow: 0 12px 28px rgba(89, 102, 160, .12);
-}
-
-.me-kpi-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  color: #fff;
-  font-size: var(--lc-text-sm);
-}
-
-.me-kpi-icon.is-blue,
-.me-card-icon.is-blue,
-.me-recommend-icon.is-blue {
-  background: linear-gradient(135deg, #60a5fa, var(--lc-blue));
-}
-
-.me-kpi-icon.is-purple,
-.me-card-icon.is-purple {
-  background: linear-gradient(135deg, #8b5cf6, #6d5dfc);
-}
-
-.me-kpi-icon.is-amber {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-}
-
-.me-kpi-icon.is-orange,
-.me-card-icon.is-orange,
-.me-recommend-icon.is-orange {
-  background: linear-gradient(135deg, #fb923c, #f97316);
-}
-
-.me-card-icon.is-teal {
-  background: linear-gradient(135deg, #2dd4bf, #14b8a6);
-}
-
-.me-recommend-icon.is-pink {
-  background: linear-gradient(135deg, #f472b6, var(--lc-pink));
-}
-
-.me-kpis p {
-  margin-top: var(--lc-space-2);
-  color: #566076;
-  font-weight: 700;
-}
-
-.me-kpis strong {
-  margin-top: var(--lc-space-1);
-  color: #141b34;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.me-kpis small {
-  color: #7d8799;
-  font-size: var(--lc-text-xs);
-}
-
-.me-center-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--lc-space-4);
-}
-
-.me-center-card,
-.me-recommend-panel {
-  border: 1px solid rgba(226, 232, 240, .84);
-  border-radius: var(--lc-radius);
-  background: rgba(255, 255, 255, .94);
-  box-shadow: var(--lc-shadow-sm);
-}
-
-.me-center-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: var(--lc-space-4);
-  min-height: 236px;
-  padding: var(--lc-space-5);
-}
-
-.me-card-head {
-  display: flex;
-  gap: var(--lc-space-3);
-  align-items: center;
-}
-
-.me-card-icon,
-.me-recommend-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  color: #fff;
-  font-weight: 900;
-}
-
-.me-card-head h3,
-.me-recommend-panel h3 {
-  margin: 0;
-  color: #1f2937;
-  font-size: var(--lc-text-lg);
-}
-
-.me-card-head p {
-  margin: 4px 0 0;
-  color: #8a94a6;
-  font-size: var(--lc-text-xs);
-}
-
-.me-card-list {
-  display: grid;
-  align-content: start;
-  gap: var(--lc-space-2);
-}
-
-.me-card-list a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 24px;
-  border-bottom: 1px solid rgba(226, 232, 240, .72);
-  color: #5d687a;
-  font-size: var(--lc-text-xs);
-  text-decoration: none;
-}
-
-.me-card-list a:hover {
-  color: var(--lc-blue);
-}
-
-.me-card-list strong {
-  color: #667085;
-  font-weight: 700;
-}
-
-.me-card-action {
-  display: inline-flex;
-  justify-content: center;
-  padding: 10px 12px;
-  border-radius: var(--lc-radius-sm);
-  font-size: var(--lc-text-xs);
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.me-card-action.is-purple {
-  color: #6d5dfc;
-  background: rgba(109, 93, 252, .1);
-}
-
-.me-card-action.is-orange {
-  color: #f97316;
-  background: rgba(249, 115, 22, .1);
-}
-
-.me-card-action.is-teal {
-  color: #0f9f92;
-  background: rgba(20, 184, 166, .1);
-}
-
-.me-card-action.is-blue {
-  color: var(--lc-blue);
-  background: var(--lc-blue-light);
-}
-
-.me-recommend-panel {
-  position: relative;
-  overflow: hidden;
-  padding: var(--lc-space-4) var(--lc-space-5);
-}
-
-.me-recommend-panel::after {
-  position: absolute;
-  right: 24px;
-  bottom: -28px;
-  width: 128px;
-  height: 128px;
-  border-radius: 36px;
-  background:
-    radial-gradient(circle at 38% 38%, rgba(236, 72, 153, .18), transparent 38%),
-    linear-gradient(135deg, rgba(255, 255, 255, .4), rgba(236, 72, 153, .12));
-  transform: rotate(10deg);
-  content: "";
-}
-
-.me-recommend-list {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--lc-space-4);
-  margin-top: var(--lc-space-3);
-}
-
-.me-recommend-item {
-  display: flex;
-  align-items: center;
-  gap: var(--lc-space-3);
-  min-height: 74px;
-  padding: var(--lc-space-3);
-  border-radius: var(--lc-radius-sm);
-  color: inherit;
-  background: linear-gradient(135deg, rgba(248, 250, 252, .9), rgba(255, 255, 255, .68));
-  text-decoration: none;
-}
-
-.me-recommend-item strong,
-.me-recommend-item small,
-.me-recommend-item em {
-  display: block;
-}
-
-.me-recommend-item strong {
-  color: #1f2937;
-  font-size: var(--lc-text-base);
-}
-
-.me-recommend-item small {
-  margin-top: 2px;
-  color: #7d8799;
-  font-size: var(--lc-text-xs);
-}
-
-.me-recommend-item em {
-  margin-top: var(--lc-space-1);
-  color: #e07a18;
-  font-size: var(--lc-text-xs);
-  font-style: normal;
-  font-weight: 800;
-}
-
-@media (max-width: 960px) {
-  .me-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .me-center-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1023px) {
-  .me-layout {
-    width: calc(100% - 32px);
-    grid-template-columns: 1fr;
-  }
-
-  .me-sidebar {
-    position: static;
-  }
-
-  .me-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .me-recommend-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 767px) {
-  .me-layout {
-    width: calc(100% - 24px);
-    margin-top: var(--lc-space-4);
-  }
-
-  .me-sidebar {
-    padding: var(--lc-space-4);
-  }
-
-  .me-menu {
-    display: grid;
-    overflow: visible;
-  }
-
-  .me-menu-item {
-    border-radius: var(--lc-radius-sm);
-  }
-
-  .me-hero {
-    min-height: 0;
-    padding: var(--lc-space-5);
-  }
-
-  .me-user {
-    flex-direction: column;
-  }
-
-  .me-avatar {
-    width: 88px;
-    height: 88px;
-  }
-
-  .me-meta h1 {
-    font-size: 24px;
-  }
-
-  .me-profile-line {
-    gap: var(--lc-space-2);
-  }
-
-  .me-center-grid,
-  .me-kpis {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Prototype fidelity pass: keep this page close to the supplied desktop mock. */
-.me-layout {
-  position: relative;
-  width: calc(100% - 40px);
-  max-width: 1880px;
-  margin: 18px auto 26px;
-  display: grid;
-  grid-template-columns: 304px minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
-  color: #1f2937;
-}
-
-.me-layout::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(circle at 18% 8%, rgba(236, 72, 153, .08), transparent 30%),
-    radial-gradient(circle at 86% 24%, rgba(99, 102, 241, .08), transparent 34%),
-    #f7f9fd;
-  content: "";
-}
-
-.me-sidebar {
-  position: sticky;
-  top: 86px;
-  min-height: 780px;
-  padding: 26px 22px 22px;
-  border: 1px solid rgba(229, 234, 244, .95);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, .96);
-  box-shadow: 0 16px 36px rgba(31, 42, 68, .07);
-}
-
-.me-sidebar h2 {
-  margin: 0 0 20px;
-  color: #172033;
-  font-size: 22px;
-  font-weight: 900;
-}
-
-.me-menu {
-  display: grid;
-  gap: 7px;
-}
-
-.me-menu-group {
-  display: grid;
-  gap: 2px;
-}
-
-.me-menu-item {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
-  color: #5f6b80;
-  font-size: 14px;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.me-menu-item.is-active,
-.me-menu-item:hover {
-  background: #fff0f6;
-  color: #e63d8c;
-}
-
-.me-menu-icon {
-  width: 22px;
-  color: #7c899d;
-  text-align: center;
-}
-
-.me-menu-icon.is-pink,
-.me-menu-item.is-active .me-menu-icon {
-  color: #e63d8c;
-}
-
-.me-menu-caret {
-  color: #97a3b6;
-  font-size: 12px;
-}
-
-.me-sub-item {
-  display: flex;
-  align-items: center;
-  min-height: 30px;
-  margin-left: 46px;
-  padding: 0 8px;
-  border-radius: 8px;
-  color: #5f6b80;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.me-sub-item:hover {
-  color: #e63d8c;
-  background: #fff7fb;
-}
-
-.me-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #ff315f;
-  color: #fff;
-  font-size: 11px;
-  line-height: 1;
-}
-
-.me-fellowship-card {
-  position: relative;
-  overflow: hidden;
-  margin-top: 24px;
-  min-height: 150px;
-  padding: 20px 16px;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 84% 70%, rgba(236, 72, 153, .42), transparent 25%),
-    radial-gradient(circle at 104% 92%, rgba(96, 165, 250, .35), transparent 26%),
-    linear-gradient(135deg, #f3edff 0%, #eef3ff 100%);
-}
-
-.me-fellowship-card::after {
-  position: absolute;
-  right: 16px;
-  bottom: 12px;
-  width: 78px;
-  height: 62px;
-  border-radius: 24px 24px 18px 18px;
-  background:
-    radial-gradient(circle at 32% 36%, rgba(255, 255, 255, .88) 0 7px, transparent 8px),
-    radial-gradient(circle at 62% 32%, rgba(255, 255, 255, .78) 0 6px, transparent 7px),
-    linear-gradient(135deg, rgba(236, 72, 153, .32), rgba(96, 165, 250, .24));
-  content: "";
-  filter: blur(.1px);
-}
-
-.me-fellowship-card p {
-  margin: 0 0 8px;
-  color: #6d5dfc;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.me-fellowship-card span {
-  display: block;
-  max-width: 164px;
-  color: #68758b;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.me-fellowship-card a {
-  display: inline-flex;
-  margin-top: 20px;
-  padding: 8px 14px;
-  border: 1px solid rgba(109, 93, 252, .18);
-  border-radius: 999px;
-  color: #6d5dfc;
-  background: rgba(255, 255, 255, .72);
-  font-size: 12px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.me-main {
-  display: grid;
-  gap: 20px;
-}
-
-.me-hero {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(0, 1fr);
-  gap: 28px;
-  align-items: center;
-  min-height: 246px;
-  padding: 38px 34px 36px 54px;
-  border: 1px solid rgba(255, 255, 255, .86);
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 12% 14%, rgba(255, 255, 255, .68), transparent 21%),
-    radial-gradient(circle at 88% 42%, rgba(255, 255, 255, .26), transparent 30%),
-    linear-gradient(103deg, #ffd9ef 0%, #f6d8ff 36%, #bacaff 100%);
-  box-shadow: 0 18px 40px rgba(96, 111, 191, .16);
-}
-
-.me-hero::after {
-  position: absolute;
-  right: -70px;
-  bottom: -110px;
-  width: 360px;
-  height: 240px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .22);
-  content: "";
-}
-
-.me-user {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 34px;
-  min-width: 0;
-}
-
-.me-avatar {
-  width: 132px;
-  height: 132px;
-  flex: 0 0 auto;
-  border: 6px solid rgba(255, 255, 255, .94);
-  border-radius: 999px;
-  object-fit: cover;
-  box-shadow: 0 18px 36px rgba(79, 53, 134, .26);
-}
-
-.me-avatar-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #6d5dfc;
-  background:
-    radial-gradient(circle at 36% 34%, #ffffff 0 12px, transparent 13px),
-    radial-gradient(circle at 62% 34%, #ffffff 0 12px, transparent 13px),
-    linear-gradient(135deg, #fff, #eef3ff);
-  font-size: 46px;
-  font-weight: 900;
-}
-
-.me-title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.me-meta h1 {
-  margin: 0;
-  color: #20243a;
-  font-size: 29px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.me-level {
-  padding: 4px 10px;
-  border-radius: 999px;
-  color: #6d63d8;
-  background: rgba(255, 255, 255, .72);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.me-bio {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 14px 0 14px;
-  color: #5f647b;
-  font-size: 14px;
-}
-
-.me-bio button {
-  border: 0;
-  color: #5964d5;
-  background: transparent;
-  cursor: pointer;
-}
-
-.me-profile-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  color: #6e7890;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.me-invite-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  color: #5f647b;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.me-invite-line button {
-  border: 0;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #6d5dfc;
-  background: rgba(255, 255, 255, .78);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.me-invite-line button:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-.me-copy-feedback {
-  color: #16a34a;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.me-copy-feedback.is-error {
-  color: #dc2626;
-}
-
-.me-edit-btn {
-  margin-top: 24px;
-  min-width: 104px;
-  height: 34px;
-  border: 0;
-  border-radius: 999px;
-  color: #6d5dfc;
-  background: rgba(255, 255, 255, .78);
-  box-shadow: 0 8px 18px rgba(91, 72, 214, .12);
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.me-kpis {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
-@media (max-width: 1360px) {
-  .me-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.me-kpis article {
-  display: grid;
-  align-content: start;
-  min-height: 142px;
-  padding: 24px 20px 18px;
-  border: 1px solid rgba(255, 255, 255, .76);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, .84);
-  box-shadow: 0 14px 28px rgba(80, 92, 150, .12);
-}
-
-.me-kpi-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.me-kpis p {
-  margin: 0 0 12px;
-  color: #5b6678;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.me-kpis strong {
-  margin: 0;
-  color: #121827;
-  font-size: 32px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.me-kpis small {
-  margin-top: 10px;
-  color: #818b9d;
-  font-size: 12px;
-}
-
-.me-center-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.me-center-card,
-.me-recommend-panel {
-  border: 1px solid rgba(226, 232, 240, .9);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, .97);
-  box-shadow: 0 14px 32px rgba(31, 42, 68, .07);
-}
-
-.me-center-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 18px;
-  min-height: 258px;
-  padding: 28px 22px 22px;
-}
-
-.me-card-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.me-card-icon,
-.me-recommend-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
-  color: #fff;
-  font-size: 21px;
-  font-weight: 900;
-}
-
-.me-card-head h3 {
-  margin: 0;
-  color: #20273a;
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.me-card-head p {
-  margin: 5px 0 0;
-  color: #94a0b2;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.me-card-list {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-}
-
-.me-card-list a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 24px;
-  padding-bottom: 7px;
-  border-bottom: 1px solid #edf1f7;
-  color: #637084;
-  font-size: 13px;
-  text-decoration: none;
-}
-
-.me-card-list strong {
-  color: #697489;
-  font-weight: 900;
-}
-
-.me-card-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.me-recommend-panel {
-  position: relative;
-  overflow: hidden;
-  min-height: 120px;
-  padding: 20px 26px 22px;
-}
-
-.me-recommend-panel h3 {
-  margin: 0;
-  color: #20273a;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.me-recommend-panel::after {
-  position: absolute;
-  right: 42px;
-  bottom: -22px;
-  width: 126px;
-  height: 118px;
-  border-radius: 32px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, .55) 47%, rgba(236, 72, 153, .22) 48% 54%, rgba(255, 255, 255, .55) 55%),
-    radial-gradient(circle at 34% 26%, rgba(236, 72, 153, .18), transparent 34%),
-    linear-gradient(135deg, rgba(255, 255, 255, .3), rgba(96, 165, 250, .16));
-  transform: rotate(8deg);
-  content: "";
-}
-
-.me-recommend-list {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 16px;
-  padding-right: 120px;
-}
-
-.me-recommend-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 68px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  color: inherit;
-  background: linear-gradient(135deg, rgba(248, 250, 252, .82), rgba(255, 255, 255, .74));
-  text-decoration: none;
-}
-
-.me-recommend-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 13px;
-  font-size: 18px;
-}
-
-.me-recommend-item strong,
-.me-recommend-item small,
-.me-recommend-item em {
-  display: block;
-}
-
-.me-recommend-item strong {
-  color: #20273a;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.me-recommend-item small {
-  margin-top: 3px;
-  color: #8b96a8;
-  font-size: 12px;
-}
-
-.me-recommend-item em {
-  margin-top: 6px;
-  color: #e07a18;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 900;
-}
-
-@media (max-width: 1500px) {
-  .me-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .me-kpis {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .me-center-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1023px) {
-  .me-layout {
-    width: calc(100% - 28px);
-    grid-template-columns: 1fr;
-  }
-
-  .me-sidebar {
-    position: static;
-    min-height: 0;
-  }
-
-  .me-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .me-kpis article {
-    min-height: 108px;
-    padding: 12px 10px;
-    border-radius: 12px;
-  }
-
-  .me-kpi-icon {
-    width: 24px;
-    height: 24px;
-    margin-bottom: 8px;
-    font-size: 12px;
-  }
-
-  .me-kpis p {
-    margin-bottom: 6px;
-    font-size: 12px;
-  }
-
-  .me-kpis strong {
-    font-size: 20px;
-  }
-
-  .me-kpis small {
-    margin-top: 4px;
-    font-size: 11px;
-  }
-
-  .me-center-grid,
-  .me-recommend-list {
-    grid-template-columns: 1fr;
-  }
-
-  .me-recommend-list {
-    padding-right: 0;
-  }
-}
-
-@media (max-width: 767px) {
-  .me-layout {
-    display: block;
-    width: calc(100% - 16px);
-    margin: 8px auto 82px;
-  }
-
-  .me-layout::before {
-    background: #f5f7fc;
-  }
-
-  .me-sidebar {
-    display: none;
-  }
-
-  .me-main {
-    display: grid;
-    gap: 10px;
-  }
-
-  .me-hero {
-    min-height: 0;
-    padding: 14px 12px;
-    gap: 12px;
-    border: 1px solid #ebeff7;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, .05);
-  }
-
-  .me-hero::after {
-    display: none;
-  }
-
-  .me-user {
-    align-items: center;
-    flex-direction: row;
-    gap: 12px;
-  }
-
-  .me-avatar {
-    width: 68px;
-    height: 68px;
-    border-width: 3px;
-    box-shadow: none;
-  }
-
-  .me-meta h1 {
-    font-size: 20px;
-  }
-
-  .me-level {
-    padding: 3px 8px;
-    font-size: 11px;
-  }
-
-  .me-bio {
-    margin: 4px 0 6px;
-    font-size: 12px;
-  }
-
-  .me-profile-line {
-    gap: 8px;
-    font-size: 11px;
-  }
-
-  .me-edit-btn {
-    margin-top: 8px;
-    height: 30px;
-    min-width: 88px;
-    font-size: 12px;
-  }
-
-  .me-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .me-kpis article {
-    min-height: 92px;
-    padding: 10px;
-    border: 1px solid #edf1f8;
-    border-radius: 12px;
-    background: #f9fbff;
-    box-shadow: none;
-  }
-
-  .me-kpi-icon {
-    width: 22px;
-    height: 22px;
-    margin-bottom: 6px;
-    border-radius: 7px;
-    font-size: 11px;
-  }
-
-  .me-kpis p {
-    margin: 0 0 6px;
-    font-size: 12px;
-  }
-
-  .me-kpis strong {
-    font-size: 22px;
-  }
-
-  .me-kpis small {
-    margin-top: 3px;
-    font-size: 11px;
-  }
-
-  .me-center-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .me-center-card {
-    min-height: 0;
-    padding: 12px;
-    gap: 8px;
-    border: 1px solid #ebeff7;
-    border-radius: 14px;
-    box-shadow: none;
-  }
-
-  .me-card-head {
-    gap: 10px;
-  }
-
-  .me-card-head h3 {
-    font-size: 17px;
-  }
-
-  .me-card-head p {
-    margin-top: 2px;
-    font-size: 11px;
-  }
-
-  .me-card-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
-    font-size: 14px;
-  }
-
-  .me-card-list {
-    gap: 2px;
-  }
-
-  .me-card-list a {
-    min-height: 26px;
-    padding-bottom: 4px;
-    font-size: 13px;
-  }
-
-  .me-card-action {
-    min-height: 34px;
-    border-radius: 10px;
-    font-size: 12px;
-  }
-
-  .me-recommend-panel {
-    min-height: 0;
-    padding: 12px;
-    border: 1px solid #ebeff7;
-    border-radius: 14px;
-    box-shadow: none;
-  }
-
-  .me-recommend-panel::after {
-    display: none;
-  }
-
-  .me-recommend-list {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    margin-top: 10px;
-    padding-right: 0;
-  }
-
-  .me-recommend-item {
-    min-height: 56px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: #f8faff;
-  }
-
-  :deep(.co-creation-toolbar) {
-    display: none;
-  }
-}
-
-.mobile-only {
-  display: none;
+.settings-list strong {
+  color: var(--me-text);
 }
 
 @media (max-width: 767px) {
   :global(.platform-header),
-  :global(.platform-route-back),
   :global(.platform-footer),
   :global(.co-creation-toolbar) {
     display: none !important;
   }
 
-  .mobile-only {
+  .me-shell {
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+}
+
+@media (min-width: 768px) {
+  .me-shell {
+    padding-top: 36px;
+  }
+
+  .me-modal {
+    width: min(100%, 480px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .me-page {
+    width: 100%;
+    margin: 0 auto 42px;
+  }
+
+  .me-mobile {
+    display: none;
+  }
+
+  .me-desktop {
     display: block;
   }
 
-  .me-layout {
+  .me-shell {
     width: 100%;
-    margin: 0;
-    padding: 0 14px 84px;
-    background:
-      linear-gradient(160deg, #ffd6e9 0%, #f2ddff 34%, #d9e6ff 68%, #f7f8fc 68%);
+    padding: 16px 16px 48px;
   }
 
-  .me-main {
-    gap: 10px;
+  .me-header h1 {
+    font-size: 32px;
   }
 
-  .mobile-me-header {
-    position: relative;
-    padding: 42px 8px 12px;
-    text-align: center;
+  .me-header p {
+    font-size: 15px;
   }
 
-  .mobile-me-header h1 {
-    margin: 0;
-    color: #141827;
-    font-size: 18px;
-    font-weight: 900;
-    letter-spacing: .02em;
+  .me-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 372px;
+    grid-template-rows: auto 1fr;
+    gap: 22px 28px;
+    align-items: start;
   }
 
-  .mobile-header-actions {
-    position: absolute;
-    top: 40px;
-    right: 8px;
+  .me-layout > .profile-card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .me-layout > .me-aside {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  .me-layout > .me-main-stack {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .me-aside {
+    position: sticky;
+    top: 84px;
+    z-index: 1;
+  }
+
+  .profile-card {
+    padding: 26px 28px;
+  }
+
+  .profile-main {
+    grid-template-columns: 100px minmax(0, 1fr) auto;
+    gap: 24px;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .avatar-fallback {
+    font-size: 32px;
+  }
+
+  .profile-name-row h2 {
+    font-size: 22px;
+  }
+
+  .profile-light-stats {
+    width: min(100%, 360px);
+  }
+
+  .profile-actions {
+    max-width: 520px;
+  }
+
+  .me-aside .growth-body {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .me-aside .growth-body .level-badge {
+    align-self: center;
+  }
+
+  .me-aside .exp-list {
+    padding-top: 14px;
+    padding-left: 0;
+    border-top: 1px solid var(--me-border);
+    border-left: 0;
+  }
+
+  .me-aside .task-grid {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .me-aside .task-item {
+    flex: 1 1 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .me-main-stack .group-actions {
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .me-main-stack .ranking-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .me-main-stack .quick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .me-shell {
+    width: min(100%, 1240px);
+  }
+
+  .me-layout {
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: 24px 32px;
+  }
+}
+
+@media (min-width: 520px) {
+  .task-item {
+    flex-basis: calc((100% - 28px) / 3);
+  }
+}
+
+@media (min-width: 720px) {
+  .task-item {
+    flex-basis: calc((100% - 42px) / 4);
+  }
+}
+
+@media (max-width: 420px) {
+  .me-shell {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .profile-card {
+    padding: 16px;
+  }
+
+  .profile-main {
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile-badges {
+    display: none;
+  }
+
+  .profile-light-stats {
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .growth-body {
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 14px;
   }
 
-  .mobile-header-icon {
-    position: relative;
-    border: 0;
-    padding: 0;
-    color: #1f2937;
-    background: transparent;
-    font-size: 18px;
-    font-weight: 900;
-    text-decoration: none;
-    cursor: pointer;
+  .exp-list {
+    grid-column: 1 / -1;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--me-border);
+    border-left: 0;
   }
 
-  .mobile-header-icon span {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 15px;
-    height: 15px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: #ff315f;
-    color: #fff;
-    font-size: 10px;
+  .level-badge {
+    width: 72px;
+    height: 72px;
+    font-size: 21px;
   }
 
-  .me-hero {
-    overflow: visible;
-    padding: 10px 6px 8px;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+  .workspace-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .me-user {
-    align-items: center;
-    gap: 13px;
-  }
-
-  .me-avatar {
-    width: 74px;
-    height: 74px;
-    border: 3px solid rgba(255, 255, 255, .94);
-    box-shadow: 0 10px 24px rgba(104, 78, 180, .18);
-  }
-
-  .me-meta h1 {
-    font-size: 18px;
-  }
-
-  .me-level {
-    background: rgba(255, 255, 255, .7);
-  }
-
-  .me-bio {
-    margin: 6px 0;
-    color: #6b7280;
-  }
-
-  .me-profile-line {
-    color: #6d7487;
-  }
-
-  .me-invite-line {
-    margin-top: 6px;
-    font-size: 11px;
-  }
-
-  .me-edit-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 10px;
-    margin-right: 8px;
-    padding: 0 16px;
-    border-radius: 999px;
-    color: #6d5dfc;
-    background: rgba(255, 255, 255, .76);
-  }
-
-  .mobile-fellowship-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    margin-top: 10px;
-    padding: 0 16px;
-    border-radius: 999px;
-    color: #fff;
-    background: linear-gradient(135deg, #8b5cf6, #6d5dfc);
-    font-size: 12px;
-    font-weight: 900;
-    text-decoration: none;
-  }
-
-  .me-kpis,
-  .me-center-grid,
-  .me-recommend-panel {
-    display: none;
-  }
-
-  .mobile-shortcut-card,
-  .mobile-data-card,
-  .mobile-list-card,
-  .mobile-recommend-card {
-    border: 1px solid rgba(235, 239, 247, .86);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, .94);
-    box-shadow: 0 10px 24px rgba(31, 42, 68, .06);
-  }
-
-  .mobile-shortcut-card {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 4px;
-    padding: 14px 8px 12px;
-  }
-
-  .mobile-shortcut-item {
-    display: grid;
-    justify-items: center;
-    gap: 5px;
-    color: #111827;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .mobile-shortcut-icon,
-  .mobile-data-icon,
-  .mobile-list-icon,
-  .mobile-recommend-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 900;
-  }
-
-  .mobile-shortcut-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 13px;
-    font-size: 18px;
-  }
-
-  .mobile-shortcut-item strong {
-    font-size: 13px;
-    font-weight: 900;
-  }
-
-  .mobile-shortcut-item small {
-    color: #6f788a;
-    font-size: 11px;
-  }
-
-  .mobile-section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 14px 8px;
-  }
-
-  .mobile-section-head h2,
-  .mobile-recommend-card h2 {
-    margin: 0;
-    color: #171d2e;
-    font-size: 15px;
-    font-weight: 900;
-  }
-
-  .mobile-section-head a {
-    color: #8a93a5;
-    font-size: 11px;
-    text-decoration: none;
-  }
-
-  .mobile-data-row {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px 12px 15px;
-  }
-
-  .mobile-data-item {
-    display: grid;
-    justify-items: center;
-    gap: 5px;
-    min-width: 0;
-    padding: 9px 4px;
-    border-radius: 12px;
-    background: #fafbff;
-    color: #111827;
-    text-decoration: none;
-  }
-
-  .mobile-data-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 9px;
-    font-size: 13px;
-  }
-
-  .mobile-data-item strong {
-    font-size: 20px;
-    line-height: 1;
-  }
-
-  .mobile-data-item small {
-    color: #6f788a;
-    font-size: 10px;
-    white-space: nowrap;
-  }
-
-  .mobile-list-card {
-    padding: 8px 14px;
-  }
-
-  .mobile-list-item {
-    display: grid;
-    grid-template-columns: 28px minmax(0, auto) 1fr auto;
-    align-items: center;
-    gap: 10px;
-    min-height: 42px;
-    border-bottom: 1px solid #eef2f7;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .mobile-list-item:last-child {
-    border-bottom: 0;
-  }
-
-  .mobile-list-icon {
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    font-size: 12px;
-  }
-
-  .mobile-list-item strong {
-    color: #1f2937;
-    font-size: 13px;
-    font-weight: 900;
-  }
-
-  .mobile-list-item small {
-    display: none;
-  }
-
-  .mobile-list-item em {
-    color: #7b8496;
-    font-size: 11px;
-    font-style: normal;
-    text-align: right;
-  }
-
-  .mobile-recommend-card {
-    padding: 14px;
-  }
-
-  .mobile-recommend-grid {
-    display: grid;
+  .quick-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
   }
 
-  .mobile-recommend-item {
-    display: grid;
-    gap: 5px;
-    justify-items: center;
-    min-width: 0;
-    padding: 10px 6px;
-    border-radius: 12px;
-    background: #fbf7ff;
-    color: inherit;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .mobile-recommend-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-  }
-
-  .mobile-recommend-item strong {
-    font-size: 12px;
-  }
-
-  .mobile-recommend-item small {
-    color: #7b8496;
-    font-size: 10px;
-    line-height: 1.35;
-  }
-
-  .mobile-recommend-item em {
-    margin-top: 3px;
-    min-width: 58px;
-    padding: 6px 8px;
-    border-radius: 999px;
-    background: rgba(236, 72, 153, .1);
-    color: #e63d8c;
-    font-size: 11px;
-    font-style: normal;
-    font-weight: 900;
-  }
-
-  .is-purple {
-    background: linear-gradient(135deg, #8b5cf6, #6d5dfc);
-  }
-
-  .is-pink {
-    background: linear-gradient(135deg, #ff7ab6, #ec4899);
-  }
-
-  .is-orange {
-    background: linear-gradient(135deg, #ffb13d, #f97316);
-  }
-
-  .is-blue {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  }
-
-  .is-amber {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  }
-
-  .is-teal {
-    background: linear-gradient(135deg, #34d399, #14b8a6);
+  .profile-actions {
+    grid-template-columns: 1fr;
   }
 }
 </style>
-

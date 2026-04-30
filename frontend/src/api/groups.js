@@ -11,8 +11,9 @@ export function unwrapPlatformGroupList(res) {
   return []
 }
 
+/** 团体大厅列表（platform_groups + 分页结构） */
 export function fetchGroups(params = {}) {
-  return request.get('/platform/groups', { params })
+  return request.get('/groups', { params })
 }
 
 export function fetchMeGroupsBuckets() {
@@ -24,23 +25,29 @@ export function fetchMyGroups() {
 }
 
 export function fetchGroupDetail(id) {
-  return request.get(`/platform/groups/${id}`)
+  return request.get(`/groups/${id}`)
 }
 
 export function fetchGroupMembers(id, params = {}) {
-  return request.get(`/platform/groups/${id}/members`, { params })
+  return request.get(`/groups/${id}/members`, { params })
 }
 
 export function fetchGroupPosts(id) {
-  return request.get(`/platform/groups/${id}/posts`)
+  return request.get(`/groups/${id}/posts`)
 }
 
-export function fetchGroupNotices(id) {
-  return request.get(`/platform/groups/${id}/notices`)
+/** 从 group_posts 中筛公告类 type */
+export async function fetchGroupNotices(id) {
+  const res = await request.get(`/groups/${id}/posts`)
+  const raw = Array.isArray(res) ? res : res?.data ?? []
+  return raw.filter((p) => {
+    const t = String(p.type || '').toLowerCase()
+    return t === 'notice' || t === 'announcement' || t === 'bulletin'
+  })
 }
 
 export function fetchHotGroups() {
-  return request.get('/platform/groups/hot')
+  return request.get('/groups/hot')
 }
 
 export function fetchGroupFeed() {
@@ -48,15 +55,16 @@ export function fetchGroupFeed() {
 }
 
 export function joinGroup(id, message = '') {
-  return request.post(`/platform/groups/${id}/join`, { message })
+  return request.post(`/groups/${id}/join`, { message })
 }
 
 export function leaveGroup(id) {
-  return request.post(`/platform/groups/${id}/leave`)
+  return request.delete(`/groups/${id}/leave`)
 }
 
+/** 登录用户创建 platform_groups，创建者写入 platform_group_admin(OWNER) */
 export function createGroup(payload) {
-  return request.post('/platform/groups', payload)
+  return request.post('/groups', payload)
 }
 
 export function updateGroup(id, payload) {
@@ -64,7 +72,7 @@ export function updateGroup(id, payload) {
 }
 
 export function createGroupPost(id, payload) {
-  return request.post(`/platform/groups/${id}/posts`, payload)
+  return request.post(`/groups/${id}/posts`, payload)
 }
 
 export function createGroupNotice(id, payload) {

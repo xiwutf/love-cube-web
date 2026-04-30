@@ -40,6 +40,10 @@ public class PlatformGroup {
     @Column(name = "created_by")
     private Long createdBy;
 
+    /** 团体拥有者（通常与创建者一致） */
+    @Column(name = "owner_user_id")
+    private Long ownerUserId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
