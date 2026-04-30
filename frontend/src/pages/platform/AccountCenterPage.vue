@@ -15,6 +15,13 @@
               <span class="mh-verify-tag" :class="{ 'is-verified': user?.verificationStatus === 'approved' }">{{ verifyLabel }}</span>
               <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
+            <router-link class="mh-badge-row" to="/me/badges" aria-label="我的徽章">
+              <div class="mh-badge-icons">
+                <span v-for="(icon, index) in mobileBadgeIcons" :key="`mh-badge-${index}`" class="mh-badge-icon">{{ icon }}</span>
+              </div>
+              <span class="mh-badge-text">我的徽章</span>
+              <span class="mh-badge-arrow">›</span>
+            </router-link>
             <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
           </div>
           <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
@@ -81,27 +88,27 @@
 
       <!-- 设置列表 -->
       <div class="mh-card mh-settings-card">
-        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+        <router-link class="mh-setting-row" to="/me/verify">
           <span class="mh-setting-icon">🪪</span>
           <span class="mh-setting-label">实名认证</span>
           <span class="mh-setting-value">{{ verifyLabel }}</span>
           <span class="mh-setting-arrow">›</span>
-        </button>
-        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+        </router-link>
+        <router-link class="mh-setting-row" to="/me/privacy">
           <span class="mh-setting-icon">🔒</span>
           <span class="mh-setting-label">隐私设置</span>
           <span class="mh-setting-arrow">›</span>
-        </button>
-        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+        </router-link>
+        <router-link class="mh-setting-row" to="/me/notifications">
           <span class="mh-setting-icon">🔔</span>
           <span class="mh-setting-label">消息通知</span>
           <span class="mh-setting-arrow">›</span>
-        </button>
-        <button type="button" class="mh-setting-row" @click="openSettingsPanel">
+        </router-link>
+        <router-link class="mh-setting-row" to="/me/feedback">
           <span class="mh-setting-icon">💬</span>
           <span class="mh-setting-label">帮助与反馈</span>
           <span class="mh-setting-arrow">›</span>
-        </button>
+        </router-link>
         <button type="button" class="mh-setting-row mh-setting-danger" @click="handleLogout">
           <span class="mh-setting-icon">🚪</span>
           <span class="mh-setting-label">退出登录</span>
@@ -279,16 +286,37 @@ const mobileGrowthProgress = computed(() => {
 })
 
 const mobileCompletedCount = computed(() => mobileDailyTasks.value.filter(t => t.done).length)
+const mobileBadgeIcons = computed(() => {
+  const earned = Array.isArray(badges.value) ? badges.value.filter(item => item?.unlocked !== false) : []
+  const preset = ['⭐', '🛡️', '💗', '🏅']
+  const nameMap = {
+    '新手上路': '⭐',
+    '活跃达人': '💗',
+    '热心帮助': '🛡️',
+    '官方认证': '🏅'
+  }
+
+  const sanitizeIcon = (item, index) => {
+    const raw = String(item?.icon || '').trim()
+    if (raw && !raw.includes('-') && raw.length <= 4) return raw
+    const byName = nameMap[String(item?.name || '').trim()]
+    if (byName) return byName
+    return preset[index % preset.length]
+  }
+
+  if (earned.length) return earned.slice(0, 4).map(sanitizeIcon)
+  return preset
+})
 
 const mobileGridItems = [
-  { title: '我的资料', icon: '👤', tone: 'violet', to: { path: '/me', query: { panel: 'edit' } } },
-  { title: '我的团体', icon: '🏠', tone: 'blue', to: '/platform/groups' },
-  { title: '我的动态', icon: '📝', tone: 'rose', to: '/platform/positive-share' },
+  { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
+  { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
+  { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
   { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
-  { title: '今日任务', icon: '✅', tone: 'green', to: '/platform/positive-share' },
-  { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/platform/positive-share' },
-  { title: '账号安全', icon: '🔐', tone: 'blue', to: { path: '/me', query: { panel: 'settings' } } },
-  { title: '意见反馈', icon: '💡', tone: 'violet', to: '/platform/positive-share' }
+  { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
+  { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
+  { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
+  { title: '意见反馈', icon: '💡', tone: 'violet', to: '/me/feedback' }
 ]
 
 const growthLevel = {
@@ -1947,6 +1975,49 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.55);
 }
 
+.mh-badge-row {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  text-decoration: none;
+  max-width: 100%;
+}
+
+.mh-badge-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.mh-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mh-badge-text {
+  font-size: 12px;
+  color: #e5e7ff;
+  line-height: 1;
+}
+
+.mh-badge-arrow {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1;
+}
+
 .mh-edit-btn {
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -2257,6 +2328,8 @@ onBeforeUnmount(() => {
   background: #fff;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   -webkit-tap-highlight-color: transparent;
 }
 
