@@ -23,6 +23,7 @@ import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.HomeConfigService;
 import com.lovecube.backend.services.NotificationService;
+import com.lovecube.backend.services.PermissionConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -93,19 +94,20 @@ public class AdminContentController {
 
     @GetMapping("/home-config")
     public Map<String, Object> getHomeConfig(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.SYSTEM_MANAGE);
         return homeConfigService.getAdminHomeConfig();
     }
 
     @GetMapping("/auth-context")
     public Map<String, Object> getAuthContext(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         User user = adminAuthService.requireUser(authHeader);
-        return Map.of(
-                "userId", user.getUserid(),
-                "role", user.getRole() == null ? "" : user.getRole(),
-                "userStatus", user.getUserStatus() == null ? "" : user.getUserStatus(),
-                "isAdmin", adminAuthService.isAdmin(user)
-        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", user.getUserid());
+        result.put("nickname", user.getUsername() != null ? user.getUsername() : "");
+        result.put("roles", adminAuthService.getUserRoles(user));
+        result.put("permissions", adminAuthService.getUserPermissions(user));
+        result.put("isAdmin", adminAuthService.isAdmin(user));
+        return result;
     }
 
     @PutMapping("/home-config")
@@ -113,13 +115,13 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.SYSTEM_MANAGE);
         return homeConfigService.saveAdminHomeConfig(payload);
     }
 
     @GetMapping("/announcements")
     public List<Announcement> listAnnouncements(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ANNOUNCEMENT_MANAGE);
         return announcementRepository.findAll();
     }
 
@@ -128,7 +130,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Announcement payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ANNOUNCEMENT_MANAGE);
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("announcement-" + UUID.randomUUID());
         }
@@ -143,7 +145,7 @@ public class AdminContentController {
 
     @GetMapping("/articles")
     public List<Article> listArticles(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ARTICLE_MANAGE);
         return articleRepository.findAll();
     }
 
@@ -152,7 +154,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Article payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ARTICLE_MANAGE);
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("article-" + UUID.randomUUID());
         }
@@ -167,7 +169,7 @@ public class AdminContentController {
 
     @GetMapping("/events")
     public List<PlatformEvent> listEvents(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
         return platformEventRepository.findAll();
     }
 
@@ -176,7 +178,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody PlatformEvent payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("event-" + UUID.randomUUID());
         }
@@ -191,10 +193,7 @@ public class AdminContentController {
 
     @GetMapping("/users")
     public List<Map<String, Object>> listUsers(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        User operator = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(operator)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
 
         return userRepository.findAll().stream()
@@ -224,10 +223,7 @@ public class AdminContentController {
             @PathVariable Long userId,
             @RequestBody Map<String, Object> payload
     ) {
-        User operator = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(operator)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
 
         String rawRole = String.valueOf(payload.getOrDefault("role", "")).trim().toUpperCase();
         if (!ALLOWED_ROLES.contains(rawRole)) {
@@ -275,7 +271,7 @@ public class AdminContentController {
             @RequestParam(value = "endTime", required = false) String endTime,
             @RequestParam(value = "status", required = false) String status
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
         return fellowshipInviteService.searchInvites(
                 inviterUserId,
                 inviteeUserId,
@@ -288,7 +284,7 @@ public class AdminContentController {
 
     @GetMapping("/verifications")
     public List<UserVerification> listVerifications(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         return userVerificationRepository.findAllByOrderBySubmittedAtDesc();
     }
 
@@ -297,7 +293,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody VerificationRequest payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("verify-" + UUID.randomUUID());
         }
@@ -312,19 +308,19 @@ public class AdminContentController {
 
     @GetMapping("/reports")
     public List<ReportRecord> listReports(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         return reportRecordRepository.findAll();
     }
 
     @GetMapping("/feedbacks")
     public List<UserFeedback> listFeedbacks(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         return userFeedbackRepository.findAllByOrderByCreatedAtDesc();
     }
 
     @GetMapping("/feedbacks/summary")
     public Map<String, Object> feedbackSummary(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         List<UserFeedback> feedbacks = userFeedbackRepository.findAllByOrderByCreatedAtDesc();
         Map<String, Long> moduleCount = new HashMap<>();
         Map<String, Long> goalCount = new HashMap<>();
@@ -373,7 +369,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ReportRecord payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("report-" + UUID.randomUUID());
         }
@@ -392,7 +388,7 @@ public class AdminContentController {
             @PathVariable String id,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         ReportRecord record = reportRecordRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "举报记录不存在"));
         if (payload.containsKey("status")) {
@@ -410,10 +406,7 @@ public class AdminContentController {
             @PathVariable String id,
             @RequestBody Map<String, Object> payload
     ) {
-        User admin = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(admin)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User admin = adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         ReportRecord record = reportRecordRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "举报记录不存在"));
 
@@ -484,7 +477,7 @@ public class AdminContentController {
             @PathVariable String id,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         UserFeedback record = userFeedbackRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "反馈记录不存在"));
 
@@ -506,7 +499,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String id
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ANNOUNCEMENT_MANAGE);
         announcementRepository.deleteById(id);
         return Map.of("message", "公告已删除", "id", id);
     }
@@ -516,7 +509,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String id
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ARTICLE_MANAGE);
         articleRepository.deleteById(id);
         return Map.of("message", "资讯已删除", "id", id);
     }
@@ -526,7 +519,7 @@ public class AdminContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String id
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
         platformEventRepository.deleteById(id);
         return Map.of("message", "活动已删除", "id", id);
     }
@@ -537,10 +530,7 @@ public class AdminContentController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> payload
     ) {
-        User admin = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(admin)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User admin = adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         UserVerification record = userVerificationRepository.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "认证记录不存在"));
 
@@ -602,10 +592,7 @@ public class AdminContentController {
             @PathVariable Long userId,
             @RequestBody Map<String, Object> payload
     ) {
-        User operator = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(operator)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
 
         User target = userRepository.findById(userId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
@@ -630,10 +617,7 @@ public class AdminContentController {
             @PathVariable Long userId,
             @RequestBody Map<String, Object> payload
     ) {
-        User operator = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(operator)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
 
         User target = userRepository.findById(userId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
@@ -682,10 +666,7 @@ public class AdminContentController {
 
     @GetMapping("/stats")
     public Map<String, Object> getStats(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        User operator = adminAuthService.requireUser(authHeader);
-        if (!adminAuthService.isAdmin(operator)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无管理员权限");
-        }
+        User operator = adminAuthService.requireAdmin(authHeader);
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
 
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();

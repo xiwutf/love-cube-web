@@ -291,8 +291,9 @@ onMounted(() => {
 async function loadGroups() {
   loading.value = true
   try {
-    const data = await fetchGroups({ status: 'published' })
-    remoteGroups.value = Array.isArray(data) ? data.map(normalizeGroup) : []
+    const data = await fetchGroups({ status: 'published', pageSize: 200 })
+    const list = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : [])
+    remoteGroups.value = list.map(normalizeGroup)
   } catch {
     remoteGroups.value = []
   } finally {

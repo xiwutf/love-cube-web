@@ -14,7 +14,7 @@
       </section>
 
       <nav class="admin-nav">
-        <router-link v-for="item in navItems" :key="item.to" :to="item.to">
+        <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to">
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </router-link>
@@ -47,23 +47,27 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import RouteBackButton from '@/components/RouteBackButton.vue'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
+import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
+const userStore = useUserStore()
 
-const navItems = [
-  { to: '/admin', label: '总览面板', icon: '◉' },
-  { to: '/admin/announcements', label: '公告管理', icon: '◎' },
-  { to: '/admin/articles', label: '资讯管理', icon: '◈' },
-  { to: '/admin/positive-shares', label: '心声审核', icon: '◉' },
-  { to: '/admin/events', label: '活动管理', icon: '◍' },
-  { to: '/admin/users', label: '用户管理', icon: '◌' },
-  { to: '/admin/invites', label: '邀请记录', icon: '◐' },
-  { to: '/admin/verifications', label: '认证审核', icon: '◑' },
-  { to: '/admin/reports', label: '举报处理', icon: '◒' },
-  { to: '/admin/feedbacks', label: '用户反馈', icon: '◓' },
-  { to: '/admin/modules', label: '模块管理', icon: '◇' },
-  { to: '/admin/home-config', label: '首页配置', icon: '◆' },
-  { to: '/admin/platform/groups', label: '团体管理', icon: '◈' }
+// 所有菜单定义，permission 为 null 表示所有管理员可见
+const ALL_NAV_ITEMS = [
+  { to: '/admin',                   label: '总览面板',    icon: '◉', permission: null },
+  { to: '/admin/announcements',     label: '公告管理',    icon: '◎', permission: 'content.announcement.manage' },
+  { to: '/admin/articles',          label: '资讯管理',    icon: '◈', permission: 'content.article.manage' },
+  { to: '/admin/events',            label: '活动管理',    icon: '◍', permission: 'content.event.manage' },
+  { to: '/admin/feedbacks',         label: '用户反馈',    icon: '◓', permission: 'content.manage' },
+  { to: '/admin/positive-shares',   label: '心声审核',    icon: '◐', permission: 'review.manage' },
+  { to: '/admin/verifications',     label: '认证审核',    icon: '◑', permission: 'review.manage' },
+  { to: '/admin/reports',           label: '举报处理',    icon: '◒', permission: 'review.manage' },
+  { to: '/admin/users',             label: '用户管理',    icon: '◌', permission: 'user.manage' },
+  { to: '/admin/invites',           label: '邀请记录',    icon: '◇', permission: 'user.manage' },
+  { to: '/admin/modules',           label: '模块管理',    icon: '◆', permission: 'system.manage' },
+  { to: '/admin/home-config',       label: '首页配置',    icon: '◉', permission: 'system.manage' },
+  { to: '/admin/platform/groups',   label: '全站团体管理', icon: '◈', permission: 'group.manage.all' },
+  { to: '/admin/my-groups',         label: '我的团体',    icon: '◈', permission: 'group.manage.own' }
 ]
 
 const sectionMap = {
@@ -79,10 +83,18 @@ const sectionMap = {
   '/admin/feedbacks': '用户反馈',
   '/admin/modules': '模块管理',
   '/admin/home-config': '首页配置',
-  '/admin/platform/groups': '团体管理'
+  '/admin/platform/groups': '全站团体管理',
+  '/admin/my-groups': '我的团体',
+  '/admin/403': '无权限'
 }
 
-const navHomePaths = computed(() => new Set(navItems.map(item => item.to)))
+const visibleNavItems = computed(() =>
+  ALL_NAV_ITEMS.filter(item =>
+    item.permission === null || userStore.hasPermission(item.permission)
+  )
+)
+
+const navHomePaths = computed(() => new Set(visibleNavItems.value.map(item => item.to)))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const currentSection = computed(() => sectionMap[route.path] || '管理中心')
 const todayText = computed(() =>

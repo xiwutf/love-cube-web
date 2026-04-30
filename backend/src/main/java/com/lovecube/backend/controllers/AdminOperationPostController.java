@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.entity.OperationPost;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.OperationPostService;
+import com.lovecube.backend.services.PermissionConstants;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,7 +25,7 @@ public class AdminOperationPostController {
     @GetMapping("/posts")
     public ResponseEntity<List<OperationPost>> listAll(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         return ResponseEntity.ok(service.getAll());
     }
 
@@ -32,7 +33,7 @@ public class AdminOperationPostController {
     public ResponseEntity<OperationPost> create(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody OperationPost post) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         return ResponseEntity.ok(service.create(post));
     }
 
@@ -41,7 +42,7 @@ public class AdminOperationPostController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String id,
             @RequestBody OperationPost patch) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         return ResponseEntity.ok(service.update(id, patch));
     }
 
@@ -49,7 +50,7 @@ public class AdminOperationPostController {
     public ResponseEntity<Map<String, Object>> delete(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @PathVariable String id) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_MANAGE);
         service.delete(id);
         return ResponseEntity.ok(Map.of("success", true, "id", id));
     }

@@ -2,8 +2,21 @@ import request from './request.js'
 
 // ── Platform groups (public module) ──────────────────────────────────────────
 
+/** Normalizes list API: plain array or paginated { items, total, page, pageSize }. */
+export function unwrapPlatformGroupList(res) {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.items)) return res.items
+  if (Array.isArray(res?.data?.items)) return res.data.items
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
 export function fetchGroups(params = {}) {
   return request.get('/platform/groups', { params })
+}
+
+export function fetchMeGroupsBuckets() {
+  return request.get('/platform/me/groups')
 }
 
 export function fetchMyGroups() {
@@ -66,14 +79,42 @@ export function rejectMember(groupId, memberId) {
   return request.post(`/platform/groups/${groupId}/members/${memberId}/reject`)
 }
 
+export function auditMember(groupId, memberId, action = 'approve') {
+  return request.put(`/platform/groups/${groupId}/members/${memberId}/audit`, { action })
+}
+
+export function removeGroupMember(groupId, memberId) {
+  return request.delete(`/platform/groups/${groupId}/members/${memberId}`)
+}
+
 // ── Admin groups (back-office) ────────────────────────────────────────────────
 
 export function getAdminGroups() {
   return request.get('/admin/groups')
 }
 
-export async function getAdminGroupDetail(id) {
-  return fetchGroupDetail(id)
+/** 后台团体详情（含 userRole / userPermissions，platform_groups） */
+export function fetchAdminGroupDetail(id) {
+  return request.get(`/admin/groups/${id}`)
+}
+
+export function getAdminGroupDetail(id) {
+  return fetchAdminGroupDetail(id)
+}
+
+/** 公共 API：platform_groups 的团体资料（无角色信息） */
+export function fetchLegacyGroupDetail(id) {
+  return request.get(`/groups/${id}`)
+}
+
+/** 公共 API：团体动态列表（group_posts） */
+export function fetchLegacyGroupPosts(id) {
+  return request.get(`/groups/${id}/posts`)
+}
+
+/** 后台：已加入成员（需 OWNER/ADMIN） */
+export function fetchAdminGroupMembers(id) {
+  return request.get(`/admin/groups/${id}/members`)
 }
 
 export function createAdminGroup(payload) {
@@ -110,4 +151,16 @@ export function deleteAdminGroupPost(groupId, postId) {
 
 export function removeAdminGroupMember(groupId, userId) {
   return request.delete(`/admin/groups/${groupId}/members/${userId}`)
+}
+
+export function getAdminGroupAdmins(groupId) {
+  return request.get(`/admin/groups/${groupId}/admins`)
+}
+
+export function addAdminGroupAdmin(groupId, payload) {
+  return request.post(`/admin/groups/${groupId}/admins`, payload)
+}
+
+export function removeAdminGroupAdmin(groupId, userId) {
+  return request.delete(`/admin/groups/${groupId}/admins/${userId}`)
 }

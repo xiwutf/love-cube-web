@@ -23,6 +23,10 @@
           <span class="me-menu-icon">□</span>
           <span>活动中心</span>
         </router-link>
+        <router-link to="/platform/me/groups" class="me-menu-item">
+          <span class="me-menu-icon">◈</span>
+          <span>我的团体</span>
+        </router-link>
         <router-link to="/modules" class="me-menu-item">
           <span class="me-menu-icon">◇</span>
           <span>模块中心</span>
@@ -48,11 +52,7 @@
       <header class="mobile-me-header mobile-only">
         <h1>平台个人中心</h1>
         <div class="mobile-header-actions">
-          <router-link to="/messages" class="mobile-header-icon">
-            ♧
-            <span v-if="unreadCount > 0">{{ unreadCount }}</span>
-          </router-link>
-          <router-link :to="accountSettingsRoute" class="mobile-header-icon">⚙</router-link>
+          <button type="button" class="mobile-header-icon" aria-label="编辑资料" @click="openSettingsPanel">⚙</button>
         </div>
       </header>
 
@@ -65,7 +65,7 @@
               <h1>{{ user?.username || '平台用户' }}</h1>
               <span class="me-level">平台创作者</span>
             </div>
-            <p class="me-bio">{{ user?.bio || '分享美好，连接你我' }} <button type="button" @click="toggleEdit">✎</button></p>
+            <p class="me-bio">{{ user?.bio || '分享美好，连接你我' }} <button type="button" @click="openEditPanel">✎</button></p>
             <div class="me-profile-line">
               <span>ID: {{ user?.id || '--' }}</span>
               <span>注册时间: {{ registerDate }}</span>
@@ -76,8 +76,8 @@
               <button type="button" :disabled="!inviteCode" @click="copyInviteCode">复制</button>
               <span v-if="copyFeedback" class="me-copy-feedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</span>
             </div>
-            <button type="button" class="me-edit-btn" @click="toggleEdit">
-              {{ editOpen ? '收起编辑' : '编辑资料' }} >
+            <button type="button" class="me-edit-btn" @click="openEditPanel">
+              编辑资料 >
             </button>
             <router-link to="/fellowship" class="mobile-fellowship-pill mobile-only">♡ 切换联谊中心 ></router-link>
           </div>
@@ -122,42 +122,6 @@
           <em>{{ item.extra }} ></em>
         </router-link>
       </section>
-
-      <div v-if="editOpen" class="platform-card me-edit-card">
-        <h3>编辑个人资料</h3>
-        <form class="me-edit-form" @submit.prevent="handleSaveProfile">
-          <label>
-            <span>昵称</span>
-            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称（最多20字）" />
-          </label>
-          <label>
-            <span>头像</span>
-            <div class="me-avatar-uploader">
-              <img v-if="editForm.avatar" :src="editForm.avatar" class="me-avatar-upload-preview" alt="头像预览" />
-              <div v-else class="me-avatar-upload-preview me-avatar-upload-fallback">{{ avatarFallback }}</div>
-              <div class="me-avatar-upload-actions">
-                <button type="button" class="me-avatar-upload-btn" :disabled="uploading || saving" @click="handlePickAvatar">
-                  {{ uploading ? '上传中...' : '选择图片' }}
-                </button>
-                <p class="me-avatar-upload-tip">支持常见图片格式，选择后自动上传并填充头像</p>
-              </div>
-            </div>
-          </label>
-          <label>
-            <span>所在地</span>
-            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：上海·浦东" />
-          </label>
-          <label>
-            <span>个人简介</span>
-            <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
-          </label>
-          <p v-if="saveMessage" :class="['me-save-message', { 'is-error': saveError }]">{{ saveMessage }}</p>
-          <div class="me-edit-actions">
-            <button type="button" class="me-edit-cancel" :disabled="saving" @click="resetEditForm">重置</button>
-            <button type="submit" class="me-edit-submit" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
-          </div>
-        </form>
-      </div>
 
       <div class="me-center-grid">
         <article v-for="card in centerCards" :key="card.key" class="me-center-card">
@@ -204,12 +168,92 @@
         </div>
       </section>
     </main>
+
+    <div v-if="editOpen" class="me-modal-backdrop" @click.self="closeEditPanel">
+      <section class="me-modal me-edit-card" role="dialog" aria-modal="true" aria-label="编辑个人资料">
+        <div class="me-modal-head">
+          <h3>编辑个人资料</h3>
+          <button type="button" class="me-modal-close" aria-label="关闭" @click="closeEditPanel">×</button>
+        </div>
+        <form class="me-edit-form" @submit.prevent="handleSaveProfile">
+          <label>
+            <span>昵称</span>
+            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称（最多20字）" />
+          </label>
+          <label>
+            <span>头像</span>
+            <div class="me-avatar-uploader">
+              <img v-if="editForm.avatar" :src="editForm.avatar" class="me-avatar-upload-preview" alt="头像预览" />
+              <div v-else class="me-avatar-upload-preview me-avatar-upload-fallback">{{ avatarFallback }}</div>
+              <div class="me-avatar-upload-actions">
+                <button type="button" class="me-avatar-upload-btn" :disabled="uploading || saving" @click="handlePickAvatar">
+                  {{ uploading ? '上传中...' : '选择图片' }}
+                </button>
+                <p class="me-avatar-upload-tip">支持常见图片格式，选择后自动上传并填充头像</p>
+              </div>
+            </div>
+          </label>
+          <label>
+            <span>所在地</span>
+            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：上海·浦东" />
+          </label>
+          <label>
+            <span>个人简介</span>
+            <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
+          </label>
+          <p v-if="saveMessage" :class="['me-save-message', { 'is-error': saveError }]">{{ saveMessage }}</p>
+          <div class="me-edit-actions">
+            <button type="button" class="me-edit-cancel" :disabled="saving" @click="resetEditForm">重置</button>
+            <button type="submit" class="me-edit-submit" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div v-if="settingsOpen" class="me-modal-backdrop" @click.self="closeSettingsPanel">
+      <section class="me-modal me-settings-modal" role="dialog" aria-modal="true" aria-label="账号设置">
+        <div class="me-modal-head">
+          <h3>账号设置</h3>
+          <button type="button" class="me-modal-close" aria-label="关闭" @click="closeSettingsPanel">×</button>
+        </div>
+        <div class="me-account-summary">
+          <img v-if="user?.avatar" :src="user.avatar" class="me-account-avatar" alt="头像" />
+          <div v-else class="me-account-avatar me-account-avatar-fallback">{{ avatarFallback }}</div>
+          <div>
+            <strong>{{ user?.username || '平台用户' }}</strong>
+            <span>{{ roleLabel }}</span>
+          </div>
+        </div>
+        <div class="me-settings-list">
+          <div class="me-settings-row">
+            <span>账号 ID</span>
+            <strong>{{ user?.id || '--' }}</strong>
+          </div>
+          <div class="me-settings-row">
+            <span>手机号</span>
+            <strong>{{ user?.phone || '未绑定' }}</strong>
+          </div>
+          <div class="me-settings-row">
+            <span>认证状态</span>
+            <strong>{{ verifyLabel }}</strong>
+          </div>
+          <div class="me-settings-row">
+            <span>注册时间</span>
+            <strong>{{ registerDate }}</strong>
+          </div>
+        </div>
+        <div class="me-settings-actions">
+          <button type="button" class="me-edit-submit" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="me-logout-btn" @click="handleLogout">退出登录</button>
+        </div>
+      </section>
+    </div>
   </section>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
@@ -218,9 +262,11 @@ import { useImageUpload } from '@/composables/useImageUpload.js'
 
 const userStore = useUserStore()
 const route = useRoute()
+const router = useRouter()
 const user = computed(() => userStore.userInfo)
 const unreadCount = ref(0)
 const editOpen = ref(false)
+const settingsOpen = ref(false)
 const saving = ref(false)
 const saveMessage = ref('')
 const saveError = ref(false)
@@ -239,6 +285,7 @@ const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
 const accountSettingsRoute = { path: '/me', query: { panel: 'settings' } }
+const profileEditRoute = { path: '/me', query: { panel: 'edit' } }
 
 const avatarFallback = computed(() => {
   const name = user.value?.username || ''
@@ -322,14 +369,14 @@ const centerCards = computed(() => [
   },
   {
     key: 'account',
-    title: '资料设置',
-    desc: '编辑个人资料信息',
+    title: '账号设置',
+    desc: '登录状态与账号信息',
     icon: '⚙',
     theme: 'blue',
-    action: '去编辑',
+    action: '查看设置',
     actionTo: accountSettingsRoute,
     rows: [
-      { label: '基础资料', value: '>', to: '/me' },
+      { label: '编辑资料', value: '>', to: profileEditRoute },
       { label: '账号角色', value: roleLabel.value, to: accountSettingsRoute },
       { label: '通知消息', value: unreadCount.value, to: '/messages' },
       { label: '认证状态', value: verifyLabel.value, to: accountSettingsRoute }
@@ -360,7 +407,7 @@ const recommendItems = [
     action: '去完善',
     icon: '●',
     theme: 'orange',
-    to: '/me'
+    to: profileEditRoute
   }
 ]
 
@@ -368,7 +415,7 @@ const mobileShortcutItems = computed(() => [
   { title: '我的内容', desc: `${myContentCount.value} 篇内容`, icon: '▣', theme: 'purple', to: '/platform/positive-share' },
   { title: '每日心声', desc: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', theme: 'pink', to: '/platform/positive-share' },
   { title: '活动中心', desc: `${myEventCount.value} 个活动`, icon: '□', theme: 'orange', to: '/events' },
-  { title: '编辑资料', desc: '修改账号资料', icon: '◇', theme: 'blue', to: accountSettingsRoute }
+  { title: '消息中心', desc: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '♧', theme: 'blue', to: '/messages' }
 ])
 
 const mobileDataItems = computed(() => [
@@ -383,9 +430,9 @@ const mobileListItems = computed(() => [
   { title: '内容中心', desc: '管理我的内容创作', extra: `${myContentCount.value} 篇内容`, icon: '▣', theme: 'purple', to: '/platform/positive-share' },
   { title: '模块中心', desc: '创作者成长体系', extra: '待接入', icon: '♕', theme: 'amber', to: '/modules' },
   { title: '通知中心', desc: '平台消息与评论', extra: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '♧', theme: 'pink', to: '/messages' },
-  { title: '资料设置', desc: '编辑头像昵称简介', extra: verifyLabel.value, icon: '◇', theme: 'teal', to: accountSettingsRoute },
+  { title: '账号设置', desc: '登录状态与账号信息', extra: verifyLabel.value, icon: '⚙', theme: 'teal', to: accountSettingsRoute },
   { title: '邀请码', desc: '邀请好友得奖励', extra: '去邀请', icon: '✉', theme: 'blue', to: '/fellowship/invite' },
-  { title: '资料帮助', desc: '资料编辑相关说明', extra: '查看', icon: '?', theme: 'purple', to: accountSettingsRoute }
+  { title: '编辑资料', desc: '编辑头像昵称简介', extra: '修改', icon: '◇', theme: 'purple', to: profileEditRoute }
 ])
 
 async function refreshUnreadCount() {
@@ -408,10 +455,27 @@ watch(
   { immediate: true }
 )
 
-function toggleEdit() {
-  editOpen.value = !editOpen.value
+function openEditPanel() {
+  editOpen.value = true
+  settingsOpen.value = false
   saveMessage.value = ''
   saveError.value = false
+}
+
+function closeEditPanel() {
+  editOpen.value = false
+}
+
+function openSettingsPanel() {
+  settingsOpen.value = true
+  editOpen.value = false
+  if (route.query?.panel !== 'settings') {
+    router.replace({ path: '/me', query: { ...route.query, panel: 'settings' } })
+  }
+}
+
+function closeSettingsPanel() {
+  settingsOpen.value = false
 }
 
 function resetEditForm() {
@@ -462,12 +526,20 @@ async function handleSaveProfile() {
     })
     await userStore.refreshCurrentUser().catch(() => {})
     saveMessage.value = '资料已更新'
+    setTimeout(() => {
+      if (!saveError.value) closeEditPanel()
+    }, 600)
   } catch (error) {
     saveError.value = true
     saveMessage.value = error?.message || '保存失败，请稍后重试'
   } finally {
     saving.value = false
   }
+}
+
+function handleLogout() {
+  userStore.logout()
+  router.replace('/login')
 }
 
 async function copyInviteCode() {
@@ -497,7 +569,9 @@ async function copyInviteCode() {
 onMounted(async () => {
   window.addEventListener('platform-notif-read-all', handleNotifReadAll)
   if (route.query?.panel === 'settings') {
-    editOpen.value = true
+    openSettingsPanel()
+  } else if (route.query?.panel === 'edit') {
+    openEditPanel()
   }
   if (!user.value) {
     await userStore.refreshCurrentUser().catch(() => {})
@@ -513,6 +587,17 @@ onMounted(async () => {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
   }
 })
+
+watch(
+  () => route.query?.panel,
+  (panel) => {
+    if (panel === 'settings') {
+      openSettingsPanel()
+    } else if (panel === 'edit') {
+      openEditPanel()
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('platform-notif-read-all', handleNotifReadAll)
@@ -677,8 +762,62 @@ onBeforeUnmount(() => {
   gap: 14px;
 }
 
+.me-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, .42);
+}
+
+.me-modal {
+  width: min(100%, 520px);
+  max-height: min(86vh, 720px);
+  overflow-y: auto;
+  border: 1px solid rgba(226, 232, 240, .92);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .24);
+}
+
+.me-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+  background: #fff;
+}
+
+.me-modal-head h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.me-modal-close {
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: #64748b;
+  background: #f1f5f9;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .me-edit-card h3 {
   margin-top: 0;
+}
+
+.me-edit-card {
+  padding: 0 20px 20px;
 }
 
 .me-edit-form {
@@ -800,6 +939,103 @@ onBeforeUnmount(() => {
   border-color: #2563eb;
   background: #2563eb;
   color: #fff;
+}
+
+.me-settings-modal {
+  padding: 0 20px 20px;
+}
+
+.me-account-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.me-account-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.me-account-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  background: #dbeafe;
+  font-weight: 900;
+}
+
+.me-account-summary strong,
+.me-account-summary span {
+  display: block;
+}
+
+.me-account-summary strong {
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.me-account-summary span {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.me-settings-list {
+  display: grid;
+  gap: 0;
+  margin-top: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.me-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.me-settings-row:last-child {
+  border-bottom: 0;
+}
+
+.me-settings-row span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.me-settings-row strong {
+  color: #0f172a;
+  font-size: 13px;
+  text-align: right;
+}
+
+.me-settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.me-logout-btn {
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: #dc2626;
+  background: #fef2f2;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .me-shortcuts {
@@ -2429,10 +2665,14 @@ onBeforeUnmount(() => {
 
   .mobile-header-icon {
     position: relative;
+    border: 0;
+    padding: 0;
     color: #1f2937;
+    background: transparent;
     font-size: 18px;
     font-weight: 900;
     text-decoration: none;
+    cursor: pointer;
   }
 
   .mobile-header-icon span {

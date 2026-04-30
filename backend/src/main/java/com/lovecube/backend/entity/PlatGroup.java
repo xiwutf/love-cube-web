@@ -32,6 +32,9 @@ public class PlatGroup {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(length = 500)
+    private String tags;
+
     @Column(name = "owner_user_id")
     private Long ownerUserId;
 

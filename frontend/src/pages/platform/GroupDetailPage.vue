@@ -25,8 +25,11 @@
             <button type="button" class="join-btn" :disabled="joinDisabled || joining" @click="applyJoin">
               {{ joining ? '处理中...' : joinButtonText }}
             </button>
-            <button type="button" class="primary-btn">邀请好友</button>
-            <button type="button" class="icon-btn" aria-label="更多操作">···</button>
+            <router-link
+              v-if="group.managed"
+              class="manage-link"
+              :to="`/platform/groups/${group.id}/members`"
+            >团体管理</router-link>
           </div>
         </div>
       </section>
@@ -133,6 +136,13 @@
                   <button type="button" :disabled="moderatingMemberId === member.id" @click="approvePendingMember(member)">通过</button>
                   <button type="button" :disabled="moderatingMemberId === member.id" @click="rejectPendingMember(member)">拒绝</button>
                 </div>
+                <button
+                  v-else-if="canRemoveMember(member)"
+                  type="button"
+                  class="remove-member-btn"
+                  :disabled="moderatingMemberId === member.id"
+                  @click="removeMember(member)"
+                >移除</button>
               </article>
             </div>
             <div v-else class="empty-inline">暂无成员</div>
@@ -163,7 +173,7 @@
         </main>
 
         <aside class="side-panel">
-          <section class="side-card">
+          <section v-if="activeTab !== 'profile'" class="side-card">
             <h2>团体资料</h2>
             <InfoList :group="group" compact />
           </section>
@@ -180,7 +190,7 @@
 
 <script setup>
 import { computed, defineComponent, h, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   approveMember,
   createGroupPost,
@@ -189,13 +199,17 @@ import {
   fetchGroupNotices,
   fetchGroupPosts,
   joinGroup,
-  rejectMember
+  rejectMember,
+  removeGroupMember
 } from '@/api/groups.js'
+import { useUserStore } from '@/stores/user.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 const group = ref(null)
 const rawMembers = ref([])
 const rawPosts = ref([])
@@ -234,11 +248,26 @@ const tabs = computed(() => {
 
 const heroImage = computed(() => group.value?.coverUrl || DEFAULT_COVER)
 const latestNotice = computed(() => notices.value[0] || group.value?.latestNotice || null)
-const joinDisabled = computed(() => group.value?.isMember || group.value?.hasPendingRequest)
+const joinModeKey = computed(() => {
+  const g = group.value
+  if (!g) return 'audit'
+  return g.joinModeKey || (g.joinMode === 'free' ? 'open' : g.joinMode === 'invite' ? 'invite' : 'audit')
+})
+
+const joinDisabled = computed(() => {
+  if (!group.value) return true
+  if (group.value.isMember || group.value.hasPendingRequest) return true
+  if (joinModeKey.value === 'invite') return true
+  return false
+})
+
 const joinButtonText = computed(() => {
+  if (!userStore.isLoggedIn) return '登录后加入'
   if (group.value?.isMember) return '已加入'
-  if (group.value?.hasPendingRequest) return '申请中'
-  return group.value?.joinMode === 'free' ? '加入团体' : '申请加入'
+  if (group.value?.hasPendingRequest) return '审核中'
+  if (joinModeKey.value === 'invite') return '仅限邀请'
+  if (joinModeKey.value === 'open') return '加入团体'
+  return '申请加入'
 })
 
 const admins = computed(() => normalizeAdmins(group.value?.admins || []))
@@ -316,8 +345,14 @@ async function loadRelatedData() {
 
 async function applyJoin() {
   if (joinDisabled.value || joining.value) return
+  if (!userStore.isLoggedIn) {
+    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || `/platform/groups/${route.params.id}`)
+    router.push('/login')
+    return
+  }
+  if (joinModeKey.value === 'invite') return
   let applyMessage = ''
-  if (group.value?.joinMode !== 'free') {
+  if (joinModeKey.value === 'audit') {
     const input = window.prompt('请输入申请验证信息（必填）', '')
     if (input === null) return
     applyMessage = input.trim()
@@ -364,6 +399,30 @@ function canAuditMember(member) {
   return group.value?.managed && member.status === 'pending'
 }
 
+function canRemoveMember(member) {
+  return (
+    group.value?.managed &&
+    member.status === 'approved' &&
+    member.role !== 'owner'
+  )
+}
+
+async function removeMember(member) {
+  if (!canRemoveMember(member) || moderatingMemberId.value) return
+  if (!window.confirm(`确定将「${member.name}」移出团体？`)) return
+  moderatingMemberId.value = member.id
+  try {
+    await removeGroupMember(group.value.id, member.id)
+    await loadDetail()
+    await loadMembers()
+    flashMessage('已移除成员')
+  } catch (error) {
+    flashMessage(error.message || '移除失败', 'error')
+  } finally {
+    moderatingMemberId.value = null
+  }
+}
+
 async function approvePendingMember(member) {
   if (!canAuditMember(member) || moderatingMemberId.value) return
   moderatingMemberId.value = member.id
@@ -398,6 +457,10 @@ function toggleNotice(id) {
 }
 
 function normalizeGroup(item) {
+  const jm = item.joinMode
+  const key = item.joinModeKey || (jm === 'free' ? 'open' : jm === 'invite' ? 'invite' : 'audit')
+  const joinLabel =
+    key === 'open' ? '公开加入' : key === 'invite' ? '仅限邀请' : '审核加入'
   return {
     id: item.id || route.params.id,
     name: item.name || '未命名团体',
@@ -406,8 +469,9 @@ function normalizeGroup(item) {
     category: item.category || item.typeName || item.type || '团体',
     region: item.location || item.region || '未设置地区',
     memberCount: Number(item.memberCount || 0),
-    joinMode: item.joinMode || (item.joinType === 'open' ? 'free' : 'audit'),
-    joinLabel: item.joinMode === 'free' || item.joinType === 'open' ? '自由加入' : '审核加入',
+    joinMode: jm || (key === 'open' ? 'free' : 'audit'),
+    joinModeKey: key,
+    joinLabel,
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
     hasPendingRequest: Boolean(item.hasPendingRequest),
@@ -692,6 +756,32 @@ onMounted(async () => {
   color: var(--lc-blue);
   background: var(--lc-blue-light);
   cursor: default;
+}
+
+.manage-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--lc-space-4);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-blue-border);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.remove-member-btn {
+  height: 28px;
+  padding: 0 var(--lc-space-2);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-border);
+  color: var(--lc-red);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .icon-btn {

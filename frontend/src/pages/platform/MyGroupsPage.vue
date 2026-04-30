@@ -3,126 +3,144 @@
     <header class="page-head">
       <div>
         <h1>我的团体</h1>
-        <p>管理你加入、负责和正在申请中的团体</p>
+        <p>查看你创建、管理及加入的团体</p>
       </div>
-      <router-link to="/platform/groups">发现团体</router-link>
+      <div class="head-actions">
+        <router-link to="/platform/groups" class="btn-secondary">团体大厅</router-link>
+        <router-link to="/platform/groups/create" class="btn-primary">创建团体</router-link>
+      </div>
     </header>
 
-    <div v-if="loading" class="loading-state">加载我的团体中...</div>
+    <nav class="tabs" aria-label="分类">
+      <button type="button" :class="{ active: tab === 'created' }" @click="tab = 'created'">
+        我创建的 <span class="count">{{ created.length }}</span>
+      </button>
+      <button type="button" :class="{ active: tab === 'managed' }" @click="tab = 'managed'">
+        我管理的 <span class="count">{{ managed.length }}</span>
+      </button>
+      <button type="button" :class="{ active: tab === 'joined' }" @click="tab = 'joined'">
+        我加入的 <span class="count">{{ joined.length }}</span>
+      </button>
+    </nav>
+
+    <div v-if="loading" class="loading-state">加载中...</div>
     <div v-else-if="error" class="error-card">
-      <h2>我的团体加载失败</h2>
+      <h2>加载失败</h2>
       <p>{{ error }}</p>
-      <button type="button" @click="loadMyGroups">重试</button>
+      <button type="button" @click="load">重试</button>
     </div>
 
     <template v-else>
-      <section v-for="section in sections" :key="section.key" class="group-section">
-        <div class="section-head">
-          <h2>{{ section.title }}</h2>
-          <span>{{ section.items.length }}</span>
-        </div>
-        <div v-if="section.items.length" class="groups-grid">
-          <router-link v-for="group in section.items" :key="group.id" :to="`/platform/groups/${group.id}`" class="group-card">
+      <div v-if="currentList.length" class="groups-grid">
+        <article v-for="group in currentList" :key="group.id" class="group-card">
+          <router-link :to="`/platform/groups/${group.id}`" class="cover-wrap">
             <img :src="group.coverUrl" :alt="group.name">
-            <div class="group-info">
-              <div class="title-line">
-                <h3>{{ group.name }}</h3>
-                <span>{{ group.category }}</span>
-              </div>
-              <p class="meta">{{ group.region }} · {{ group.memberCount }} 人</p>
-              <p class="desc">{{ group.description }}</p>
-              <div class="card-foot">
-                <em :class="section.key">{{ section.badge }}</em>
-              </div>
-            </div>
           </router-link>
-        </div>
-        <div v-else class="empty-card">
-          <h3>{{ section.emptyTitle }}</h3>
-          <p>{{ section.emptyText }}</p>
-        </div>
-      </section>
+          <div class="group-info">
+            <div class="title-line">
+              <h3>{{ group.name }}</h3>
+              <span class="role-pill">{{ group.roleLabel }}</span>
+            </div>
+            <p class="meta">{{ group.region }} · {{ group.memberCount }} 人 · {{ group.joinModeLabel }}</p>
+            <p class="desc">{{ group.description }}</p>
+            <div class="card-foot">
+              <span class="status-tag">{{ group.statusLabel }}</span>
+              <router-link class="enter-btn" :to="`/platform/groups/${group.id}`">{{ group.enterLabel }}</router-link>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div v-else class="empty-card">
+        <h3>{{ emptyTitle }}</h3>
+        <p>{{ emptyText }}</p>
+        <router-link v-if="tab === 'created'" to="/platform/groups/create" class="btn-primary inline">创建团体</router-link>
+        <router-link v-else to="/platform/groups" class="btn-primary inline">去发现团体</router-link>
+      </div>
     </template>
   </section>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchMyGroups } from '@/api/groups.js'
+import { fetchMeGroupsBuckets } from '@/api/groups.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
 
 const loading = ref(false)
 const error = ref('')
-const groups = ref([])
+const tab = ref('created')
 
-const joinedGroups = computed(() => groups.value.filter(item => item.isMember && !item.managed))
-const managedGroups = computed(() => groups.value.filter(item => item.managed))
-const pendingGroups = computed(() => groups.value.filter(item => item.hasPendingRequest))
+const created = ref([])
+const managed = ref([])
+const joined = ref([])
 
-const sections = computed(() => [
-  {
-    key: 'joined',
-    title: '我加入的团体',
-    badge: '已加入',
-    items: joinedGroups.value,
-    emptyTitle: '还没有加入团体',
-    emptyText: '去发现页看看适合你的团体。'
-  },
-  {
-    key: 'managed',
-    title: '我管理的团体',
-    badge: '管理中',
-    items: managedGroups.value,
-    emptyTitle: '还没有管理的团体',
-    emptyText: '创建团体后，你负责的团体会显示在这里。'
-  },
-  {
-    key: 'pending',
-    title: '申请中的团体',
-    badge: '申请中',
-    items: pendingGroups.value,
-    emptyTitle: '暂无申请中的团体',
-    emptyText: '提交审核加入申请后，会在这里跟踪状态。'
-  }
-])
+const currentList = computed(() => {
+  if (tab.value === 'created') return created.value
+  if (tab.value === 'managed') return managed.value
+  return joined.value
+})
 
-async function loadMyGroups() {
-  loading.value = true
-  error.value = ''
-  try {
-    const data = await fetchMyGroups()
-    groups.value = unwrapList(data).map(normalizeGroup)
-  } catch (err) {
-    groups.value = []
-    error.value = err.message || '无法连接 /api/platform/groups'
-  } finally {
-    loading.value = false
-  }
-}
+const emptyTitle = computed(() => {
+  if (tab.value === 'created') return '还没有创建的团体'
+  if (tab.value === 'managed') return '没有作为管理员参与的团体'
+  return '还没有加入的团体'
+})
 
-function unwrapList(res) {
-  if (Array.isArray(res)) return res
-  if (Array.isArray(res?.data)) return res.data
-  return []
-}
+const emptyText = computed(() => {
+  if (tab.value === 'created') return '创建第一个团体，邀请伙伴一起成长。'
+  if (tab.value === 'managed') return '由团长将你设为管理员后，会显示在这里。'
+  return '去团体大厅搜索感兴趣的团体并加入。'
+})
 
-function normalizeGroup(item) {
+function normalize(item, tabKey) {
+  const joinKey = item.joinModeKey || (item.joinMode === 'free' ? 'open' : item.joinMode === 'invite' ? 'invite' : 'audit')
+  const joinModeLabel = joinKey === 'open' ? '公开加入' : joinKey === 'invite' ? '仅限邀请' : '审核加入'
+  let roleLabel = '成员'
+  if (tabKey === 'created') roleLabel = '团长'
+  else if (tabKey === 'managed') roleLabel = '管理员'
+  else if (item.myRole === 'owner') roleLabel = '团长'
+  else if (item.hasPendingRequest) roleLabel = '审核中'
+
+  const statusLabel = item.hasPendingRequest ? '审核中' : (item.status === 'published' ? '进行中' : item.status || '进行中')
+  const enterLabel = item.managed ? '管理' : '进入'
+
   return {
-    id: item.id || item.slug,
+    id: item.id,
     name: item.name || '未命名团体',
     category: item.category || item.typeName || item.type || '团体',
     region: item.location || item.region || '未设置地区',
     memberCount: Number(item.memberCount || 0),
     description: item.description || '暂无团体简介',
     coverUrl: item.coverUrl || DEFAULT_COVER,
-    isMember: Boolean(item.isMember),
+    joinModeLabel,
+    roleLabel,
+    statusLabel,
+    enterLabel,
     managed: Boolean(item.managed),
     hasPendingRequest: Boolean(item.hasPendingRequest)
   }
 }
 
-onMounted(loadMyGroups)
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const data = await fetchMeGroupsBuckets()
+    const raw = data?.data ?? data
+    created.value = (raw?.createdGroups ?? []).map((g) => normalize(g, 'created'))
+    managed.value = (raw?.managedGroups ?? []).map((g) => normalize(g, 'managed'))
+    joined.value = (raw?.joinedGroups ?? []).map((g) => normalize(g, 'joined'))
+  } catch (err) {
+    error.value = err.message || '无法加载我的团体'
+    created.value = []
+    managed.value = []
+    joined.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
 </script>
 
 <style scoped>
@@ -136,12 +154,12 @@ onMounted(loadMyGroups)
   box-shadow: var(--lc-shadow-sm);
 }
 
-.page-head,
-.section-head {
+.page-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--lc-space-4);
+  flex-wrap: wrap;
 }
 
 .page-head h1 {
@@ -156,78 +174,112 @@ onMounted(loadMyGroups)
   font-weight: 700;
 }
 
-.page-head a {
+.head-actions {
+  display: flex;
+  gap: var(--lc-space-3);
+}
+
+.btn-secondary,
+.btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 42px;
-  border-radius: var(--lc-radius-xs);
   padding: 0 var(--lc-space-4);
+  border-radius: var(--lc-radius-xs);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.btn-secondary {
+  border: 1px solid var(--lc-border);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+}
+
+.btn-primary {
+  border: 0;
   color: var(--lc-surface);
   background: linear-gradient(135deg, var(--lc-pink), var(--lc-blue));
   box-shadow: var(--lc-shadow-blue);
-  text-decoration: none;
-  font-weight: 900;
 }
 
-.group-section {
-  margin-top: var(--lc-space-8);
+.btn-primary.inline {
+  margin-top: var(--lc-space-4);
 }
 
-.section-head {
-  margin-bottom: var(--lc-space-4);
+.tabs {
+  display: flex;
+  gap: var(--lc-space-2);
+  margin-top: var(--lc-space-6);
   border-bottom: 1px solid var(--lc-border);
-  padding-bottom: var(--lc-space-3);
+  flex-wrap: wrap;
 }
 
-.section-head h2 {
-  margin: 0;
-  color: var(--lc-text);
-  font-size: var(--lc-text-lg);
+.tabs button {
+  position: relative;
+  padding: var(--lc-space-3) var(--lc-space-4);
+  border: 0;
+  background: transparent;
+  color: var(--lc-muted);
+  font-size: var(--lc-text-base);
+  font-weight: 900;
+  cursor: pointer;
 }
 
-.section-head span {
-  display: grid;
-  place-items: center;
-  min-width: 28px;
-  height: 28px;
+.tabs button.active {
+  color: var(--lc-blue);
+}
+
+.tabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
   border-radius: 999px;
+  background: var(--lc-blue);
+}
+
+.count {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  margin-left: 4px;
   color: var(--lc-blue);
   background: var(--lc-blue-light);
-  font-weight: 900;
+  font-size: var(--lc-text-xs);
 }
 
 .groups-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--lc-space-4);
+  margin-top: var(--lc-space-6);
 }
 
 .group-card {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
   gap: var(--lc-space-4);
-  min-height: 140px;
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
   border-radius: var(--lc-radius-sm);
-  color: inherit;
   background: var(--lc-surface);
-  text-decoration: none;
   box-shadow: 0 7px 18px rgba(15, 23, 42, 0.04);
-  transition: var(--lc-transition);
 }
 
-.group-card:hover {
-  border-color: var(--lc-blue-border);
-  box-shadow: var(--lc-shadow);
-  transform: translateY(-1px);
+.cover-wrap {
+  display: block;
+  border-radius: var(--lc-radius-xs);
+  overflow: hidden;
 }
 
-.group-card img {
+.cover-wrap img {
   width: 132px;
   height: 116px;
-  border-radius: var(--lc-radius-xs);
   object-fit: cover;
 }
 
@@ -241,23 +293,18 @@ onMounted(loadMyGroups)
   display: flex;
   align-items: center;
   gap: var(--lc-space-2);
-  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .title-line h3 {
   margin: 0;
-  min-width: 0;
-  overflow: hidden;
   color: var(--lc-text);
   font-size: var(--lc-text-lg);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.title-line span {
-  flex: 0 0 auto;
-  border-radius: 999px;
+.role-pill {
   padding: 3px var(--lc-space-2);
+  border-radius: 999px;
   color: var(--lc-blue);
   background: var(--lc-blue-light);
   font-size: var(--lc-text-xs);
@@ -269,7 +316,6 @@ onMounted(loadMyGroups)
   margin: var(--lc-space-2) 0 0;
   color: var(--lc-muted);
   font-size: var(--lc-text-sm);
-  line-height: 1.55;
 }
 
 .desc {
@@ -281,76 +327,64 @@ onMounted(loadMyGroups)
 
 .card-foot {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-3);
   margin-top: auto;
+  padding-top: var(--lc-space-3);
 }
 
-.card-foot em {
+.status-tag {
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+  color: var(--lc-muted);
+}
+
+.enter-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 78px;
-  height: 30px;
+  min-width: 72px;
+  height: 32px;
+  padding: 0 var(--lc-space-3);
   border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-blue-border);
   color: var(--lc-blue);
-  background: var(--lc-blue-light);
-  font-size: var(--lc-text-sm);
-  font-style: normal;
   font-weight: 900;
-}
-
-.card-foot em.pending {
-  color: var(--lc-amber);
-  background: var(--lc-amber-light);
+  font-size: var(--lc-text-sm);
+  text-decoration: none;
 }
 
 .loading-state,
 .empty-card,
 .error-card {
-  min-height: 220px;
+  min-height: 200px;
+  margin-top: var(--lc-space-6);
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: var(--lc-space-2);
   text-align: center;
-}
-
-.loading-state,
-.empty-card {
-  color: var(--lc-muted);
 }
 
 .empty-card {
   border: 1px dashed var(--lc-border);
   border-radius: var(--lc-radius-sm);
-}
-
-.empty-card h3,
-.error-card h2 {
-  margin: 0;
-  color: var(--lc-text);
-}
-
-.empty-card p,
-.error-card p {
-  margin: 0;
+  padding: var(--lc-space-8);
   color: var(--lc-muted);
 }
 
 .error-card {
-  margin-top: var(--lc-space-6);
-  border-radius: var(--lc-radius-sm);
   color: var(--lc-red);
   background: var(--lc-red-light);
+  border-radius: var(--lc-radius-sm);
 }
 
 .error-card button {
-  height: 34px;
-  border: 1px solid var(--lc-red);
+  margin-top: var(--lc-space-3);
+  padding: var(--lc-space-2) var(--lc-space-4);
   border-radius: var(--lc-radius-xs);
-  padding: 0 var(--lc-space-4);
-  color: var(--lc-red);
+  border: 1px solid var(--lc-red);
   background: var(--lc-surface);
+  color: var(--lc-red);
   font-weight: 900;
   cursor: pointer;
 }
@@ -363,27 +397,6 @@ onMounted(loadMyGroups)
 
   .groups-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .page-head {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .group-card {
-    grid-template-columns: 104px minmax(0, 1fr);
-  }
-
-  .group-card img {
-    width: 104px;
-    height: 104px;
-  }
-
-  .title-line {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 </style>

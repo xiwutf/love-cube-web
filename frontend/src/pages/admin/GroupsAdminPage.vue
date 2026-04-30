@@ -208,6 +208,7 @@ function normalizeGroup(item) {
 
 function unwrapList(res) {
   if (Array.isArray(res)) return res
+  if (Array.isArray(res?.items)) return res.items
   if (Array.isArray(res?.data)) return res.data
   return []
 }

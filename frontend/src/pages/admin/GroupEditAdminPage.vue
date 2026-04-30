@@ -4,7 +4,7 @@
     <div v-else-if="errors.detail" class="admin-error">
       {{ errors.detail }}
       <button type="button" class="admin-btn" @click="loadDetail">重试</button>
-      <router-link to="/admin/platform/groups" class="admin-btn">返回列表</router-link>
+      <router-link :to="backListPath" class="admin-btn">返回列表</router-link>
     </div>
 
     <template v-else-if="group">
@@ -15,14 +15,23 @@
             <span v-else>{{ group.name.charAt(0) }}</span>
             <div>
               <h1 class="platform-title">{{ group.name }}</h1>
-              <p class="platform-subtitle">{{ group.category || '未分类' }} · {{ group.region || '未设置地区' }} · {{ group.memberCount }} 位成员</p>
+              <p class="platform-subtitle">
+                <span class="role-chip">{{ userRoleName }}</span>
+                · {{ group.category || '未分类' }} · {{ group.region || '未设置地区' }} · {{ group.memberCount }} 位成员
+              </p>
             </div>
           </div>
           <div class="head-actions">
-            <button type="button" class="admin-btn" :disabled="saving" @click="toggleStatus">
+            <button
+              v-if="showDisableButton"
+              type="button"
+              class="admin-btn"
+              :disabled="saving"
+              @click="toggleStatus"
+            >
               {{ isEnabled(group.status) ? '禁用团体' : '启用团体' }}
             </button>
-            <router-link to="/admin/platform/groups" class="admin-btn">返回列表</router-link>
+            <router-link :to="backListPath" class="admin-btn">返回列表</router-link>
           </div>
         </div>
       </section>
@@ -145,7 +154,7 @@
         <div v-else class="empty-hint">暂无动态</div>
       </section>
 
-      <section v-else class="platform-card">
+      <section v-else-if="activeTab === 'notices'" class="platform-card">
         <div class="section-head">
           <h2>团体公告</h2>
         </div>
@@ -162,69 +171,173 @@
         </div>
         <div v-else class="empty-hint">暂无公告</div>
       </section>
+
+      <!-- 管理员设置（OWNER only） -->
+      <section v-else-if="activeTab === 'admins'" class="platform-card">
+        <div class="section-head">
+          <h2>管理员设置</h2>
+        </div>
+        <div v-if="loading.admins" class="tab-loading">加载中...</div>
+        <div v-else-if="errors.admins" class="inline-error">{{ errors.admins }}</div>
+        <div v-else class="member-list">
+          <article v-for="admin in groupAdmins" :key="admin.userId" class="member-row">
+            <img :src="admin.avatarUrl || DEFAULT_AVATAR" :alt="admin.username">
+            <div>
+              <strong>{{ admin.username || '未知用户' }}</strong>
+              <p>ID: {{ admin.userId }}</p>
+            </div>
+            <span class="admin-role-tag" :class="`ga-${admin.role?.toLowerCase()}`">{{ admin.roleName }}</span>
+            <div class="row-actions">
+              <button
+                v-if="admin.role !== 'OWNER'"
+                type="button"
+                class="admin-btn danger"
+                :disabled="saving"
+                @click="removeGroupAdminRecord(admin)"
+              >移除</button>
+              <span v-else class="owner-badge">团长</span>
+            </div>
+          </article>
+          <div v-if="!groupAdmins.length" class="empty-hint">暂无管理员记录</div>
+        </div>
+
+        <div class="add-admin-form">
+          <h3>添加管理员</h3>
+          <div class="add-admin-row">
+            <input v-model.trim="newAdminUserId" class="admin-input" type="text" placeholder="用户 ID">
+            <select v-model="newAdminRole" class="admin-input admin-input-sm">
+              <option value="ADMIN">副管理员</option>
+              <option value="REVIEWER">审核员</option>
+            </select>
+            <button type="button" class="admin-btn primary" :disabled="saving || !newAdminUserId" @click="addGroupAdminRecord">添加</button>
+          </div>
+        </div>
+      </section>
     </template>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
-  approveMember,
-  fetchGroupDetail,
-  fetchGroupMembers,
-  fetchGroupNotices,
-  fetchGroupPosts,
-  rejectMember,
+  addAdminGroupAdmin,
+  approveAdminGroupRequest,
+  fetchAdminGroupDetail,
+  fetchAdminGroupMembers,
+  fetchLegacyGroupPosts,
+  getAdminGroupAdmins,
+  getAdminGroupJoinRequests,
+  rejectAdminGroupRequest,
+  removeAdminGroupAdmin,
   removeAdminGroupMember,
-  updateGroup
+  updateAdminGroup
 } from '@/api/groups.js'
 import CoverUploadField from '@/components/admin/CoverUploadField.vue'
 
 const route = useRoute()
+const router = useRouter()
 const groupId = String(route.params.id)
+const isMyGroupsContext = route.path.includes('/my-groups/')
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
 
-const activeTab = ref('info')
+const backListPath = isMyGroupsContext ? '/admin/my-groups' : '/admin/platform/groups'
+
+const userRole = ref('OWNER')
+const userRoleName = ref('团长')
+const userPermissions = ref([])
+
+const activeTab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'info')
 const group = ref(null)
 const members = ref([])
 const posts = ref([])
-const notices = ref([])
+const groupAdmins = ref([])
+const isFirstDetailLoad = ref(true)
 const pendingMembers = ref([])
 const memberStatus = ref('approved')
 const saving = ref(false)
 const message = ref('')
 const messageType = ref('success')
+const newAdminUserId = ref('')
+const newAdminRole = ref('ADMIN')
 
-const loading = reactive({ detail: true, members: false, posts: false, notices: false })
-const errors = reactive({ detail: '', members: '', posts: '', notices: '' })
+const loading = reactive({ detail: true, members: false, posts: false, notices: false, admins: false })
+const errors = reactive({ detail: '', members: '', posts: '', notices: '', admins: '' })
 const form = reactive({ name: '', region: '', category: '', description: '', coverUrl: '', joinType: 'approval', status: 'active' })
 
-const tabs = [
-  { key: 'info', label: '基础信息' },
+const ALL_TABS = [
+  { key: 'info',    label: '基础信息' },
   { key: 'members', label: '成员审核' },
-  { key: 'posts', label: '团体动态' },
-  { key: 'notices', label: '团体公告' }
+  { key: 'posts',   label: '团体动态' },
+  { key: 'notices', label: '团体公告' },
+  { key: 'admins',  label: '管理员设置' }
 ]
 
-const memberStatusOptions = [
-  { label: '已加入', value: 'approved' },
-  { label: '待审核', value: 'pending' },
-  { label: '全部', value: 'all' }
-]
+function tabVisible(key) {
+  if (key === 'members') return true
+  if (key === 'admins') {
+    return userRole.value === 'OWNER' || (userPermissions.value && userPermissions.value.includes('group.manage.admins'))
+  }
+  if (key === 'info' || key === 'posts' || key === 'notices') {
+    return userRole.value !== 'REVIEWER'
+  }
+  return true
+}
 
-const postItems = computed(() => posts.value.map(item => ({
-  ...item,
-  images: parseImages(item.imageUrls)
-})))
+const tabs = computed(() => ALL_TABS.filter(t => tabVisible(t.key)))
 
-const noticeItems = computed(() => notices.value)
+const showDisableButton = computed(() =>
+  userPermissions.value?.includes('group.delete')
+)
+
+const memberStatusOptions = computed(() => {
+  if (userRole.value === 'REVIEWER') {
+    return [{ label: '待审核', value: 'pending' }]
+  }
+  return [
+    { label: '已加入', value: 'approved' },
+    { label: '待审核', value: 'pending' },
+    { label: '全部', value: 'all' }
+  ]
+})
+
+const postItems = computed(() => posts.value
+  .filter(p => isPostType(p))
+  .map(item => ({
+    ...item,
+    images: parseImages(item.imageUrls)
+  })))
+
+const noticeItems = computed(() => posts.value
+  .filter(p => isNoticeType(p))
+  .map(n => ({
+    id: n.id,
+    title: noticeTitle(n),
+    content: n.content,
+    createdAt: n.createdAt
+  })))
+
+function isNoticeType(p) {
+  const t = String(p.type || '').toLowerCase()
+  return t === 'notice' || t === 'announcement' || t === 'bulletin'
+}
+
+function isPostType(p) {
+  return !isNoticeType(p)
+}
+
+function noticeTitle(n) {
+  const c = String(n.content || '').trim()
+  const line = c.split(/\r?\n/)[0]
+  if (line && line.length <= 100) return line
+  return '团体公告'
+}
 
 async function loadDetail() {
   loading.detail = true
   errors.detail = ''
   try {
-    const response = await fetchGroupDetail(groupId)
+    const response = await fetchAdminGroupDetail(groupId)
     const data = unwrapDetail(response)
     if (!data) {
       console.warn('[AdminGroupDetail] empty detail response', response)
@@ -232,6 +345,25 @@ async function loadDetail() {
       group.value = null
       return
     }
+    userRole.value = data.userRole || 'OWNER'
+    userRoleName.value = data.userRoleName || '团长'
+    userPermissions.value = Array.isArray(data.userPermissions) ? data.userPermissions : []
+
+    if (isFirstDetailLoad.value) {
+      const qTab = typeof route.query.tab === 'string' ? route.query.tab : null
+      if (qTab && !tabVisible(qTab)) {
+        await router.replace('/admin/403')
+        return
+      }
+      if (!qTab && userRole.value === 'REVIEWER') {
+        activeTab.value = 'members'
+        await router.replace({ path: route.path, query: { ...route.query, tab: 'members' } })
+      } else if (qTab && tabVisible(qTab)) {
+        activeTab.value = qTab
+      }
+      isFirstDetailLoad.value = false
+    }
+
     group.value = normalizeGroup(data)
     syncForm(group.value)
   } catch (err) {
@@ -242,39 +374,111 @@ async function loadDetail() {
   }
 }
 
-async function switchTab(tab) {
-  activeTab.value = tab
+async function loadTabData(tab) {
   if (tab === 'members') {
-    await loadMembers(memberStatus.value)
+    const st = userRole.value === 'REVIEWER' ? 'pending' : memberStatus.value
+    await loadMembers(st)
     await loadPendingCount()
   }
   if (tab === 'posts') await loadPosts()
   if (tab === 'notices') await loadNotices()
+  if (tab === 'admins') await loadGroupAdmins()
+}
+
+async function switchTab(tab) {
+  if (!tabVisible(tab)) {
+    await router.replace('/admin/403')
+    return
+  }
+  activeTab.value = tab
+  await router.replace({ path: route.path, query: { ...route.query, tab } })
+  await loadTabData(tab)
+}
+
+watch(
+  () => route.query.tab,
+  async (t) => {
+    if (loading.detail) return
+    const key = typeof t === 'string' ? t : 'info'
+    if (!tabVisible(key)) {
+      await router.replace('/admin/403')
+      return
+    }
+    if (activeTab.value !== key) {
+      activeTab.value = key
+      await loadTabData(key)
+    }
+  }
+)
+
+async function loadGroupAdmins() {
+  loading.admins = true
+  errors.admins = ''
+  try {
+    const data = await getAdminGroupAdmins(groupId)
+    groupAdmins.value = Array.isArray(data) ? data : data?.data ?? []
+  } catch (err) {
+    errors.admins = err.message || '管理员列表加载失败'
+    groupAdmins.value = []
+  } finally {
+    loading.admins = false
+  }
+}
+
+async function addGroupAdminRecord() {
+  if (!newAdminUserId.value) return
+  saving.value = true
+  try {
+    await addAdminGroupAdmin(groupId, { userId: Number(newAdminUserId.value), role: newAdminRole.value })
+    flash('管理员已添加')
+    newAdminUserId.value = ''
+    await loadGroupAdmins()
+  } catch (err) {
+    flash(err.message || '添加失败', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeGroupAdminRecord(admin) {
+  if (!window.confirm(`确定移除管理员 ${admin.username || admin.userId}？`)) return
+  saving.value = true
+  try {
+    await removeAdminGroupAdmin(groupId, admin.userId)
+    flash('管理员已移除')
+    await loadGroupAdmins()
+  } catch (err) {
+    flash(err.message || '移除失败', 'error')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function loadMembers(status = 'approved') {
-  memberStatus.value = status
+  let st = status
+  if (userRole.value === 'REVIEWER') st = 'pending'
+  memberStatus.value = st
   loading.members = true
   errors.members = ''
   try {
-    if (status === 'pending') {
-      const data = await fetchGroupMembers(groupId, { status: 'pending' })
-      members.value = unwrapList(data).map(normalizeMember)
+    if (st === 'pending') {
+      const data = await getAdminGroupJoinRequests(groupId, 'pending')
+      members.value = unwrapList(data).map(normalizeJoinRequest)
       pendingMembers.value = members.value
-    } else if (status === 'all') {
-      const [approvedResult, pendingResult] = await Promise.allSettled([
-        fetchGroupMembers(groupId, { status: 'approved' }),
-        fetchGroupMembers(groupId, { status: 'pending' })
+    } else if (st === 'all') {
+      const [pendingRes, approvedResult] = await Promise.allSettled([
+        getAdminGroupJoinRequests(groupId, 'pending'),
+        fetchAdminGroupMembers(groupId)
       ])
-      const approved = approvedResult.status === 'fulfilled' ? unwrapList(approvedResult.value).map(normalizeMember) : []
-      const pending = pendingResult.status === 'fulfilled' ? unwrapList(pendingResult.value).map(normalizeMember) : []
+      const pending = pendingRes.status === 'fulfilled' ? unwrapList(pendingRes.value).map(normalizeJoinRequest) : []
+      const approved = approvedResult.status === 'fulfilled' ? unwrapList(approvedResult.value).map(normalizeMemberRow) : []
       members.value = [...pending, ...approved]
       pendingMembers.value = pending
+      if (pendingRes.status === 'rejected') throw pendingRes.reason
       if (approvedResult.status === 'rejected') throw approvedResult.reason
-      if (pendingResult.status === 'rejected') throw pendingResult.reason
     } else {
-      const data = await fetchGroupMembers(groupId, { status })
-      members.value = unwrapList(data).map(normalizeMember)
+      const data = await fetchAdminGroupMembers(groupId)
+      members.value = unwrapList(data).map(normalizeMemberRow)
     }
   } catch (err) {
     members.value = []
@@ -286,8 +490,8 @@ async function loadMembers(status = 'approved') {
 
 async function loadPendingCount() {
   try {
-    const data = await fetchGroupMembers(groupId, { status: 'pending' })
-    pendingMembers.value = unwrapList(data).map(normalizeMember)
+    const data = await getAdminGroupJoinRequests(groupId, 'pending')
+    pendingMembers.value = unwrapList(data).map(normalizeJoinRequest)
   } catch {
     pendingMembers.value = []
   }
@@ -297,7 +501,7 @@ async function loadPosts() {
   loading.posts = true
   errors.posts = ''
   try {
-    const data = await fetchGroupPosts(groupId)
+    const data = await fetchLegacyGroupPosts(groupId)
     posts.value = unwrapList(data)
   } catch (err) {
     posts.value = []
@@ -311,10 +515,9 @@ async function loadNotices() {
   loading.notices = true
   errors.notices = ''
   try {
-    const data = await fetchGroupNotices(groupId)
-    notices.value = unwrapList(data)
+    const data = await fetchLegacyGroupPosts(groupId)
+    posts.value = unwrapList(data)
   } catch (err) {
-    notices.value = []
     errors.notices = err.message || '团体公告加载失败'
   } finally {
     loading.notices = false
@@ -328,17 +531,14 @@ async function saveInfo() {
   }
   saving.value = true
   try {
-    const saveId = getCurrentNumericGroupId()
-    const payload = {
+    await updateAdminGroup(groupId, {
       name: form.name,
-      region: form.region,
-      type: group.value?.type || undefined,
+      category: form.category,
       description: form.description,
       coverUrl: form.coverUrl,
-      joinMode: joinTypeToJoinMode(form.joinType),
+      joinType: form.joinType,
       status: form.status
-    }
-    await updateGroup(saveId, payload)
+    })
     await loadDetail()
     flash('基础信息已保存')
   } catch (err) {
@@ -357,7 +557,9 @@ async function toggleStatus() {
 async function approveMemberRecord(member) {
   saving.value = true
   try {
-    await approveMember(groupId, member.id)
+    if (member.status === 'pending') {
+      await approveAdminGroupRequest(groupId, member.id)
+    }
     flash('成员申请已通过')
     await loadMembers(memberStatus.value)
     await loadDetail()
@@ -371,7 +573,9 @@ async function approveMemberRecord(member) {
 async function rejectMemberRecord(member) {
   saving.value = true
   try {
-    await rejectMember(groupId, member.id)
+    if (member.status === 'pending') {
+      await rejectAdminGroupRequest(groupId, member.id)
+    }
     flash('成员申请已拒绝')
     await loadMembers(memberStatus.value)
     await loadPendingCount()
@@ -411,17 +615,31 @@ function normalizeGroup(item) {
   }
 }
 
-function normalizeMember(item) {
+function normalizeMemberRow(item) {
   return {
     id: item.id,
     userId: item.userId,
     name: item.username || '未命名成员',
     avatar: item.avatarUrl || DEFAULT_AVATAR,
     role: item.role || 'member',
-    status: item.status || 'approved',
+    status: 'approved',
     joinedAt: formatDateTime(item.joinedAt),
-    requestedAt: formatDateTime(item.requestedAt || item.createdAt),
-    applyReason: item.applyReason || item.message || ''
+    requestedAt: '',
+    applyReason: ''
+  }
+}
+
+function normalizeJoinRequest(item) {
+  return {
+    id: item.id,
+    userId: item.userId,
+    name: item.username || '未命名用户',
+    avatar: item.avatarUrl || DEFAULT_AVATAR,
+    role: 'member',
+    status: 'pending',
+    joinedAt: '',
+    requestedAt: formatDateTime(item.requestedAt),
+    applyReason: item.message || ''
   }
 }
 
@@ -451,18 +669,6 @@ function unwrapDetail(res) {
     return payload || null
   }
   return res
-}
-
-function getCurrentNumericGroupId() {
-  const id = group.value?.id
-  if (!/^\d+$/.test(String(id || ''))) {
-    throw new Error('当前团体缺少数字 ID，无法保存')
-  }
-  return id
-}
-
-function joinTypeToJoinMode(value) {
-  return value === 'open' ? 'free' : 'audit'
 }
 
 function parseImages(value) {
@@ -521,7 +727,9 @@ function flash(text, type = 'success') {
 
 onMounted(async () => {
   await loadDetail()
+  if (errors.detail) return
   await loadPendingCount()
+  await loadTabData(activeTab.value)
 })
 </script>
 
@@ -836,5 +1044,67 @@ onMounted(async () => {
   .image-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.role-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.admin-role-tag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-role-tag.ga-owner {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.admin-role-tag.ga-admin {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.admin-role-tag.ga-reviewer {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.owner-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--lc-muted);
+}
+
+.add-admin-form {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--lc-border);
+}
+
+.add-admin-form h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--lc-text);
+}
+
+.add-admin-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-input-sm {
+  max-width: 140px;
 }
 </style>

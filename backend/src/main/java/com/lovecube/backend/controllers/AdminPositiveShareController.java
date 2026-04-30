@@ -1,6 +1,7 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.PermissionConstants;
 import com.lovecube.backend.services.PositiveShareService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,7 +37,7 @@ public class AdminPositiveShareController {
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "10") int pageSize
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         return positiveShareService.listSharesForAdmin(status, pageNum, pageSize);
     }
 
@@ -46,7 +47,7 @@ public class AdminPositiveShareController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         String status = String.valueOf(payload.getOrDefault("status", ""));
         return positiveShareService.reviewShare(id, status);
     }
@@ -65,7 +66,7 @@ public class AdminPositiveShareController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         @SuppressWarnings("unchecked")
         List<Number> rawIds = (List<Number>) payload.get("ids");
         List<Long> ids = rawIds == null ? List.of() : rawIds.stream().map(Number::longValue).toList();
@@ -88,7 +89,7 @@ public class AdminPositiveShareController {
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize
     ) {
-        adminAuthService.requireAdmin(authHeader);
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         return positiveShareService.listShareCommentsForAdmin(id, pageNum, pageSize);
     }
 }

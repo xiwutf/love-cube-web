@@ -40,8 +40,14 @@ router.beforeEach(async (to) => {
 
   if (to.meta.requiresAdmin) {
     await userStore.refreshCurrentUser().catch(() => null)
+    // Load fine-grained permissions (cached after first load)
+    await userStore.loadAdminContext().catch(() => null)
     if (!userStore.isAdmin) {
       return { path: '/' }
+    }
+    // Permission-gated route check
+    if (to.meta.permission && !userStore.hasPermission(to.meta.permission)) {
+      return { path: '/admin/403' }
     }
   }
 })

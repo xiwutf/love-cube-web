@@ -178,10 +178,10 @@ const fallbackPendingUpdates = [
 const coreModules = [
   { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/modules', icon: '⚙', tone: 'pink' },
   { title: 'LoveCube', desc: '联谊交友专区\n真诚相遇，认真开始', to: '/fellowship-intro', icon: '♥', tone: 'pink' },
+  { title: '团队', desc: '寻找你的团体\n连接志同道合的伙伴', to: '/platform/groups', icon: '◎', tone: 'green' },
   { title: '活动中心', desc: '线上线下活动\n发现有趣的人和事', to: '/events', icon: '♔', tone: 'orange' },
   { title: 'AI 工具', desc: '智能助手、效率工具\n让生活更高效', to: '/modules', icon: '✣', tone: 'violet' },
-  { title: '用户中心', desc: '个人资料、消息、动态\n管理你的多端空间', to: '/me', icon: '●', tone: 'blue' },
-  { title: '官方动态', desc: '公告、更新日志\n了解平台最新进展', to: '/announcements', icon: '▤', tone: 'green' }
+  { title: '用户中心', desc: '个人资料、消息、动态\n管理你的多端空间', to: '/me', icon: '●', tone: 'blue' }
 ]
 
 const notice = computed(() => {

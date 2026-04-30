@@ -3,7 +3,7 @@
     <header class="section-head">
       <div>
         <h2>核心模块</h2>
-        <p>第一次来可先看：活动中心、官方动态、用户中心</p>
+        <p>第一次来可先看：活动中心、用户中心，也可以寻找自己的团队</p>
       </div>
     </header>
     <div class="module-tags" aria-label="模块清单">

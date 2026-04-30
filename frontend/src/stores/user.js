@@ -9,6 +9,7 @@ import {
   getMeCached,
   updateFellowshipMatchVisibility as updateFellowshipMatchVisibilityApi
 } from '@/api/user.js'
+import { getAdminAuthContext } from '@/api/adminContent.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 
 const REDIRECT_KEY = 'postLoginRedirect'
@@ -44,6 +45,7 @@ export const useUserStore = defineStore('user', () => {
   const nickname = ref(storage.get('nickname') || '')
   const avatar = ref(storage.get('avatar') || '')
   const userInfo = ref(null)
+  const adminContext = ref(null)
 
   function setAuth(newToken, newUserId) {
     clearMeCache()
@@ -138,6 +140,21 @@ export const useUserStore = defineStore('user', () => {
     return normalized
   }
 
+  async function loadAdminContext(force = false) {
+    if (adminContext.value && !force) return adminContext.value
+    const ctx = await getAdminAuthContext()
+    adminContext.value = ctx
+    return ctx
+  }
+
+  function hasPermission(permission) {
+    return adminContext.value?.permissions?.includes(permission) ?? false
+  }
+
+  function hasAdminRole(roleCode) {
+    return adminContext.value?.roles?.includes(roleCode.toUpperCase()) ?? false
+  }
+
   function logout() {
     token.value = ''
     userId.value = ''
@@ -145,6 +162,7 @@ export const useUserStore = defineStore('user', () => {
     nickname.value = ''
     avatar.value = ''
     userInfo.value = null
+    adminContext.value = null
     storage.remove('token')
     storage.remove('userId')
     storage.remove('nickname')
@@ -166,7 +184,12 @@ export const useUserStore = defineStore('user', () => {
   }
 
   const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => ['admin', 'super_admin', 'root'].includes(String(userInfo.value?.role || '').toLowerCase()))
+  const isAdmin = computed(() => {
+    // Legacy role check
+    if (['admin', 'super_admin', 'root'].includes(String(userInfo.value?.role || '').toLowerCase())) return true
+    // Fine-grained: any admin role from context
+    return (adminContext.value?.roles?.length ?? 0) > 0
+  })
   const isFellowshipEnabled = computed(() => Boolean(userInfo.value?.fellowshipEnabled))
   const isFellowshipMatchVisible = computed(() => Boolean(userInfo.value?.fellowshipMatchVisible))
 
@@ -183,6 +206,7 @@ export const useUserStore = defineStore('user', () => {
     avatar,
     userId,
     userInfo,
+    adminContext,
     isLoggedIn,
     isAdmin,
     isFellowshipEnabled,
@@ -191,6 +215,9 @@ export const useUserStore = defineStore('user', () => {
     setUserInfo,
     syncCurrentUser,
     refreshCurrentUser,
+    loadAdminContext,
+    hasPermission,
+    hasAdminRole,
     login,
     register,
     activateFellowship,
