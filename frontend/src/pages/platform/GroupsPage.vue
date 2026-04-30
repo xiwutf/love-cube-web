@@ -1,6 +1,6 @@
 <template>
   <section class="groups-page">
-    <div class="groups-panel">
+    <div class="groups-panel desktop-shell">
       <header class="hero">
         <div class="hero-text">
           <h1>寻找或创建你的团体</h1>
@@ -82,9 +82,9 @@
           </template>
 
           <div v-if="totalPages > 1" class="pagination">
-            <button type="button" :disabled="page === 1" @click="goPage(-1)">‹</button>
+            <button type="button" :disabled="page === 1" @click="goPage(-1)">←</button>
             <span class="page-info">第 {{ page }} / {{ totalPages }} 页</span>
-            <button type="button" :disabled="page === totalPages" @click="goPage(1)">›</button>
+            <button type="button" :disabled="page === totalPages" @click="goPage(1)">→</button>
           </div>
         </main>
 
@@ -123,6 +123,87 @@
           </section>
         </aside>
       </div>
+    </div>
+
+    <div class="mobile-shell">
+      <header class="m-hero">
+        <div>
+          <h1>团体广场</h1>
+          <p>找到你的团体，或创建属于你的团体</p>
+        </div>
+        <button type="button" class="m-create" @click="goCreate">创建团体</button>
+      </header>
+
+      <form class="m-search" role="search" @submit.prevent="onSearch">
+        <span aria-hidden="true">⌕</span>
+        <input v-model.trim="searchKeyword" type="search" placeholder="搜索团体名称、地区、标签">
+      </form>
+
+      <section class="m-quick-grid" aria-label="快捷入口">
+        <router-link class="m-quick-item" to="/platform/me/groups">我的团体</router-link>
+        <button type="button" class="m-quick-item" @click="goCreate">创建团体</button>
+        <router-link class="m-quick-item" to="/platform/me/groups">加入审核</router-link>
+        <router-link class="m-quick-item" to="/platform/me/groups">团体管理</router-link>
+      </section>
+
+      <div v-if="message" class="page-message" :class="{ error: messageType === 'error' }">{{ message }}</div>
+
+      <main class="m-list-wrap">
+        <div v-if="loading" class="loading-state">加载中...</div>
+        <template v-else>
+          <div v-if="errors.list" class="error-card">
+            <h3>团体列表加载失败</h3>
+            <p>{{ errors.list }}</p>
+            <button type="button" @click="loadGroups">重试</button>
+          </div>
+
+          <section v-else-if="groupItems.length" class="m-group-list">
+            <article v-for="group in groupItems" :key="group.id" class="m-group-card">
+              <router-link :to="`/platform/groups/${group.id}`" class="m-cover">
+                <img :src="group.coverUrl" :alt="group.name">
+              </router-link>
+
+              <div class="m-main">
+                <div class="m-title-row">
+                  <h2>{{ group.name }}</h2>
+                  <span class="m-cat">{{ group.category }}</span>
+                </div>
+                <p class="m-meta">{{ group.region }} · {{ group.memberCount }}人</p>
+                <p class="m-desc">{{ group.description }}</p>
+
+                <div class="m-statuses">
+                  <span class="m-status">{{ group.joinModeLabel }}</span>
+                  <span v-if="group.isOwner || group.managed" class="m-status subtle">管理员</span>
+                  <span v-if="group.isMember" class="m-status subtle">已加入</span>
+                  <span v-if="group.hasPendingRequest" class="m-status subtle">审核中</span>
+                </div>
+
+                <div v-if="group.tags" class="m-tags">
+                  <span v-for="t in group.tagList.slice(0, 3)" :key="t" class="m-tag">{{ t }}</span>
+                </div>
+
+                <div class="m-actions">
+                  <router-link class="m-btn ghost" :to="`/platform/groups/${group.id}`">查看团体</router-link>
+                  <button type="button" class="m-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
+                    {{ mobileActionLabel(group) }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section v-else class="m-empty">
+            <h3>暂无团体，你可以创建第一个团体</h3>
+            <button type="button" class="m-btn" @click="goCreate">创建团体</button>
+          </section>
+        </template>
+
+        <div v-if="totalPages > 1" class="pagination">
+          <button type="button" :disabled="page === 1" @click="goPage(-1)">←</button>
+          <span class="page-info">第 {{ page }} / {{ totalPages }} 页</span>
+          <button type="button" :disabled="page === totalPages" @click="goPage(1)">→</button>
+        </div>
+      </main>
     </div>
   </section>
 </template>
@@ -220,12 +301,21 @@ function actionLabel(g) {
   return '申请加入'
 }
 
+function mobileActionLabel(g) {
+  if ((g.isOwner || g.managed) && g.isMember) return '管理'
+  if (g.isMember) return '已加入'
+  if (g.hasPendingRequest) return '审核中'
+  if (g.joinModeKey === 'invite') return '仅限邀请'
+  return '申请加入'
+}
+
 function needsInteraction(g) {
   if (g.isMember || g.hasPendingRequest) return false
   return true
 }
 
 function actionDisabled(g) {
+  if ((g.isOwner || g.managed) && g.isMember) return false
   if (g.joinModeKey === 'invite' && !g.isMember) return true
   if (g.isMember || g.hasPendingRequest) return true
   return false
@@ -387,6 +477,10 @@ onMounted(() => {
 .groups-page {
   width: calc(100% - var(--lc-space-8));
   margin: var(--lc-space-4) auto 0;
+}
+
+.mobile-shell {
+  display: none;
 }
 
 .groups-panel {
@@ -802,28 +896,242 @@ onMounted(() => {
 
 @media (max-width: 720px) {
   .groups-page {
-    width: calc(100% - var(--lc-space-4));
+    width: 100%;
+    margin: 0;
+    padding: 0 12px 16px;
+    box-sizing: border-box;
   }
 
-  .groups-panel {
-    padding: var(--lc-space-4);
+  .desktop-shell {
+    display: none;
   }
 
-  .toolbar-row {
-    grid-template-columns: 1fr;
+  .mobile-shell {
+    display: block;
   }
 
-  .groups-grid {
-    grid-template-columns: 1fr;
+  .m-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 12px 0 10px;
   }
 
-  .group-card {
-    grid-template-columns: 104px minmax(0, 1fr);
+  .m-hero h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.25;
+    color: var(--lc-text);
   }
 
-  .card-cover img {
-    width: 104px;
-    height: 96px;
+  .m-hero p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--lc-muted);
+    line-height: 1.4;
+  }
+
+  .m-create {
+    height: 34px;
+    border: 1px solid var(--lc-blue-border);
+    background: var(--lc-surface);
+    color: var(--lc-blue);
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    flex: none;
+  }
+
+  .m-search {
+    margin-top: 12px;
+    height: 42px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border-radius: 14px;
+    border: 1px solid var(--lc-border);
+    background: var(--lc-surface);
+  }
+
+  .m-search span {
+    color: var(--lc-subtle);
+    font-size: 14px;
+  }
+
+  .m-search input {
+    border: 0;
+    outline: 0;
+    font-size: 14px;
+    color: var(--lc-text);
+    background: transparent;
+  }
+
+  .m-quick-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .m-quick-item {
+    height: 42px;
+    border: 1px solid var(--lc-border);
+    border-radius: 12px;
+    background: var(--lc-surface);
+    display: grid;
+    place-items: center;
+    color: var(--lc-text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0;
+  }
+
+  .m-list-wrap {
+    margin-top: 12px;
+  }
+
+  .m-group-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .m-group-card {
+    border: 1px solid var(--lc-border);
+    background: var(--lc-surface);
+    border-radius: 16px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .m-cover {
+    border-radius: 12px;
+    overflow: hidden;
+    display: block;
+    height: 88px;
+  }
+
+  .m-cover img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+  }
+
+  .m-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .m-title-row h2 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--lc-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .m-cat {
+    font-size: 11px;
+    color: var(--lc-blue);
+    background: var(--lc-blue-light);
+    border-radius: 999px;
+    padding: 2px 8px;
+    flex: none;
+  }
+
+  .m-meta,
+  .m-desc {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--lc-muted);
+  }
+
+  .m-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.45;
+  }
+
+  .m-statuses,
+  .m-tags {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .m-status,
+  .m-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--lc-bg);
+    color: var(--lc-muted);
+  }
+
+  .m-status.subtle {
+    opacity: 0.78;
+  }
+
+  .m-actions {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .m-btn {
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--lc-blue-border);
+    background: var(--lc-blue);
+    color: var(--lc-surface);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+
+  .m-btn.ghost {
+    background: var(--lc-surface);
+    color: var(--lc-blue);
+  }
+
+  .m-btn:disabled {
+    opacity: 0.65;
+  }
+
+  .m-empty {
+    border: 1px dashed var(--lc-border);
+    border-radius: 16px;
+    padding: 20px 14px;
+    text-align: center;
+    color: var(--lc-muted);
+  }
+
+  .m-empty h3 {
+    margin: 0 0 10px;
+    color: var(--lc-text);
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 700;
+  }
+
+  .pagination {
+    margin-top: 12px;
   }
 }
 </style>
