@@ -204,11 +204,21 @@ const notifList = ref([])
 const loadingNotif = ref(false)
 const refreshingNotif = ref(false)
 
+function normalizeListPayload(payload) {
+  if (Array.isArray(payload)) return payload
+  if (!payload || typeof payload !== 'object') return []
+  const candidates = [payload.records, payload.list, payload.items, payload.content, payload.data]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate
+  }
+  return []
+}
+
 async function loadChat() {
   loadingChat.value = true
   try {
-    const data = await getChatList()
-    chatList.value = (Array.isArray(data) ? data : []).map((item) => ({
+    const data = normalizeListPayload(await getChatList())
+    chatList.value = data.map((item) => ({
       userId: item.partnerId || item.userId,
       nickname: item.nickname || item.partnerName || '用户',
       avatar: getAvatar(item),
@@ -227,9 +237,8 @@ async function loadChat() {
 async function loadInteract() {
   loadingInteract.value = true
   try {
-    const data = await getInteractList()
-    interactList.value = Array.isArray(data)
-      ? data.map((item) => {
+    const data = normalizeListPayload(await getInteractList())
+    interactList.value = data.map((item) => {
           const uid = item.fromUser?.userId ?? item.userId ?? null
           const mergedFrom = {
             userId: uid,
@@ -242,7 +251,6 @@ async function loadInteract() {
             createdAt: item.createdAt || item.time || null
           }
         })
-      : []
     await markInteractRead()
     msgStore.clearInteract()
   } finally {
@@ -254,18 +262,16 @@ async function loadInteract() {
 async function loadVisitor() {
   loadingVisitor.value = true
   try {
-    const data = await getVisitorList()
-    visitorList.value = Array.isArray(data)
-      ? data.map((item) => ({
+    const data = normalizeListPayload(await getVisitorList())
+    visitorList.value = data.map((item) => ({
         ...item,
-        visitorId: item.visitorId || item.userId || null,
+        visitorId: item.visitorId || item.userId || item.visitor?.userId || null,
         visitor: item.visitor || {
           nickname: item.nickname || '神秘访客',
           avatar: item.avatar || '',
-          userId: item.userId || null
+          userId: item.userId || item.visitorId || null
         }
       }))
-      : []
     await markVisitorRead()
     msgStore.clearVisitor()
   } finally {
@@ -277,8 +283,8 @@ async function loadVisitor() {
 async function loadNotifications() {
   loadingNotif.value = true
   try {
-    const data = await getNotifications(10)
-    notifList.value = Array.isArray(data) ? data : []
+    const data = normalizeListPayload(await getNotifications(10))
+    notifList.value = data
     const unreadCount = notifList.value.filter((item) => !item.isRead).length
     msgStore.setUnreadNotification(unreadCount)
   } finally {

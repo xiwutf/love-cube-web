@@ -40,7 +40,24 @@
           <div class="mobile-header-actions">
             <!-- 移动端搜索入口：保持顶部只显示图标，点击进入内容搜索页 -->
             <button class="mobile-icon-btn" type="button" aria-label="搜索内容" @click="goMobileSearch">⌕</button>
-            <button class="menu-toggle" type="button" @click="menuOpen = !menuOpen" aria-label="打开菜单"><span></span><span></span><span></span></button>
+            <button
+              class="menu-toggle"
+              :class="{ 'is-active': menuOpen && mobileMenuSection === 'module' }"
+              type="button"
+              aria-label="打开导航菜单"
+              @click="toggleMobileMenu('module')"
+            >
+              <span></span><span></span><span></span>
+            </button>
+            <button
+              class="menu-toggle menu-toggle-account"
+              :class="{ 'is-active': menuOpen && mobileMenuSection === 'account' }"
+              type="button"
+              aria-label="打开账号菜单"
+              @click="toggleMobileMenu('account')"
+            >
+              <i aria-hidden="true"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -94,7 +111,42 @@
     <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
     <transition name="menu-fade"><div v-if="menuOpen" class="mobile-menu-mask" @click="menuOpen = false" /></transition>
-    <transition name="menu-slide"><nav v-if="menuOpen" class="mobile-menu-panel"><form class="mobile-search" role="search" @submit.prevent="handleSearch"><span aria-hidden="true">⌕</span><input v-model.trim="searchKeyword" type="search" placeholder="搜索内容、用户、活动..."></form><router-link v-for="item in mobileNavItems" :key="item.to" :to="item.to" :class="{ 'is-active': isActive(item.to) }" @click="menuOpen = false">{{ item.label }}</router-link><router-link to="/events" @click="menuOpen = false">签到</router-link><router-link to="/messages" @click="menuOpen = false">平台消息中心</router-link><router-link v-if="userStore.isLoggedIn" to="/me" @click="menuOpen = false">平台个人中心</router-link><router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link><router-link v-if="!userStore.isLoggedIn" to="/login" @click="menuOpen = false">登录 / 注册</router-link><button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button></nav></transition>
+    <transition name="menu-slide">
+      <nav v-if="menuOpen" class="mobile-menu-panel">
+        <form class="mobile-search" role="search" @submit.prevent="handleSearch">
+          <span aria-hidden="true">⌕</span>
+          <input v-model.trim="searchKeyword" type="search" placeholder="搜索内容、用户、活动...">
+        </form>
+
+        <section v-if="mobileMenuSection === 'module'" class="mobile-menu-group">
+          <p class="mobile-menu-group-title">模块导航</p>
+          <router-link
+            v-for="item in mobileModuleNavItems"
+            :key="item.to"
+            :to="item.to"
+            :class="{ 'is-active': isActive(item.to) }"
+            @click="menuOpen = false"
+          >
+            {{ item.label }}
+          </router-link>
+        </section>
+
+        <section v-else class="mobile-menu-group">
+          <p class="mobile-menu-group-title">账号管理</p>
+          <router-link
+            v-for="item in mobileAccountNavItems"
+            :key="item.to"
+            :to="item.to"
+            :class="{ 'is-active': isActive(item.to) }"
+            @click="menuOpen = false"
+          >
+            {{ item.label }}
+          </router-link>
+          <router-link v-if="userStore.isAdmin" to="/admin" @click="menuOpen = false">管理后台</router-link>
+          <button v-if="userStore.isLoggedIn" type="button" class="mobile-logout" @click="handleLogout">退出登录</button>
+        </section>
+      </nav>
+    </transition>
 
     <transition name="dialog-fade">
       <div v-if="wechatGuideVisible" class="wechat-guide-mask" @click.self="closeWechatGuide">
@@ -124,6 +176,7 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const menuOpen = ref(false)
+const mobileMenuSection = ref('module')
 const isScrolled = ref(false)
 const searchKeyword = ref('')
 const coCreationOpen = ref(false)
@@ -169,10 +222,23 @@ const navItems = [
   { to: '/fellowship-intro', label: '联谊介绍' }
 ]
 
-const mobileNavItems = [
-  ...navItems,
-  { to: '/about', label: '关于我们' }
+const mobileModuleNavItems = [
+  { to: '/', label: '首页' },
+  { to: '/modules', label: '模块中心' },
+  { to: '/announcements', label: '平台动态' },
+  { to: '/articles', label: '精选内容' },
+  { to: '/events', label: '活动中心' },
+  { to: '/fellowship-intro', label: '联谊介绍' }
 ]
+const mobileAccountNavItems = computed(() => {
+  const accountItems = [{ to: '/messages', label: '平台消息中心' }]
+  if (userStore.isLoggedIn) {
+    accountItems.unshift({ to: '/me', label: '账号中心' })
+    return accountItems
+  }
+  accountItems.unshift({ to: '/login', label: '登录 / 注册' })
+  return accountItems
+})
 const messageBadge = computed(() => '')
 const navHomePaths = computed(() => new Set([...navItems.map(item => item.to), '/about']))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
@@ -202,6 +268,15 @@ function handleSearch() {
     return
   }
   router.push({ path: '/articles', query: { keyword } })
+}
+
+function toggleMobileMenu(section) {
+  if (menuOpen.value && mobileMenuSection.value === section) {
+    menuOpen.value = false
+    return
+  }
+  mobileMenuSection.value = section
+  menuOpen.value = true
 }
 
 function goMobileSearch() {
@@ -619,22 +694,29 @@ onBeforeUnmount(() => {
 }
 
 .menu-toggle {
-  display: none;
+  display: inline-flex;
   border: 1px solid #e1e8f2;
   background: #fff;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
+  color: #243449;
+  cursor: pointer;
+}
+
+.menu-toggle.is-active {
+  border-color: #c7d2fe;
+  background: #eef2ff;
 }
 
 .mobile-header-actions {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mobile-icon-btn {
@@ -656,6 +738,27 @@ onBeforeUnmount(() => {
   height: 2px;
   border-radius: 999px;
   background: #243449;
+}
+
+.menu-toggle-account i {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  position: relative;
+}
+
+.menu-toggle-account i::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 14px;
+  height: 7px;
+  border: 2px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 999px 999px;
+  transform: translateX(-50%);
 }
 
 .platform-main {
@@ -1205,6 +1308,18 @@ onBeforeUnmount(() => {
   padding: 12px 10px;
 }
 
+.mobile-menu-group {
+  display: grid;
+  gap: 6px;
+}
+
+.mobile-menu-group-title {
+  margin: 2px 2px 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 @media (min-width: 768px) and (max-width: 1199px) {
   .platform-header {
     top: 0;
@@ -1258,8 +1373,7 @@ onBeforeUnmount(() => {
     right: 32px;
     z-index: 101;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
     padding: 14px;
     border: 1px solid #dbeafe;
     border-radius: 8px;
@@ -1269,10 +1383,18 @@ onBeforeUnmount(() => {
   }
 
   .mobile-search {
-    grid-column: 1 / -1;
     min-height: 44px;
     border-radius: 8px;
     padding: 0 12px;
+  }
+
+  .mobile-menu-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .mobile-menu-group-title {
+    grid-column: 1 / -1;
   }
 
   .mobile-menu-panel a {
@@ -1282,6 +1404,10 @@ onBeforeUnmount(() => {
     text-decoration: none;
     padding: 12px;
     border-radius: 8px;
+  }
+
+  .mobile-logout {
+    padding: 12px;
   }
 
   .mobile-menu-panel a.router-link-exact-active,
@@ -1322,7 +1448,6 @@ onBeforeUnmount(() => {
   }
 
   .menu-toggle {
-    display: inline-flex;
     width: 40px;
     height: 40px;
     border-radius: 10px;
@@ -1566,7 +1691,7 @@ onBeforeUnmount(() => {
     right: 12px;
     z-index: 101;
     display: grid;
-    gap: 6px;
+    gap: 10px;
     padding: 12px;
     border: 1px solid #dbeafe;
     border-radius: 8px;
@@ -1577,9 +1702,13 @@ onBeforeUnmount(() => {
 
   .mobile-search {
     min-height: 44px;
-    margin-bottom: 4px;
+    margin-bottom: 0;
     padding: 0 12px;
     border-radius: 8px;
+  }
+
+  .mobile-menu-group {
+    gap: 6px;
   }
 
   .mobile-menu-panel a {
@@ -1595,6 +1724,10 @@ onBeforeUnmount(() => {
   .mobile-menu-panel a.is-active {
     background: #fff2f6;
     color: #e84f73;
+  }
+
+  .mobile-logout {
+    width: 100%;
   }
 }
 

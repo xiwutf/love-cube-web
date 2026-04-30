@@ -72,7 +72,7 @@
           <div class="progress-track">
             <div class="progress-bar" :style="{ width: `${completionPercent}%` }" />
           </div>
-          <p class="cell-sub">再完善 1 项，匹配率提升 30%</p>
+          <p class="cell-sub">{{ completionHint }}</p>
           <button class="minor-link" @click="router.push('/fellowship/profile/edit')">去完善</button>
         </div>
         <div class="status-cell">
@@ -230,8 +230,28 @@ const displayJob = computed(() => profile.value.job || '产品经理')
 const displayIntro = computed(() => profile.value.bio || '认真生活、真诚交友，期待遇见对的人。')
 const displayPhotos = computed(() => photoList.value.slice(0, 4))
 const completionPercent = computed(() => {
-  const value = Number(completion.value?.percent || 0)
-  return Math.min(100, Math.max(0, value))
+  const raw = completion.value || {}
+  const candidates = [raw.percent, raw.completionPercent, raw.completionRate, raw.profileCompletion]
+  const firstValid = candidates.find((item) => Number.isFinite(Number(item)))
+  const numeric = Number(firstValid || 0)
+  const percent = numeric > 0 && numeric <= 1 ? numeric * 100 : numeric
+  return Math.min(100, Math.max(0, Math.round(percent)))
+})
+const completionMissingCount = computed(() => {
+  const raw = completion.value || {}
+  if (Array.isArray(raw.missingFields) && raw.missingFields.length > 0) return raw.missingFields.length
+  if (Array.isArray(raw.unfinishedFields) && raw.unfinishedFields.length > 0) return raw.unfinishedFields.length
+  const total = Number(raw.totalFields ?? raw.totalCount ?? raw.totalItems ?? 0)
+  if (total > 0) {
+    const completed = Number(raw.completedFields ?? raw.completedCount ?? raw.completedItems ?? 0)
+    return Math.max(0, total - completed)
+  }
+  return completionPercent.value >= 100 ? 0 : null
+})
+const completionHint = computed(() => {
+  if (completionMissingCount.value === 0) return '资料已完善，匹配展示更充分'
+  if (completionMissingCount.value && completionMissingCount.value > 0) return `再完善 ${completionMissingCount.value} 项，匹配率可继续提升`
+  return '完善更多资料，可提升匹配率'
 })
 const verificationStatus = computed(() => userInfo.value?.verificationStatus || profile.value.reviewStatus || 'none')
 const verificationLabel = computed(() => {
@@ -434,12 +454,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 13px 16px 9px;
+  padding: 13px 132px 9px 16px;
 }
 
 .page-title {
   margin: 0 6px 0 0;
-  font-size: 31px;
+  font-size: 22px;
   line-height: 1;
   font-weight: 800;
   color: #212334;
@@ -490,7 +510,7 @@ onMounted(async () => {
 }
 
 .me-content {
-  padding: 0 12px;
+  padding: 6px 12px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;

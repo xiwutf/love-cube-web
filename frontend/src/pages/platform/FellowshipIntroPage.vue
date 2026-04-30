@@ -313,9 +313,19 @@
     border-radius: 18px;
   }
 
+  .intro-hero-bg {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0.12) 100%),
+      linear-gradient(0deg, rgba(255, 220, 232, 0.12) 0%, rgba(255, 220, 232, 0) 56%),
+      url('@/assets/platform/fellowship-hero.webp');
+    background-position: center top, center, center;
+    background-size: cover, cover, cover;
+  }
+
   .intro-hero-overlay {
     padding: 24px 16px 16px;
     max-width: 100%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.44) 48%, rgba(255, 255, 255, 0.08) 82%);
   }
 
   .intro-title {
@@ -342,6 +352,10 @@
 
   .intro-badge {
     padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.56);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+    backdrop-filter: blur(1px);
   }
 
   .intro-actions {
@@ -382,6 +396,7 @@
 
   .intro-hero-overlay {
     padding: 18px 12px 12px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0.5) 58%, rgba(255, 255, 255, 0.14) 100%);
   }
 
   .intro-title {
