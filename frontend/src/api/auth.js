@@ -9,3 +9,8 @@ export function login(data) {
 export function register(data) {
   return request.post('/auth/register', data)
 }
+
+/** 修改当前登录用户密码 */
+export function changePassword(data) {
+  return request.put('/auth/password', data)
+}

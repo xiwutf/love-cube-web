@@ -21,6 +21,10 @@ export function forceDeleteAdminUser(userId) {
   return request.delete(`/admin/users/${userId}/force`)
 }
 
+export function resetAdminUserPassword(userId) {
+  return request.put(`/admin/users/${userId}/reset-password`)
+}
+
 // Stats
 export function getAdminStats() {
   return request.get('/admin/stats')

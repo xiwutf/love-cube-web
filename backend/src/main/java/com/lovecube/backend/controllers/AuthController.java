@@ -2,6 +2,7 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,15 +29,18 @@ public class AuthController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final FellowshipInviteService fellowshipInviteService;
+    private final AdminAuthService adminAuthService;
 
     public AuthController(
             UserRepository userRepository,
             BCryptPasswordEncoder passwordEncoder,
-            FellowshipInviteService fellowshipInviteService
+            FellowshipInviteService fellowshipInviteService,
+            AdminAuthService adminAuthService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.fellowshipInviteService = fellowshipInviteService;
+        this.adminAuthService = adminAuthService;
     }
 
     @PostMapping("/login")
@@ -154,6 +158,41 @@ public class AuthController {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "注册失败，请稍后重试"));
         }
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> body
+    ) {
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        String confirmPassword = body.get("confirmPassword");
+
+        if (oldPassword == null || oldPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "旧密码不能为空"));
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "新密码不能为空"));
+        }
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("message", "新密码至少 6 位"));
+        }
+        if (confirmPassword == null || !newPassword.equals(confirmPassword)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "两次输入的新密码不一致"));
+        }
+        if (newPassword.equals(oldPassword)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "新密码不能与旧密码相同"));
+        }
+
+        User user = adminAuthService.requireUser(authHeader);
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "旧密码不正确"));
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of("message", "密码修改成功"));
     }
 
     private String normalizeUsername(String rawUsername) {

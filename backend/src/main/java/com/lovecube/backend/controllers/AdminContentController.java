@@ -25,6 +25,7 @@ import com.lovecube.backend.services.HomeConfigService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PermissionConstants;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -59,6 +60,7 @@ public class AdminContentController {
     private final FellowshipInviteService fellowshipInviteService;
     private final NotificationService notificationService;
     private final HomeConfigService homeConfigService;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     public AdminContentController(
             AnnouncementRepository announcementRepository,
@@ -74,7 +76,8 @@ public class AdminContentController {
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService,
             NotificationService notificationService,
-            HomeConfigService homeConfigService
+            HomeConfigService homeConfigService,
+            BCryptPasswordEncoder passwordEncoder
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -90,6 +93,7 @@ public class AdminContentController {
         this.fellowshipInviteService = fellowshipInviteService;
         this.notificationService = notificationService;
         this.homeConfigService = homeConfigService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @GetMapping("/home-config")
@@ -211,6 +215,9 @@ public class AdminContentController {
                     item.put("invitedByUserId", user.getInvitedByUserId());
                     item.put("createdAt", user.getCreatedAt());
                     item.put("canForceDelete", hiddenSuperAdminOperator
+                            && !operator.getUserid().equals(user.getUserid())
+                            && !adminAuthService.isHiddenSuperAdmin(user));
+                    item.put("canResetPassword", hiddenSuperAdminOperator
                             && !operator.getUserid().equals(user.getUserid())
                             && !adminAuthService.isHiddenSuperAdmin(user));
                     return item;
@@ -661,6 +668,33 @@ public class AdminContentController {
         return Map.of(
                 "userId", userId,
                 "message", "用户已从数据库强制删除"
+        );
+    }
+
+    @PutMapping("/users/{userId}/reset-password")
+    public Map<String, Object> resetUserPassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long userId
+    ) {
+        User operator = adminAuthService.requireUser(authHeader);
+        if (!adminAuthService.isHiddenSuperAdmin(operator)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅超级管理员可重置密码");
+        }
+        if (operator.getUserid().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不能重置当前登录账号密码");
+        }
+
+        User target = userRepository.findById(userId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+        if (adminAuthService.isHiddenSuperAdmin(target)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "不能重置超级管理员密码");
+        }
+
+        target.setPasswordHash(passwordEncoder.encode("123456"));
+        userRepository.save(target);
+        return Map.of(
+                "userId", userId,
+                "message", "密码已重置为 123456"
         );
     }
 

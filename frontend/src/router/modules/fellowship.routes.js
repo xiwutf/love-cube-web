@@ -19,6 +19,7 @@ export default {
     { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile/edit', component: () => import('@/pages/fellowship/profile/edit.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'settings', component: () => import('@/pages/fellowship/SettingsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'change-password', component: () => import('@/pages/fellowship/ChangePasswordPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'verify', component: () => import('@/pages/fellowship/VerifyPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'preferences', component: () => import('@/pages/fellowship/PreferencesPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'blacklist', component: () => import('@/pages/fellowship/BlacklistPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },

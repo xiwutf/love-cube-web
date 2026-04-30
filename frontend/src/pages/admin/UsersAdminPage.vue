@@ -6,7 +6,37 @@
     </section>
 
     <section class="platform-card" style="margin-top: 12px;">
-      <p class="platform-text">当前 {{ users.length }} 位用户</p>
+      <p class="platform-text">
+        当前 {{ filteredUsers.length }} / {{ users.length }} 位用户
+        （第 {{ currentPage }} / {{ totalPages }} 页）
+      </p>
+    </section>
+
+    <section class="platform-card admin-filter-card">
+      <div class="admin-filter-bar">
+        <input
+          v-model.trim="filters.keyword"
+          class="admin-filter-input"
+          type="text"
+          placeholder="搜索用户名 / 手机号 / 用户ID"
+        >
+        <select v-model="filters.role" class="admin-select">
+          <option value="">全部角色</option>
+          <option value="user">普通用户</option>
+          <option value="admin">管理员</option>
+        </select>
+        <select v-model="filters.status" class="admin-select">
+          <option value="">全部状态</option>
+          <option value="active">active</option>
+          <option value="banned">banned</option>
+        </select>
+        <select v-model="filters.fellowshipEnabled" class="admin-select">
+          <option value="">联谊全部</option>
+          <option value="enabled">已开通</option>
+          <option value="disabled">未开通</option>
+        </select>
+        <button class="admin-btn" type="button" @click="resetFilters">重置筛选</button>
+      </div>
     </section>
 
     <section class="admin-table-wrap admin-desktop-only">
@@ -24,7 +54,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in users" :key="item.userId">
+          <tr v-for="item in paginatedUsers" :key="item.userId">
             <td>{{ item.username || `用户${item.userId}` }}</td>
             <td>{{ item.phone || '无手机号' }}</td>
             <td>
@@ -62,16 +92,24 @@
                 >
                   强制删除
                 </button>
+                <button
+                  v-if="canResetPassword(item)"
+                  class="admin-btn warning"
+                  type="button"
+                  @click="resetPassword(item)"
+                >
+                  重置密码
+                </button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
-      <van-empty v-if="!loading && !users.length" description="暂无用户数据" />
+      <van-empty v-if="!loading && !filteredUsers.length" description="暂无匹配用户" />
     </section>
 
     <div class="admin-list admin-mobile-only">
-      <article v-for="item in users" :key="item.userId" class="admin-row">
+      <article v-for="item in paginatedUsers" :key="item.userId" class="admin-row">
         <div class="admin-row-head">
           <strong>{{ item.username || `用户${item.userId}` }}</strong>
           <span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span>
@@ -98,19 +136,40 @@
           <button class="admin-btn" type="button" @click="setFellowship(item, true)">开通联谊</button>
           <button class="admin-btn" type="button" @click="setFellowship(item, false)">关闭联谊</button>
           <button v-if="canForceDelete(item)" class="admin-btn danger" type="button" @click="forceDelete(item)">强制删除</button>
+          <button v-if="canResetPassword(item)" class="admin-btn warning" type="button" @click="resetPassword(item)">重置密码</button>
         </div>
       </article>
-      <van-empty v-if="!loading && !users.length" description="暂无用户数据" />
+      <van-empty v-if="!loading && !filteredUsers.length" description="暂无匹配用户" />
     </div>
+
+    <section v-if="filteredUsers.length" class="platform-card admin-pagination-card">
+      <div class="admin-pagination">
+        <label class="admin-page-size">
+          每页
+          <select v-model.number="pageSize" class="admin-select">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+          </select>
+          条
+        </label>
+        <div class="admin-page-actions">
+          <button class="admin-btn" type="button" :disabled="currentPage <= 1" @click="goPrevPage">上一页</button>
+          <span class="admin-page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+          <button class="admin-btn" type="button" :disabled="currentPage >= totalPages" @click="goNextPage">下一页</button>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
 import {
   forceDeleteAdminUser,
   getAdminUsers,
+  resetAdminUserPassword,
   updateAdminUserFellowshipStatus,
   updateAdminUserRole,
   updateAdminUserStatus
@@ -121,6 +180,14 @@ const loading = ref(false)
 const users = ref([])
 const savingRoleUserId = ref(null)
 const userStore = useUserStore()
+const currentPage = ref(1)
+const pageSize = ref(10)
+const filters = reactive({
+  keyword: '',
+  role: '',
+  status: '',
+  fellowshipEnabled: ''
+})
 
 const roleOptions = [
   { value: 'user', label: '普通用户' },
@@ -128,6 +195,26 @@ const roleOptions = [
 ]
 
 const currentAdminRole = computed(() => normalizeRole(userStore.syncCurrentUser()?.role || 'user'))
+const filteredUsers = computed(() => {
+  const keyword = filters.keyword.trim().toLowerCase()
+  return users.value.filter((item) => {
+    if (filters.role && item.role !== filters.role) return false
+    if (filters.status && (item.status || 'active') !== filters.status) return false
+    if (filters.fellowshipEnabled === 'enabled' && !item.fellowshipEnabled) return false
+    if (filters.fellowshipEnabled === 'disabled' && item.fellowshipEnabled) return false
+    if (!keyword) return true
+    const username = String(item.username || '').toLowerCase()
+    const phone = String(item.phone || '').toLowerCase()
+    const userId = String(item.userId || '').toLowerCase()
+    return username.includes(keyword) || phone.includes(keyword) || userId.includes(keyword)
+  })
+})
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / pageSize.value)))
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredUsers.value.slice(start, end)
+})
 
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
@@ -140,7 +227,8 @@ function normalizeUsers(rows) {
       status: item.status || 'active',
       fellowshipEnabled: Boolean(item.fellowshipEnabled),
       createdAt: item.createdAt || null,
-      canForceDelete: !!item.canForceDelete
+      canForceDelete: !!item.canForceDelete,
+      canResetPassword: !!item.canResetPassword
     }))
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
 }
@@ -157,6 +245,26 @@ function canEditRole(item) {
 
 function canForceDelete(item) {
   return !!item?.canForceDelete
+}
+
+function canResetPassword(item) {
+  return !!item?.canResetPassword
+}
+
+function resetFilters() {
+  filters.keyword = ''
+  filters.role = ''
+  filters.status = ''
+  filters.fellowshipEnabled = ''
+  currentPage.value = 1
+}
+
+function goPrevPage() {
+  if (currentPage.value > 1) currentPage.value -= 1
+}
+
+function goNextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value += 1
 }
 
 async function loadUsers() {
@@ -244,7 +352,42 @@ async function forceDelete(item) {
   }
 }
 
+async function resetPassword(item) {
+  if (!canResetPassword(item)) {
+    showToast({ type: 'fail', message: '当前账号无重置密码权限' })
+    return
+  }
+  try {
+    await showConfirmDialog({
+      title: '重置密码',
+      message: `确认将用户 ${item.username || `用户${item.userId}`} 的密码重置为 123456 吗？`
+    })
+  } catch {
+    return
+  }
+  try {
+    const result = await resetAdminUserPassword(item.userId)
+    showToast({ type: 'success', message: result.message || '密码已重置为 123456' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '重置密码失败' })
+  }
+}
+
 onMounted(loadUsers)
+
+watch([() => filters.keyword, () => filters.role, () => filters.status, () => filters.fellowshipEnabled], () => {
+  currentPage.value = 1
+})
+
+watch(pageSize, () => {
+  currentPage.value = 1
+})
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) {
+    currentPage.value = pages
+  }
+})
 </script>
 
 <style scoped>
@@ -263,6 +406,66 @@ onMounted(loadUsers)
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.admin-filter-card {
+  margin-top: 12px;
+}
+
+.admin-pagination-card {
+  margin-top: 12px;
+}
+
+.admin-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(120px, 160px)) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-filter-input {
+  height: 32px;
+  border: 1px solid #d8deea;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 10px;
+  color: #1f2937;
+}
+
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-page-indicator {
+  min-width: 56px;
+  text-align: center;
+  color: #334155;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+@media (max-width: 1023px) {
+  .admin-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>
 
