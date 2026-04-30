@@ -1,112 +1,236 @@
-# AI 任务入口手册
+# AI 开发入口手册
 
-AI 在本项目执行任务时，先看这一页，再按类型读取对应手册的关键章节。
-
-## 10 秒快速决策
-
-1. 用一句话定义任务目标（改什么、影响哪里）
-2. 按下表匹配任务类型，只读最少必要章节
-3. 确认代码落点（文件、层级、模块）后再动代码
-4. 命中以下关键词时，必须叠加专项检查：
-   - **层级混用**：`fellowship`、`platform`、布局、路由前缀
-   - **数据库**：新建表、新增字段、Schema 变更
-   - **全局资源**：全局样式、入口文件、路由文件
-5. 改完做最小验证（能跑通本次改动路径即可）
+> **任何 AI 接到任务后，必须先读完本文件，再读对应规范，最后才能动代码。**
+> 本文件是所有开发规范的分发枢纽。
 
 ---
 
-## 本项目两层架构（必读前提）
+## 第一步：任务分类（必须做，不可跳过）
 
-本项目有两套体系，**严禁混用**：
+拿到任务后，先用一句话回答：**"这次改的是什么、在哪一层、是新建还是修改？"**
 
-| 维度 | 平台层（网站） | 交友层（H5） |
-|------|--------------|------------|
-| 路由 | `/` | `/fellowship/*` |
-| 布局 | 全宽，无约束 | max-width 480px，居中 |
-| UI 库 | 纯 CSS | Vant 4 |
-| 样式文件 | `assets/styles/platform.css` | `assets/styles/fellowship.css` |
-| 组件目录 | `src/components/` | `src/components/fellowship/` |
-| 页面目录 | `src/pages/platform/` | `src/pages/{功能}/` |
+然后按以下决策树找到自己的位置：
 
-判断任何任务前，先确认它属于哪一层。
+```
+任务进来
+  │
+  ├─ 涉及数据库（新增表、字段、迁移）？
+  │    └─ 是 → 读 DEVGUIDE.md §6（数据库规范）
+  │
+  ├─ 涉及后端（Controller / Service / Repository）？
+  │    └─ 是 → 读 DEVGUIDE.md §4 §5（后端规范 + API 规范）
+  │
+  └─ 涉及前端 UI？
+       │
+       ├─ 路由在 /pc/* 或 /m/*（新分离架构）？
+       │    └─ 是 → 读 docs/ui-architecture.md（UI 分离规范）⬅ 最重要
+       │
+       ├─ 路由在 /fellowship/*（联谊 H5）？
+       │    └─ 是 → 读 DEVGUIDE.md §3（前端规范）+ 联谊层原则（见本文第三节）
+       │
+       ├─ 路由在 /admin/*（管理后台）？
+       │    └─ 是 → 读 DEVGUIDE.md §3（前端规范）+ 管理层原则（见本文第三节）
+       │
+       └─ 路由在 / 或 /platform/*（平台网站）？
+            └─ 是 → 读 DEVGUIDE.md §3（前端规范）+ 平台层原则（见本文第三节）
+```
 
----
+分类后，再判断任务性质：
 
-## 任务类型与必读内容
-
-| 任务类型 | 必读位置 |
+| 任务性质 | 额外必读 |
 |---------|---------|
-| 项目总览 / 快速定位 | `CLAUDE.md` 全文 |
-| 前端页面 / 组件 / 逻辑 | `DEVGUIDE.md` §3（开发规范）、§7（代码模式）、§8（陷阱清单） |
-| 样式 / 主题 / CSS 变量 | `DEVGUIDE.md` §3.6（样式规范） |
-| 路由 / 导航 | `DEVGUIDE.md` §3.2（路由注册）、§3.7（路由跳转） |
-| 后端 Controller / Service | `DEVGUIDE.md` §4（后端规范）、§7.3–7.5（后端模式） |
-| API 联调 / 前后端对接 | `DEVGUIDE.md` §5（API 规范）、§5.3（现有 API 速查） |
-| 数据库 / Schema 变更 | `DEVGUIDE.md` §6（数据库规范） |
-| 本地启动 / 环境配置 | `DEVGUIDE.md` §2（本地启动）+ `CLAUDE.md` 环境文件表 |
-| 新功能完整开发 | `DEVGUIDE.md` §9（Checklist 全流程） |
+| 全新功能（从无到有） | `DEVGUIDE.md §9`（新功能开发 Checklist） |
+| 修改现有功能 | `DEVGUIDE.md §8`（已知陷阱 / 避坑清单） |
+| UI 迁移（旧路由 → 新 /pc/ /m/ 路由） | `docs/ui-architecture.md` 迁移流程章节 |
+| Bug 修复 | 最小改动原则，不触碰无关文件 |
 
 ---
 
-## 执行流程（必须按顺序）
+## 第二步：了解三层架构（必读前提）
 
-1. **定义目标**：一句话说清楚改什么、为什么、影响哪层（平台层 / 交友层 / 后端 / 全局）
-2. **读手册**：按上表找到对应章节，读完再落代码
-3. **定位落点**：在代码中找到真实的文件、函数、模块
-4. **实施修改**：遵守对应层的约定（见下方专项原则）
-5. **最小验证**：至少跑通本次改动路径
-6. **收尾**：只有开发流程、目录职责或关键约定发生变化时才更新文档
+本项目有三套体系，**严禁混用**：
 
----
+| 层级 | 路由前缀 | 布局组件 | UI 规范 | 页面目录 |
+|------|---------|---------|---------|---------|
+| 平台层（网站） | `/`、`/platform/*` | `PlatformLayout.vue` | 纯 CSS，禁止 Vant | `src/pages/platform/` |
+| 联谊层（H5） | `/fellowship/*` | `FellowshipLayout.vue` | Vant 4，max-width 480px | `src/pages/{功能}/` |
+| 管理后台 | `/admin/*` | `AdminLayout.vue` | 纯 CSS + Vant toast | `src/pages/admin/` |
 
-## 前端专项原则
+**UI 分离新架构**（叠加在上方，独立路由前缀）：
 
-- **两层不混**：交友层组件不进 `src/components/`（根目录），平台层不用 Vant
-- **页面目录**：交友层页面放 `src/pages/{功能}/index.vue`；`src/modules/fellowship/pages/` 是旧目录，**禁止再往里加新页面**
-- **路由前缀**：交友层跳转必须带 `/fellowship/` 前缀，漏掉会跳到平台层
-- **认证路由**：需要登录的交友页面必须加 `meta: { requiresAuth: true }`
-- **API 调用**：用 `src/api/request.js` 封装，`baseURL` 已处理环境差异，不硬编码 URL
-- **响应解包**：后端有两种格式（直接返回 / 包装格式），用 `unwrapList()` 兼容
-- **样式**：`<style scoped>` 无例外；颜色用 CSS 变量，不硬编码；禁止内联大段样式；禁止 Tailwind
+| 层级 | 路由前缀 | 布局组件 | 页面目录 | 规范文档 |
+|------|---------|---------|---------|---------|
+| PC 专属 | `/pc/*` | `PcLayout.vue` | `src/pages/pc/` | `docs/ui-architecture.md` |
+| 移动端专属 | `/m/*` | `MobileLayout.vue` | `src/pages/mobile/` | `docs/ui-architecture.md` |
 
-## 后端专项原则
-
-- **路径前缀**：Controller `@RequestMapping` 以 `/api/` 开头，**不加 `/admin`**（context-path 已处理）
-- **认证**：每个需要登录的接口都必须调 `getCurrentUser(authHeader)`，返回 null 时响应 401
-- **幂等写入**：写操作前先 `existsBy...` 检查，避免重复记录
-- **推荐列表**：必须过滤已操作用户（调 `findActedUserIdsByFromUserId`）
-- **分层**：业务逻辑在 Service，Controller 只做参数解析和响应封装
-- **枚举**：实体类枚举字段用 `@Enumerated(EnumType.STRING)`，不用 ORDINAL
-
-## 数据库专项原则
-
-- `ddl-auto: none`，Hibernate **不自动建表改表**
-- `schema-platform.sql` **不会自动执行**（`sql.init.mode: never`），仅作历史参考
-- 所有 Schema 变更通过 **Flyway 迁移文件**（`db/migration/V{N}__{描述}.sql`），启动时自动执行
-- Flyway 文件只跑一次，**无需幂等写法**；禁止修改已执行的文件（会破坏 checksum 校验）
-- 两张 fellowship 资料表：`fellowship_profile`（用这个）、`fellowship_profiles`（旧，废弃）
+旧路由（`/`、`/fellowship/*`、`/me` 等）永远保留，不删除，不重定向。
 
 ---
 
-## 高频错误（禁止）
+## 第三步：各层专项原则
 
-| 错误 | 正确做法 |
-|------|---------|
-| 不读手册直接开改 | 先按类型读对应章节 |
-| 交友层跳转少写 `/fellowship/` | `router.push('/fellowship/chat/' + id)` |
-| 新页面放 `modules/fellowship/pages/` | 放 `src/pages/{功能}/index.vue` |
-| Controller 路径加 `/admin` | 只写 `/api/{resource}` |
-| 写操作不检查是否已存在 | 先 `existsBy...` 再 save |
-| 修改已执行的 Flyway 文件 | 新建下一个版本号的迁移文件 |
-| 平台层使用 Vant 组件 | 平台层用纯 CSS |
-| 全局样式文件里加页面专属样式 | 放在组件 `<style scoped>` 里 |
+### 平台层
+
+- 页面放 `src/pages/platform/{Name}Page.vue`
+- 只用纯 CSS，禁止引入 Vant 任何组件
+- 样式写 `<style scoped>`，CSS 变量来自 `assets/styles/tokens.css`
+- 全局样式加到 `assets/styles/platform.css`，不加到组件里
+
+### 联谊层
+
+- 页面放 `src/pages/{功能}/index.vue`（不是 `modules/fellowship/pages/`，那是旧目录）
+- 使用 Vant 4；跳转必须带 `/fellowship/` 前缀，否则会跳到平台层
+- 需要登录的路由必须加 `meta: { requiresAuth: true }`
+- 联谊层 store ID 必须加 `fellowship-` 前缀
+
+### 管理后台
+
+- 新增管理页面后，必须同时注册到 `AdminLayout.vue` 的 `navItems` 和 `sectionMap`
+- Controller 用 `adminAuthService.requireAdmin(authHeader)` 做权限校验
+- 路由加 `meta: { requiresAdmin: true, permission: '权限码' }`
+
+### PC / Mobile 新架构（`/pc/*`、`/m/*`）
+
+**在动代码前，必须读 `docs/ui-architecture.md`。以下是最关键的禁止项：**
+
+- ❌ 禁止 PC 页面写 `@media (max-width: 560px)` 以下断点
+- ❌ 禁止 Mobile 页面写 `@media (min-width: 1024px)` 以上断点
+- ❌ 禁止 PC 页面引用 `van-*` 组件或 `AppTabBar`
+- ❌ 禁止 Mobile 页面引用 `DesktopDashboard`
+- ❌ 禁止在同一页面同时写 PC + mobile 双端 UI
+- ❌ 禁止修改旧路由文件（`platform.routes.js`、`fellowship.routes.js`）
+- 新路由只加到 `pc.routes.js` 或 `mobile.routes.js`
 
 ---
 
-## 任务完成标准（DoD）
+## 第四步：开始前必须输出的内容（强制）
 
-- 代码改动与任务目标一致，未越界修改其他层
-- 本次改动路径可运行（前端可访问对应页面 / 后端接口可调通）
-- 涉及 DB 变更时，SQL 已确认幂等
-- 涉及路由时，已确认层级前缀正确
-- 交付说明包含：改了什么、为什么、如何验证、剩余风险（如有）
+**在写任何代码之前**，必须先输出：
+
+```
+【任务分类】
+- 层级：平台层 / 联谊层 / 管理后台 / PC新架构 / Mobile新架构 / 后端 / 数据库
+- 类型：新功能 / 修改现有 / UI迁移 / Bug修复
+- 涉及文件清单：（列出将要创建或修改的每个文件）
+- 是否影响旧路由：是 / 否
+- 对应规范：（列出将要遵循的规范章节）
+```
+
+如果影响旧路由，必须说明如何保证旧路由不受影响。
+
+---
+
+## 第五步：开发规范速查表
+
+| 需求 | 对应文档 | 章节 |
+|------|---------|------|
+| 项目全貌、命令、环境变量 | `CLAUDE.md` | 全文 |
+| 前端文件放置、路由注册、样式规范 | `DEVGUIDE.md` | §3 |
+| 后端 Controller / Service 写法 | `DEVGUIDE.md` | §4 |
+| API 规范、响应格式、前后端对接 | `DEVGUIDE.md` | §5 |
+| 数据库、Flyway 迁移文件 | `DEVGUIDE.md` | §6 |
+| 标准代码模式（Vue 组件、API、Store） | `DEVGUIDE.md` | §7 |
+| 已知陷阱、高频错误 | `DEVGUIDE.md` | §8 |
+| 新功能完整开发流程 Checklist | `DEVGUIDE.md` | §9 |
+| PC / Mobile UI 分离规范 | `docs/ui-architecture.md` | 全文 |
+
+---
+
+## 第六步：完成后必须输出的内容（强制）
+
+**在交付结果时**，必须输出：
+
+```
+【验收报告】
+- 修改了哪些文件（按创建/修改/未动分类）
+- 新页面访问路径（如有）
+- 是否影响旧路由（用 git diff 验证旧文件无变动）
+- 是否存在样式污染（PC/mobile 是否串了）
+- 构建结果：npm run build 是否零错误
+- 遗留风险（如有）
+```
+
+---
+
+## 第七步：给任何 AI 的启动话术（可直接复制）
+
+把下面整段发给任意 AI，作为每次开发前的第一条消息：
+
+```text
+你现在是本项目开发代理。开始编码前必须严格执行以下流程，未完成前禁止修改代码：
+
+1) 先阅读文档（按顺序）：
+- AGENTS.md（入口与决策树）
+- CLAUDE.md（项目架构与命令）
+- DEVGUIDE.md（具体开发规范）
+- 若任务涉及 /pc/* 或 /m/*，必须额外阅读 docs/ui-architecture.md
+
+2) 阅读后先输出【任务分类】，格式必须完全一致：
+【任务分类】
+- 层级：平台层 / 联谊层 / 管理后台 / PC新架构 / Mobile新架构 / 后端 / 数据库
+- 类型：新功能 / 修改现有 / UI迁移 / Bug修复
+- 涉及文件清单：（列出将要创建或修改的每个文件）
+- 是否影响旧路由：是 / 否
+- 对应规范：（列出将要遵循的规范章节）
+
+3) 若未输出【任务分类】或内容不完整，停止执行并继续补全，不允许开始改代码。
+
+4) 开发时执行“最小改动原则”：
+- 只改任务清单中的文件，不顺手改无关文件
+- 不改已执行的 Flyway 迁移文件
+- 不混用平台/联谊/管理/PC/Mobile 的 UI 规范
+
+5) 完成后必须输出【验收报告】，格式必须完全一致：
+【验收报告】
+- 修改了哪些文件（按创建/修改/未动分类）
+- 新页面访问路径（如有）
+- 是否影响旧路由（用 git diff 验证旧文件无变动）
+- 是否存在样式污染（PC/mobile 是否串了）
+- 构建结果：npm run build 是否零错误
+- 遗留风险（如有）
+
+如果以上任一步做不到，先报告阻塞点，再等待我确认，不要自行跳过流程。
+```
+
+---
+
+## 第八步：AI 自检执行循环（防止“说了但没做”）
+
+每次任务都按这个循环：
+
+1. **先判定再开发**：先出 `【任务分类】`，再动代码。  
+2. **边做边对照**：每次新增改动前，检查是否仍在“涉及文件清单”内。  
+3. **超范围先停下**：如果发现要改清单外文件，先更新分类并说明原因，再继续。  
+4. **交付前复核**：对照 `【验收报告】` 六项逐条确认后再提交结果。  
+5. **无法验证就标风险**：例如无法本地验证时，必须写入“遗留风险”。  
+
+---
+
+## 高频错误速查（禁止）
+
+| ❌ 错误 | ✅ 正确做法 |
+|--------|-----------|
+| 拿到任务直接动代码 | 先完成第四步输出分类和文件清单 |
+| 联谊层跳转不带 `/fellowship/` 前缀 | `router.push('/fellowship/chat/' + id)` |
+| 新联谊页面放 `modules/fellowship/pages/` | 放 `src/pages/{功能}/index.vue` |
+| 平台层用 Vant 组件 | 平台层只用纯 CSS |
+| 后端 Controller 路径加 `/admin` 前缀 | 只写 `/api/{resource}`，context-path 已处理 |
+| 修改已执行的 Flyway 迁移文件 | 新建 `V{N+1}__description.sql` |
+| PC 页面写移动端断点 | PC 只写 `max-width: 980px` 平板适配 |
+| Mobile 页面引 DesktopDashboard | Mobile 页面只用 mobile 组件 |
+| 顺手修改无关文件 | 只改任务清单里的文件 |
+| 旧路由页面直接修改做 UI 分离 | 新建文件放 `pc/` 或 `mobile/`，旧文件不动 |
+
+---
+
+## 文档体系说明
+
+```
+AGENTS.md          ← 你现在在这里。所有 AI 的入口，先读这个
+CLAUDE.md          ← 项目全貌（架构、命令、环境）
+DEVGUIDE.md        ← 详细开发规范（前端/后端/DB/代码模式）
+docs/
+  ui-architecture.md  ← PC/Mobile UI 分离规范（新架构专用）
+CHANGELOG.md       ← 版本记录
+README.md          ← 项目介绍
+```

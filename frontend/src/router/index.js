@@ -3,6 +3,8 @@ import { useUserStore } from '@/stores/user.js'
 import platformRoutes from './modules/platform.routes.js'
 import fellowshipRoutes from './modules/fellowship.routes.js'
 import adminRoutes from './modules/admin.routes.js'
+import pcRoutes from './modules/pc.routes.js'
+import mobileRoutes from './modules/mobile.routes.js'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -10,6 +12,8 @@ const router = createRouter({
     platformRoutes,
     adminRoutes,
     fellowshipRoutes,
+    pcRoutes,
+    mobileRoutes,
     { path: '/vip', redirect: '/fellowship/vip' },
     { path: '/:pathMatch(.*)*', redirect: '/' }
   ]

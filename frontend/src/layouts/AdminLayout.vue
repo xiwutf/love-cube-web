@@ -66,6 +66,7 @@ const ALL_NAV_ITEMS = [
   { to: '/admin/invites',           label: '邀请记录',    icon: '◇', permission: 'user.manage' },
   { to: '/admin/modules',           label: '模块管理',    icon: '◆', permission: 'system.manage' },
   { to: '/admin/home-config',       label: '首页配置',    icon: '◉', permission: 'system.manage' },
+  { to: '/admin/analytics',         label: '访客分析',    icon: '◍', permission: 'system.manage' },
   { to: '/admin/platform/groups',   label: '全站团体管理', icon: '◈', permission: 'group.manage.all' },
   { to: '/admin/my-groups',         label: '我的团体',    icon: '◈', permission: 'group.manage.own' }
 ]
@@ -83,6 +84,7 @@ const sectionMap = {
   '/admin/feedbacks': '用户反馈',
   '/admin/modules': '模块管理',
   '/admin/home-config': '首页配置',
+  '/admin/analytics': '访客分析',
   '/admin/platform/groups': '全站团体管理',
   '/admin/my-groups': '我的团体',
   '/admin/403': '无权限'

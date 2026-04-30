@@ -2,6 +2,11 @@ import request from './request.js'
 
 // ── Platform groups (public module) ──────────────────────────────────────────
 
+function isLegacyPlatformGroupId(id) {
+  if (id === null || id === undefined) return false
+  return /^\d+$/.test(String(id))
+}
+
 /** Normalizes list API: plain array or paginated { items, total, page, pageSize }. */
 export function unwrapPlatformGroupList(res) {
   if (Array.isArray(res)) return res
@@ -12,8 +17,18 @@ export function unwrapPlatformGroupList(res) {
 }
 
 /** 团体大厅列表（platform_groups + 分页结构） */
-export function fetchGroups(params = {}) {
-  return request.get('/groups', { params })
+export async function fetchGroups(params = {}) {
+  const normalizedParams = { ...params }
+
+  // 新表接口默认按 active 查询；兼容旧表时改为 published。
+  if (!normalizedParams.status) normalizedParams.status = 'active'
+  const modern = await request.get('/groups', { params: normalizedParams })
+  const modernItems = unwrapPlatformGroupList(modern)
+  if (modernItems.length > 0) return modern
+
+  const legacyParams = { ...normalizedParams }
+  if (legacyParams.status === 'active') legacyParams.status = 'published'
+  return request.get('/platform/groups', { params: legacyParams })
 }
 
 export function fetchMeGroupsBuckets() {
@@ -25,21 +40,34 @@ export function fetchMyGroups() {
 }
 
 export function fetchGroupDetail(id) {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.get(`/platform/groups/${id}`)
+  }
   return request.get(`/groups/${id}`)
 }
 
 export function fetchGroupMembers(id, params = {}) {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.get(`/platform/groups/${id}/members`, { params })
+  }
   return request.get(`/groups/${id}/members`, { params })
 }
 
 export function fetchGroupPosts(id) {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.get(`/platform/groups/${id}/posts`)
+  }
   return request.get(`/groups/${id}/posts`)
 }
 
 /** 从 group_posts 中筛公告类 type */
 export async function fetchGroupNotices(id) {
-  const res = await request.get(`/groups/${id}/posts`)
+  const path = isLegacyPlatformGroupId(id)
+    ? `/platform/groups/${id}/notices`
+    : `/groups/${id}/posts`
+  const res = await request.get(path)
   const raw = Array.isArray(res) ? res : res?.data ?? []
+  if (isLegacyPlatformGroupId(id)) return raw
   return raw.filter((p) => {
     const t = String(p.type || '').toLowerCase()
     return t === 'notice' || t === 'announcement' || t === 'bulletin'
@@ -55,10 +83,16 @@ export function fetchGroupFeed() {
 }
 
 export function joinGroup(id, message = '') {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.post(`/platform/groups/${id}/join`, { message })
+  }
   return request.post(`/groups/${id}/join`, { message })
 }
 
 export function leaveGroup(id) {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.post(`/platform/groups/${id}/leave`)
+  }
   return request.delete(`/groups/${id}/leave`)
 }
 

@@ -72,6 +72,11 @@ export default {
       component: () => import('@/pages/admin/HomeConfigAdminPage.vue'),
       meta: { module: 'admin', permission: 'system.manage' }
     },
+    {
+      path: 'analytics',
+      component: () => import('@/pages/admin/AnalyticsAdminPage.vue'),
+      meta: { module: 'admin', permission: 'system.manage' }
+    },
 
     // 全站团体管理（SUPER_ADMIN）
     {

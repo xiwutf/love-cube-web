@@ -1,0 +1,606 @@
+<template>
+  <section class="pc-me-page">
+    <DesktopDashboard
+      :user="user"
+      :display-name="displayName"
+      :user-id-display="userIdDisplay"
+      :location-display="locationDisplay"
+      :invite-code-display="inviteCodeDisplay"
+      :copy-feedback="copyFeedback"
+      :copy-feedback-error="copyFeedbackError"
+      :profile-light-stats="profileLightStats"
+      :growth-level="growthLevel"
+      :growth-progress="growthProgress"
+      :completed-task-count="completedTaskCount"
+      :daily-tasks="dailyTasks"
+      :overview-items="overviewItems"
+      :group-info="groupInfo"
+      :group-ranking="groupRanking"
+      :quick-actions="quickActions"
+      :on-open-settings="openSettingsPanel"
+      :on-open-edit="openEditPanel"
+      :on-copy-invite="copyInviteCode"
+    />
+
+    <div v-if="editOpen" class="me-modal-backdrop" @click.self="closeEditPanel">
+      <section class="me-modal" role="dialog" aria-modal="true" aria-label="编辑个人资料">
+        <div class="me-modal-head">
+          <h3>编辑个人资料</h3>
+          <button type="button" aria-label="关闭" @click="closeEditPanel">×</button>
+        </div>
+        <form class="me-edit-form" @submit.prevent="handleSaveProfile">
+          <label>
+            <span>昵称</span>
+            <input v-model.trim="editForm.username" type="text" maxlength="20" placeholder="请输入昵称" />
+          </label>
+          <label>
+            <span>头像</span>
+            <div class="avatar-uploader">
+              <img v-if="editForm.avatar" :src="editForm.avatar" alt="头像预览" />
+              <div v-else>{{ avatarFallback }}</div>
+              <button type="button" :disabled="uploading || saving" @click="handlePickAvatar">
+                {{ uploading ? '上传中...' : '选择图片' }}
+              </button>
+            </div>
+          </label>
+          <label>
+            <span>所在地</span>
+            <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：河北省 保定市" />
+          </label>
+          <label>
+            <span>个人简介</span>
+            <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
+          </label>
+          <p v-if="saveMessage" class="save-message" :class="{ 'is-error': saveError }">{{ saveMessage }}</p>
+          <div class="modal-actions">
+            <button type="button" class="outline-action" :disabled="saving" @click="resetEditForm">重置</button>
+            <button type="submit" class="primary-action" :disabled="saving">{{ saving ? '保存中...' : '保存资料' }}</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div v-if="settingsOpen" class="me-modal-backdrop" @click.self="closeSettingsPanel">
+      <section class="me-modal" role="dialog" aria-modal="true" aria-label="账号设置">
+        <div class="me-modal-head">
+          <h3>账号设置</h3>
+          <button type="button" aria-label="关闭" @click="closeSettingsPanel">×</button>
+        </div>
+        <div class="settings-summary">
+          <div class="profile-avatar avatar-fallback">{{ avatarFallback }}</div>
+          <div>
+            <strong>{{ displayName }}</strong>
+            <span>{{ roleLabel }}</span>
+          </div>
+        </div>
+        <div class="settings-list">
+          <div><span>账号 ID</span><strong>{{ userIdDisplay }}</strong></div>
+          <div><span>手机号</span><strong>{{ user?.phone || '未绑定' }}</strong></div>
+          <div><span>认证状态</span><strong>{{ verifyLabel }}</strong></div>
+          <div><span>注册时间</span><strong>{{ registerDate }}</strong></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
+        </div>
+      </section>
+    </div>
+  </section>
+</template>
+
+<script setup>
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user.js'
+import { getNotifUnreadCountCached } from '@/api/notification.js'
+import { getUserStatsCached, updateProfile } from '@/api/user.js'
+import { getMyInviteCode } from '@/api/invite.js'
+import { useImageUpload } from '@/composables/useImageUpload.js'
+import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
+
+const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
+const user = computed(() => userStore.userInfo)
+const unreadCount = ref(0)
+const editOpen = ref(false)
+const settingsOpen = ref(false)
+const saving = ref(false)
+const saveMessage = ref('')
+const saveError = ref(false)
+const { pickAndUpload, uploading } = useImageUpload()
+const inviteCode = ref('')
+const copyFeedback = ref('')
+const copyFeedbackError = ref(false)
+const editForm = reactive({
+  username: '',
+  avatar: '',
+  location: '',
+  bio: ''
+})
+
+const myContentCount = ref(0)
+const myEventCount = ref(0)
+const myFavoriteCount = ref(0)
+
+const growthLevel = {
+  level: 2,
+  name: '新手创作者',
+  currentExp: 120,
+  nextExp: 300,
+  sources: [
+    { label: '发布内容', exp: 10 },
+    { label: '每日心声', exp: 5 },
+    { label: '创建团体', exp: 20 },
+    { label: '获得点赞', exp: 2 }
+  ]
+}
+
+const dailyTasks = [
+  { title: '发布一条每日心声', exp: 5, current: 1, total: 1, done: true, to: '/platform/positive-share' },
+  { title: '浏览 3 条内容', exp: 2, current: 1, total: 3, done: false, to: '/articles' },
+  { title: '点赞 1 条内容', exp: 1, current: 0, total: 1, done: false, to: '/platform/positive-share' },
+  { title: '分享 1 条内容', exp: 2, current: 0, total: 1, done: false, to: '/articles' }
+]
+
+const groupInfo = {
+  name: 'LoveCube 官方团队',
+  role: '管理员',
+  members: 23,
+  activity: '中等',
+  weekExp: 120
+}
+
+const groupRanking = [
+  { rank: 1, name: 'LoveCube 官方团队', activity: 320 },
+  { rank: 2, name: '星空联谊社', activity: 280 },
+  { rank: 3, name: '绿来是你', activity: 210 }
+]
+
+const displayName = computed(() => user.value?.username || user.value?.nickname || 'LoveCube 官方团队')
+const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '1')
+const locationDisplay = computed(() => user.value?.location || '河北省 保定市')
+const avatarFallback = computed(() => String(displayName.value || 'L').slice(0, 1).toUpperCase())
+const inviteCodeDisplay = computed(() => inviteCode.value || 'LC69UWM')
+const growthProgress = computed(() => `${Math.round((growthLevel.currentExp / growthLevel.nextExp) * 100)}%`)
+const completedTaskCount = computed(() => dailyTasks.filter(item => item.done).length)
+
+const roleLabel = computed(() => {
+  const role = String(user.value?.role || '').toLowerCase()
+  if (role === 'admin' || role === 'super_admin' || role === 'root') return '平台管理员'
+  return '普通用户'
+})
+
+const verifyLabel = computed(() => {
+  const status = String(user.value?.verificationStatus || 'none')
+  if (status === 'approved') return '账号已认证'
+  if (status === 'pending') return '认证审核中'
+  if (status === 'rejected') return '认证未过'
+  return '账号未认证'
+})
+
+const registerDate = computed(() => {
+  const raw = user.value?.createdAt
+  if (!raw) return '--'
+  return String(raw).replace('T', ' ').slice(0, 10)
+})
+
+const profileLightStats = [
+  { label: '关注', value: '12' },
+  { label: '粉丝', value: '236' },
+  { label: '获赞', value: '1,234' }
+]
+
+const workspaceItems = computed(() => [
+  { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
+  { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
+  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
+  { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
+])
+
+const overviewItems = computed(() => [
+  { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
+  { label: '收藏内容', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
+  { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },
+  { label: '当前等级', value: `Lv.${growthLevel.level}`, icon: '◇', tone: 'blue', to: '/modules' }
+])
+
+const quickActions = computed(() => [
+  { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: '/platform/positive-share' },
+  { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: '/modules' },
+  { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: '/messages' },
+  { title: '账号设置', desc: '账号与安全', icon: '◇', tone: 'green', to: { path: '/pc/platform/me', query: { panel: 'settings' } } },
+  { title: '邀请码', desc: '邀请好友加入', icon: '▭', tone: 'amber', to: '/fellowship/invite' },
+  { title: '编辑资料', desc: '修改个人资料', icon: '✎', tone: 'blue', to: { path: '/pc/platform/me', query: { panel: 'edit' } } }
+])
+
+async function refreshUnreadCount() {
+  const notifRes = await getNotifUnreadCountCached().catch(() => null)
+  unreadCount.value = Number(notifRes?.count ?? notifRes?.unreadCount ?? 0)
+}
+
+function handleNotifReadAll() {
+  unreadCount.value = 0
+}
+
+watch(
+  () => user.value,
+  (value) => {
+    editForm.username = value?.username || ''
+    editForm.avatar = value?.avatar || ''
+    editForm.location = value?.location || ''
+    editForm.bio = value?.bio || ''
+  },
+  { immediate: true }
+)
+
+function openEditPanel() {
+  editOpen.value = true
+  settingsOpen.value = false
+  saveMessage.value = ''
+  saveError.value = false
+}
+
+function closeEditPanel() {
+  editOpen.value = false
+}
+
+function openSettingsPanel() {
+  settingsOpen.value = true
+  editOpen.value = false
+  if (route.query?.panel !== 'settings') {
+    router.replace({ path: '/pc/platform/me', query: { ...route.query, panel: 'settings' } })
+  }
+}
+
+function closeSettingsPanel() {
+  settingsOpen.value = false
+}
+
+function resetEditForm() {
+  editForm.username = user.value?.username || ''
+  editForm.avatar = user.value?.avatar || ''
+  editForm.location = user.value?.location || ''
+  editForm.bio = user.value?.bio || ''
+  saveMessage.value = ''
+  saveError.value = false
+}
+
+async function handlePickAvatar() {
+  saveMessage.value = ''
+  saveError.value = false
+  try {
+    const avatarUrl = await pickAndUpload({ quality: 0.8 })
+    if (!avatarUrl) throw new Error('上传失败，请重试')
+    editForm.avatar = avatarUrl
+  } catch (error) {
+    saveError.value = true
+    saveMessage.value = error?.message || '头像上传失败，请稍后重试'
+  }
+}
+
+async function handleSaveProfile() {
+  saveMessage.value = ''
+  saveError.value = false
+  const username = editForm.username.trim()
+  if (!username) {
+    saveError.value = true
+    saveMessage.value = '昵称不能为空'
+    return
+  }
+  if (username.length > 20) {
+    saveError.value = true
+    saveMessage.value = '昵称最多 20 个字符'
+    return
+  }
+  saving.value = true
+  try {
+    await updateProfile({
+      username,
+      profilePhoto: editForm.avatar,
+      location: editForm.location,
+      bio: editForm.bio
+    })
+    await userStore.refreshCurrentUser().catch(() => {})
+    saveMessage.value = '资料已更新'
+    window.setTimeout(() => {
+      if (!saveError.value) closeEditPanel()
+    }, 600)
+  } catch (error) {
+    saveError.value = true
+    saveMessage.value = error?.message || '保存失败，请稍后重试'
+  } finally {
+    saving.value = false
+  }
+}
+
+function handleLogout() {
+  userStore.logout()
+  router.replace('/login')
+}
+
+async function copyInviteCode() {
+  if (!inviteCodeDisplay.value) return
+  copyFeedback.value = ''
+  copyFeedbackError.value = false
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(inviteCodeDisplay.value)
+    } else {
+      const input = document.createElement('input')
+      input.value = inviteCodeDisplay.value
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
+    copyFeedback.value = '已复制'
+    window.setTimeout(() => { copyFeedback.value = '' }, 2000)
+  } catch {
+    copyFeedbackError.value = true
+    copyFeedback.value = '复制失败'
+    window.setTimeout(() => { copyFeedback.value = '' }, 2000)
+  }
+}
+
+onMounted(async () => {
+  window.addEventListener('platform-notif-read-all', handleNotifReadAll)
+  if (route.query?.panel === 'settings') openSettingsPanel()
+  if (route.query?.panel === 'edit') openEditPanel()
+  if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
+  await refreshUnreadCount()
+  const [statsRes, inviteRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode()])
+  if (statsRes.status === 'fulfilled' && statsRes.value) {
+    myContentCount.value = Number(statsRes.value.contentCount ?? 0)
+    myEventCount.value = Number(statsRes.value.eventCount ?? 0)
+    myFavoriteCount.value = Number(statsRes.value.favoriteCount ?? 0)
+  }
+  if (inviteRes.status === 'fulfilled') {
+    inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
+  }
+})
+
+watch(
+  () => route.query?.panel,
+  (panel) => {
+    if (panel === 'settings') openSettingsPanel()
+    if (panel === 'edit') openEditPanel()
+  }
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('platform-notif-read-all', handleNotifReadAll)
+})
+</script>
+
+<style scoped>
+.pc-me-page {
+  min-height: calc(100vh - 60px);
+  background: #f6f7fb;
+}
+
+.me-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(15, 23, 42, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.me-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: min(100%, 480px);
+  padding: 28px 28px 24px;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18);
+}
+
+.me-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.me-modal-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.me-modal-head button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.me-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.me-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.me-edit-form label span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.me-edit-form input,
+.me-edit-form textarea {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.me-edit-form input:focus,
+.me-edit-form textarea:focus {
+  border-color: #6d5dfb;
+}
+
+.avatar-uploader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-uploader img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-uploader div {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6d5dfb, #4f46e5);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.avatar-uploader button {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.save-message {
+  margin: 0;
+  font-size: 13px;
+  color: #059669;
+}
+
+.save-message.is-error {
+  color: #dc2626;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.primary-action {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #6d5dfb;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.primary-action:hover {
+  opacity: 0.88;
+}
+
+.primary-action:disabled {
+  opacity: 0.5;
+}
+
+.outline-action {
+  padding: 9px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.danger-action {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.settings-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+
+.profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #6d5dfb, #4f46e5);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.settings-summary strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settings-summary span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-list div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.settings-list span {
+  color: #64748b;
+}
+
+.settings-list strong {
+  font-weight: 600;
+}
+</style>

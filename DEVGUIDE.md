@@ -288,6 +288,21 @@ router.push('/user-profile/' + userId)   // ❌
 router.push('/chat/' + userId)           // ❌
 ```
 
+### 3.8 页面 UI 改动约束（强制）
+
+后续所有页面 UI 改动必须遵守以下规则：
+
+1. 禁止在单个大型 Vue 页面中堆叠全部 UI。
+2. 页面文件仅负责 layout 组装，不承载复杂 UI 细节。
+3. 每个页面必须拆分为多个业务区块组件。
+4. PC 区块组件统一放在 `components/pc/`。
+5. 移动端区块组件统一放在 `components/mobile/`。
+6. 样式集中放到对应页面的独立 CSS 文件，不在页面内分散维护。
+7. 修改某个区块时，只允许改该区块组件和其对应样式文件。
+8. 禁止顺手重构无关页面或无关区块。
+9. 禁止改 API、store、路由，除非任务明确要求。
+10. 每次改动前，必须先列出将修改的文件清单并确认范围。
+
 ---
 
 ## 4. 后端开发规范
@@ -718,6 +733,7 @@ public void createRecord(Long userId, Long targetId) {
 ### 前端
 
 - [ ] 页面文件放在 `src/pages/` 正确子目录
+- [ ] UI 改动前先列出本次将修改的文件清单
 - [ ] 路由在 `router/index.js` 中注册，需要认证的加 `...auth`
 - [ ] API 文件放在 `src/api/`，用 `request.js` 封装，不硬编码 URL
 - [ ] 交友层跳转用 `/fellowship/` 前缀
@@ -751,4 +767,4 @@ public void createRecord(Long userId, Long targetId) {
 
 ---
 
-*最后更新：2026-04-26*
+*最后更新：2026-04-30*
