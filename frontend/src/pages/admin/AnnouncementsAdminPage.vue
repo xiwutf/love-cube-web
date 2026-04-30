@@ -8,9 +8,13 @@
         <input v-model="draft.title" class="admin-input" placeholder="公告标题" />
         <input v-model="draft.summary" class="admin-input" placeholder="摘要" />
         <input v-model="draft.category" class="admin-input" placeholder="分类（填" />
+        <span class="upload-label">封面图</span>
         <CoverUploadField v-model="draft.coverUrl" :disabled="saving" />
+        <span class="upload-label">附件图（如微信群二维码）</span>
+        <CoverUploadField v-model="draft.attachmentUrl" :disabled="saving" />
         <label class="admin-check"><input type="checkbox" v-model="draft.pinned" /> 置顶</label>
         <label class="admin-check"><input type="checkbox" v-model="draft.recommended" /> 推荐</label>
+        <label class="admin-check"><input type="checkbox" v-model="draft.popupEnabled" /> 弹窗</label>
         <button type="button" class="admin-btn primary" :disabled="saving" @click="create">新增公告</button>
       </div>
       <textarea v-model="draft.content" class="admin-textarea admin-desktop-only" placeholder="公告内容" ></textarea>
@@ -40,11 +44,15 @@
             <td>{{ item.summary }}</td>
             <td>
               <input v-model="item.category" class="admin-input" placeholder="分类" style="margin-bottom: 6px" />
+              <span class="upload-label">封面图</span>
               <CoverUploadField v-model="item.coverUrl" :disabled="saving" />
+              <span class="upload-label" style="margin-top: 8px;">附件图</span>
+              <CoverUploadField v-model="item.attachmentUrl" :disabled="saving" />
             </td>
             <td>
               <label class="admin-check"><input type="checkbox" v-model="item.pinned" /> 置顶</label>
               <label class="admin-check"><input type="checkbox" v-model="item.recommended" /> 推荐</label>
+              <label class="admin-check"><input type="checkbox" v-model="item.popupEnabled" /> 弹窗</label>
             </td>
             <td><span class="admin-tag" :class="item.status">{{ item.status }}</span></td>
             <td><textarea v-model="item.content" class="admin-textarea" ></textarea></td>
@@ -99,15 +107,20 @@ const draft = reactive({
   content: '',
   category: '',
   coverUrl: '',
+  attachmentUrl: '',
   pinned: false,
-  recommended: false
+  recommended: false,
+  popupEnabled: false
 })
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    items.value = await getAnnouncements()
+    const rows = await getAnnouncements()
+    items.value = Array.isArray(rows)
+      ? rows.map(item => ({ ...item, popupEnabled: Boolean(item?.popupEnabled) }))
+      : []
   } catch (e) {
     error.value = e.message || '加载失败'
   } finally {
@@ -127,8 +140,10 @@ async function create() {
       content: '',
       category: '',
       coverUrl: '',
+      attachmentUrl: '',
       pinned: false,
-      recommended: false
+      recommended: false,
+      popupEnabled: false
     })
     showToast({ message: '公告已创', type: 'success' })
   } catch (e) {
@@ -200,6 +215,14 @@ onMounted(load)
 
 .admin-check input[type='checkbox'] {
   accent-color: #e84f73;
+}
+
+.upload-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
 }
 </style>
 

@@ -144,6 +144,9 @@ public class AdminContentController {
         if (payload.getPublishDate() == null && "published".equals(payload.getStatus())) {
             payload.setPublishDate(LocalDateTime.now());
         }
+        if (payload.getPopupEnabled() == null) {
+            payload.setPopupEnabled(false);
+        }
         return announcementRepository.save(payload);
     }
 

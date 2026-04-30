@@ -143,9 +143,9 @@ function taskProgress(task) {
   --dash-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   background: transparent;
   color: var(--dash-text);
-  width: min(100%, 1600px);
+  width: min(100% - 40px, 1720px);
   margin: 0 auto;
-  padding: 0 4px 24px;
+  padding: 0 0 24px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -354,6 +354,10 @@ function taskProgress(task) {
 }
 
 @media (max-width: 1180px) {
+  .dash {
+    width: min(100% - 24px, 1180px);
+  }
+
   .dash-grid {
     grid-template-columns: 1fr;
   }

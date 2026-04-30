@@ -2,13 +2,19 @@
   <section class="card" aria-label="成长等级">
     <header class="head">
       <h2>成长等级</h2>
-      <router-link class="more" to="/modules">成长记录 ></router-link>
+      <router-link class="more" to="/pc/platform/growth-record">成长记录 ></router-link>
     </header>
 
     <div class="body">
-      <div class="badge">Lv.{{ growthLevel.level }}</div>
+      <div class="level-row">
+        <div class="badge">Lv.{{ growthLevel.level }}</div>
+        <div class="medal">
+          <span>徽章</span>
+          <strong>{{ growthLevel.name }}</strong>
+        </div>
+      </div>
       <div class="content">
-        <strong class="lv-name">{{ growthLevel.name }}</strong>
+        <strong class="lv-name">成长进度 {{ growthProgress }}</strong>
         <p class="hint">再获得 {{ growthLevel.nextExp - growthLevel.currentExp }} 经验可升级 Lv.{{ growthLevel.level + 1 }}</p>
         <div class="progress">
           <span :style="{ width: growthProgress }"></span>
@@ -72,28 +78,60 @@ defineProps({
   display: flex;
   min-height: 176px;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 14px;
-  text-align: center;
+  gap: 16px;
 }
 
 .badge {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 84px;
+  height: 84px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: #ffffff;
   font-weight: 900;
-  font-size: 22px;
+  font-size: 21px;
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
-  filter: drop-shadow(0 14px 22px rgba(79, 70, 229, 0.28));
+  filter: drop-shadow(0 12px 20px rgba(79, 70, 229, 0.28));
+}
+
+.level-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.medal {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  border: 1px solid #fde68a;
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.12);
+}
+
+.medal span {
+  font-size: 11px;
+  color: #b45309;
+  font-weight: 700;
+}
+
+.medal strong {
+  font-size: 13px;
+  color: #92400e;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .content {
   min-width: 0;
+  text-align: center;
 }
 
 .lv-name {

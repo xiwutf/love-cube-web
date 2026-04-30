@@ -4,6 +4,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.UserInteractionService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,9 @@ public class InteractionController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private GrowthService growthService;
     
     /**
      * 点赞用户
@@ -51,6 +55,7 @@ public class InteractionController {
             } else {
                 // 如果没有点赞，则点赞
                 interactionService.likeUser(currentUser.getUserid(), userId);
+                growthService.recordAction(currentUser.getUserid(), "LIKE_CONTENT", "LIKE_USER_" + userId);
                 boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
 
                 String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";

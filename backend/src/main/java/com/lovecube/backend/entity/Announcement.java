@@ -37,9 +37,15 @@ public class Announcement {
     @Column(name = "cover_url", length = 512)
     private String coverUrl;
 
+    @Column(name = "attachment_url", length = 512)
+    private String attachmentUrl;
+
     private Boolean pinned;
 
     private Boolean recommended;
+
+    @Column(name = "popup_enabled")
+    private Boolean popupEnabled;
 
     @Column(name = "view_count")
     private Integer viewCount;

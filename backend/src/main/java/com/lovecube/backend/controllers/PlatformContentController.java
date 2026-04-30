@@ -13,6 +13,7 @@ import com.lovecube.backend.repository.HomeConfigRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.HomeConfigService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,7 @@ public class PlatformContentController {
     private final UserRepository userRepository;
     private final HomeConfigRepository homeConfigRepository;
     private final DynamicRepository dynamicRepository;
+    private final GrowthService growthService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
@@ -49,7 +51,8 @@ public class PlatformContentController {
             AdminAuthService adminAuthService,
             UserRepository userRepository,
             HomeConfigRepository homeConfigRepository,
-            DynamicRepository dynamicRepository
+            DynamicRepository dynamicRepository,
+            GrowthService growthService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -60,6 +63,7 @@ public class PlatformContentController {
         this.userRepository = userRepository;
         this.homeConfigRepository = homeConfigRepository;
         this.dynamicRepository = dynamicRepository;
+        this.growthService = growthService;
     }
 
     @GetMapping("/announcements")
@@ -75,11 +79,15 @@ public class PlatformContentController {
     }
 
     @GetMapping("/announcements/{id}")
-    public Announcement getAnnouncement(@PathVariable String id) {
+    public Announcement getAnnouncement(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
         Announcement item = announcementRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "公告不存在"));
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         announcementRepository.save(item);
+        tryRecordViewAction(authHeader, "ANNOUNCEMENT_" + id);
         return item;
     }
 
@@ -96,11 +104,15 @@ public class PlatformContentController {
     }
 
     @GetMapping("/articles/{id}")
-    public Article getArticle(@PathVariable String id) {
+    public Article getArticle(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
         Article item = articleRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "资讯不存在"));
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         articleRepository.save(item);
+        tryRecordViewAction(authHeader, "ARTICLE_" + id);
         return item;
     }
 
@@ -109,7 +121,7 @@ public class PlatformContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> payload
     ) {
-        adminAuthService.requireUser(authHeader);
+        User user = adminAuthService.requireUser(authHeader);
         String title = String.valueOf(payload.getOrDefault("title", "")).trim();
         String summary = String.valueOf(payload.getOrDefault("summary", "")).trim();
         String content = String.valueOf(payload.getOrDefault("content", "")).trim();
@@ -139,6 +151,7 @@ public class PlatformContentController {
         article.setCreatedAt(LocalDateTime.now());
         article.setUpdatedAt(LocalDateTime.now());
         Article saved = articleRepository.save(article);
+        growthService.recordAction(user.getUserid(), "POST_CONTENT", "ARTICLE_SUBMISSION_" + saved.getId());
 
         return Map.of(
                 "id", saved.getId(),
@@ -161,11 +174,15 @@ public class PlatformContentController {
     }
 
     @GetMapping("/events/{id}")
-    public PlatformEvent getEvent(@PathVariable String id) {
+    public PlatformEvent getEvent(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
         PlatformEvent item = platformEventRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         platformEventRepository.save(item);
+        tryRecordViewAction(authHeader, "EVENT_" + id);
         return item;
     }
 
@@ -317,5 +334,16 @@ public class PlatformContentController {
                 "verifications", "/api/admin/verifications",
                 "reports", "/api/admin/reports"
         );
+    }
+
+    private void tryRecordViewAction(String authHeader, String bizId) {
+        if (authHeader == null || authHeader.isBlank()) {
+            return;
+        }
+        try {
+            User user = adminAuthService.requireUser(authHeader);
+            growthService.recordAction(user.getUserid(), "VIEW_CONTENT", bizId);
+        } catch (Exception ignored) {
+        }
     }
 }

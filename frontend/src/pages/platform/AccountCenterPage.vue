@@ -246,8 +246,9 @@
           <div><span>认证状态</span><strong>{{ verifyLabel }}</strong></div>
           <div><span>注册时间</span><strong>{{ registerDate }}</strong></div>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions settings-actions">
           <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="outline-action" @click="goChangePasswordPage">修改密码</button>
           <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
         </div>
       </section>
@@ -485,6 +486,11 @@ async function handleSaveProfile() {
 function handleLogout() {
   userStore.logout()
   router.replace('/login')
+}
+
+function goChangePasswordPage() {
+  closeSettingsPanel()
+  router.push('/fellowship/change-password')
 }
 
 async function copyInviteCode() {
@@ -1553,6 +1559,10 @@ onBeforeUnmount(() => {
 
 .settings-list strong {
   color: var(--me-text);
+}
+
+.settings-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 @media (max-width: 767px) {

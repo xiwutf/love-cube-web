@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.PositiveShareService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,15 +24,18 @@ public class PositiveShareController {
     private final PositiveShareService positiveShareService;
     private final AdminAuthService adminAuthService;
     private final UserRepository userRepository;
+    private final GrowthService growthService;
 
     public PositiveShareController(
             PositiveShareService positiveShareService,
             AdminAuthService adminAuthService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            GrowthService growthService
     ) {
         this.positiveShareService = positiveShareService;
         this.adminAuthService = adminAuthService;
         this.userRepository = userRepository;
+        this.growthService = growthService;
     }
 
     @PostMapping
@@ -40,7 +44,12 @@ public class PositiveShareController {
             @RequestBody Map<String, Object> payload
     ) {
         User user = adminAuthService.requireUser(authHeader);
-        return positiveShareService.createShare(user, payload);
+        Map<String, Object> result = positiveShareService.createShare(user, payload);
+        Object id = result.get("id");
+        if (id != null) {
+            growthService.recordAction(user.getUserid(), "POST_CONTENT", "POSITIVE_SHARE_" + id);
+        }
+        return result;
     }
 
     @GetMapping
@@ -90,7 +99,9 @@ public class PositiveShareController {
             @RequestHeader(value = "Authorization", required = false) String authHeader
     ) {
         User user = adminAuthService.requireUser(authHeader);
-        return positiveShareService.likeShare(id, user.getUserid());
+        Map<String, Object> result = positiveShareService.likeShare(id, user.getUserid());
+        growthService.recordAction(user.getUserid(), "LIKE_CONTENT", "POSITIVE_SHARE_" + id);
+        return result;
     }
 
     @DeleteMapping("/{id}/like")

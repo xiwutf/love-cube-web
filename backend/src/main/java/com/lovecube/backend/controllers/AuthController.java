@@ -4,6 +4,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -30,17 +31,20 @@ public class AuthController {
     private final BCryptPasswordEncoder passwordEncoder;
     private final FellowshipInviteService fellowshipInviteService;
     private final AdminAuthService adminAuthService;
+    private final GrowthService growthService;
 
     public AuthController(
             UserRepository userRepository,
             BCryptPasswordEncoder passwordEncoder,
             FellowshipInviteService fellowshipInviteService,
-            AdminAuthService adminAuthService
+            AdminAuthService adminAuthService,
+            GrowthService growthService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.fellowshipInviteService = fellowshipInviteService;
         this.adminAuthService = adminAuthService;
+        this.growthService = growthService;
     }
 
     @PostMapping("/login")
@@ -76,6 +80,8 @@ public class AuthController {
         }
 
         String token = JwtUtil.generateToken(user.getOpenid());
+        // 每日登录经验按日期去重，同一天只计一次。
+        growthService.recordAction(user.getUserid(), "LOGIN", "LOGIN_" + java.time.LocalDate.now());
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getUserid());
         result.put("token", token);

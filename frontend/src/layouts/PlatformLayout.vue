@@ -149,6 +149,21 @@
     </transition>
 
     <transition name="dialog-fade">
+      <div v-if="announcementPopupVisible" class="announcement-popup-mask" @click.self="closeAnnouncementPopup">
+        <section class="announcement-popup-dialog" role="dialog" aria-modal="true" aria-labelledby="announcement-popup-title">
+          <button type="button" class="announcement-popup-close" aria-label="关闭公告弹窗" @click="closeAnnouncementPopup">×</button>
+          <p class="announcement-popup-kicker">平台公告</p>
+          <h3 id="announcement-popup-title">{{ announcementPopupItem?.title || '最新公告' }}</h3>
+          <p class="announcement-popup-summary">{{ announcementPopupItem?.summary || '平台发布了新的公告内容，点击查看详情。' }}</p>
+          <div class="announcement-popup-actions">
+            <button type="button" class="announcement-popup-btn announcement-popup-btn-secondary" @click="closeAnnouncementPopup">关闭</button>
+            <button type="button" class="announcement-popup-btn announcement-popup-btn-primary" @click="goAnnouncementDetail">查看详情</button>
+          </div>
+        </section>
+      </div>
+    </transition>
+
+    <transition name="dialog-fade">
       <div v-if="wechatGuideVisible" class="wechat-guide-mask" @click.self="closeWechatGuide">
         <section class="wechat-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="wechat-guide-title">
           <h3 id="wechat-guide-title">建议使用手机浏览器打开</h3>
@@ -168,6 +183,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { submitCoCreationFeedback } from '@/api/feedback.js'
+import { fetchAnnouncements } from '@/api/platformContent.js'
 import { useUserStore } from '@/stores/user.js'
 import RouteBackButton from '@/components/RouteBackButton.vue'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
@@ -185,6 +201,8 @@ const coCreationMessage = ref('')
 const coCreationError = ref(false)
 const wechatGuideVisible = ref(false)
 const wechatCopyDone = ref(false)
+const announcementPopupVisible = ref(false)
+const announcementPopupItem = ref(null)
 const coCreationForm = ref({
   focusModule: '',
   goals: [],
@@ -243,6 +261,7 @@ const messageBadge = computed(() => '')
 const navHomePaths = computed(() => new Set([...navItems.map(item => item.to), '/about']))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const WECHAT_GUIDE_KEY = 'platform-wechat-guide-dismissed-date'
+const ANNOUNCEMENT_DISMISS_PREFIX = 'platform-announcement-dismissed'
 
 watch(() => route.fullPath, () => {
   menuOpen.value = false
@@ -425,11 +444,74 @@ function setupWechatGuide() {
   wechatGuideVisible.value = true
 }
 
+function getAnnouncementDismissKey(userId, announcementId) {
+  return `${ANNOUNCEMENT_DISMISS_PREFIX}:${userId}:${announcementId}`
+}
+
+function closeAnnouncementPopup() {
+  const userId = String(userStore.userId || '')
+  const announcementId = String(announcementPopupItem.value?.id || '')
+  if (userId && announcementId) {
+    try {
+      localStorage.setItem(getAnnouncementDismissKey(userId, announcementId), '1')
+    } catch (error) {
+      // ignore storage exceptions
+    }
+  }
+  announcementPopupVisible.value = false
+}
+
+function goAnnouncementDetail() {
+  const announcementId = String(announcementPopupItem.value?.id || '')
+  closeAnnouncementPopup()
+  if (announcementId) {
+    router.push(`/announcements/${announcementId}`)
+    return
+  }
+  router.push('/announcements')
+}
+
+async function maybeShowAnnouncementPopup() {
+  if (!userStore.isLoggedIn) return
+  const userId = String(userStore.userId || '')
+  if (!userId) return
+  try {
+    const list = await fetchAnnouncements({ status: 'published' })
+    const latest = Array.isArray(list)
+      ? list.find(item => Boolean(item?.popupEnabled))
+      : null
+    const announcementId = String(latest?.id || '')
+    if (!announcementId) return
+    const dismissed = localStorage.getItem(getAnnouncementDismissKey(userId, announcementId))
+    if (dismissed) return
+    announcementPopupItem.value = latest
+    announcementPopupVisible.value = true
+  } catch (error) {
+    // ignore announcement popup failure
+  }
+}
+
 onMounted(() => {
   handleScroll()
   setupWechatGuide()
+  maybeShowAnnouncementPopup()
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
+
+watch(
+  () => [userStore.isLoggedIn, userStore.userId],
+  ([loggedIn, userId], [prevLoggedIn, prevUserId]) => {
+    if (!loggedIn) {
+      announcementPopupVisible.value = false
+      announcementPopupItem.value = null
+      return
+    }
+    if (!userId) return
+    if (!prevLoggedIn || userId !== prevUserId) {
+      maybeShowAnnouncementPopup()
+    }
+  }
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleScroll)
@@ -1760,6 +1842,89 @@ onBeforeUnmount(() => {
 .dialog-fade-enter-from,
 .dialog-fade-leave-to {
   opacity: 0;
+}
+
+.announcement-popup-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 215;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.announcement-popup-dialog {
+  position: relative;
+  width: min(92vw, 460px);
+  border-radius: 16px;
+  border: 1px solid #fbcfe8;
+  background: #ffffff;
+  padding: 24px 20px 18px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.28);
+}
+
+.announcement-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.announcement-popup-kicker {
+  margin: 0 0 8px;
+  color: #e84f73;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.announcement-popup-dialog h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.announcement-popup-summary {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.announcement-popup-actions {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.announcement-popup-btn {
+  border-radius: 999px;
+  height: 40px;
+  border: 1px solid #dbeafe;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-popup-btn-secondary {
+  background: #ffffff;
+  color: #334155;
+}
+
+.announcement-popup-btn-primary {
+  border-color: #e84f73;
+  background: linear-gradient(90deg, #ef5ca7 0%, #8f96f8 100%);
+  color: #ffffff;
 }
 
 .wechat-guide-mask {

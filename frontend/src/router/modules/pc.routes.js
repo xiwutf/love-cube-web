@@ -19,6 +19,11 @@ export default {
       path: 'platform/me',
       component: () => import('@/pages/pc/platform/MePage.vue'),
       meta: { module: 'platform', requiresAuth: true }
+    },
+    {
+      path: 'platform/growth-record',
+      component: () => import('@/pages/pc/platform/GrowthRecordPage.vue'),
+      meta: { module: 'platform', requiresAuth: true }
     }
   ]
 }

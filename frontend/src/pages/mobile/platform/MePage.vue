@@ -96,6 +96,18 @@
               </article>
             </div>
           </section>
+
+          <section class="dashboard-card badge-card">
+            <div class="section-head">
+              <h2>我的徽章</h2>
+            </div>
+            <div class="badge-list">
+              <article v-for="badge in badges" :key="badge.code" :class="{ locked: !badge.unlocked }">
+                <strong>{{ badge.name }}</strong>
+                <small>{{ badge.progress }}/{{ badge.conditionValue }}</small>
+              </article>
+            </div>
+          </section>
         </aside>
 
         <div class="me-main-stack">
@@ -221,8 +233,9 @@
           <div><span>认证状态</span><strong>{{ verifyLabel }}</strong></div>
           <div><span>注册时间</span><strong>{{ registerDate }}</strong></div>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions settings-actions">
           <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="outline-action" @click="goChangePasswordPage">修改密码</button>
           <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
         </div>
       </section>
@@ -237,6 +250,7 @@ import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
+import { getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 
 const userStore = useUserStore()
@@ -263,26 +277,43 @@ const editForm = reactive({
 const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
+const growthInfo = ref(null)
+const badges = ref([])
 
-const growthLevel = {
-  level: 2,
-  name: '新手创作者',
-  currentExp: 120,
-  nextExp: 300,
-  sources: [
-    { label: '发布内容', exp: 10 },
-    { label: '每日心声', exp: 5 },
-    { label: '创建团体', exp: 20 },
-    { label: '获得点赞', exp: 2 }
-  ]
-}
+const growthLevel = computed(() => {
+  const data = growthInfo.value
+  return {
+    level: Number(data?.level ?? 1),
+    name: data?.title || '新手用户',
+    currentExp: Number(data?.exp ?? 0),
+    nextExp: Number(data?.nextLevelExp ?? 100),
+    sources: [
+      { label: '登录', exp: 2 },
+      { label: '发布内容', exp: 10 },
+      { label: '浏览内容', exp: 1 },
+      { label: '点赞内容', exp: 2 }
+    ]
+  }
+})
 
-const dailyTasks = [
-  { title: '发布一条每日心声', exp: 5, current: 1, total: 1, done: true, to: '/platform/positive-share' },
-  { title: '浏览 3 条内容', exp: 2, current: 1, total: 3, done: false, to: '/articles' },
-  { title: '点赞 1 条内容', exp: 1, current: 0, total: 1, done: false, to: '/platform/positive-share' },
-  { title: '分享 1 条内容', exp: 2, current: 0, total: 1, done: false, to: '/articles' }
-]
+const dailyTasks = computed(() => {
+  const codeToRoute = {
+    DAILY_LOGIN: '/m/platform/me',
+    DAILY_POST: '/platform/positive-share',
+    DAILY_VIEW: '/articles',
+    DAILY_LIKE: '/platform/positive-share'
+  }
+  const rows = growthInfo.value?.dailyTasks
+  if (!Array.isArray(rows)) return []
+  return rows.map(item => ({
+    title: item.name || item.code,
+    exp: Number(item.rewardExp ?? 0),
+    current: Number(item.progress ?? 0),
+    total: Number(item.targetCount ?? 1),
+    done: Boolean(item.completed),
+    to: codeToRoute[item.code] || '/m/platform/me'
+  }))
+})
 
 const groupInfo = {
   name: 'LoveCube 官方团队',
@@ -303,8 +334,12 @@ const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '1'
 const locationDisplay = computed(() => user.value?.location || '河北省 保定市')
 const avatarFallback = computed(() => String(displayName.value || 'L').slice(0, 1).toUpperCase())
 const inviteCodeDisplay = computed(() => inviteCode.value || 'LC69UWM')
-const growthProgress = computed(() => `${Math.round((growthLevel.currentExp / growthLevel.nextExp) * 100)}%`)
-const completedTaskCount = computed(() => dailyTasks.filter(item => item.done).length)
+const growthProgress = computed(() => {
+  const nextExp = Math.max(1, Number(growthLevel.value.nextExp))
+  const currentExp = Number(growthLevel.value.currentExp)
+  return `${Math.min(100, Math.round((currentExp / nextExp) * 100))}%`
+})
+const completedTaskCount = computed(() => dailyTasks.value.filter(item => item.done).length)
 
 const roleLabel = computed(() => {
   const role = String(user.value?.role || '').toLowerCase()
@@ -344,7 +379,7 @@ const overviewItems = computed(() => [
   { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
   { label: '收藏内容', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
   { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },
-  { label: '当前等级', value: `Lv.${growthLevel.level}`, icon: '◇', tone: 'blue', to: '/modules' }
+  { label: '当前等级', value: `Lv.${growthLevel.value.level}`, icon: '◇', tone: 'blue', to: '/modules' }
 ])
 
 const quickActions = computed(() => [
@@ -461,6 +496,11 @@ function handleLogout() {
   router.replace('/login')
 }
 
+function goChangePasswordPage() {
+  closeSettingsPanel()
+  router.push('/fellowship/change-password')
+}
+
 async function copyInviteCode() {
   if (!inviteCodeDisplay.value) return
   copyFeedback.value = ''
@@ -491,7 +531,7 @@ onMounted(async () => {
   if (route.query?.panel === 'edit') openEditPanel()
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
-  const [statsRes, inviteRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode()])
+  const [statsRes, inviteRes, growthRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode(), getMyGrowth()])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
@@ -499,6 +539,10 @@ onMounted(async () => {
   }
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
+  }
+  if (growthRes.status === 'fulfilled') {
+    growthInfo.value = growthRes.value || null
+    badges.value = Array.isArray(growthRes.value?.badges) ? growthRes.value.badges : []
   }
 })
 
@@ -858,6 +902,7 @@ onBeforeUnmount(() => {
 
 .growth-card,
 .task-card,
+.badge-card,
 .overview-card,
 .group-card {
   margin-top: 8px;
@@ -1010,6 +1055,27 @@ onBeforeUnmount(() => {
 .task-item.is-done a {
   color: var(--me-muted);
   border-color: var(--me-border-strong);
+}
+
+.badge-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.badge-list article {
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #eff6ff;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.badge-list article.locked {
+  border-color: var(--me-border);
+  background: #f8fafc;
+  color: var(--me-muted);
 }
 
 .workspace-grid,
@@ -1300,6 +1366,9 @@ onBeforeUnmount(() => {
 }
 .settings-list div:last-child { border-bottom: 0; }
 .settings-list strong { color: var(--me-text); }
+.settings-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 
 @media (max-width: 420px) {
   .me-shell { padding-right: 8px; padding-left: 8px; }

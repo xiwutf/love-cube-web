@@ -176,7 +176,7 @@ const fallbackPendingUpdates = [
 ]
 
 const coreModules = [
-  { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/modules', icon: '⚙', tone: 'pink' },
+  { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/', icon: '⚙', tone: 'pink' },
   { title: 'LoveCube', desc: '联谊交友专区\n真诚相遇，认真开始', to: '/fellowship-intro', icon: '♥', tone: 'pink' },
   { title: '团队', desc: '寻找你的团体\n连接志同道合的伙伴', to: '/platform/groups', icon: '◎', tone: 'green' },
   { title: '活动中心', desc: '线上线下活动\n发现有趣的人和事', to: '/events', icon: '♔', tone: 'orange' },

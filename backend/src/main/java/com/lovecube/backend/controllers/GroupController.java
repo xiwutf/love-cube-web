@@ -12,6 +12,7 @@ import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GroupAdminRoleConstants;
+import com.lovecube.backend.services.GrowthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,7 @@ public class GroupController {
     private final GroupJoinRequestRepository joinRequestRepository;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
+    private final GrowthService growthService;
 
     public GroupController(
             PlatformGroupRepository groupRepository,
@@ -39,7 +41,8 @@ public class GroupController {
             GroupPostRepository postRepository,
             GroupJoinRequestRepository joinRequestRepository,
             UserRepository userRepository,
-            AdminAuthService adminAuthService
+            AdminAuthService adminAuthService,
+            GrowthService growthService
     ) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
@@ -47,6 +50,7 @@ public class GroupController {
         this.joinRequestRepository = joinRequestRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
+        this.growthService = growthService;
     }
 
     @GetMapping
@@ -143,6 +147,7 @@ public class GroupController {
         member.setRole("owner");
         member.setJoinedAt(LocalDateTime.now());
         memberRepository.save(member);
+        growthService.recordAction(user.getUserid(), "JOIN_GROUP", "CREATE_GROUP_" + saved.getId());
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", saved.getId());
@@ -296,6 +301,7 @@ public class GroupController {
             memberRepository.save(member);
             group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
             groupRepository.save(group);
+            growthService.recordAction(user.getUserid(), "JOIN_GROUP", "JOIN_GROUP_" + id);
             return Map.of("joined", true, "message", "加入成功");
         }
 
