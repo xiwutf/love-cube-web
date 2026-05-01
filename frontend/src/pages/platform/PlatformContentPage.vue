@@ -196,6 +196,6 @@ onMounted(async () => {
 
 <style scoped>
 .page{width:min(100% - 24px,560px);margin:16px auto;display:grid;gap:12px;padding-bottom:calc(92px + env(safe-area-inset-bottom));}
-.search input{width:100%;height:40px;border:1px solid var(--lc-border);border-radius:10px;padding:0 12px;background:#fff}
-.fab{position:fixed;right:16px;bottom:calc(74px + env(safe-area-inset-bottom));height:44px;padding:0 16px;border:0;border-radius:22px;background:var(--lc-blue);color:#fff;font-weight:700;box-shadow:var(--lc-shadow-blue);}
+.search input{width:100%;height:40px;border:1px solid var(--lc-border);border-radius:10px;padding:0 12px;background:var(--lc-surface)}
+.fab{position:fixed;right:16px;bottom:calc(74px + env(safe-area-inset-bottom));height:44px;padding:0 16px;border:0;border-radius:22px;background:var(--lc-blue);color:var(--lc-surface);font-weight:700;box-shadow:var(--lc-shadow-blue);}
 </style>

@@ -66,8 +66,8 @@ function statusLabel(task) {
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 16px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
   padding: 18px 18px 14px;
@@ -93,24 +93,24 @@ function statusLabel(task) {
   margin: 0;
   font-size: 16px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .title span {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   font-weight: 600;
 }
 
 .right {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .right b {
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .table-head {
@@ -164,14 +164,14 @@ function statusLabel(task) {
   display: block;
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .row.done .name strong {
-  color: #94a3b8;
+  color: var(--lc-subtle);
   text-decoration: line-through;
 }
 
@@ -182,20 +182,20 @@ function statusLabel(task) {
   border: 1.5px solid rgba(203, 213, 225, 0.9);
   display: grid;
   place-items: center;
-  color: #ffffff;
-  background: #ffffff;
+  color: var(--lc-surface);
+  background: var(--lc-surface);
   font-weight: 900;
   font-size: 11px;
   flex: 0 0 auto;
 }
 
 .dot.ok {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: var(--lc-indigo);
+  border-color: var(--lc-indigo);
 }
 
 .reward {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -218,13 +218,13 @@ function statusLabel(task) {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #4f46e5;
+  background: var(--lc-indigo);
   transition: width 0.3s ease;
 }
 
 .progress small {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-weight: 600;
 }
 
@@ -240,9 +240,9 @@ function statusLabel(task) {
   white-space: nowrap;
 }
 
-.s-done   { color: #059669; background: rgba(5, 150, 105, 0.10); }
-.s-active { color: #2563eb; background: rgba(37, 99, 235, 0.10); }
-.s-idle   { color: #94a3b8; background: #f1f5f9; }
+.s-done   { color: var(--lc-emerald); background: rgba(5, 150, 105, 0.10); }
+.s-active { color: var(--lc-blue); background: rgba(37, 99, 235, 0.10); }
+.s-idle   { color: var(--lc-subtle); background: var(--lc-soft); }
 
 .action {
   justify-self: end;
@@ -253,7 +253,7 @@ function statusLabel(task) {
   padding: 0 12px;
   border-radius: 10px;
   border: 1px solid rgba(229, 231, 235, 0.9);
-  color: #64748b;
+  color: var(--lc-muted-light);
   text-decoration: none;
   font-size: 12px;
   font-weight: 700;
@@ -262,12 +262,12 @@ function statusLabel(task) {
 }
 
 .action:hover {
-  background: #f8fafc;
+  background: var(--lc-bg);
 }
 
 .action.primary {
   border-color: rgba(79, 70, 229, 0.18);
-  color: #4f46e5;
+  color: var(--lc-indigo);
   background: rgba(79, 70, 229, 0.07);
 }
 

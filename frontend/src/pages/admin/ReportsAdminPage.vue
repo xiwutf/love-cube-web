@@ -189,8 +189,8 @@ onMounted(load)
 
 <style scoped>
 .admin-filters { display: flex; gap: 8px; padding: 12px 0; }
-.admin-tag.banned { background: #fee2e2; color: #dc2626; }
-.admin-tag.rejected { background: #fef3c7; color: #92400e; }
-.admin-btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
-.admin-btn.danger:hover { background: #b91c1c; }
+.admin-tag.banned { background: var(--lc-red-light); color: var(--lc-red); }
+.admin-tag.rejected { background: var(--lc-amber-light); color: #92400e; }
+.admin-btn.danger { background: var(--lc-red); color: var(--lc-surface); border-color: var(--lc-red); }
+.admin-btn.danger:hover { background: var(--lc-red); }
 </style>

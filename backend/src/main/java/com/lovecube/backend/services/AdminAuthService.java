@@ -5,6 +5,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AdminRolePermissionRepository;
 import com.lovecube.backend.repository.AdminUserRoleRepository;
 import com.lovecube.backend.repository.PlatformGroupAdminRepository;
+import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.http.HttpStatus;
@@ -32,17 +33,20 @@ public class AdminAuthService {
     private final AdminUserRoleRepository adminUserRoleRepository;
     private final AdminRolePermissionRepository adminRolePermissionRepository;
     private final PlatformGroupAdminRepository platformGroupAdminRepository;
+    private final PlatformGroupRepository platformGroupRepository;
 
     public AdminAuthService(
             UserRepository userRepository,
             AdminUserRoleRepository adminUserRoleRepository,
             AdminRolePermissionRepository adminRolePermissionRepository,
-            PlatformGroupAdminRepository platformGroupAdminRepository
+            PlatformGroupAdminRepository platformGroupAdminRepository,
+            PlatformGroupRepository platformGroupRepository
     ) {
         this.userRepository = userRepository;
         this.adminUserRoleRepository = adminUserRoleRepository;
         this.adminRolePermissionRepository = adminRolePermissionRepository;
         this.platformGroupAdminRepository = platformGroupAdminRepository;
+        this.platformGroupRepository = platformGroupRepository;
     }
 
     public User requireUser(String authHeader) {
@@ -107,7 +111,92 @@ public class AdminAuthService {
 
     /** 与 {@link #getGroupRoleFromTable} 相同，供外部语义使用 */
     public String getGroupRole(User user, String groupId) {
-        return getGroupRoleFromTable(user, groupId);
+        return findGroupRoleAcrossAliases(user, groupId);
+    }
+
+    /**
+     * 旧平台团体迁移后，platform_groups.id 多为 {@code legacy-{数字}}，而 platform_group_admin.group_id
+     * 可能仍为纯数字。返回路径 id 与其 legacy 别名（双向）供权限与数据解析共用。
+     */
+    /**
+     * 供 Controller 按多种历史 id 形态查询同一条 platform_groups 记录（如 20 与 legacy-20）。
+     */
+    public List<String> expandGroupIdAliasesForLegacy(String groupId) {
+        return expandLegacyGroupIdAliases(groupId);
+    }
+
+    private List<String> expandLegacyGroupIdAliases(String groupId) {
+        if (groupId == null || groupId.isBlank()) {
+            return List.of();
+        }
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        out.add(groupId);
+        if (groupId.startsWith("legacy-")) {
+            String rest = groupId.substring("legacy-".length());
+            if (!rest.isEmpty()) {
+                out.add(rest);
+            }
+        } else if (groupId.chars().allMatch(Character::isDigit)) {
+            out.add("legacy-" + groupId);
+        }
+        return new ArrayList<>(out);
+    }
+
+    private String findGroupRoleAcrossAliases(User user, String groupId) {
+        for (String gid : expandLegacyGroupIdAliases(groupId)) {
+            String r = getGroupRoleFromTable(user, gid);
+            if (r != null) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    private boolean isGroupOwnerOrCreatorAcrossAliases(Long userId, String groupId) {
+        for (String gid : expandLegacyGroupIdAliases(groupId)) {
+            if (isGroupOwnerOrCreator(userId, gid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 路径上的团体 id 与入团申请记录的 group_id 是否为同一团体（含 legacy 别名） */
+    public boolean isSameLegacyGroup(String pathGroupId, String requestGroupId) {
+        if (pathGroupId == null || requestGroupId == null) {
+            return false;
+        }
+        if (pathGroupId.equals(requestGroupId)) {
+            return true;
+        }
+        Set<String> a = new HashSet<>(expandLegacyGroupIdAliases(pathGroupId));
+        for (String x : expandLegacyGroupIdAliases(requestGroupId)) {
+            if (a.contains(x)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 解析 platform_groups 中实际存在的主键（legacy / 数字择一） */
+    public String resolvePlatformGroupIdOrThrow(String groupId) {
+        for (String gid : expandLegacyGroupIdAliases(groupId)) {
+            if (platformGroupRepository.existsById(gid)) {
+                return gid;
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在");
+    }
+
+    /**
+     * 兜底检查：platform_group_admin 中没有记录时，
+     * 若用户就是该团体的 owner_user_id 或 created_by，则视同 OWNER。
+     * 用于修复 V39 迁移遗漏 platform_group_admin 记录的 legacy 团体。
+     */
+    private boolean isGroupOwnerOrCreator(Long userId, String groupId) {
+        return platformGroupRepository.findById(groupId)
+                .map(g -> userId.equals(g.getOwnerUserId()) || userId.equals(g.getCreatedBy()))
+                .orElse(false);
     }
 
     /**
@@ -119,7 +208,7 @@ public class AdminAuthService {
         if (hasGroupManageAll(user)) {
             return user;
         }
-        String tableRole = getGroupRoleFromTable(user, groupId);
+        String tableRole = findGroupRoleAcrossAliases(user, groupId);
         if (tableRole == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无该团体的访问权限");
         }
@@ -133,64 +222,49 @@ public class AdminAuthService {
     /** 本团体管理员（platform_group_admin 任一角）或全站团体监管员 */
     public User requireGroupAdmin(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        if (getGroupRoleFromTable(user, groupId) != null) {
-            return user;
-        }
-        if (hasGroupManageAll(user)) {
-            return user;
-        }
+        if (findGroupRoleAcrossAliases(user, groupId) != null) return user;
+        if (hasGroupManageAll(user)) return user;
+        if (isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId)) return user;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无该团体的管理权限");
     }
 
     /** 团体 OWNER（表中角色）或全站团体监管员 */
     public User requireGroupOwner(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        if (hasGroupManageAll(user)) {
-            return user;
-        }
-        String tableRole = getGroupRoleFromTable(user, groupId);
-        if (GroupAdminRoleConstants.isOwner(tableRole)) {
-            return user;
-        }
+        if (hasGroupManageAll(user)) return user;
+        String tableRole = findGroupRoleAcrossAliases(user, groupId);
+        if (GroupAdminRoleConstants.isOwner(tableRole)) return user;
+        if (isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId)) return user;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "需要团体拥有者权限");
     }
 
     /** OWNER / ADMIN（表中）或全站监管 */
     public User requireGroupManagePermission(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        if (hasGroupManageAll(user)) {
-            return user;
-        }
-        String r = getGroupRoleFromTable(user, groupId);
-        if (r != null && (GroupAdminRoleConstants.OWNER.equals(r) || GroupAdminRoleConstants.ADMIN.equals(r))) {
-            return user;
-        }
+        if (hasGroupManageAll(user)) return user;
+        String r = findGroupRoleAcrossAliases(user, groupId);
+        if (r != null && (GroupAdminRoleConstants.OWNER.equals(r) || GroupAdminRoleConstants.ADMIN.equals(r))) return user;
+        if (isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId)) return user;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无编辑该团体的权限");
     }
 
     /** 可审核入团：OWNER / ADMIN / REVIEWER 或全站监管 */
     public User requireGroupReviewPermission(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        if (hasGroupManageAll(user)) {
-            return user;
-        }
-        String r = getGroupRoleFromTable(user, groupId);
-        if (GroupAdminRoleConstants.canReview(r)) {
-            return user;
-        }
+        if (hasGroupManageAll(user)) return user;
+        String r = findGroupRoleAcrossAliases(user, groupId);
+        if (GroupAdminRoleConstants.canReview(r)) return user;
+        if (isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId)) return user;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无成员审核权限");
     }
 
     /** 表中 OWNER 或全站监管（删除团体） */
     public User requireGroupOwnerOrSuperAdmin(String authHeader, String groupId) {
         User user = requireUser(authHeader);
-        if (hasGroupManageAll(user)) {
-            return user;
-        }
-        String tableRole = getGroupRoleFromTable(user, groupId);
-        if (GroupAdminRoleConstants.isOwner(tableRole)) {
-            return user;
-        }
+        if (hasGroupManageAll(user)) return user;
+        String tableRole = findGroupRoleAcrossAliases(user, groupId);
+        if (GroupAdminRoleConstants.isOwner(tableRole)) return user;
+        if (isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId)) return user;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有团体拥有者或超级管理员可删除团体");
     }
 

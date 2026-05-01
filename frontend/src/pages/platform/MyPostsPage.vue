@@ -74,22 +74,22 @@ onMounted(() => fetchList())
 </script>
 
 <style scoped>
-.sp-page { min-height: 100vh; background: #f6f7fb; color: #0f172a; }
+.sp-page { min-height: 100vh; background: var(--lc-bg); color: var(--lc-text); }
 
 .sp-head {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center;
-  background: #fff; border-bottom: 1px solid #eef0f4;
+  background: var(--lc-surface); border-bottom: 1px solid var(--lc-soft-alt);
 }
 .sp-back {
   width: 48px; height: 52px; flex: 0 0 auto;
   display: grid; place-items: center;
-  border: 0; background: none; font-size: 22px; color: #4f46e5; cursor: pointer;
+  border: 0; background: none; font-size: 22px; color: var(--lc-indigo); cursor: pointer;
 }
 .sp-title { flex: 1; margin: 0; font-size: 17px; font-weight: 800; }
 .sp-action-btn {
   padding: 0 16px; height: 52px; line-height: 52px;
-  font-size: 14px; color: #4f46e5; font-weight: 700;
+  font-size: 14px; color: var(--lc-indigo); font-weight: 700;
   text-decoration: none; white-space: nowrap;
 }
 
@@ -98,11 +98,11 @@ onMounted(() => fetchList())
   max-width: 680px; margin: 0 auto;
 }
 
-.sp-status { text-align: center; padding: 40px 0; color: #94a3b8; font-size: 14px; }
+.sp-status { text-align: center; padding: 40px 0; color: var(--lc-subtle); font-size: 14px; }
 .sp-empty::before { display: block; font-size: 32px; margin-bottom: 10px; content: "📝"; }
 
 .sp-card {
-  background: #fff; border: 1px solid #eef0f4; border-radius: 16px;
+  background: var(--lc-surface); border: 1px solid var(--lc-soft-alt); border-radius: 16px;
   box-shadow: 0 3px 12px rgba(15,23,42,0.04); margin-bottom: 12px; padding: 14px 16px;
 }
 
@@ -112,16 +112,16 @@ onMounted(() => fetchList())
 }
 .post-cat {
   border-radius: 999px; padding: 2px 10px;
-  background: #f1efff; color: #4f46e5; font-size: 11px; font-weight: 700;
+  background: var(--lc-indigo-soft); color: var(--lc-indigo); font-size: 11px; font-weight: 700;
 }
-.post-date { font-size: 11px; color: #94a3b8; }
-.post-content { margin: 0 0 10px; font-size: 14px; color: #1e293b; line-height: 1.6; }
-.post-meta { display: flex; gap: 14px; font-size: 12px; color: #94a3b8; }
+.post-date { font-size: 11px; color: var(--lc-subtle); }
+.post-content { margin: 0 0 10px; font-size: 14px; color: var(--lc-text-deep); line-height: 1.6; }
+.post-meta { display: flex; gap: 14px; font-size: 12px; color: var(--lc-subtle); }
 
 .sp-more { text-align: center; margin-top: 8px; }
 .sp-more-btn {
-  border: 1px solid #eef0f4; border-radius: 999px;
-  background: #fff; color: #64748b;
+  border: 1px solid var(--lc-soft-alt); border-radius: 999px;
+  background: var(--lc-surface); color: var(--lc-muted-light);
   font-size: 13px; padding: 8px 24px; cursor: pointer;
 }
 .sp-more-btn:disabled { opacity: 0.5; }

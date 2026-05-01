@@ -60,7 +60,7 @@ defineProps({
 }
 
 .stat-item {
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
   padding: 18px;
   box-shadow: var(--lc-shadow-sm);
@@ -104,19 +104,19 @@ defineProps({
 }
 
 .tone-blue {
-  background: #eff6ff;
+  background: var(--lc-blue-light);
 }
 
 .tone-green {
-  background: #ecfdf5;
+  background: var(--lc-green-light);
 }
 
 .tone-purple {
-  background: #f5f3ff;
+  background: var(--lc-indigo-soft);
 }
 
 .tone-orange {
-  background: #fff7ed;
+  background: var(--lc-orange-light);
 }
 
 @media (max-width: 1100px) {

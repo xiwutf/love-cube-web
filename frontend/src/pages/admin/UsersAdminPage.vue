@@ -394,11 +394,11 @@ watch(totalPages, (pages) => {
 .admin-select {
   min-width: 120px;
   height: 32px;
-  border: 1px solid #d8deea;
+  border: 1px solid var(--lc-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 0 8px;
-  color: #1f2937;
+  color: var(--lc-text);
 }
 
 .admin-row-role {
@@ -425,11 +425,11 @@ watch(totalPages, (pages) => {
 
 .admin-filter-input {
   height: 32px;
-  border: 1px solid #d8deea;
+  border: 1px solid var(--lc-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 0 10px;
-  color: #1f2937;
+  color: var(--lc-text);
 }
 
 .admin-pagination {
@@ -444,7 +444,7 @@ watch(totalPages, (pages) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 13px;
 }
 
@@ -457,7 +457,7 @@ watch(totalPages, (pages) => {
 .admin-page-indicator {
   min-width: 56px;
   text-align: center;
-  color: #334155;
+  color: var(--lc-slate);
   font-weight: 600;
   font-size: 13px;
 }

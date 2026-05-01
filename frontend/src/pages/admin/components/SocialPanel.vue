@@ -38,7 +38,7 @@ defineProps({
 <style scoped>
 .panel {
   padding: 24px;
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
 }
 
@@ -67,21 +67,21 @@ h3 {
 }
 
 .entry-btn {
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
   padding: 10px 16px;
   text-decoration: none;
-  color: #be185d;
+  color: var(--lc-pink);
   font-size: 13px;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .panel-visual {
   margin: 22px 0;
   min-height: 140px;
   border-radius: 12px;
-  border: 1px solid #eee;
-  background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+  border: 1px solid var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-pink-light), var(--lc-pink-light));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,7 +90,7 @@ h3 {
 .heart {
   width: 84px;
   height: 84px;
-  background: radial-gradient(circle at 35% 30%, #fb7185, #ec4899);
+  background: radial-gradient(circle at 35% 30%, #fb7185, var(--lc-pink));
   transform: rotate(45deg);
   border-radius: 12px;
   position: relative;

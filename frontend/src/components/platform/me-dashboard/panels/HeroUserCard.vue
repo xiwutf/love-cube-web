@@ -58,8 +58,8 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 
 <style scoped>
 .profile-card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   overflow: hidden;
@@ -96,8 +96,8 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 .avatar-fallback {
   display: grid;
   place-items: center;
-  color: #ffffff;
-  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
+  color: var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-indigo), var(--lc-violet));
   font-size: 28px;
   font-weight: 800;
 }
@@ -113,7 +113,7 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
   margin: 0;
   font-size: 25px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   line-height: 1.18;
 }
 
@@ -122,7 +122,7 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  color: #4f46e5;
+  color: var(--lc-indigo);
   background: rgba(79, 70, 229, 0.10);
   flex: 0 0 auto;
 }
@@ -133,7 +133,7 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
 }
 
@@ -141,7 +141,7 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #cbd5e1;
+  background: var(--lc-border);
   flex: 0 0 auto;
 }
 
@@ -151,19 +151,19 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
 }
 
 .invite b {
-  color: #0f172a;
+  color: var(--lc-text);
   font-weight: 800;
 }
 
 .chip-btn {
   border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--lc-surface);
+  color: var(--lc-text);
   border-radius: 8px;
   padding: 5px 10px;
   font-size: 12px;
@@ -174,24 +174,24 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 
 .chip-primary {
   border-color: rgba(79, 70, 229, 0.22);
-  color: #4f46e5;
+  color: var(--lc-indigo);
   background: rgba(79, 70, 229, 0.08);
 }
 
 .feedback {
   font-style: normal;
   font-size: 12px;
-  color: #059669;
+  color: var(--lc-emerald);
 }
 
 .feedback.is-error {
-  color: #dc2626;
+  color: var(--lc-red);
 }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -210,12 +210,12 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 .stat strong {
   font-size: 19px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
   line-height: 1;
 }
 
 .stat small {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
 }
 
@@ -234,14 +234,14 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 }
 
 .btn-ghost {
-  border: 1px solid #e7ebf2;
-  background: #ffffff;
-  color: #0f172a;
+  border: 1px solid var(--lc-soft-alt);
+  background: var(--lc-surface);
+  color: var(--lc-text);
 }
 
 .btn-primary {
   border: 0;
-  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--lc-indigo), var(--lc-violet));
+  color: var(--lc-surface);
 }
 </style>

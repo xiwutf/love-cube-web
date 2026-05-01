@@ -58,6 +58,7 @@
           </div>
 
           <button class="edit-link" @click="router.push('/fellowship/profile/edit')">编辑资料</button>
+          <button class="message-link" @click="router.push('/fellowship/messages')">消息</button>
           <div class="premium-seal" @click="router.push('/fellowship/vip')">
             <span>LOVE</span>
             <strong>PREMIUM</strong>
@@ -740,6 +741,18 @@ onMounted(async () => {
   border-radius: 12px;
   font-size: 11px;
   padding: 4px 9px;
+}
+
+.message-link {
+  position: absolute;
+  right: 10px;
+  top: 44px;
+  border: none;
+  background: rgba(255, 84, 145, 0.1);
+  color: #de4b88;
+  border-radius: 12px;
+  font-size: 11px;
+  padding: 4px 14px;
 }
 
 .heart-glow {

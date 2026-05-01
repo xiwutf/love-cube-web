@@ -1,3 +1,3 @@
 ﻿<template><section class="card"><h3>内容预览</h3><ul><li v-for="item in items" :key="item.id">{{ item.title }}</li></ul><button type="button" @click="$emit('more')">查看更多</button></section></template>
 <script setup>defineProps({ items: Array });defineEmits(['more'])</script>
-<style scoped>.card{padding:14px 16px;background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:var(--lc-radius)}ul{margin:0;padding-left:16px;color:var(--lc-muted)}li{margin:6px 0}button{margin-top:8px;height:36px;border:1px solid var(--lc-blue-border);background:#fff;color:var(--lc-blue);border-radius:8px}</style>
+<style scoped>.card{padding:14px 16px;background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:var(--lc-radius)}ul{margin:0;padding-left:16px;color:var(--lc-muted)}li{margin:6px 0}button{margin-top:8px;height:36px;border:1px solid var(--lc-blue-border);background:var(--lc-surface);color:var(--lc-blue);border-radius:8px}</style>

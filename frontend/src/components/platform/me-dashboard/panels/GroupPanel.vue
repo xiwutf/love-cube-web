@@ -54,7 +54,7 @@ defineProps({
 
 <style scoped>
 .card {
-  background: #ffffff;
+  background: var(--lc-surface);
   border: 1px solid rgba(79, 70, 229, 0.12);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
@@ -80,8 +80,8 @@ defineProps({
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--lc-indigo), var(--lc-violet));
+  color: var(--lc-surface);
   font-weight: 900;
   font-size: 20px;
   flex: 0 0 auto;
@@ -102,14 +102,14 @@ defineProps({
 .gname {
   font-size: 18px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .role {
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(79, 70, 229, 0.10);
-  color: #4f46e5;
+  color: var(--lc-indigo);
   font-size: 12px;
   font-weight: 800;
 }
@@ -120,7 +120,7 @@ defineProps({
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 13px;
 }
 
@@ -159,15 +159,15 @@ defineProps({
 
 .btn-enter {
   border: 0;
-  background: linear-gradient(135deg, #4f46e5, #6d5dfb);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--lc-indigo), var(--lc-violet));
+  color: var(--lc-surface);
 }
 
 .btn-post,
 .btn-member {
-  border: 1px solid #e7ebf2;
-  background: #ffffff;
-  color: #0f172a;
+  border: 1px solid var(--lc-soft-alt);
+  background: var(--lc-surface);
+  color: var(--lc-text);
 }
 
 .more-link {
@@ -175,9 +175,9 @@ defineProps({
   align-items: center;
   justify-content: center;
   height: 38px;
-  border: 1px solid #e7ebf2;
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 10px;
-  color: #7a8699;
+  color: var(--lc-muted);
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
@@ -187,7 +187,7 @@ defineProps({
 .rank-section {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid #edf1f7;
+  border-top: 1px solid var(--lc-soft-alt);
 }
 
 .rank-head {
@@ -202,11 +202,11 @@ defineProps({
   margin: 0;
   font-size: 14px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .rank-more {
-  color: #7a8699;
+  color: var(--lc-muted);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
@@ -227,15 +227,15 @@ defineProps({
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 14px;
-  background: linear-gradient(180deg, #fbfcff, #ffffff);
+  background: linear-gradient(180deg, var(--lc-bg), var(--lc-surface));
   min-height: 62px;
   transition: background 0.12s;
 }
 
 .rank-card:hover {
-  background: #f4f6fb;
+  background: var(--lc-bg);
 }
 
 .medal {
@@ -251,8 +251,8 @@ defineProps({
   background: #fff1c2;
 }
 
-.medal-2 { color: #64748b; background: #e7edf7; }
-.medal-3 { color: #f97316; background: #ffead6; }
+.medal-2 { color: var(--lc-muted-light); background: var(--lc-soft-alt); }
+.medal-3 { color: var(--lc-orange); background: var(--lc-orange-light); }
 
 .rank-info {
   min-width: 0;
@@ -263,7 +263,7 @@ defineProps({
 .rank-info strong {
   font-size: 13px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -271,7 +271,7 @@ defineProps({
 
 .rank-info small {
   font-size: 12px;
-  color: #64748b;
+  color: var(--lc-muted-light);
 }
 
 @media (max-width: 1180px) {

@@ -1,5 +1,5 @@
 ﻿<template>
-  <article class="card" :class="{ 'no-cover': !item.cover }">
+  <article ref="cardEl" class="card" :class="{ 'no-cover': !item.cover }">
     <img v-if="item.cover" :src="item.cover" alt="">
     <div class="body">
       <p v-if="item.pinned" class="pinned">置顶</p>
@@ -28,10 +28,29 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { recordGrowthAction } from '@/api/growth.js'
 
 const props = defineProps({ item: Object })
 defineEmits(['like', 'comment'])
+
+const cardEl = ref(null)
+let observer = null
+
+onMounted(() => {
+  if (!props.item?.id) return
+  observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) {
+      const today = new Date().toISOString().slice(0, 10)
+      recordGrowthAction({ actionType: 'VIEW_CONTENT', bizId: `VIEW_${today}_${props.item.id}` }).catch(() => {})
+      observer.disconnect()
+      observer = null
+    }
+  }, { threshold: 0.5 })
+  if (cardEl.value) observer.observe(cardEl.value)
+})
+
+onBeforeUnmount(() => { if (observer) { observer.disconnect(); observer = null } })
 
 const authorInitial = computed(() => String(props.item?.authorName || '用户').slice(0, 1))
 const displayCategory = computed(() => {
@@ -54,7 +73,7 @@ p{margin:4px 0;color:var(--lc-muted);font-size:13px}
 .author{display:inline-flex;align-items:center;gap:6px}
 .meta-avatar,.meta-avatar-fallback{width:18px;height:18px;flex:0 0 18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
 .meta-avatar{object-fit:cover}
-.meta-avatar-fallback{background:#e2e8f0;color:#475569;font-size:11px}
+.meta-avatar-fallback{background:var(--lc-border);color:var(--lc-muted);font-size:11px}
 .actions{display:flex;gap:8px;margin-top:8px}
-.action-btn{height:28px;padding:0 10px;border:1px solid var(--lc-border);border-radius:14px;background:#fff;color:var(--lc-muted);font-size:12px}
+.action-btn{height:28px;padding:0 10px;border:1px solid var(--lc-border);border-radius:14px;background:var(--lc-surface);color:var(--lc-muted);font-size:12px}
 </style>

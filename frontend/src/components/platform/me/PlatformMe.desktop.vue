@@ -24,7 +24,13 @@
             </router-link>
             <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
           </div>
-          <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
+          <div class="mh-hero-actions">
+            <router-link class="mh-message-btn" to="/me/notifications">
+              消息
+              <em v-if="unreadCount > 0" class="mh-message-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</em>
+            </router-link>
+            <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
+          </div>
         </div>
         <div class="mh-hero-stats">
           <span v-for="item in profileLightStats" :key="item.label" class="mh-hero-stat">
@@ -259,9 +265,10 @@ const mobileGrowthLevel = computed(() => {
 const mobileDailyTasks = computed(() => {
   const codeToRoute = {
     DAILY_LOGIN: '/me',
-    DAILY_POST: '/platform/positive-share',
-    DAILY_VIEW: '/articles',
-    DAILY_LIKE: '/platform/positive-share'
+    DAILY_POST: '/platform/publish',
+    DAILY_COMMENT: '/platform/content?type=mood',
+    DAILY_VIEW: '/platform/content',
+    DAILY_LIKE: '/platform/content?type=mood'
   }
   const rows = growthInfo.value?.dailyTasks
   if (Array.isArray(rows) && rows.length) {
@@ -338,9 +345,10 @@ const dailyTasks = computed(() => {
   const rows = growthInfo.value?.dailyTasks
   const codeToRoute = {
     DAILY_LOGIN: '/me',
-    DAILY_POST: '/platform/positive-share',
-    DAILY_VIEW: '/articles',
-    DAILY_LIKE: '/platform/positive-share'
+    DAILY_POST: '/platform/publish',
+    DAILY_COMMENT: '/platform/content?type=mood',
+    DAILY_VIEW: '/platform/content',
+    DAILY_LIKE: '/platform/content?type=mood'
   }
   if (Array.isArray(rows) && rows.length) {
     return rows.map(item => ({
@@ -605,25 +613,25 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .me-page {
-  --me-bg: #f6f7fb;
-  --me-bg-soft: #f8fafc;
-  --me-card: #ffffff;
-  --me-border: #eef0f4;
-  --me-text: #0f172a;
-  --me-muted: #64748b;
-  --me-primary: #6d5dfb;
-  --me-primary-dark: #4f46e5;
-  --me-white: #ffffff;
-  --me-success: #059669;
-  --me-danger: #dc2626;
-  --me-text-soft: #334155;
-  --me-border-strong: #dfe4ee;
-  --me-violet: #4f46e5;
-  --me-rose: #db2777;
-  --me-amber: #d97706;
-  --me-blue: #2563eb;
+  --me-bg: var(--lc-bg);
+  --me-bg-soft: var(--lc-bg);
+  --me-card: var(--lc-surface);
+  --me-border: var(--lc-soft-alt);
+  --me-text: var(--lc-text);
+  --me-muted: var(--lc-muted-light);
+  --me-primary: var(--lc-violet);
+  --me-primary-dark: var(--lc-indigo);
+  --me-white: var(--lc-surface);
+  --me-success: var(--lc-emerald);
+  --me-danger: var(--lc-red);
+  --me-text-soft: var(--lc-slate);
+  --me-border-strong: var(--lc-border);
+  --me-violet: var(--lc-indigo);
+  --me-rose: var(--lc-pink);
+  --me-amber: var(--lc-amber);
+  --me-blue: var(--lc-blue);
   --me-medal: #9a6700;
-  --me-orange: #f97316;
+  --me-orange: var(--lc-orange);
   --me-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
   min-height: 100vh;
   background: var(--me-bg);
@@ -780,7 +788,7 @@ onBeforeUnmount(() => {
 }
 
 .profile-badges .tone-blue {
-  background: linear-gradient(145deg, #eef6ff, #e1edff);
+  background: linear-gradient(145deg, var(--lc-blue-light), var(--lc-blue-light));
 }
 
 .profile-name-row {
@@ -801,7 +809,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   padding: 4px 9px;
   color: var(--me-primary-dark);
-  background: #f1efff;
+  background: var(--lc-indigo-soft);
   font-size: 12px;
   font-weight: 700;
 }
@@ -869,7 +877,7 @@ onBeforeUnmount(() => {
   top: 7px;
   width: 1px;
   height: 28px;
-  background: linear-gradient(180deg, rgba(226, 232, 240, 0), #dbe1ea, rgba(226, 232, 240, 0));
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0), var(--lc-border), rgba(226, 232, 240, 0));
   content: "";
 }
 
@@ -953,13 +961,13 @@ onBeforeUnmount(() => {
 
 .outline-action,
 .group-actions a {
-  border: 1px solid #dfe4ee;
+  border: 1px solid var(--lc-border);
   color: var(--me-text);
-  background: #ffffff;
+  background: var(--lc-surface);
 }
 
 .danger-action {
-  border: 1px solid #fecaca;
+  border: 1px solid var(--lc-red-light);
   color: var(--me-danger);
   background: #fff5f5;
 }
@@ -1010,7 +1018,7 @@ onBeforeUnmount(() => {
   height: 96px;
   color: var(--me-white);
   background: radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 30%),
-    linear-gradient(145deg, #9b8cff 0%, var(--me-primary) 48%, var(--me-primary-dark) 100%);
+    linear-gradient(145deg, var(--lc-violet) 0%, var(--me-primary) 48%, var(--me-primary-dark) 100%);
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
   font-size: 25px;
   font-weight: 900;
@@ -1022,7 +1030,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: -9px;
   z-index: -1;
-  background: linear-gradient(145deg, #e8e4ff, #cfc7ff);
+  background: linear-gradient(145deg, var(--lc-indigo-soft), var(--lc-blue-border));
   clip-path: inherit;
   content: "";
 }
@@ -1058,7 +1066,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   height: 8px;
   border-radius: 999px;
-  background: #edf0f5;
+  background: var(--lc-soft-alt);
 }
 
 .progress-track {
@@ -1130,22 +1138,22 @@ onBeforeUnmount(() => {
   height: 24px;
   border: 1px solid var(--me-border);
   border-radius: 9px;
-  background: linear-gradient(145deg, #f3f1ff, #ffffff);
+  background: linear-gradient(145deg, var(--lc-indigo-soft), var(--lc-surface));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 8px 16px rgba(79, 70, 229, 0.08);
   font-size: 13px;
 }
 
 .growth-card .exp-list li:nth-child(2)::before {
-  background: linear-gradient(145deg, #fff0f7, #ffffff);
+  background: linear-gradient(145deg, #fff0f7, var(--lc-surface));
 }
 
 .growth-card .exp-list li:nth-child(3)::before {
-  background: linear-gradient(145deg, #f2f0ff, #ffffff);
+  background: linear-gradient(145deg, var(--lc-indigo-soft), var(--lc-surface));
 }
 
 .growth-card .exp-list li:nth-child(4)::before {
   color: var(--me-blue);
-  background: linear-gradient(145deg, #eef6ff, #ffffff);
+  background: linear-gradient(145deg, var(--lc-blue-light), var(--lc-surface));
 }
 
 .exp-list li span {
@@ -1197,7 +1205,7 @@ onBeforeUnmount(() => {
   padding: 16px 14px 14px;
   border: 1px solid var(--me-border);
   border-radius: 16px;
-  background: linear-gradient(145deg, #fbfcff, #ffffff);
+  background: linear-gradient(145deg, var(--lc-bg), var(--lc-surface));
   text-align: center;
 }
 
@@ -1206,7 +1214,7 @@ onBeforeUnmount(() => {
 }
 
 .task-item.is-done {
-  background: linear-gradient(145deg, #f8faff, #ffffff);
+  background: linear-gradient(145deg, var(--lc-bg), var(--lc-surface));
 }
 
 .task-check {
@@ -1244,9 +1252,9 @@ onBeforeUnmount(() => {
   min-height: 30px;
   width: 100%;
   margin-top: 9px;
-  border: 1px solid #cfd4ff;
+  border: 1px solid var(--lc-blue-border);
   color: var(--me-primary-dark);
-  background: #ffffff;
+  background: var(--lc-surface);
 }
 
 .task-item.is-done a {
@@ -1290,19 +1298,19 @@ onBeforeUnmount(() => {
 }
 
 .workspace-item .tone-violet {
-  background: linear-gradient(135deg, #7c66ff, var(--me-primary-dark));
+  background: linear-gradient(135deg, var(--lc-violet), var(--me-primary-dark));
 }
 
 .workspace-item .tone-rose {
-  background: linear-gradient(135deg, #ff5fa8, #ec4899);
+  background: linear-gradient(135deg, var(--lc-rose), var(--lc-pink));
 }
 
 .workspace-item .tone-amber {
-  background: linear-gradient(135deg, #ffae3d, #f97316);
+  background: linear-gradient(135deg, var(--lc-orange), var(--lc-orange));
 }
 
 .workspace-item .tone-blue {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  background: linear-gradient(135deg, var(--lc-blue), var(--lc-blue));
 }
 
 .workspace-item strong,
@@ -1326,11 +1334,11 @@ onBeforeUnmount(() => {
   font-weight: 900;
 }
 
-.tone-violet { color: var(--me-violet); background: #f1efff; }
-.tone-rose { color: var(--me-rose); background: #fdf2f8; }
-.tone-amber { color: var(--me-amber); background: #fffbeb; }
-.tone-blue { color: var(--me-blue); background: #eff6ff; }
-.tone-green { color: var(--me-success); background: #ecfdf5; }
+.tone-violet { color: var(--me-violet); background: var(--lc-indigo-soft); }
+.tone-rose { color: var(--me-rose); background: var(--lc-pink-light); }
+.tone-amber { color: var(--me-amber); background: var(--lc-amber-light); }
+.tone-blue { color: var(--me-blue); background: var(--lc-blue-light); }
+.tone-green { color: var(--me-success); background: var(--lc-green-light); }
 
 .overview-row {
   display: grid;
@@ -1379,7 +1387,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   padding: 3px 8px;
   color: var(--me-primary-dark);
-  background: #f1efff;
+  background: var(--lc-indigo-soft);
   font-size: 12px;
 }
 
@@ -1394,7 +1402,7 @@ onBeforeUnmount(() => {
   width: 1px;
   height: 10px;
   margin: 0 8px;
-  background: #dbe1ea;
+  background: var(--lc-border);
 }
 
 .group-actions {
@@ -1455,12 +1463,12 @@ onBeforeUnmount(() => {
 
 .ranking-list li:nth-child(2) .rank-medal {
   color: var(--me-muted);
-  background: #e7edf7;
+  background: var(--lc-soft-alt);
 }
 
 .ranking-list li:nth-child(3) .rank-medal {
   color: var(--me-orange);
-  background: #ffead6;
+  background: var(--lc-orange-light);
 }
 
 .ranking-list small {
@@ -1495,7 +1503,7 @@ onBeforeUnmount(() => {
   max-height: calc(100vh - 36px);
   overflow: auto;
   border-radius: 20px;
-  background: #ffffff;
+  background: var(--lc-surface);
   padding: 18px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
@@ -1518,7 +1526,7 @@ onBeforeUnmount(() => {
   height: 34px;
   border: 0;
   border-radius: 50%;
-  background: #f1f5f9;
+  background: var(--lc-soft);
   font-size: 20px;
 }
 
@@ -1538,11 +1546,11 @@ onBeforeUnmount(() => {
 .me-edit-form input,
 .me-edit-form textarea {
   width: 100%;
-  border: 1px solid #dfe4ee;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   padding: 11px 12px;
   color: var(--me-text);
-  background: #ffffff;
+  background: var(--lc-surface);
   font: inherit;
   outline: 0;
 }
@@ -1567,11 +1575,11 @@ onBeforeUnmount(() => {
 }
 
 .avatar-uploader button {
-  border: 1px solid #dfe4ee;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   padding: 10px 12px;
   color: var(--me-text);
-  background: #ffffff;
+  background: var(--lc-surface);
 }
 
 .settings-summary {
@@ -1887,14 +1895,14 @@ onBeforeUnmount(() => {
 
 .me-mobile {
   padding: calc(18px + env(safe-area-inset-top)) 14px calc(84px + env(safe-area-inset-bottom));
-  background: #f6f7fb;
+  background: var(--lc-bg);
   min-height: 100vh;
 }
 
 /* ── Hero card ─────────────────────────────────────────── */
 .mh-hero {
   border-radius: 20px;
-  background: linear-gradient(135deg, #6d5dfb 0%, #4f46e5 55%, #4338ca 100%);
+  background: linear-gradient(135deg, var(--lc-violet) 0%, var(--lc-indigo) 55%, var(--lc-indigo) 100%);
   padding: 20px 18px 16px;
   margin-bottom: 14px;
 }
@@ -1923,7 +1931,7 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  color: var(--lc-surface);
   font-size: 24px;
   font-weight: 800;
 }
@@ -1933,7 +1941,7 @@ onBeforeUnmount(() => {
   bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
+  background: var(--lc-surface);
   color: var(--me-primary);
   border-radius: 999px;
   padding: 1px 8px;
@@ -1952,7 +1960,7 @@ onBeforeUnmount(() => {
 .mh-hero-name {
   font-size: 18px;
   font-weight: 800;
-  color: #fff;
+  color: var(--lc-surface);
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -1981,7 +1989,7 @@ onBeforeUnmount(() => {
 
 .mh-verify-tag.is-verified {
   background: rgba(16, 185, 129, 0.28);
-  color: #a7f3d0;
+  color: var(--lc-green-light);
 }
 
 .mh-role-tag {
@@ -2028,7 +2036,7 @@ onBeforeUnmount(() => {
 
 .mh-badge-text {
   font-size: 12px;
-  color: #e5e7ff;
+  color: var(--lc-indigo-light);
   line-height: 1;
 }
 
@@ -2038,20 +2046,49 @@ onBeforeUnmount(() => {
   line-height: 1;
 }
 
-.mh-edit-btn {
+.mh-hero-actions {
   flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.mh-message-btn,
+.mh-edit-btn {
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  color: var(--lc-surface);
   font-size: 12px;
   font-weight: 700;
   padding: 6px 13px;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s;
+  text-decoration: none;
 }
 
+.mh-message-btn {
+  position: relative;
+}
+
+.mh-message-badge {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff4d6d;
+  color: #fff;
+  font-size: 9px;
+  line-height: 16px;
+  font-style: normal;
+  text-align: center;
+}
+
+.mh-message-btn:active,
 .mh-edit-btn:active {
   background: rgba(255, 255, 255, 0.25);
 }
@@ -2079,7 +2116,7 @@ onBeforeUnmount(() => {
 .mh-hero-stat strong {
   font-size: 17px;
   font-weight: 800;
-  color: #fff;
+  color: var(--lc-surface);
   line-height: 1;
 }
 
@@ -2092,8 +2129,8 @@ onBeforeUnmount(() => {
 .mh-card {
   margin-bottom: 14px;
   border-radius: 18px;
-  background: #fff;
-  border: 1px solid #eef0f4;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
   padding: 16px;
 }
@@ -2120,33 +2157,33 @@ onBeforeUnmount(() => {
 .mh-growth-name {
   font-size: 15px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .mh-growth-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   white-space: nowrap;
 }
 
 .mh-exp-bar {
   height: 8px;
   border-radius: 999px;
-  background: #edf0f5;
+  background: var(--lc-soft-alt);
   overflow: hidden;
 }
 
 .mh-exp-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #7c6aff, #4f46e5);
+  background: linear-gradient(90deg, var(--lc-violet), var(--lc-indigo));
   transition: width 0.5s ease;
 }
 
 .mh-exp-label {
   margin-top: 6px;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   text-align: right;
 }
 
@@ -2163,7 +2200,7 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: 8px 14px;
   border-radius: 12px;
-  background: #f6f7fb;
+  background: var(--lc-bg);
   gap: 2px;
   min-width: 68px;
   text-align: center;
@@ -2172,13 +2209,13 @@ onBeforeUnmount(() => {
 .mh-growth-stat strong {
   font-size: 15px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   line-height: 1;
 }
 
 .mh-growth-stat small {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
 /* ── Function grid ───────────────────────────────────────── */
@@ -2206,7 +2243,7 @@ onBeforeUnmount(() => {
 }
 
 .mh-func-item:active {
-  background: #f1f5f9;
+  background: var(--lc-soft);
 }
 
 .mh-func-icon {
@@ -2222,22 +2259,22 @@ onBeforeUnmount(() => {
 .mh-func-title {
   font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--lc-text-deep);
   text-align: center;
   line-height: 1.2;
 }
 
 .mh-func-tip {
   font-size: 10px;
-  color: #4f46e5;
+  color: var(--lc-indigo);
   line-height: 1;
 }
 
-.mh-tone-violet { background: #f1efff; }
-.mh-tone-blue   { background: #eff6ff; }
-.mh-tone-rose   { background: #fdf2f8; }
-.mh-tone-amber  { background: #fffbeb; }
-.mh-tone-green  { background: #ecfdf5; }
+.mh-tone-violet { background: var(--lc-indigo-soft); }
+.mh-tone-blue   { background: var(--lc-blue-light); }
+.mh-tone-rose   { background: var(--lc-pink-light); }
+.mh-tone-amber  { background: var(--lc-amber-light); }
+.mh-tone-green  { background: var(--lc-green-light); }
 
 /* ── Task card ───────────────────────────────────────────── */
 .mh-card-head {
@@ -2250,12 +2287,12 @@ onBeforeUnmount(() => {
 .mh-card-title {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .mh-card-meta {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
 .mh-task-list {
@@ -2270,20 +2307,20 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: 11px 14px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #eef0f4;
+  background: var(--lc-bg);
+  border: 1px solid var(--lc-soft-alt);
 }
 
 .mh-task-row.done {
-  background: #f0fdf4;
-  border-color: #d1fae5;
+  background: var(--lc-emerald-light);
+  border-color: var(--lc-green-light);
 }
 
 .mh-task-check {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 2px solid #dfe4ee;
+  border: 2px solid var(--lc-border);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -2293,9 +2330,9 @@ onBeforeUnmount(() => {
 }
 
 .mh-task-row.done .mh-task-check {
-  background: #059669;
-  border-color: #059669;
-  color: #fff;
+  background: var(--lc-emerald);
+  border-color: var(--lc-emerald);
+  color: var(--lc-surface);
 }
 
 .mh-task-body {
@@ -2306,7 +2343,7 @@ onBeforeUnmount(() => {
 .mh-task-name {
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2314,27 +2351,27 @@ onBeforeUnmount(() => {
 
 .mh-task-exp {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   margin-top: 2px;
 }
 
 .mh-task-action {
   flex: 0 0 auto;
-  border: 1px solid #cfd4ff;
+  border: 1px solid var(--lc-blue-border);
   border-radius: 999px;
   padding: 5px 13px;
   font-size: 12px;
   font-weight: 700;
-  color: #4f46e5;
-  background: #fff;
+  color: var(--lc-indigo);
+  background: var(--lc-surface);
   text-decoration: none;
   white-space: nowrap;
 }
 
 .mh-task-action.done {
-  border-color: #d1fae5;
-  color: #059669;
-  background: #f0fdf4;
+  border-color: var(--lc-green-light);
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
 }
 
 /* ── Settings card ───────────────────────────────────────── */
@@ -2350,8 +2387,8 @@ onBeforeUnmount(() => {
   width: 100%;
   padding: 14px 16px;
   border: 0;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fff;
+  border-bottom: 1px solid var(--lc-soft);
+  background: var(--lc-surface);
   cursor: pointer;
   text-align: left;
   text-decoration: none;
@@ -2364,7 +2401,7 @@ onBeforeUnmount(() => {
 }
 
 .mh-setting-row:active {
-  background: #f8fafc;
+  background: var(--lc-bg);
 }
 
 .mh-setting-icon {
@@ -2378,23 +2415,23 @@ onBeforeUnmount(() => {
 .mh-setting-label {
   flex: 1;
   font-size: 14px;
-  color: #1e293b;
+  color: var(--lc-text-deep);
   font-weight: 500;
 }
 
 .mh-setting-value {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
 .mh-setting-arrow {
   font-size: 20px;
-  color: #cbd5e1;
+  color: var(--lc-border);
   line-height: 1;
 }
 
 .mh-setting-danger .mh-setting-label {
-  color: #dc2626;
+  color: var(--lc-red);
 }
 
 /* ── Responsive tweaks (≤ 375 px) ───────────────────────── */

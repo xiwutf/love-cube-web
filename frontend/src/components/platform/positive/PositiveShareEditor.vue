@@ -119,13 +119,13 @@ async function handleSubmit() {
 .editor-card {
   border: 1px solid #f0ebe5;
   border-radius: 16px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 20px 22px;
 }
 
 .editor-title {
   margin: 0 0 14px;
-  color: #1f2937;
+  color: var(--lc-text);
   font-size: 17px;
   font-weight: 700;
 }
@@ -142,7 +142,7 @@ async function handleSubmit() {
   padding: 12px 14px 28px;
   font: inherit;
   font-size: 14px;
-  color: #374151;
+  color: var(--lc-slate);
   resize: none;
   line-height: 1.7;
   transition: border-color 0.15s;
@@ -151,8 +151,8 @@ async function handleSubmit() {
 
 .editor-textarea:focus {
   outline: none;
-  border-color: #f97316;
-  background: #fff;
+  border-color: var(--lc-orange);
+  background: var(--lc-surface);
 }
 
 .editor-textarea::placeholder {
@@ -174,7 +174,7 @@ async function handleSubmit() {
 
 .section-label {
   display: block;
-  color: #374151;
+  color: var(--lc-slate);
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 8px;
@@ -193,7 +193,7 @@ async function handleSubmit() {
   border: 1px solid #e5e0da;
   border-radius: 999px;
   background: #fafaf9;
-  color: #6b7280;
+  color: var(--lc-muted-light);
   height: 28px;
   padding: 0 11px;
   font-size: 12px;
@@ -206,7 +206,7 @@ async function handleSubmit() {
 .chip:hover {
   border-color: #d0c8c0;
   background: #f5f0eb;
-  color: #374151;
+  color: var(--lc-slate);
 }
 
 .chip-icon {
@@ -240,7 +240,7 @@ async function handleSubmit() {
 }
 
 .toggle-track.on {
-  background: #f97316;
+  background: var(--lc-orange);
 }
 
 .toggle-thumb {
@@ -250,7 +250,7 @@ async function handleSubmit() {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--lc-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   transition: left 0.2s;
 }
@@ -260,25 +260,25 @@ async function handleSubmit() {
 }
 
 .anon-label {
-  color: #374151;
+  color: var(--lc-slate);
   font-size: 13px;
   font-weight: 600;
 }
 
 .anon-hint {
-  color: #9ca3af;
+  color: var(--lc-subtle);
   font-size: 12px;
 }
 
 .feedback {
   margin: 10px 0 0;
-  color: #16a34a;
+  color: var(--lc-green);
   font-size: 13px;
   font-weight: 600;
 }
 
 .feedback.error {
-  color: #dc2626;
+  color: var(--lc-red);
 }
 
 .submit-btn {
@@ -289,8 +289,8 @@ async function handleSubmit() {
   height: 40px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  color: #fff;
+  background: linear-gradient(135deg, var(--lc-orange), var(--lc-orange));
+  color: var(--lc-surface);
   font-size: 14px;
   font-weight: 700;
   padding: 0 22px;

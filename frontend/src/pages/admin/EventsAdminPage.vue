@@ -205,14 +205,14 @@ onMounted(load)
   gap: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--lc-muted);
   cursor: pointer;
   white-space: nowrap;
   margin-bottom: 4px;
 }
 
 .admin-check input[type='checkbox'] {
-  accent-color: #e84f73;
+  accent-color: var(--lc-rose);
 }
 </style>
 

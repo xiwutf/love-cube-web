@@ -115,22 +115,22 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.sp-page { min-height: 100vh; background: #f6f7fb; color: #0f172a; }
+.sp-page { min-height: 100vh; background: var(--lc-bg); color: var(--lc-text); }
 
 .sp-head {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center;
-  background: #fff; border-bottom: 1px solid #eef0f4;
+  background: var(--lc-surface); border-bottom: 1px solid var(--lc-soft-alt);
 }
 .sp-back {
   width: 48px; height: 52px; flex: 0 0 auto;
   display: grid; place-items: center;
-  border: 0; background: none; font-size: 22px; color: #4f46e5; cursor: pointer;
+  border: 0; background: none; font-size: 22px; color: var(--lc-indigo); cursor: pointer;
 }
 .sp-title { flex: 1; margin: 0; font-size: 17px; font-weight: 800; }
 .sp-action-btn {
   padding: 0 16px; height: 52px;
-  border: 0; background: none; font-size: 14px; color: #4f46e5; font-weight: 700; cursor: pointer;
+  border: 0; background: none; font-size: 14px; color: var(--lc-indigo); font-weight: 700; cursor: pointer;
 }
 
 .sp-body {
@@ -139,7 +139,7 @@ onMounted(async () => {
 }
 
 .sp-card {
-  background: #fff; border: 1px solid #eef0f4; border-radius: 18px;
+  background: var(--lc-surface); border: 1px solid var(--lc-soft-alt); border-radius: 18px;
   box-shadow: 0 4px 16px rgba(15,23,42,0.05); margin-bottom: 14px; overflow: hidden;
 }
 
@@ -149,47 +149,47 @@ onMounted(async () => {
 .pf-avatar-wrap { position: relative; flex: 0 0 auto; }
 .pf-avatar {
   width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
-  border: 3px solid #f1efff;
+  border: 3px solid var(--lc-indigo-soft);
 }
 .pf-avatar-fb {
   display: grid; place-items: center;
   width: 80px; height: 80px; border-radius: 50%;
-  background: linear-gradient(135deg, #6d5dfb, #4f46e5);
-  color: #fff; font-size: 28px; font-weight: 800;
+  background: linear-gradient(135deg, var(--lc-violet), var(--lc-indigo));
+  color: var(--lc-surface); font-size: 28px; font-weight: 800;
 }
 .pf-avatar-edit {
   position: absolute; bottom: -2px; right: -2px;
-  border: 2px solid #fff; border-radius: 999px;
-  background: #4f46e5; color: #fff;
+  border: 2px solid var(--lc-surface); border-radius: 999px;
+  background: var(--lc-indigo); color: var(--lc-surface);
   font-size: 10px; font-weight: 700; padding: 2px 7px; cursor: pointer;
 }
 .pf-info { flex: 1; }
 .pf-name { font-size: 20px; font-weight: 800; }
-.pf-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.pf-meta { font-size: 12px; color: var(--lc-subtle); margin-top: 4px; }
 
 .pf-row {
   display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 12px; padding: 13px 16px; border-bottom: 1px solid #f1f5f9;
+  gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--lc-soft);
 }
 .pf-row.no-border { border-bottom: 0; }
-.pf-label { font-size: 13px; color: #64748b; flex: 0 0 72px; }
-.pf-value { font-size: 13px; color: #0f172a; text-align: right; flex: 1; }
-.pf-bio { text-align: left; color: #475569; }
-.pf-verified { color: #059669; font-weight: 700; }
+.pf-label { font-size: 13px; color: var(--lc-muted-light); flex: 0 0 72px; }
+.pf-value { font-size: 13px; color: var(--lc-text); text-align: right; flex: 1; }
+.pf-bio { text-align: left; color: var(--lc-muted); }
+.pf-verified { color: var(--lc-emerald); font-weight: 700; }
 .pf-invite { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .pf-copy-btn {
-  border: 1px solid #cfd4ff; border-radius: 999px;
-  background: #fff; color: #4f46e5;
+  border: 1px solid var(--lc-blue-border); border-radius: 999px;
+  background: var(--lc-surface); color: var(--lc-indigo);
   font-size: 11px; font-weight: 700; padding: 2px 10px; cursor: pointer;
 }
-.pf-invite em { font-style: normal; font-size: 11px; color: #059669; }
-.pf-invite em.err { color: #dc2626; }
+.pf-invite em { font-style: normal; font-size: 11px; color: var(--lc-emerald); }
+.pf-invite em.err { color: var(--lc-red); }
 
 .sp-primary-btn {
   display: block; width: 100%;
   padding: 14px; border: 0; border-radius: 14px;
-  background: linear-gradient(135deg, #6d5dfb, #4f46e5);
-  color: #fff; font-size: 15px; font-weight: 800; cursor: pointer;
+  background: linear-gradient(135deg, var(--lc-violet), var(--lc-indigo));
+  color: var(--lc-surface); font-size: 15px; font-weight: 800; cursor: pointer;
   box-shadow: 0 8px 20px rgba(79,70,229,0.25);
 }
 

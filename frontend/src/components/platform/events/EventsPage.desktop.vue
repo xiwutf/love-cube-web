@@ -425,7 +425,7 @@ onMounted(async () => {
 
 .cover-badge.violet,
 .hot-item em.violet {
-  color: #7c3aed;
+  color: var(--lc-purple);
   background: #f3e8ff;
 }
 
@@ -547,7 +547,7 @@ onMounted(async () => {
   top: 22px;
   width: 72px;
   height: 92px;
-  background: linear-gradient(145deg, #ff91b5, #ec4899);
+  background: linear-gradient(145deg, #ff91b5, var(--lc-pink));
 }
 
 .balloon-violet {
@@ -555,7 +555,7 @@ onMounted(async () => {
   top: 96px;
   width: 54px;
   height: 68px;
-  background: linear-gradient(145deg, #b8a5ff, #7c3aed);
+  background: linear-gradient(145deg, #b8a5ff, var(--lc-purple));
 }
 
 .gift-box {
@@ -566,8 +566,8 @@ onMounted(async () => {
   height: 72px;
   border-radius: 8px;
   background:
-    linear-gradient(90deg, transparent 40%, #7c3aed 40% 56%, transparent 56%),
-    linear-gradient(0deg, transparent 42%, #7c3aed 42% 58%, transparent 58%),
+    linear-gradient(90deg, transparent 40%, var(--lc-purple) 40% 56%, transparent 56%),
+    linear-gradient(0deg, transparent 42%, var(--lc-purple) 42% 58%, transparent 58%),
     linear-gradient(145deg, #ff94b8, #ffbdd1);
 }
 
@@ -778,7 +778,7 @@ onMounted(async () => {
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 900;
-  color: #d97706;
+  color: var(--lc-amber);
   background: rgba(255, 247, 237, 0.92);
 }
 
@@ -948,7 +948,7 @@ onMounted(async () => {
   border-radius: 999px;
   padding: 0 var(--lc-space-4);
   background: linear-gradient(135deg, #ff5f84, var(--lc-pink));
-  color: #fff;
+  color: var(--lc-surface);
   font-size: var(--lc-text-sm);
   font-weight: 900;
   text-decoration: none;
@@ -1129,7 +1129,7 @@ onMounted(async () => {
     justify-content: space-between;
     border: 1px solid var(--lc-border);
     border-radius: var(--lc-radius-xs);
-    background: #fff;
+    background: var(--lc-surface);
     color: var(--lc-text);
     padding: 0 12px;
     font-size: var(--lc-text-sm);

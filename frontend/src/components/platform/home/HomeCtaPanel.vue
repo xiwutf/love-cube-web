@@ -34,8 +34,8 @@ defineEmits(['media-error'])
   margin-top: 22px;
   padding: 30px 38px;
   border-radius: 8px;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #6d5dfc);
+  color: var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-blue), #6d5dfc);
   overflow: hidden;
 }
 
@@ -83,12 +83,12 @@ defineEmits(['media-error'])
 }
 
 .home-btn-white {
-  color: #2563eb;
-  background: #fff;
+  color: var(--lc-blue);
+  background: var(--lc-surface);
 }
 
 .home-btn-outline {
-  color: #fff;
+  color: var(--lc-surface);
   border-color: rgba(255, 255, 255, 0.62);
 }
 

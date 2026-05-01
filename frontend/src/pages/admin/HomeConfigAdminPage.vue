@@ -326,17 +326,17 @@ loadConfig()
 .hc-head h2 {
   margin: 0;
   font-size: 24px;
-  color: #122039;
+  color: var(--lc-text);
 }
 
 .hc-head p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--lc-muted-light);
 }
 
 .hc-panel {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-border);
   border-radius: 14px;
   padding: 18px;
   display: grid;
@@ -346,7 +346,7 @@ loadConfig()
 .panel-head h3 {
   margin: 0;
   font-size: 18px;
-  color: #122039;
+  color: var(--lc-text);
 }
 
 .panel-head-with-action {
@@ -364,7 +364,7 @@ loadConfig()
 
 .field > span {
   font-size: 13px;
-  color: #475569;
+  color: var(--lc-muted);
   font-weight: 700;
 }
 
@@ -385,12 +385,12 @@ loadConfig()
 }
 
 .item-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   padding: 14px;
   display: grid;
   gap: 10px;
-  background: #f8fafc;
+  background: var(--lc-bg);
 }
 
 .item-head {
@@ -408,7 +408,7 @@ loadConfig()
   display: inline-flex;
   gap: 6px;
   font-size: 12px;
-  color: #475569;
+  color: var(--lc-muted);
 }
 
 .actions {
@@ -425,14 +425,14 @@ loadConfig()
 .text-btn {
   border: 0;
   background: transparent;
-  color: #3b82f6;
+  color: var(--lc-blue);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
 }
 
 .text-btn.danger {
-  color: #ef4444;
+  color: var(--lc-red);
 }
 
 @media (max-width: 1023px) {

@@ -99,17 +99,17 @@ function handleSave() {
 </script>
 
 <style scoped>
-.sp-page { min-height: 100vh; background: #f6f7fb; color: #0f172a; }
+.sp-page { min-height: 100vh; background: var(--lc-bg); color: var(--lc-text); }
 
 .sp-head {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center;
-  background: #fff; border-bottom: 1px solid #eef0f4;
+  background: var(--lc-surface); border-bottom: 1px solid var(--lc-soft-alt);
 }
 .sp-back {
   width: 48px; height: 52px; flex: 0 0 auto;
   display: grid; place-items: center;
-  border: 0; background: none; font-size: 22px; color: #4f46e5; cursor: pointer;
+  border: 0; background: none; font-size: 22px; color: var(--lc-indigo); cursor: pointer;
 }
 .sp-title { flex: 1; margin: 0; font-size: 17px; font-weight: 800; }
 
@@ -118,57 +118,57 @@ function handleSave() {
   max-width: 680px; margin: 0 auto;
 }
 .sp-card {
-  background: #fff; border: 1px solid #eef0f4; border-radius: 18px;
+  background: var(--lc-surface); border: 1px solid var(--lc-soft-alt); border-radius: 18px;
   box-shadow: 0 3px 12px rgba(15,23,42,0.04); margin-bottom: 14px; padding: 16px;
 }
-.sp-card-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: #0f172a; }
+.sp-card-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: var(--lc-text); }
 
 .pv-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 11px 0; border-bottom: 1px solid #f1f5f9;
+  padding: 11px 0; border-bottom: 1px solid var(--lc-soft);
 }
 .pv-row:last-child { border-bottom: 0; }
 .pv-row-left { flex: 1; min-width: 0; }
-.pv-row-name { font-size: 14px; font-weight: 600; color: #1e293b; }
-.pv-row-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.pv-row-name { font-size: 14px; font-weight: 600; color: var(--lc-text-deep); }
+.pv-row-sub { font-size: 12px; color: var(--lc-subtle); margin-top: 2px; }
 
 .pv-select {
-  flex: 0 0 auto; border: 1px solid #eef0f4; border-radius: 8px;
-  padding: 6px 10px; font-size: 12px; color: #334155; background: #f8fafc;
+  flex: 0 0 auto; border: 1px solid var(--lc-soft-alt); border-radius: 8px;
+  padding: 6px 10px; font-size: 12px; color: var(--lc-slate); background: var(--lc-bg);
   outline: none; cursor: pointer;
 }
 
 .pv-switch-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid #f1f5f9;
+  padding: 12px 0; border-bottom: 1px solid var(--lc-soft);
 }
 .pv-switch-row:last-child { border-bottom: 0; }
 
 .pv-switch {
   position: relative; flex: 0 0 auto;
   width: 48px; height: 28px; border-radius: 999px; border: 0;
-  background: #e2e8f0; cursor: pointer; transition: background 0.2s;
+  background: var(--lc-border); cursor: pointer; transition: background 0.2s;
 }
-.pv-switch.on { background: #6d5dfb; }
+.pv-switch.on { background: var(--lc-violet); }
 .pv-switch-thumb {
   position: absolute; top: 3px; left: 3px;
-  width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--lc-surface);
   box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: left 0.2s;
 }
 .pv-switch.on .pv-switch-thumb { left: 23px; }
 
 .pv-link-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  width: 100%; padding: 12px 0; border-bottom: 1px solid #f1f5f9; border-left: 0; border-right: 0; border-top: 0;
+  width: 100%; padding: 12px 0; border-bottom: 1px solid var(--lc-soft); border-left: 0; border-right: 0; border-top: 0;
   background: none; cursor: pointer; text-align: left;
 }
 .pv-link-row:last-child { border-bottom: 0; }
-.pv-arrow { font-size: 20px; color: #cbd5e1; }
+.pv-arrow { font-size: 20px; color: var(--lc-border); }
 
-.pv-saved { text-align: center; font-size: 13px; color: #059669; margin-bottom: 8px; }
+.pv-saved { text-align: center; font-size: 13px; color: var(--lc-emerald); margin-bottom: 8px; }
 .sp-primary-btn {
   display: block; width: 100%; padding: 14px; border: 0; border-radius: 14px;
-  background: linear-gradient(135deg, #6d5dfb, #4f46e5); color: #fff;
+  background: linear-gradient(135deg, var(--lc-violet), var(--lc-indigo)); color: var(--lc-surface);
   font-size: 15px; font-weight: 800; cursor: pointer;
 }
 

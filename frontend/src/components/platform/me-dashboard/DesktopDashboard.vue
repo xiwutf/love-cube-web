@@ -138,8 +138,8 @@ function taskProgress(task) {
   --dash-soft: #f7f8fc;
   --dash-text: var(--lc-text);
   --dash-muted: #7b8498;
-  --dash-primary: #6d5dfb;
-  --dash-primary-dark: #4f46e5;
+  --dash-primary: var(--lc-violet);
+  --dash-primary-dark: var(--lc-indigo);
   --dash-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   background: transparent;
   color: var(--dash-text);

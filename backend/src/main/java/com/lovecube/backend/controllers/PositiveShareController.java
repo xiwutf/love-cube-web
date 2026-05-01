@@ -48,6 +48,8 @@ public class PositiveShareController {
         Object id = result.get("id");
         if (id != null) {
             growthService.recordAction(user.getUserid(), "POST_CONTENT", "POSITIVE_SHARE_" + id);
+            // 首次发布额外奖励（bizId 固定，GrowthLog 唯一约束保证只触发一次）
+            growthService.recordAction(user.getUserid(), "FIRST_POST_BONUS", "FIRST_POST_ONCE");
         }
         return result;
     }
@@ -100,7 +102,16 @@ public class PositiveShareController {
     ) {
         User user = adminAuthService.requireUser(authHeader);
         Map<String, Object> result = positiveShareService.likeShare(id, user.getUserid());
-        growthService.recordAction(user.getUserid(), "LIKE_CONTENT", "POSITIVE_SHARE_" + id);
+        boolean alreadyLiked = Boolean.TRUE.equals(result.get("alreadyLiked"));
+        if (!alreadyLiked) {
+            growthService.recordAction(user.getUserid(), "LIKE_CONTENT", "POSITIVE_SHARE_" + id);
+            // 作者被点赞经验（排除自赞，bizId 含 likerId 保证每个点赞人只触发一次）
+            Long authorId = positiveShareService.getShareAuthorId(id);
+            if (authorId != null && !authorId.equals(user.getUserid())) {
+                growthService.recordAction(authorId, "LIKED_BY_OTHERS",
+                        "LIKED_SHARE_" + id + "_BY_" + user.getUserid());
+            }
+        }
         return result;
     }
 
@@ -121,7 +132,10 @@ public class PositiveShareController {
     ) {
         User user = adminAuthService.requireUser(authHeader);
         String content = String.valueOf(payload.getOrDefault("content", ""));
-        return positiveShareService.commentShare(id, user.getUserid(), content);
+        Map<String, Object> result = positiveShareService.commentShare(id, user.getUserid(), content);
+        // 评论成功后给评论者经验（同一用户对同一内容只奖励一次）
+        growthService.recordAction(user.getUserid(), "COMMENT_CONTENT", "COMMENT_SHARE_" + id);
+        return result;
     }
 
     @GetMapping("/{id}/comments")

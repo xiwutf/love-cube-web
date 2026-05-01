@@ -25,7 +25,7 @@ const actions = [
 
 <style scoped>
 .quick-wrap {
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
   padding: 20px;
   box-shadow: var(--lc-shadow-sm);
@@ -50,7 +50,7 @@ p {
 }
 
 .quick-btn {
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
   min-height: 74px;
   text-decoration: none;
@@ -60,7 +60,7 @@ p {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #fff;
+  background: var(--lc-surface);
   box-shadow: var(--lc-shadow-sm);
 }
 

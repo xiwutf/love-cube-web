@@ -1065,18 +1065,18 @@ onMounted(async () => {
 }
 
 .admin-role-tag.ga-owner {
-  color: #b45309;
-  background: #fef3c7;
+  color: var(--lc-amber);
+  background: var(--lc-amber-light);
 }
 
 .admin-role-tag.ga-admin {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: var(--lc-blue);
+  background: var(--lc-border);
 }
 
 .admin-role-tag.ga-reviewer {
-  color: #475569;
-  background: #f1f5f9;
+  color: var(--lc-muted);
+  background: var(--lc-soft);
 }
 
 .owner-badge {

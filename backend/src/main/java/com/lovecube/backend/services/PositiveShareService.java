@@ -216,6 +216,12 @@ public class PositiveShareService {
         return listShareCommentsInternal(shareId, page, pageSize);
     }
 
+    public Long getShareAuthorId(Long shareId) {
+        return positiveShareRepository.findById(shareId)
+                .map(PositiveShare::getUserId)
+                .orElse(null);
+    }
+
     public Map<String, Object> getPositiveShareReviewSwitch() {
         return homeConfigService.getPositiveShareReviewSwitch();
     }

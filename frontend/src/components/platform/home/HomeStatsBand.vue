@@ -26,7 +26,7 @@ defineProps({
   margin-top: 22px;
   padding: 16px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #eef5ff, #f8fbff);
+  background: linear-gradient(135deg, var(--lc-indigo-light), var(--lc-bg));
 }
 
 .stat-card {
@@ -36,9 +36,9 @@ defineProps({
   align-items: center;
   min-height: 88px;
   padding: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .stat-icon {
@@ -52,27 +52,27 @@ defineProps({
 }
 
 .stat-card strong {
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 19px;
 }
 
 .stat-card small {
-  color: #475569;
+  color: var(--lc-muted);
   font-size: 12px;
 }
 
 .stat-card em {
-  color: #16a34a;
+  color: var(--lc-green);
   font-size: 12px;
   font-style: normal;
 }
 
-.tone-pink { --tone: #ec4899; --tone-bg: #fff1f5; }
-.tone-violet { --tone: #6366f1; --tone-bg: #eef2ff; }
-.tone-blue { --tone: #2563eb; --tone-bg: #eff6ff; }
-.tone-orange { --tone: #f97316; --tone-bg: #fff7ed; }
-.tone-green { --tone: #16a34a; --tone-bg: #f0fdf4; }
-.tone-purple { --tone: #7c3aed; --tone-bg: #f5f3ff; }
+.tone-pink { --tone: var(--lc-pink); --tone-bg: var(--lc-pink-light); }
+.tone-violet { --tone: var(--lc-indigo); --tone-bg: var(--lc-indigo-light); }
+.tone-blue { --tone: var(--lc-blue); --tone-bg: var(--lc-blue-light); }
+.tone-orange { --tone: var(--lc-orange); --tone-bg: var(--lc-orange-light); }
+.tone-green { --tone: var(--lc-green); --tone-bg: var(--lc-emerald-light); }
+.tone-purple { --tone: var(--lc-purple); --tone-bg: var(--lc-indigo-soft); }
 
 .stat-icon {
   background: var(--tone-bg);

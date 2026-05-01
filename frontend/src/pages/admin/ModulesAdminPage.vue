@@ -159,13 +159,13 @@ loadModules()
 .ma-title {
   font-size: 24px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
   margin: 0 0 8px;
 }
 
 .ma-desc {
   font-size: 14px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   margin: 0;
   line-height: 1.6;
 }
@@ -178,9 +178,9 @@ loadModules()
 
 .ma-table-wrap {
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .ma-table {
@@ -191,20 +191,20 @@ loadModules()
 }
 
 .ma-table th {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--lc-bg);
+  color: var(--lc-muted-light);
   font-weight: 700;
   font-size: 12px;
   text-align: left;
   padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--lc-border);
   white-space: nowrap;
 }
 
 .ma-table td {
   padding: 12px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #374151;
+  border-bottom: 1px solid var(--lc-soft);
+  color: var(--lc-slate);
   vertical-align: top;
 }
 
@@ -216,7 +216,7 @@ loadModules()
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #475569;
+  color: var(--lc-muted);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -226,18 +226,18 @@ loadModules()
   display: inline-flex;
   padding: 6px 8px;
   border-radius: 8px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
   font-size: 12px;
 }
 
 .ma-input,
 .ma-textarea {
   width: 100%;
-  border: 1px solid #dbe3ef;
+  border: 1px solid var(--lc-border);
   border-radius: 8px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--lc-surface);
+  color: var(--lc-text);
   font-size: 13px;
   padding: 8px 10px;
   box-sizing: border-box;
@@ -246,7 +246,7 @@ loadModules()
 .ma-input:focus,
 .ma-textarea:focus {
   outline: none;
-  border-color: #93c5fd;
+  border-color: var(--lc-blue-border);
   box-shadow: 0 0 0 3px rgba(37,99,235,.12);
 }
 
@@ -269,7 +269,7 @@ loadModules()
 .ma-tip {
   margin: 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   line-height: 1.6;
 }
 

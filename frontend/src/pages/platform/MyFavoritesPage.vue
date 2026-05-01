@@ -86,22 +86,22 @@ onMounted(() => {
 .panel-card {
   border: 1px solid var(--lc-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 16px;
 }
 .status { margin: 0; color: var(--lc-muted); text-align: center; padding: 20px 0; }
 .list { display: grid; gap: 12px; }
-.item { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; }
-.item-head { display: flex; justify-content: space-between; gap: 8px; color: #6b7280; font-size: 12px; }
-.item-content { margin: 8px 0; color: #111827; line-height: 1.6; white-space: pre-wrap; }
-.item-meta { display: flex; gap: 14px; color: #64748b; font-size: 12px; }
+.item { border: 1px solid var(--lc-soft-alt); border-radius: 12px; padding: 12px; }
+.item-head { display: flex; justify-content: space-between; gap: 8px; color: var(--lc-muted-light); font-size: 12px; }
+.item-content { margin: 8px 0; color: var(--lc-text); line-height: 1.6; white-space: pre-wrap; }
+.item-meta { display: flex; gap: 14px; color: var(--lc-muted-light); font-size: 12px; }
 .more-wrap { margin-top: 14px; display: flex; justify-content: center; }
 .more-btn {
-  border: 1px solid #dbe2ee;
+  border: 1px solid var(--lc-border);
   border-radius: 999px;
   padding: 8px 16px;
-  background: #fff;
-  color: #334155;
+  background: var(--lc-surface);
+  color: var(--lc-slate);
   cursor: pointer;
 }
 </style>

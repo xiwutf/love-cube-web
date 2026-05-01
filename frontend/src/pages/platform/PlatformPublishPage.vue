@@ -57,6 +57,6 @@ async function submit() {
 .page{width:min(100% - 24px,560px);margin:16px auto;display:grid;gap:12px;padding-bottom:calc(72px + env(safe-area-inset-bottom));}
 h1{margin:0;font-size:20px}
 .fixed-type{margin:0;color:var(--lc-muted);font-size:14px}
-.submit{height:44px;border:0;border-radius:10px;background:var(--lc-blue);color:#fff;font-weight:700}
+.submit{height:44px;border:0;border-radius:10px;background:var(--lc-blue);color:var(--lc-surface);font-weight:700}
 .msg{margin:0;color:var(--lc-muted);font-size:13px}
 </style>

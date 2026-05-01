@@ -117,17 +117,17 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.sp-page { min-height: 100vh; background: #f6f7fb; color: #0f172a; }
+.sp-page { min-height: 100vh; background: var(--lc-bg); color: var(--lc-text); }
 
 .sp-head {
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center;
-  background: #fff; border-bottom: 1px solid #eef0f4;
+  background: var(--lc-surface); border-bottom: 1px solid var(--lc-soft-alt);
 }
 .sp-back {
   width: 48px; height: 52px; flex: 0 0 auto;
   display: grid; place-items: center;
-  border: 0; background: none; font-size: 22px; color: #4f46e5; cursor: pointer;
+  border: 0; background: none; font-size: 22px; color: var(--lc-indigo); cursor: pointer;
 }
 .sp-title { flex: 1; margin: 0; font-size: 17px; font-weight: 800; }
 
@@ -135,28 +135,28 @@ onMounted(async () => {
   padding: 16px 14px calc(80px + env(safe-area-inset-bottom));
   max-width: 680px; margin: 0 auto;
 }
-.sp-status { text-align: center; padding: 40px 0; color: #94a3b8; font-size: 14px; }
+.sp-status { text-align: center; padding: 40px 0; color: var(--lc-subtle); font-size: 14px; }
 .sp-empty::before { display: block; font-size: 32px; margin-bottom: 10px; content: "✅"; }
 
 .sp-card {
-  background: #fff; border: 1px solid #eef0f4; border-radius: 16px;
+  background: var(--lc-surface); border: 1px solid var(--lc-soft-alt); border-radius: 16px;
   box-shadow: 0 3px 12px rgba(15,23,42,0.04); margin-bottom: 12px; padding: 16px;
 }
-.sp-card-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; color: #0f172a; }
+.sp-card-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; color: var(--lc-text); }
 
 .task-summary { padding: 16px; }
 .ts-level { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .ts-lv-badge {
   width: 52px; height: 52px; flex: 0 0 auto;
   display: grid; place-items: center;
-  background: linear-gradient(135deg, #7c6aff, #4f46e5);
+  background: linear-gradient(135deg, var(--lc-violet), var(--lc-indigo));
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
-  color: #fff; font-size: 13px; font-weight: 900;
+  color: var(--lc-surface); font-size: 13px; font-weight: 900;
 }
 .ts-lv-name { font-size: 15px; font-weight: 800; }
-.ts-lv-hint { font-size: 12px; color: #94a3b8; margin-top: 3px; }
-.ts-progress-bar { height: 8px; border-radius: 999px; background: #edf0f5; overflow: hidden; }
-.ts-progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7c6aff, #4f46e5); transition: width 0.5s; }
+.ts-lv-hint { font-size: 12px; color: var(--lc-subtle); margin-top: 3px; }
+.ts-progress-bar { height: 8px; border-radius: 999px; background: var(--lc-soft-alt); overflow: hidden; }
+.ts-progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--lc-violet), var(--lc-indigo)); transition: width 0.5s; }
 
 .task-list { display: flex; flex-direction: column; gap: 0; }
 .task-row {
@@ -164,40 +164,40 @@ onMounted(async () => {
   border-radius: 0; border-left: 0; border-right: 0; box-shadow: none;
 }
 .task-row:first-child { border-radius: 16px 16px 0 0; }
-.task-row:last-child { border-radius: 0 0 16px 16px; border-bottom: 1px solid #eef0f4; }
-.task-row:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
-.task-row.done { background: #f0fdf4; }
+.task-row:last-child { border-radius: 0 0 16px 16px; border-bottom: 1px solid var(--lc-soft-alt); }
+.task-row:not(:last-child) { border-bottom: 1px solid var(--lc-soft); }
+.task-row.done { background: var(--lc-emerald-light); }
 
 .task-check {
   width: 28px; height: 28px; flex: 0 0 auto;
   display: grid; place-items: center; border-radius: 50%;
-  border: 2px solid #dfe4ee;
+  border: 2px solid var(--lc-border);
   font-size: 14px; font-weight: 800; color: transparent;
 }
-.task-row.done .task-check { background: #059669; border-color: #059669; color: #fff; }
+.task-row.done .task-check { background: var(--lc-emerald); border-color: var(--lc-emerald); color: var(--lc-surface); }
 
 .task-body { flex: 1; min-width: 0; }
-.task-name { font-size: 14px; font-weight: 600; color: #0f172a; }
-.task-exp { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-.task-progress-bar { height: 4px; border-radius: 999px; background: #edf0f5; overflow: hidden; margin: 6px 0 4px; }
-.task-progress-fill { height: 100%; border-radius: inherit; background: #6d5dfb; }
-.task-sub { font-size: 11px; color: #94a3b8; }
+.task-name { font-size: 14px; font-weight: 600; color: var(--lc-text); }
+.task-exp { font-size: 11px; color: var(--lc-subtle); margin-top: 2px; }
+.task-progress-bar { height: 4px; border-radius: 999px; background: var(--lc-soft-alt); overflow: hidden; margin: 6px 0 4px; }
+.task-progress-fill { height: 100%; border-radius: inherit; background: var(--lc-violet); }
+.task-sub { font-size: 11px; color: var(--lc-subtle); }
 
 .task-btn {
-  flex: 0 0 auto; border: 1px solid #cfd4ff; border-radius: 999px;
-  background: #fff; color: #4f46e5;
+  flex: 0 0 auto; border: 1px solid var(--lc-blue-border); border-radius: 999px;
+  background: var(--lc-surface); color: var(--lc-indigo);
   font-size: 12px; font-weight: 700; padding: 6px 14px; text-decoration: none;
 }
-.task-btn.done { border-color: #d1fae5; color: #059669; background: #f0fdf4; }
+.task-btn.done { border-color: var(--lc-green-light); color: var(--lc-emerald); background: var(--lc-emerald-light); }
 
 .exp-row {
   display: flex; align-items: center; gap: 10px; padding: 9px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--lc-soft);
 }
 .exp-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .exp-icon { font-size: 16px; width: 24px; text-align: center; flex: 0 0 auto; }
-.exp-label { flex: 1; font-size: 13px; color: #334155; }
-.exp-val { font-size: 12px; color: #6d5dfb; font-weight: 700; }
+.exp-label { flex: 1; font-size: 13px; color: var(--lc-slate); }
+.exp-val { font-size: 12px; color: var(--lc-violet); font-weight: 700; }
 
 @media (max-width: 767px) {
   :global(.platform-header), :global(.platform-footer), :global(.co-creation-toolbar) {

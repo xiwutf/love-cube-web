@@ -251,6 +251,10 @@ const categories = [
   { label: '生活团契', value: 'family' },
   { label: '事工团队', value: 'service' }
 ]
+const categoryLabelMap = categories.reduce((acc, item) => {
+  acc[item.value] = item.label
+  return acc
+}, {})
 
 const groupItems = computed(() => remoteGroups.value)
 const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE)))
@@ -264,6 +268,11 @@ function joinModeLabel(g) {
   return '审核加入'
 }
 
+function normalizeCategory(item) {
+  const raw = (item.category || item.typeName || item.type || '团体').toString().trim()
+  return categoryLabelMap[raw] || raw
+}
+
 function normalizeGroup(item) {
   const joinKey = item.joinModeKey || (item.joinMode === 'free' ? 'open' : item.joinMode === 'invite' ? 'invite' : 'audit')
   const tagStr = item.tags || ''
@@ -273,7 +282,7 @@ function normalizeGroup(item) {
   return {
     id: item.id,
     name: item.name || '未命名团体',
-    category: item.category || item.typeName || item.type || '团体',
+    category: normalizeCategory(item),
     region: item.location || item.region || '未设置地区',
     memberCount: Number(item.memberCount || 0),
     description: item.description || '暂无团体简介',

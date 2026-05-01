@@ -5,10 +5,14 @@
     "color-no-invalid-hex": true,
     "no-descending-specificity": null,
     "declaration-property-value-disallowed-list": {
-      "color":            ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
-      "background-color": ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
-      "border-color":     ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
-      "fill":             ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"]
+      "color":             ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "background-color":  ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "background":        ["/^#[0-9a-fA-F]/"],
+      "border-color":      ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "border":            ["/^#[0-9a-fA-F]/"],
+      "outline-color":     ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "fill":              ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"],
+      "stroke":            ["/^#[0-9a-fA-F]/", "/^rgba?\\(/"]
     }
   },
   "overrides": [

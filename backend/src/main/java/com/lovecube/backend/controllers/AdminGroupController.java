@@ -130,9 +130,20 @@ public class AdminGroupController {
         if (legacyItems.isEmpty()) {
             return modernItems;
         }
+        Set<String> modernIds = modernItems.stream()
+                .map(item -> String.valueOf(item.getOrDefault("id", "")))
+                .collect(Collectors.toSet());
+
         List<Map<String, Object>> merged = new ArrayList<>(modernItems.size() + legacyItems.size());
         merged.addAll(modernItems);
-        merged.addAll(legacyItems);
+        for (Map<String, Object> legacyItem : legacyItems) {
+            String legacyId = String.valueOf(legacyItem.getOrDefault("id", ""));
+            // If modern table already contains migrated id (legacy-{id}) or same raw id, skip legacy duplicate.
+            if (modernIds.contains(legacyId) || modernIds.contains("legacy-" + legacyId)) {
+                continue;
+            }
+            merged.add(legacyItem);
+        }
         return merged;
     }
 
@@ -255,11 +266,22 @@ public class AdminGroupController {
             @RequestParam(defaultValue = "pending") String status
     ) {
         adminAuthService.requireGroupReviewPermission(authHeader, id);
-        groupRepository.findById(id)
+        String canonicalId = adminAuthService.resolvePlatformGroupIdOrThrow(id);
+        groupRepository.findById(canonicalId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
-        List<GroupJoinRequest> requests = "all".equals(status)
-                ? joinRequestRepository.findByGroupIdOrderByRequestedAtDesc(id)
-                : joinRequestRepository.findByGroupIdAndStatusOrderByRequestedAtDesc(id, status);
+        LinkedHashSet<Long> seen = new LinkedHashSet<>();
+        List<GroupJoinRequest> requests = new ArrayList<>();
+        for (String gid : adminAuthService.expandGroupIdAliasesForLegacy(id)) {
+            List<GroupJoinRequest> chunk = "all".equals(status)
+                    ? joinRequestRepository.findByGroupIdOrderByRequestedAtDesc(gid)
+                    : joinRequestRepository.findByGroupIdAndStatusOrderByRequestedAtDesc(gid, status);
+            for (GroupJoinRequest r : chunk) {
+                if (seen.add(r.getId())) {
+                    requests.add(r);
+                }
+            }
+        }
+        requests.sort(Comparator.comparing(GroupJoinRequest::getRequestedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed());
         Set<Long> userIds = requests.stream().map(GroupJoinRequest::getUserId).collect(Collectors.toSet());
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
@@ -288,13 +310,16 @@ public class AdminGroupController {
         adminAuthService.requireGroupReviewPermission(authHeader, id);
         GroupJoinRequest req = joinRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "申请不存在"));
-        if (!id.equals(req.getGroupId()))     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请与团体不匹配");
+        if (!adminAuthService.isSameLegacyGroup(id, req.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请与团体不匹配");
+        }
         if (!"pending".equals(req.getStatus())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该申请已处理");
-        PlatformGroup group = groupRepository.findById(id)
+        String canonicalId = adminAuthService.resolvePlatformGroupIdOrThrow(id);
+        PlatformGroup group = groupRepository.findById(canonicalId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
-        if (!memberRepository.existsByGroupIdAndUserId(id, req.getUserId())) {
+        if (!memberRepository.existsByGroupIdAndUserId(canonicalId, req.getUserId())) {
             GroupMember member = new GroupMember();
-            member.setGroupId(id);
+            member.setGroupId(canonicalId);
             member.setUserId(req.getUserId());
             member.setRole("member");
             member.setJoinedAt(LocalDateTime.now());
@@ -318,7 +343,9 @@ public class AdminGroupController {
         adminAuthService.requireGroupReviewPermission(authHeader, id);
         GroupJoinRequest req = joinRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "申请不存在"));
-        if (!id.equals(req.getGroupId()))      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请与团体不匹配");
+        if (!adminAuthService.isSameLegacyGroup(id, req.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请与团体不匹配");
+        }
         if (!"pending".equals(req.getStatus())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该申请已处理");
         req.setStatus("rejected");
         req.setHandledAt(LocalDateTime.now());

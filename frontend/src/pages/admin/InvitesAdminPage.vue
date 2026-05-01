@@ -146,7 +146,7 @@ onMounted(loadInvites)
 
 .filter-grid input,
 .filter-grid select {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;

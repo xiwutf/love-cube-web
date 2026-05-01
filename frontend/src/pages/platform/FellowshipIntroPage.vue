@@ -149,7 +149,7 @@
 
 .intro-btn-primary {
   color: var(--lc-surface);
-  background: linear-gradient(135deg, #ff5f84, #e84f73);
+  background: linear-gradient(135deg, #ff5f84, var(--lc-rose));
   box-shadow: 0 12px 24px rgba(255, 95, 132, 0.34);
 }
 

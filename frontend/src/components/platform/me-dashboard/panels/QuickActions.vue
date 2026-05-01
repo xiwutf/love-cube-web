@@ -38,8 +38,8 @@ function go(to) {
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   padding: 18px 24px;
@@ -57,7 +57,7 @@ function go(to) {
   margin: 0;
   font-size: 16px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .grid {
@@ -69,7 +69,7 @@ function go(to) {
 .tile {
   border: 0;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--lc-surface);
   padding: 10px 12px;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
@@ -100,7 +100,7 @@ function go(to) {
 .tile strong {
   font-size: 12px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -108,16 +108,16 @@ function go(to) {
 
 .tile small {
   font-size: 11px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   min-height: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tone-violet { color: #4f46e5; background: rgba(79, 70, 229, 0.10); }
-.tone-rose { color: #db2777; background: rgba(219, 39, 119, 0.10); }
-.tone-amber { color: #d97706; background: rgba(217, 119, 6, 0.12); }
-.tone-blue { color: #2563eb; background: rgba(37, 99, 235, 0.10); }
-.tone-green { color: #059669; background: rgba(5, 150, 105, 0.10); }
+.tone-violet { color: var(--lc-indigo); background: rgba(79, 70, 229, 0.10); }
+.tone-rose { color: var(--lc-pink); background: rgba(219, 39, 119, 0.10); }
+.tone-amber { color: var(--lc-amber); background: rgba(217, 119, 6, 0.12); }
+.tone-blue { color: var(--lc-blue); background: rgba(37, 99, 235, 0.10); }
+.tone-green { color: var(--lc-emerald); background: rgba(5, 150, 105, 0.10); }
 </style>

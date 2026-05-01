@@ -123,13 +123,13 @@ async function submit() {
 
 .form-field.required .field-label::after {
   content: ' *';
-  color: #e84f73;
+  color: var(--lc-rose);
 }
 
 .field-label {
   font-size: 13px;
   font-weight: 700;
-  color: #475569;
+  color: var(--lc-muted);
 }
 
 .form-actions {
@@ -138,7 +138,7 @@ async function submit() {
   gap: 12px;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--lc-border);
 }
 
 .form-actions a {
@@ -151,12 +151,12 @@ async function submit() {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--lc-muted);
   cursor: pointer;
 }
 
 .admin-check input[type='checkbox'] {
-  accent-color: #e84f73;
+  accent-color: var(--lc-rose);
 }
 
 @media (max-width: 640px) {

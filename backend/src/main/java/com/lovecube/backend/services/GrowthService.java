@@ -13,16 +13,20 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class GrowthService {
-    private static final Map<String, Integer> ACTION_EXP = Map.of(
-            "LOGIN", 2,
-            "POST_CONTENT", 10,
-            "VIEW_CONTENT", 1,
-            "LIKE_CONTENT", 2,
-            "JOIN_GROUP", 10,
-            "FEEDBACK_REPORT", 5
+    private static final Map<String, Integer> ACTION_EXP = Map.ofEntries(
+            Map.entry("LOGIN", 2),
+            Map.entry("POST_CONTENT", 10),
+            Map.entry("VIEW_CONTENT", 1),
+            Map.entry("LIKE_CONTENT", 2),
+            Map.entry("JOIN_GROUP", 10),
+            Map.entry("FEEDBACK_REPORT", 5),
+            Map.entry("COMMENT_CONTENT", 3),
+            Map.entry("LIKED_BY_OTHERS", 2),
+            Map.entry("FIRST_POST_BONUS", 20),
+            Map.entry("ALL_TASKS_COMPLETE", 20)
     );
 
-    private static final int[] LEVEL_EXP_RULES = {0, 100, 300, 800, 2000};
+    private static final int[] LEVEL_EXP_RULES = {0, 100, 300, 600, 1000};
     private static final String[] LEVEL_TITLES = {"新手用户", "新手创作者", "活跃用户", "内容达人", "社区骨干"};
 
     private final UserGrowthRepository userGrowthRepository;
@@ -156,10 +160,24 @@ public class GrowthService {
         userGrowthRepository.save(growth);
         refreshBadges(userId);
 
+        // 检查今日所有任务是否全部领取，若是则发放全完成奖励 (+20 EXP)
+        int bonusExp = 0;
+        List<DailyTask> allTasks = dailyTaskRepository.findByEnabledOrderBySortNoAsc(1);
+        long claimedToday = userDailyTaskProgressRepository.findByUserIdAndTaskDate(userId, today)
+                .stream().filter(p -> safeInt(p.getClaimed()) == 1).count();
+        if (!allTasks.isEmpty() && claimedToday >= allTasks.size()) {
+            Map<String, Object> bonus = recordAction(userId, "ALL_TASKS_COMPLETE", "ALL_DAILY_" + today);
+            if (Boolean.TRUE.equals(bonus.get("recorded"))) {
+                bonusExp = safeInt((Integer) bonus.getOrDefault("exp", 0));
+                growth = getOrCreateGrowth(userId); // 刷新以反映奖励经验
+            }
+        }
+
         return Map.of(
                 "claimed", true,
                 "taskCode", taskCode,
                 "rewardExp", reward,
+                "bonusExp", bonusExp,
                 "level", growth.getLevel(),
                 "title", growth.getTitle(),
                 "totalExp", growth.getExp()

@@ -145,7 +145,7 @@ watch(
 .share-card {
   border: 1px solid #f1ece8;
   border-radius: 14px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 16px;
   transition: box-shadow 0.2s;
 }
@@ -203,7 +203,7 @@ watch(
 }
 
 .name {
-  color: #1f2937;
+  color: var(--lc-text);
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -220,14 +220,14 @@ watch(
 }
 
 .time {
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 12px;
 }
 
 .more-btn {
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -237,12 +237,12 @@ watch(
 }
 
 .more-btn:hover {
-  color: #64748b;
+  color: var(--lc-muted-light);
 }
 
 .content {
   margin: 12px 0 0;
-  color: #374151;
+  color: var(--lc-slate);
   line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
@@ -263,7 +263,7 @@ watch(
   border: 1px solid #f1ece8;
   border-radius: 999px;
   background: #fafaf9;
-  color: #64748b;
+  color: var(--lc-muted-light);
   height: 30px;
   padding: 0 10px;
   font-size: 12px;
@@ -296,7 +296,7 @@ watch(
 }
 
 .action-count {
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 11px;
 }
 

@@ -196,8 +196,8 @@ onMounted(load)
 }
 
 .group-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-border);
   border-radius: 14px;
   overflow: hidden;
   display: flex;
@@ -207,7 +207,7 @@ onMounted(load)
 .group-card-cover {
   position: relative;
   height: 110px;
-  background: linear-gradient(135deg, #fce7f3, #dbeafe);
+  background: linear-gradient(135deg, var(--lc-pink-light), var(--lc-border));
   flex-shrink: 0;
 }
 
@@ -224,7 +224,7 @@ onMounted(load)
   place-items: center;
   font-size: 40px;
   font-weight: 900;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
 .pending-badge {
@@ -233,8 +233,8 @@ onMounted(load)
   right: 8px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--lc-red);
+  color: var(--lc-surface);
   font-size: 11px;
   font-weight: 700;
 }
@@ -255,7 +255,7 @@ onMounted(load)
 .group-card-name {
   font-size: 16px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .role-badge {
@@ -268,22 +268,22 @@ onMounted(load)
 }
 
 .role-badge.role-owner {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
 }
 
 .role-badge.role-admin {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--lc-border);
+  color: var(--lc-blue);
 }
 
 .role-badge.role-reviewer {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
 }
 
 .role-badge.role-platform {
-  background: #ede9fe;
+  background: var(--lc-indigo-soft);
   color: #5b21b6;
 }
 
@@ -297,13 +297,13 @@ onMounted(load)
 
 .member-count {
   font-size: 12px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-weight: 600;
 }
 
 .group-card-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   line-height: 1.5;
   margin: 0;
   display: -webkit-box;
@@ -314,7 +314,7 @@ onMounted(load)
 
 .group-card-actions {
   padding: 10px 16px 14px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--lc-soft);
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -327,8 +327,8 @@ onMounted(load)
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--lc-red);
+  color: var(--lc-surface);
   font-size: 10px;
   font-weight: 700;
   margin-left: 3px;
@@ -337,7 +337,7 @@ onMounted(load)
 .empty-card {
   margin-top: 40px;
   text-align: center;
-  color: #64748b;
+  color: var(--lc-muted-light);
 }
 
 .empty-card p {
@@ -348,10 +348,10 @@ onMounted(load)
 .empty-card .hint {
   font-size: 13px;
   font-weight: 400;
-  color: #94a3b8;
+  color: var(--lc-subtle);
 }
 
-.admin-tag.active, .admin-tag.open { color: #16a34a; background: #dcfce7; }
-.admin-tag.inactive { color: #64748b; background: #f1f5f9; }
-.admin-tag.approval { color: #1d4ed8; background: #dbeafe; }
+.admin-tag.active, .admin-tag.open { color: var(--lc-green); background: var(--lc-green-light); }
+.admin-tag.inactive { color: var(--lc-muted-light); background: var(--lc-soft); }
+.admin-tag.approval { color: var(--lc-blue); background: var(--lc-border); }
 </style>

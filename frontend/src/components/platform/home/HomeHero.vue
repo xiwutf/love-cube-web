@@ -19,6 +19,6 @@ defineEmits(['browse', 'publish'])
 h1 { margin: 0; font-size: 22px; }
 p { margin: 8px 0 0; color: var(--lc-muted); }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-button { height: 40px; border: 1px solid var(--lc-blue-border); border-radius: 10px; background: #fff; color: var(--lc-blue); font-weight: 700; }
-.publish { background: var(--lc-blue); color: #fff; border-color: var(--lc-blue); }
+button { height: 40px; border: 1px solid var(--lc-blue-border); border-radius: 10px; background: var(--lc-surface); color: var(--lc-blue); font-weight: 700; }
+.publish { background: var(--lc-blue); color: var(--lc-surface); border-color: var(--lc-blue); }
 </style>

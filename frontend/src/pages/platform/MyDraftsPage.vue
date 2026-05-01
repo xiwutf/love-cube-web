@@ -89,40 +89,40 @@ onMounted(() => {
 .head-actions { display: flex; gap: 10px; align-items: center; }
 .action-btn,
 .back-btn { text-decoration: none; font-weight: 700; }
-.action-btn { color: #fff; background: #f97316; border-radius: 999px; padding: 8px 14px; }
+.action-btn { color: var(--lc-surface); background: var(--lc-orange); border-radius: 999px; padding: 8px 14px; }
 .back-btn { color: var(--lc-blue); }
 .panel-card {
   border: 1px solid var(--lc-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 16px;
 }
 .status { margin: 0; color: var(--lc-muted); text-align: center; padding: 20px 0; }
 .list { display: grid; gap: 12px; }
-.item { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; }
-.item-head { display: flex; justify-content: space-between; gap: 8px; color: #6b7280; font-size: 12px; }
-.item-content { margin: 8px 0; color: #111827; line-height: 1.6; white-space: pre-wrap; }
-.item-meta { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: 12px; }
+.item { border: 1px solid var(--lc-soft-alt); border-radius: 12px; padding: 12px; }
+.item-head { display: flex; justify-content: space-between; gap: 8px; color: var(--lc-muted-light); font-size: 12px; }
+.item-content { margin: 8px 0; color: var(--lc-text); line-height: 1.6; white-space: pre-wrap; }
+.item-meta { display: flex; align-items: center; gap: 10px; color: var(--lc-muted-light); font-size: 12px; }
 .status-tag {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  color: #b45309;
-  background: #ffedd5;
+  color: var(--lc-amber);
+  background: var(--lc-orange-light);
 }
 .status-tag.rejected {
-  color: #b91c1c;
-  background: #fee2e2;
+  color: var(--lc-red);
+  background: var(--lc-red-light);
 }
 .more-wrap { margin-top: 14px; display: flex; justify-content: center; }
 .more-btn {
-  border: 1px solid #dbe2ee;
+  border: 1px solid var(--lc-border);
   border-radius: 999px;
   padding: 8px 16px;
-  background: #fff;
-  color: #334155;
+  background: var(--lc-surface);
+  color: var(--lc-slate);
   cursor: pointer;
 }
 </style>

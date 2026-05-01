@@ -42,8 +42,8 @@ defineProps({
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   padding: 22px 24px;
@@ -63,11 +63,11 @@ defineProps({
   margin: 0;
   font-size: 15px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .more {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
@@ -89,8 +89,8 @@ defineProps({
   height: 84px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--lc-indigo), var(--lc-purple));
+  color: var(--lc-surface);
   font-weight: 900;
   font-size: 21px;
   clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
@@ -111,14 +111,14 @@ defineProps({
   gap: 2px;
   padding: 8px 12px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  background: linear-gradient(135deg, var(--lc-orange-light), var(--lc-amber-light));
   border: 1px solid #fde68a;
   box-shadow: 0 6px 14px rgba(245, 158, 11, 0.12);
 }
 
 .medal span {
   font-size: 11px;
-  color: #b45309;
+  color: var(--lc-amber);
   font-weight: 700;
 }
 
@@ -138,13 +138,13 @@ defineProps({
   display: block;
   font-size: 14px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .hint {
   margin: 5px 0 0;
   font-size: 11px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   line-height: 1.45;
 }
 
@@ -160,14 +160,14 @@ defineProps({
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #6d5dfb, #4f46e5);
+  background: linear-gradient(90deg, var(--lc-violet), var(--lc-indigo));
   transition: width 0.4s ease;
 }
 
 .meta {
   margin-top: 5px;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-weight: 700;
   text-align: center;
 }
@@ -186,12 +186,12 @@ defineProps({
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 13px;
 }
 
 .sources strong {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-weight: 800;
 }
 </style>

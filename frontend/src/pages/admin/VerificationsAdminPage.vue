@@ -312,19 +312,19 @@ onMounted(load)
 .submit-data-cell { max-width: 200px; word-break: break-all; font-size: 12px; color: #666; }
 .admin-tag.photo    { background: #e8f4ff; color: #1989fa; }
 .admin-tag.realname { background: #e8f8f0; color: #07c160; }
-.admin-tag.idcard   { background: #fff8e1; color: #ff9800; }
+.admin-tag.idcard   { background: #fff8e1; color: var(--lc-orange); }
 .batch-toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid #e8edf5;
-  background: #f8fbff;
+  border-bottom: 1px solid var(--lc-soft-alt);
+  background: var(--lc-bg);
 }
 .batch-toolbar.mobile {
   flex-wrap: wrap;
   margin-bottom: 12px;
-  border: 1px solid #e8edf5;
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
 }
 .batch-select-all,

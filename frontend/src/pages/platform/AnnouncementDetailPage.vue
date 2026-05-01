@@ -55,8 +55,8 @@ onMounted(async () => {
   margin: 16px 0;
   overflow: hidden;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-bg);
 }
 
 .detail-cover img {
@@ -69,12 +69,12 @@ onMounted(async () => {
 .detail-attachment {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--lc-border);
 }
 
 .detail-attachment h3 {
   margin: 0 0 10px;
-  color: #334155;
+  color: var(--lc-slate);
   font-size: 16px;
 }
 
@@ -82,9 +82,9 @@ onMounted(async () => {
   display: block;
   width: 100%;
   max-height: 560px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--lc-surface);
   object-fit: contain;
 }
 </style>

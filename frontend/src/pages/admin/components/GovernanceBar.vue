@@ -53,8 +53,8 @@ defineProps({
 }
 
 .govern-item {
-  border: 1px solid #eee;
-  background: #f8fafc;
+  border: 1px solid var(--lc-surface);
+  background: var(--lc-bg);
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -78,11 +78,11 @@ defineProps({
 
 .mini-btn {
   text-decoration: none;
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
   color: var(--lc-blue-dark);
-  background: #fff;
+  background: var(--lc-surface);
 }
 </style>

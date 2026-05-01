@@ -78,7 +78,7 @@ cd backend && mvnw.cmd spring-boot:run     # http://localhost:8090
 | Pinia Store | `src/stores/{功能}.js` | 交友 store ID 前缀 `fellowship-` |
 | 工具函数 | `src/utils/` | 通用；复制一份到 `src/modules/fellowship/utils/` 如需 @f 引用 |
 
-> **禁止**在 `src/modules/fellowship/pages/` 添加新页面。该目录是旧目录，路由实际指向 `src/pages/`。
+> `src/modules/fellowship/pages/` 已于 2026-05-01 删除，不再存在。新联谊页面一律放 `src/pages/{功能}/index.vue`。
 
 ### 3.2 路由注册
 
@@ -250,29 +250,72 @@ gap: 16px;               /* 改为 var(--lc-space-4) 或 class="u-gap-4" */
 #### Token 速查
 
 ```css
-/* 颜色 */
---lc-blue / --lc-blue-mid / --lc-blue-dark / --lc-blue-light / --lc-blue-border
---lc-text / --lc-muted / --lc-subtle
---lc-surface / --lc-bg / --lc-soft / --lc-border
---lc-green / --lc-red / --lc-amber（及各自 -light 变体）
---lc-pink / --lc-pink-light（仅交友层）
+/* ── 白 / 表面 ─────────────────────────── */
+--lc-surface          /* #FFFFFF 纯白，卡片/模态底色 */
+--lc-bg               /* #F8FAFC 页面底色 */
+--lc-soft             /* #F1F5F9 轻灰底色 */
+--lc-soft-alt         /* #EEF0F4 略深的灰蓝底 */
+--lc-border           /* #E2E8F0 通用边框 */
 
-/* 间距（4 的倍数） */
---lc-space-1(4px) / -2(8px) / -3(12px) / -4(16px) / -5(20px)
---lc-space-6(24px) / -8(32px) / -10(40px) / -12(48px) / -20(80px)
+/* ── 文字 ────────────────────────────── */
+--lc-text             /* #0F172A 主文本 */
+--lc-text-deep        /* #1E293B 深文本（slate-800） */
+--lc-slate            /* #334155 次深文本（slate-700） */
+--lc-muted            /* #475569 弱文本（slate-600） */
+--lc-muted-light      /* #64748B 更弱文本（slate-500） */
+--lc-subtle           /* #94A3B8 占位/禁用文本 */
 
-/* 字号 */
---lc-text-xs(11px) / -sm(13px) / -base(14px) / -md(16px) / -lg(18px) / -xl(20px)
+/* ── 品牌蓝 ──────────────────────────── */
+--lc-blue             /* #2563EB 平台主色 */
+--lc-blue-mid         /* #1D4ED8 悬停/深一档 */
+--lc-blue-dark        /* #1E3A8A 深蓝 */
+--lc-blue-light       /* #EFF6FF 蓝色浅底 */
+--lc-blue-border      /* #BFDBFE 蓝色边框 */
 
-/* 圆角 */
---lc-radius-xs(6px) / -sm(10px) / -（16px）/ -lg(20px)
+/* ── 靛蓝 / 紫罗兰（特色区块） ────────── */
+--lc-indigo           /* #4F46E5 靛蓝 */
+--lc-indigo-light     /* #EEF2FF 靛蓝浅底 */
+--lc-indigo-soft      /* #F1EFFF 极浅紫底 */
+--lc-violet           /* #6D5DFB 紫罗兰 */
+--lc-purple           /* #7C3AED 深紫 */
 
-/* 阴影 */
---lc-shadow-sm / --lc-shadow / --lc-shadow-lg / --lc-shadow-blue
+/* ── 橙色 ────────────────────────────── */
+--lc-orange           /* #F97316 橙色 */
+--lc-orange-light     /* #FFF7ED 橙色浅底 */
 
-/* 其他 */
---lc-transition   /* all .25s ease */
---lc-z-dropdown / -sticky / -overlay / -modal / -toast
+/* ── 翡翠绿（次级成功色） ───────────── */
+--lc-emerald          /* #059669 翡翠绿 */
+--lc-emerald-light    /* #F0FDF4 翡翠浅底 */
+
+/* ── 行动粉（平台/后台 CTA） ─────────── */
+--lc-rose             /* #F54878 玫红行动色 */
+
+/* ── 联谊粉（仅联谊层） ─────────────── */
+--lc-pink             /* #EC4899 */
+--lc-pink-light       /* #FCE7F3 */
+--lc-pink-border      /* #FBCFE8 */
+
+/* ── 状态色 ──────────────────────────── */
+--lc-green / --lc-green-light
+--lc-red   / --lc-red-light
+--lc-amber / --lc-amber-light
+
+/* ── 间距（4 的倍数） ─────────────────── */
+--lc-space-1(4px) -2(8px) -3(12px) -4(16px) -5(20px)
+--lc-space-6(24px) -8(32px) -10(40px) -12(48px) -16(64px) -20(80px)
+
+/* ── 字号 ────────────────────────────── */
+--lc-text-xs(11px) -sm(13px) -base(14px) -md(16px) -lg(18px) -xl(20px)
+
+/* ── 圆角 ────────────────────────────── */
+--lc-radius-xs(6px) -sm(10px) -(16px) -lg(20px)
+
+/* ── 阴影 ────────────────────────────── */
+--lc-shadow-sm  --lc-shadow  --lc-shadow-lg  --lc-shadow-blue
+
+/* ── 其他 ────────────────────────────── */
+--lc-transition                              /* all .25s ease */
+--lc-z-dropdown -sticky -overlay -modal -toast
 ```
 
 ### 3.7 路由跳转
@@ -512,11 +555,15 @@ if (currentUser == null) {
 
 **在 `backend/src/main/resources/db/migration/` 下新建迁移文件，命名规则：`V{下一个版本号}__{简短描述}.sql`**
 
+当前最高版本为 **V38**，下一个迁移文件应为 `V39__description.sql`。
+
+> **已知空缺**：V15 从未创建，数据库从 V14 直接跳至 V16。`out-of-order` 默认关闭，**禁止补建 V15**，否则 Flyway 启动会报错。
+
 ```sql
--- 示例：V17__add_user_tags.sql
+-- 示例：V39__add_user_tags.sql
 
 -- 新建表
-CREATE TABLE IF NOT EXISTS user_tags (
+CREATE TABLE user_tags (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     tag VARCHAR(64) NOT NULL,
@@ -524,7 +571,7 @@ CREATE TABLE IF NOT EXISTS user_tags (
     INDEX idx_user_id (user_id)
 );
 
--- 新增列（Flyway 文件只运行一次，直接写 ALTER TABLE 即可）
+-- 新增列
 ALTER TABLE users ADD COLUMN tag_ids VARCHAR(255) NULL;
 ```
 
@@ -695,7 +742,7 @@ public void createRecord(Long userId, Long targetId) {
 | 陷阱 | 错误做法 | 正确做法 |
 |------|---------|---------|
 | 路由前缀缺失 | `router.push('/chat/' + id)` | `router.push('/fellowship/chat/' + id)` |
-| 新页面放错目录 | 放在 `modules/fellowship/pages/` | 放在 `pages/` |
+| 新页面放错目录 | 放在已删除的 `modules/fellowship/pages/` | 放在 `src/pages/{功能}/index.vue` |
 | superlike 复用 like | `request.post('/interactions/like/' + id)` | `request.post('/interactions/superlike/' + id)` |
 | 本地模拟接口 | `return { matched: false }` | 调真实后端接口 |
 | 喜欢状态刷新丢失 | 只用 `ref(false)` 本地记录 | 页面加载时调 `getLikeStatus()` |
@@ -767,4 +814,4 @@ public void createRecord(Long userId, Long targetId) {
 
 ---
 
-*最后更新：2026-04-30*
+*最后更新：2026-05-01*

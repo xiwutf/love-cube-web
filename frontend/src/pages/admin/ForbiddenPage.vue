@@ -29,7 +29,7 @@
 .forbidden-code {
   font-size: 80px;
   font-weight: 900;
-  color: #e2e8f0;
+  color: var(--lc-border);
   line-height: 1;
   margin: 0 0 8px;
   letter-spacing: -.04em;
@@ -38,13 +38,13 @@
 .forbidden-title {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   margin: 0 0 10px;
 }
 
 .forbidden-desc {
   font-size: 14px;
-  color: #64748b;
+  color: var(--lc-muted-light);
   margin: 0 0 24px;
   line-height: 1.6;
 }
@@ -52,10 +52,10 @@
 .forbidden-back {
   display: inline-block;
   padding: 10px 22px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: var(--lc-blue-light);
+  border: 1px solid var(--lc-blue-border);
   border-radius: 10px;
-  color: #1d4ed8;
+  color: var(--lc-blue);
   font-weight: 700;
   font-size: 14px;
   text-decoration: none;
@@ -63,8 +63,8 @@
 }
 
 .forbidden-back:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e3a8a;
+  background: var(--lc-border);
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue-dark);
 }
 </style>

@@ -8,4 +8,4 @@ function toggle(tag){
   emit('update:modelValue', Array.from(set))
 }
 </script>
-<style scoped>.tags{display:flex;flex-wrap:wrap;gap:8px}button{height:32px;padding:0 10px;border:1px solid var(--lc-border);border-radius:16px;background:#fff}.active{border-color:var(--lc-blue);color:var(--lc-blue);background:var(--lc-blue-light)}</style>
+<style scoped>.tags{display:flex;flex-wrap:wrap;gap:8px}button{height:32px;padding:0 10px;border:1px solid var(--lc-border);border-radius:16px;background:var(--lc-surface)}.active{border-color:var(--lc-blue);color:var(--lc-blue);background:var(--lc-blue-light)}</style>

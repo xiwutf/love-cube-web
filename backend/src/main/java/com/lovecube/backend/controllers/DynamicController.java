@@ -4,6 +4,7 @@ import com.lovecube.backend.entity.Dynamic;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.DynamicService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,9 @@ public class DynamicController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private GrowthService growthService;
 
     /**
      * 获取动态列表
@@ -72,6 +76,8 @@ public class DynamicController {
             }
 
             Dynamic dynamic = dynamicService.publishDynamic(currentUserId, content, imageUrls);
+            growthService.recordAction(currentUserId, "POST_CONTENT", "DYNAMIC_" + dynamic.getId());
+            growthService.recordAction(currentUserId, "FIRST_POST_BONUS", "FIRST_POST_ONCE");
             return ResponseEntity.ok(Map.of(
                 "message", "发布成功",
                 "dynamic", dynamic
@@ -99,6 +105,9 @@ public class DynamicController {
             }
 
             Map<String, Object> result = dynamicService.toggleLike(id, currentUserId);
+            if (Boolean.TRUE.equals(result.get("isLiked"))) {
+                growthService.recordAction(currentUserId, "LIKE_CONTENT", "DYNAMIC_LIKE_" + id);
+            }
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {

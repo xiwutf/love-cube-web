@@ -28,8 +28,8 @@ defineProps({
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   padding: 20px 24px;
@@ -51,11 +51,11 @@ defineProps({
   margin: 0;
   font-size: 15px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .more {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
@@ -94,17 +94,17 @@ defineProps({
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 18px rgba(15, 23, 42, 0.08);
 }
 
-.icon.on  { color: #ffffff; background: linear-gradient(145deg, #7c66ff, #4f46e5); }
-.icon.dim { color: #94a3b8; background: linear-gradient(145deg, #f1f5f9, #d7dde7); }
+.icon.on  { color: var(--lc-surface); background: linear-gradient(145deg, var(--lc-violet), var(--lc-indigo)); }
+.icon.dim { color: var(--lc-subtle); background: linear-gradient(145deg, var(--lc-soft), #d7dde7); }
 
-.badge:nth-child(2) .icon.on { background: linear-gradient(145deg, #ffb35c, #f97316); }
-.badge:nth-child(3) .icon.on { background: linear-gradient(145deg, #ff67b2, #db2777); }
+.badge:nth-child(2) .icon.on { background: linear-gradient(145deg, #ffb35c, var(--lc-orange)); }
+.badge:nth-child(3) .icon.on { background: linear-gradient(145deg, #ff67b2, var(--lc-pink)); }
 
 .title {
   max-width: 70px;
   font-size: 11px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

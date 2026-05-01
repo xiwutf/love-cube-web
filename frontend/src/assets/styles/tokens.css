@@ -28,6 +28,32 @@
   --lc-pink-light:      #FCE7F3;
   --lc-pink-border:     #FBCFE8;
 
+  /* ── Indigo / Violet accent ──────────────────────────────── */
+  --lc-indigo:          #4F46E5;
+  --lc-indigo-light:    #EEF2FF;
+  --lc-indigo-soft:     #F1EFFF;
+  --lc-violet:          #6D5DFB;
+  --lc-purple:          #7C3AED;
+
+  /* ── Orange ─────────────────────────────────────────────── */
+  --lc-orange:          #F97316;
+  --lc-orange-light:    #FFF7ED;
+
+  /* ── Emerald (secondary success) ────────────────────────── */
+  --lc-emerald:         #059669;
+  --lc-emerald-light:   #F0FDF4;
+
+  /* ── Rose (platform / admin action pink) ────────────────── */
+  --lc-rose:            #F54878;
+
+  /* ── Extended text scale ────────────────────────────────── */
+  --lc-slate:           #334155;
+  --lc-text-deep:       #1E293B;
+  --lc-muted-light:     #64748B;
+
+  /* ── Extended surface scale ─────────────────────────────── */
+  --lc-soft-alt:        #EEF0F4;
+
   /* ── Status ─────────────────────────────────────────────── */
   --lc-green:           #16A34A;
   --lc-green-light:     #DCFCE7;

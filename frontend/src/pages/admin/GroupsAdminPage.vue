@@ -116,7 +116,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchGroupMembers, fetchGroups } from '@/api/groups.js'
+import { getAdminGroups } from '@/api/groups.js'
 
 const loading = ref(true)
 const error = ref('')
@@ -154,37 +154,14 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await fetchGroups(buildListParams())
-    const groups = unwrapList(data).map(normalizeGroup)
-    items.value = await withPendingCounts(groups)
+    const groups = unwrapList(await getAdminGroups()).map(normalizeGroup)
+    items.value = groups
   } catch (err) {
     items.value = []
     error.value = err.message || '团体列表加载失败'
   } finally {
     loading.value = false
   }
-}
-
-function buildListParams() {
-  return {
-    keyword: keyword.value || undefined,
-    region: region.value || undefined,
-    type: type.value || undefined,
-    status: status.value || undefined,
-    sort: sort.value === 'newest' ? 'newest' : undefined
-  }
-}
-
-async function withPendingCounts(groups) {
-  const results = await Promise.all(groups.map(async (group) => {
-    try {
-      const pending = unwrapList(await fetchGroupMembers(group.id, { status: 'pending' }))
-      return { ...group, pendingRequestCount: pending.length }
-    } catch {
-      return group
-    }
-  }))
-  return results
 }
 
 function normalizeGroup(item) {

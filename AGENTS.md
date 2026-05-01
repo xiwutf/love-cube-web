@@ -78,7 +78,7 @@
 
 ### 联谊层
 
-- 页面放 `src/pages/{功能}/index.vue`（不是 `modules/fellowship/pages/`，那是旧目录）
+- 页面放 `src/pages/{功能}/index.vue`（`modules/fellowship/pages/` 已于 2026-05-01 删除）
 - 使用 Vant 4；跳转必须带 `/fellowship/` 前缀，否则会跳到平台层
 - 需要登录的路由必须加 `meta: { requiresAuth: true }`
 - 联谊层 store ID 必须加 `fellowship-` 前缀
@@ -212,7 +212,7 @@
 |--------|-----------|
 | 拿到任务直接动代码 | 先完成第四步输出分类和文件清单 |
 | 联谊层跳转不带 `/fellowship/` 前缀 | `router.push('/fellowship/chat/' + id)` |
-| 新联谊页面放 `modules/fellowship/pages/` | 放 `src/pages/{功能}/index.vue` |
+| 新联谊页面放已删除的 `modules/fellowship/pages/` | 放 `src/pages/{功能}/index.vue` |
 | 平台层用 Vant 组件 | 平台层只用纯 CSS |
 | 后端 Controller 路径加 `/admin` 前缀 | 只写 `/api/{resource}`，context-path 已处理 |
 | 修改已执行的 Flyway 迁移文件 | 新建 `V{N+1}__description.sql` |

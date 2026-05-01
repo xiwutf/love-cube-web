@@ -254,10 +254,10 @@ onMounted(async () => {
 
 <style scoped>
 .modules-page {
-  --text: #111827;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --card: #ffffff;
+  --text: var(--lc-text);
+  --muted: var(--lc-muted-light);
+  --border: var(--lc-border);
+  --card: var(--lc-surface);
   --bg: #f4f7fb;
   --radius: 14px;
   min-height: calc(100vh - 68px);
@@ -304,7 +304,7 @@ onMounted(async () => {
 }
 
 .mp-stat {
-  background: #fff;
+  background: var(--lc-surface);
   border: 1px solid #dbe5f3;
   border-radius: 12px;
   padding: 12px 14px;
@@ -314,7 +314,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 22px;
   font-weight: 800;
-  color: #1e3a8a;
+  color: var(--lc-blue-dark);
 }
 
 .mp-stat-label {
@@ -351,7 +351,7 @@ onMounted(async () => {
 }
 
 .mp-card {
-  background: #fff;
+  background: var(--lc-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
@@ -363,7 +363,7 @@ onMounted(async () => {
 
 .mp-card:not(.mp-card--planned):hover {
   transform: translateY(-3px);
-  border-color: #bfdbfe;
+  border-color: var(--lc-blue-border);
   box-shadow: 0 14px 26px rgba(30, 64, 175, 0.1);
 }
 
@@ -400,8 +400,8 @@ onMounted(async () => {
 }
 
 .mp-badge--planned {
-  background: #eef2f7;
-  color: #64748b;
+  background: var(--lc-soft-alt);
+  color: var(--lc-muted-light);
 }
 
 .mp-name {
@@ -422,7 +422,7 @@ onMounted(async () => {
   margin: 10px 0 0;
   font-size: 13px;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--lc-blue-mid);
 }
 
 .mp-side {
@@ -433,7 +433,7 @@ onMounted(async () => {
 .side-card,
 .discover-card,
 .mp-recommend {
-  background: #fff;
+  background: var(--lc-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -454,7 +454,7 @@ onMounted(async () => {
 }
 
 .side-manage {
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 12px;
 }
 
@@ -462,9 +462,9 @@ onMounted(async () => {
   display: block;
   margin-top: 10px;
   text-decoration: none;
-  color: #334155;
+  color: var(--lc-slate);
   font-size: 14px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--lc-soft);
   padding-bottom: 8px;
 }
 
@@ -496,7 +496,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 18px;
   font-weight: 800;
-  color: #be185d;
+  color: var(--lc-pink);
 }
 
 .discover-text {
@@ -512,8 +512,8 @@ onMounted(async () => {
   margin-top: 12px;
   border: 0;
   border-radius: 999px;
-  background: #ec4899;
-  color: #fff;
+  background: var(--lc-pink);
+  color: var(--lc-surface);
   font-size: 13px;
   font-weight: 700;
   height: 32px;
@@ -550,13 +550,13 @@ onMounted(async () => {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .recommend-item-desc {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #64748b;
+  color: var(--lc-muted-light);
 }
 
 .recommend-action {
@@ -564,7 +564,7 @@ onMounted(async () => {
   margin-top: 10px;
   font-size: 12px;
   font-weight: 700;
-  color: #2563eb;
+  color: var(--lc-blue);
 }
 
 @media (max-width: 1279px) {

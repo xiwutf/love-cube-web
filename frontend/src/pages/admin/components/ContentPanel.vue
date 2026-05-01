@@ -38,7 +38,7 @@ defineProps({
 <style scoped>
 .panel {
   padding: 24px;
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
 }
 
@@ -67,21 +67,21 @@ h3 {
 }
 
 .entry-btn {
-  border: 1px solid #eee;
+  border: 1px solid var(--lc-surface);
   border-radius: 12px;
   padding: 10px 16px;
   text-decoration: none;
   color: var(--lc-blue-dark);
   font-size: 13px;
-  background: #fff;
+  background: var(--lc-surface);
 }
 
 .panel-visual {
   margin: 22px 0;
   min-height: 140px;
   border-radius: 12px;
-  border: 1px solid #eee;
-  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  border: 1px solid var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-blue-light), var(--lc-bg));
   padding: 18px;
 }
 

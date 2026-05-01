@@ -25,8 +25,8 @@ defineProps({
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e7ebf2;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
   padding: 20px 24px;
@@ -48,11 +48,11 @@ defineProps({
   margin: 0;
   font-size: 15px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--lc-text);
 }
 
 .more {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
@@ -89,7 +89,7 @@ defineProps({
   display: grid;
   place-items: center;
   background: rgba(79, 70, 229, 0.08);
-  color: #4f46e5;
+  color: var(--lc-indigo);
   font-weight: 800;
   font-size: 13px;
   flex: 0 0 auto;
@@ -103,7 +103,7 @@ defineProps({
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--lc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -112,7 +112,7 @@ defineProps({
 
 .time {
   font-size: 11px;
-  color: #7a8699;
+  color: var(--lc-muted);
   justify-self: end;
   white-space: nowrap;
 }

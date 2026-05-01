@@ -49,6 +49,8 @@ spring:
     baseline-on-migrate: true
     baseline-version: 13
     validate-on-migrate: true
+    # 由 FlywayRepairMigrationStrategyConfig 读取：先 repair 再 migrate。checksum 对齐后请改 false
+    repair-on-migrate: true
 
   data:
     redis:

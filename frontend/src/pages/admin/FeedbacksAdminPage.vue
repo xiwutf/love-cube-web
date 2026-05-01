@@ -207,9 +207,9 @@ onMounted(load)
 }
 
 .summary-panel {
-  border: 1px solid #eceff5;
+  border: 1px solid var(--lc-soft-alt);
   border-radius: 12px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 12px;
 }
 
@@ -226,7 +226,7 @@ onMounted(load)
 
 .summary-item {
   border-radius: 10px;
-  background: #f8faff;
+  background: var(--lc-bg);
   padding: 8px;
   font-size: 14px;
 }
@@ -250,22 +250,22 @@ onMounted(load)
 .summary-bar {
   height: 7px;
   border-radius: 999px;
-  background: #e6edf8;
+  background: var(--lc-border);
   overflow: hidden;
 }
 
 .summary-bar-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, var(--lc-blue), var(--lc-blue));
 }
 
 .summary-bar-fill.goal {
-  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  background: linear-gradient(90deg, var(--lc-violet), var(--lc-violet));
 }
 
 .summary-bar-fill.improvement {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--lc-emerald), #34d399);
 }
 </style>
 

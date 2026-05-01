@@ -192,12 +192,12 @@ onMounted(load)
   margin: 8px 0 0;
   white-space: pre-wrap;
   line-height: 1.7;
-  color: #334155;
+  color: var(--lc-slate);
 }
 
 .comment-list {
   margin-top: 10px;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed var(--lc-border);
   padding-top: 8px;
 }
 </style>

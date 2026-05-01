@@ -42,12 +42,12 @@ defineProps({
 
 .panel-head h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 22px;
 }
 
 .panel-head a {
-  color: #2563eb;
+  color: var(--lc-blue);
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
@@ -66,9 +66,9 @@ defineProps({
   min-height: 206px;
   padding: 14px 12px;
   text-align: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--lc-surface);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.045);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -93,8 +93,8 @@ defineProps({
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  color: #fff;
-  background: linear-gradient(135deg, var(--tone), #94a3b8);
+  color: var(--lc-surface);
+  background: linear-gradient(135deg, var(--tone), var(--lc-subtle));
   font-size: 24px;
   font-weight: 900;
 }
@@ -105,19 +105,19 @@ defineProps({
   bottom: 17px;
   width: 9px;
   height: 9px;
-  border: 2px solid #fff;
+  border: 2px solid var(--lc-surface);
   border-radius: 50%;
   background: #22c55e;
 }
 
 .person-card strong {
-  color: #0f172a;
+  color: var(--lc-text);
   font-size: 15px;
 }
 
 .person-card small,
 .person-card p {
-  color: #64748b;
+  color: var(--lc-muted-light);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -141,12 +141,12 @@ defineProps({
   text-decoration: none;
 }
 
-.tone-pink { --tone: #ec4899; --tone-bg: #fff1f5; color: #be185d; background: linear-gradient(180deg, #fff7fb, #fff); }
-.tone-violet { --tone: #6366f1; --tone-bg: #eef2ff; color: #4f46e5; background: linear-gradient(180deg, #f5f3ff, #fff); }
-.tone-blue { --tone: #2563eb; --tone-bg: #eff6ff; color: #1d4ed8; background: linear-gradient(180deg, #eff6ff, #fff); }
-.tone-orange { --tone: #f97316; --tone-bg: #fff7ed; color: #c2410c; background: linear-gradient(180deg, #fff7ed, #fff); }
-.tone-green { --tone: #16a34a; --tone-bg: #f0fdf4; color: #15803d; background: linear-gradient(180deg, #f0fdf4, #fff); }
-.tone-purple { --tone: #7c3aed; --tone-bg: #f5f3ff; color: #6d28d9; background: linear-gradient(180deg, #f5f3ff, #fff); }
+.tone-pink { --tone: var(--lc-pink); --tone-bg: var(--lc-pink-light); color: var(--lc-pink); background: linear-gradient(180deg, #fff7fb, var(--lc-surface)); }
+.tone-violet { --tone: var(--lc-indigo); --tone-bg: var(--lc-indigo-light); color: var(--lc-indigo); background: linear-gradient(180deg, var(--lc-indigo-soft), var(--lc-surface)); }
+.tone-blue { --tone: var(--lc-blue); --tone-bg: var(--lc-blue-light); color: var(--lc-blue-mid); background: linear-gradient(180deg, var(--lc-blue-light), var(--lc-surface)); }
+.tone-orange { --tone: var(--lc-orange); --tone-bg: var(--lc-orange-light); color: #c2410c; background: linear-gradient(180deg, var(--lc-orange-light), var(--lc-surface)); }
+.tone-green { --tone: var(--lc-green); --tone-bg: var(--lc-emerald-light); color: #15803d; background: linear-gradient(180deg, var(--lc-emerald-light), var(--lc-surface)); }
+.tone-purple { --tone: var(--lc-purple); --tone-bg: var(--lc-indigo-soft); color: #6d28d9; background: linear-gradient(180deg, var(--lc-indigo-soft), var(--lc-surface)); }
 
 @media (max-width: 520px) {
   .people-grid {
