@@ -1,0 +1,3 @@
+﻿<template><div class="tabs"><button v-for="item in tabs" :key="item.key" :class="{ active: modelValue===item.key }" @click="$emit('update:modelValue', item.key)">{{ item.label }}</button></div></template>
+<script setup>defineProps({ tabs:Array, modelValue:String });defineEmits(['update:modelValue'])</script>
+<style scoped>.tabs{display:flex;gap:8px;overflow-x:auto;white-space:nowrap;-ms-overflow-style:none;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}button{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--lc-border);background:#fff}.active{border-color:var(--lc-blue);color:var(--lc-blue);background:var(--lc-blue-light)}</style>

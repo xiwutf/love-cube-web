@@ -18,7 +18,8 @@ public class GrowthService {
             "POST_CONTENT", 10,
             "VIEW_CONTENT", 1,
             "LIKE_CONTENT", 2,
-            "JOIN_GROUP", 10
+            "JOIN_GROUP", 10,
+            "FEEDBACK_REPORT", 5
     );
 
     private static final int[] LEVEL_EXP_RULES = {0, 100, 300, 800, 2000};

@@ -1,26 +1,24 @@
 <template>
   <div class="all-users-page">
     <NavBar title="全部异性" />
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-list
-        v-model:loading="loading"
-        :finished="finished"
-        finished-text="没有更多了"
-        @load="loadMore"
+    <van-list
+      v-model:loading="loading"
+      :finished="finished"
+      finished-text="No more users"
+      @load="loadMore"
+    >
+      <UserCard
+        v-for="user in users"
+        :key="user.userId"
+        :user="user"
+        @click="goProfile(user.userId)"
       >
-        <UserCard
-          v-for="user in users"
-          :key="user.userId"
-          :user="user"
-          @click="goProfile(user.userId)"
-        >
-          <template #action>
-            <van-tag plain type="primary" @click.stop="goProfile(user.userId)">查看</van-tag>
-          </template>
-        </UserCard>
-        <van-empty v-if="!loading && !users.length" description="暂无可查看用户" />
-      </van-list>
-    </van-pull-refresh>
+        <template #action>
+          <van-tag plain type="primary" @click.stop="goProfile(user.userId)">View</van-tag>
+        </template>
+      </UserCard>
+      <van-empty v-if="!loading && !users.length" description="No users available" />
+    </van-list>
   </div>
 </template>
 
@@ -36,7 +34,6 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 const router = useRouter()
 const users = ref([])
 const loading = ref(false)
-const refreshing = ref(false)
 const finished = ref(false)
 const pager = ref({ page: 1, size: 20 })
 const fetching = ref(false)
@@ -64,13 +61,6 @@ async function loadMore() {
   }
 }
 
-async function onRefresh() {
-  users.value = []
-  finished.value = false
-  pager.value.page = 1
-  await loadMore()
-  refreshing.value = false
-}
 
 function goProfile(id) {
   router.push(`/fellowship/user-profile/${id}`)

@@ -4,6 +4,10 @@
       <h1 class="platform-title">每日心声审核</h1>
       <p class="platform-subtitle">审核用户提交内容，支持通过、驳回、删除。</p>
       <div class="admin-toolbar">
+        <label class="admin-check">
+          <input v-model="reviewRequired" type="checkbox" :disabled="switchSaving" @change="handleReviewSwitchChange">
+          发布前需审核
+        </label>
         <select v-model="statusFilter" class="admin-input" @change="load">
           <option value="ALL">全部</option>
           <option value="PENDING">待审核</option>
@@ -73,7 +77,9 @@ import {
   batchReviewAdminPositiveShare,
   getAdminPositiveShareComments,
   getAdminPositiveShares,
-  reviewAdminPositiveShare
+  getAdminPositiveShareReviewSwitch,
+  reviewAdminPositiveShare,
+  updateAdminPositiveShareReviewSwitch
 } from '@/api/adminContent.js'
 
 const loading = ref(false)
@@ -86,11 +92,14 @@ const expandedId = ref(null)
 const commentLoading = ref(false)
 const comments = ref([])
 const selectedIds = ref([])
+const reviewRequired = ref(false)
+const switchSaving = ref(false)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
+    await loadReviewSwitch()
     const res = await getAdminPositiveShares({ status: statusFilter.value, pageNum: 1, pageSize: 50 })
     items.value = Array.isArray(res?.list) ? res.list : []
     selectedIds.value = []
@@ -98,6 +107,25 @@ async function load() {
     error.value = e.message || '加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadReviewSwitch() {
+  const config = await getAdminPositiveShareReviewSwitch()
+  const value = config?.positiveShareReviewRequired
+  reviewRequired.value = value === true || String(value).toLowerCase() === 'true'
+}
+
+async function handleReviewSwitchChange() {
+  switchSaving.value = true
+  try {
+    await updateAdminPositiveShareReviewSwitch(reviewRequired.value)
+    showToast({ type: 'success', message: reviewRequired.value ? '已开启发布前审核' : '已关闭发布前审核（默认直发）' })
+  } catch (e) {
+    reviewRequired.value = !reviewRequired.value
+    showToast({ type: 'fail', message: e.message || '审核开关保存失败' })
+  } finally {
+    switchSaving.value = false
   }
 }
 

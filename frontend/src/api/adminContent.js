@@ -151,3 +151,11 @@ export function batchReviewAdminPositiveShare(ids, status) {
 export function getAdminPositiveShareComments(id, params = {}) {
   return request.get(`/admin/positive-shares/${id}/comments`, { params })
 }
+
+export function getAdminPositiveShareReviewSwitch() {
+  return request.get('/admin/positive-shares/review-switch')
+}
+
+export function updateAdminPositiveShareReviewSwitch(positiveShareReviewRequired) {
+  return request.patch('/admin/positive-shares/review-switch', { positiveShareReviewRequired })
+}

@@ -2,7 +2,7 @@
   <div class="pc-layout">
     <header class="pc-header" :class="{ 'is-scrolled': isScrolled }">
       <div class="pc-nav-wrap">
-        <router-link to="/" class="pc-brand">
+        <router-link to="/pc/platform" class="pc-brand">
           <img :src="loveCubeIcon" class="pc-brand-logo" alt="" />
           <span class="pc-brand-text">Love Cube</span>
           <span class="pc-brand-tag">多元连接平台</span>
@@ -77,7 +77,7 @@ const userStore = useUserStore()
 const isScrolled = ref(false)
 
 const navItems = [
-  { to: '/', label: '首页' },
+  { to: '/pc/platform', label: '首页' },
   { to: '/platform/positive-share', label: '每日心声' },
   { to: '/modules', label: '模块中心' },
   { to: '/announcements', label: '平台动态' },

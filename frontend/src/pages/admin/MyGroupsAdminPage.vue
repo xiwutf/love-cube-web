@@ -22,7 +22,7 @@
     <template v-else>
       <div v-if="!filteredItems.length" class="empty-card">
         <p>暂无可管理的团体</p>
-        <p class="hint">如需获得管理权限，请联系超级管理员。</p>
+        <p class="hint">{{ emptyHintText }}</p>
       </div>
 
       <section v-else class="groups-grid">
@@ -96,11 +96,23 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getAdminGroups } from '@/api/groups.js'
+import { useUserStore } from '@/stores/user.js'
 
 const loading = ref(true)
 const error = ref('')
 const items = ref([])
 const keyword = ref('')
+const userStore = useUserStore()
+
+const hasManageAllPermission = computed(() =>
+  userStore.hasPermission('group.manage.all')
+)
+
+const emptyHintText = computed(() =>
+  hasManageAllPermission.value
+    ? '你当前是全站团体管理员；若仍为空，通常表示当前暂无团体数据。'
+    : '如需获得管理权限，请联系超级管理员。'
+)
 
 const filteredItems = computed(() => {
   const kw = keyword.value.toLowerCase()
@@ -126,6 +138,8 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    // 确保当前页可读取后台权限，便于空状态给出准确提示。
+    await userStore.loadAdminContext()
     const data = await getAdminGroups()
     items.value = (Array.isArray(data) ? data : data?.data ?? []).map(normalizeGroup)
   } catch (err) {

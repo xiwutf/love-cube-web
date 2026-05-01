@@ -100,12 +100,11 @@
     </transition>
 
     <nav class="mobile-quick-nav">
-      <router-link to="/" :class="{ 'is-active': isActive('/') }">首页</router-link>
-      <router-link to="/platform/positive-share" :class="{ 'is-active': isActive('/platform/positive-share') }">每日心声</router-link>
-      <router-link to="/announcements" :class="{ 'is-active': isActive('/announcements') }">平台动态</router-link>
-      <router-link to="/articles" :class="{ 'is-active': isActive('/articles') }">精选内容</router-link>
-      <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团队</router-link>
-      <router-link to="/me" :class="{ 'is-active': isActive('/me') }">个人中心</router-link>
+      <router-link to="/platform" :class="{ 'is-active': isActive('/platform') || route.path === '/' }">首页</router-link>
+      <router-link to="/platform/content" :class="{ 'is-active': isActive('/platform/content') }">内容</router-link>
+      <router-link to="/platform/publish" class="mobile-publish-entry" :class="{ 'is-active': isActive('/platform/publish') }">发布</router-link>
+      <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团体</router-link>
+      <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
     </nav>
 
     <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
@@ -1547,8 +1546,8 @@ onBeforeUnmount(() => {
   }
 
   .platform-main {
-    min-height: calc(100vh - 74px - 58px);
-    padding-bottom: calc(62px + env(safe-area-inset-bottom));
+    min-height: calc(100vh - 74px);
+    padding-bottom: 0;
   }
 
   .co-creation-toolbar {
@@ -1720,14 +1719,16 @@ onBeforeUnmount(() => {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 90;
-    height: calc(52px + env(safe-area-inset-bottom));
-    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 80;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    background: rgba(255, 255, 255, 0.92);
-    border-top: 1px solid #d6e0ed;
-    backdrop-filter: blur(8px);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    gap: 4px;
+    min-height: 60px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid #dbeafe;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
   }
 
   .mobile-quick-nav a {
@@ -1740,13 +1741,29 @@ onBeforeUnmount(() => {
     text-decoration: none;
   }
 
+  .mobile-quick-nav .mobile-publish-entry {
+    width: 64px;
+    height: 36px;
+    margin: -12px auto 0;
+    border-radius: 999px;
+    color: #ffffff;
+    background: var(--lc-blue);
+    box-shadow: var(--lc-shadow-blue);
+  }
+
   .mobile-quick-nav a.router-link-exact-active,
   .mobile-quick-nav a.is-active {
     color: #4f46e5;
   }
 
+  .mobile-quick-nav .mobile-publish-entry.router-link-exact-active,
+  .mobile-quick-nav .mobile-publish-entry.is-active {
+    color: #ffffff;
+    background: var(--lc-blue-mid);
+  }
+
   .platform-footer {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    display: none;
   }
 
   .footer-inner {

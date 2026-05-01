@@ -1,0 +1,3 @@
+﻿<template><section class="card"><h3>今日推荐</h3><article v-for="item in items" :key="item.id" class="item" @click="$emit('open', item)"><img :src="item.cover" alt=""><div><h4>{{ item.title }}</h4><p>{{ item.summary }}</p></div></article></section></template>
+<script setup>defineProps({ items: Array });defineEmits(['open'])</script>
+<style scoped>.card{padding:14px 16px;background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:var(--lc-radius)}.item{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:8px 0}img{width:70px;height:52px;object-fit:cover;border-radius:8px}h4{margin:0;font-size:14px}p{margin:4px 0 0;color:var(--lc-muted);font-size:12px}</style>

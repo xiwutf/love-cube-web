@@ -4,6 +4,7 @@ import com.lovecube.backend.entity.UserFeedback;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserFeedbackRepository;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,13 +22,16 @@ import java.util.UUID;
 public class FeedbackController {
     private final UserRepository userRepository;
     private final UserFeedbackRepository userFeedbackRepository;
+    private final GrowthService growthService;
 
     public FeedbackController(
             UserRepository userRepository,
-            UserFeedbackRepository userFeedbackRepository
+            UserFeedbackRepository userFeedbackRepository,
+            GrowthService growthService
     ) {
         this.userRepository = userRepository;
         this.userFeedbackRepository = userFeedbackRepository;
+        this.growthService = growthService;
     }
 
     @PostMapping({"", "/submit"})
@@ -54,9 +58,19 @@ public class FeedbackController {
         record.setStatus("pending");
         userFeedbackRepository.save(record);
 
+        int awardedExp = 0;
+        if (user != null) {
+            Map<String, Object> growthResult = growthService.recordAction(user.getUserid(), "FEEDBACK_REPORT", record.getId());
+            Object expObj = growthResult.get("exp");
+            if (Boolean.TRUE.equals(growthResult.get("recorded")) && expObj instanceof Number num) {
+                awardedExp = num.intValue();
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("id", record.getId());
         result.put("message", "感谢参与平台共建");
+        result.put("awardedExp", awardedExp);
         return ResponseEntity.ok(result);
     }
 

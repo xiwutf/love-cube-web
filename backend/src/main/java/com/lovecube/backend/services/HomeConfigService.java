@@ -17,7 +17,10 @@ public class HomeConfigService {
     private static final String GROUP_FOUNDATION = "foundation";
     private static final String GROUP_CHANGELOG = "changelog";
     private static final String GROUP_PENDING = "pending";
-    private static final List<String> ALL_GROUPS = List.of(GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION, GROUP_CHANGELOG, GROUP_PENDING);
+    private static final String GROUP_GOVERNANCE = "governance";
+    private static final List<String> ALL_GROUPS = List.of(
+            GROUP_HERO, GROUP_MODULE, GROUP_ABILITY, GROUP_FOUNDATION, GROUP_CHANGELOG, GROUP_PENDING, GROUP_GOVERNANCE
+    );
 
     private final HomeConfigRepository homeConfigRepository;
     private final ObjectMapper objectMapper;
@@ -43,6 +46,7 @@ public class HomeConfigService {
         Map<String, Object> foundation = toMap(payload.get("foundation"));
         List<Map<String, Object>> changelog = toListOfMap(payload.get("changelog"));
         List<Map<String, Object>> pendingUpdates = toListOfMap(payload.get("pendingUpdates"));
+        Map<String, Object> governance = toMap(payload.get("governance"));
 
         upsertSingle(GROUP_HERO, "hero-main", hero, 0, true);
         upsertList(GROUP_MODULE, modules, "moduleKey");
@@ -50,6 +54,7 @@ public class HomeConfigService {
         upsertSingle(GROUP_FOUNDATION, "foundation-main", foundation, 0, true);
         upsertList(GROUP_CHANGELOG, changelog, "version");
         upsertList(GROUP_PENDING, pendingUpdates, "id");
+        upsertSingle(GROUP_GOVERNANCE, "governance-main", governance, 0, true);
 
         return getAdminHomeConfig();
     }
@@ -57,6 +62,7 @@ public class HomeConfigService {
     private Map<String, Object> buildResponse(List<HomeConfig> rows) {
         Map<String, Object> hero = defaultHero();
         Map<String, Object> foundation = defaultFoundation();
+        Map<String, Object> governance = defaultGovernance();
         List<Map<String, Object>> modules = defaultModules();
         List<Map<String, Object>> abilities = defaultAbilities();
         List<Map<String, Object>> changelog = defaultChangelog();
@@ -113,6 +119,8 @@ public class HomeConfigService {
                 target.put("sortOrder", row.getSortOrder());
                 target.put("enabled", row.getEnabled());
                 pendingMap.put(key, target);
+            } else if (GROUP_GOVERNANCE.equals(row.getConfigGroup())) {
+                governance.putAll(value);
             }
         }
 
@@ -134,10 +142,36 @@ public class HomeConfigService {
         result.put("modules", modules);
         result.put("abilities", abilities);
         result.put("foundation", foundation);
+        result.put("governance", governance);
         result.put("changelog", changelog);
         result.put("pendingUpdates", pendingUpdates);
         result.put("banners", List.of());
         return result;
+    }
+
+    public boolean isPositiveShareReviewRequired() {
+        try {
+            Map<String, Object> governance = toMap(getPublicHomeConfig().get("governance"));
+            Object value = governance.get("positiveShareReviewRequired");
+            if (value instanceof Boolean bool) {
+                return bool;
+            }
+            return "true".equalsIgnoreCase(String.valueOf(value));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public Map<String, Object> getPositiveShareReviewSwitch() {
+        return Map.of("positiveShareReviewRequired", isPositiveShareReviewRequired());
+    }
+
+    @Transactional
+    public Map<String, Object> setPositiveShareReviewRequired(boolean required) {
+        Map<String, Object> governance = new LinkedHashMap<>();
+        governance.put("positiveShareReviewRequired", required);
+        upsertSingle(GROUP_GOVERNANCE, "governance-main", governance, 0, true);
+        return Map.of("positiveShareReviewRequired", required);
     }
 
     @SuppressWarnings("unchecked")
@@ -218,6 +252,12 @@ public class HomeConfigService {
         foundation.put("subtitle", "统一建设账号、运营、消息和治理，支撑多模块长期协同增长。");
         foundation.put("imageUrl", "");
         return foundation;
+    }
+
+    private Map<String, Object> defaultGovernance() {
+        Map<String, Object> governance = new LinkedHashMap<>();
+        governance.put("positiveShareReviewRequired", false);
+        return governance;
     }
 
     private List<Map<String, Object>> defaultChangelog() {

@@ -92,4 +92,22 @@ public class AdminPositiveShareController {
         adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
         return positiveShareService.listShareCommentsForAdmin(id, pageNum, pageSize);
     }
+
+    @GetMapping("/review-switch")
+    public Map<String, Object> getReviewSwitch(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
+        return positiveShareService.getPositiveShareReviewSwitch();
+    }
+
+    @PatchMapping("/review-switch")
+    public Map<String, Object> updateReviewSwitch(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
+        boolean required = Boolean.parseBoolean(String.valueOf(payload.getOrDefault("positiveShareReviewRequired", false)));
+        return positiveShareService.setPositiveShareReviewRequired(required);
+    }
 }

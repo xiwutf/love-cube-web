@@ -3,12 +3,15 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.entity.GroupJoinRequest;
 import com.lovecube.backend.entity.GroupMember;
 import com.lovecube.backend.entity.GroupPost;
+import com.lovecube.backend.entity.PlatGroup;
 import com.lovecube.backend.entity.PlatformGroup;
 import com.lovecube.backend.entity.PlatformGroupAdmin;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.GroupJoinRequestRepository;
 import com.lovecube.backend.repository.GroupMemberRepository;
 import com.lovecube.backend.repository.GroupPostRepository;
+import com.lovecube.backend.repository.PlatGroupMemberRepository;
+import com.lovecube.backend.repository.PlatGroupRepository;
 import com.lovecube.backend.repository.PlatformGroupAdminRepository;
 import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
@@ -33,6 +36,8 @@ public class AdminGroupController {
     private final GroupPostRepository postRepository;
     private final GroupJoinRequestRepository joinRequestRepository;
     private final PlatformGroupAdminRepository groupAdminRepository;
+    private final PlatGroupRepository platGroupRepository;
+    private final PlatGroupMemberRepository platGroupMemberRepository;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
 
@@ -42,6 +47,8 @@ public class AdminGroupController {
             GroupPostRepository postRepository,
             GroupJoinRequestRepository joinRequestRepository,
             PlatformGroupAdminRepository groupAdminRepository,
+            PlatGroupRepository platGroupRepository,
+            PlatGroupMemberRepository platGroupMemberRepository,
             UserRepository userRepository,
             AdminAuthService adminAuthService
     ) {
@@ -50,6 +57,8 @@ public class AdminGroupController {
         this.postRepository = postRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.groupAdminRepository = groupAdminRepository;
+        this.platGroupRepository = platGroupRepository;
+        this.platGroupMemberRepository = platGroupMemberRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
     }
@@ -78,7 +87,7 @@ public class AdminGroupController {
             groups = ids.isEmpty() ? Collections.emptyList() : groupRepository.findAllById(ids);
         }
 
-        return groups.stream().map(g -> {
+        List<Map<String, Object>> modernItems = groups.stream().map(g -> {
             Map<String, Object> item = buildGroupDetail(g);
             item.put("pendingRequestCount",
                     joinRequestRepository.findByGroupIdAndStatusOrderByRequestedAtDesc(g.getId(), "pending").size());
@@ -97,6 +106,34 @@ public class AdminGroupController {
             }
             return item;
         }).collect(Collectors.toList());
+
+        if (!manageAll) {
+            return modernItems;
+        }
+
+        // 兼容旧平台团体表：超级管理员应可在“我的团体”中看见全量团体数据。
+        List<Map<String, Object>> legacyItems = platGroupRepository
+                .findByStatusOrderByMemberCountDescCreatedAtDesc("published")
+                .stream()
+                .map(g -> {
+                    Map<String, Object> item = buildLegacyGroupDetail(g);
+                    item.put("pendingRequestCount",
+                            platGroupMemberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(g.getId(), "pending").size());
+                    item.put("userRole", null);
+                    item.put("userRoleName", "平台监管");
+                    item.put("userPermissions", buildGroupPermissions(GroupAdminRoleConstants.OWNER));
+                    item.put("regulatingAsPlatformAdmin", true);
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        if (legacyItems.isEmpty()) {
+            return modernItems;
+        }
+        List<Map<String, Object>> merged = new ArrayList<>(modernItems.size() + legacyItems.size());
+        merged.addAll(modernItems);
+        merged.addAll(legacyItems);
+        return merged;
     }
 
     /** 团体详情（后台）：含当前用户在该团体内的角色与权限，供编辑页与 tab 控制 */
@@ -477,6 +514,24 @@ public class AdminGroupController {
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
         item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
         item.put("createdBy", g.getCreatedBy());
+        item.put("ownerUserId", g.getOwnerUserId());
+        item.put("createdAt", g.getCreatedAt());
+        item.put("updatedAt", g.getUpdatedAt());
+        return item;
+    }
+
+    private Map<String, Object> buildLegacyGroupDetail(PlatGroup g) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", String.valueOf(g.getId()));
+        item.put("name", g.getName());
+        item.put("description", g.getDescription());
+        item.put("category", g.getType());
+        item.put("coverUrl", g.getCoverUrl());
+        item.put("status", "published".equals(g.getStatus()) ? "active" : g.getStatus());
+        item.put("joinType", "free".equals(g.getJoinMode()) ? "open" : "approval");
+        item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
+        item.put("pinned", false);
+        item.put("createdBy", g.getOwnerUserId());
         item.put("ownerUserId", g.getOwnerUserId());
         item.put("createdAt", g.getCreatedAt());
         item.put("updatedAt", g.getUpdatedAt());

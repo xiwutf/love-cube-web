@@ -13,9 +13,15 @@ export default {
   component: () => import('@/layouts/MobileLayout.vue'),
   children: [
     {
-      path: 'platform/me',
-      component: () => import('@/pages/mobile/platform/MePage.vue'),
-      meta: { module: 'platform', requiresAuth: true }
+      path: 'platform/:pathMatch(.*)*',
+      redirect: to => {
+        const tail = String(to.params.pathMatch || '')
+        return tail ? `/platform/${tail}` : '/platform'
+      }
+    },
+    {
+      path: 'platform',
+      redirect: '/platform'
     },
     {
       path: 'fellowship/me',

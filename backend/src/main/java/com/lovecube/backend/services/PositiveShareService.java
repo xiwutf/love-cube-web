@@ -35,17 +35,20 @@ public class PositiveShareService {
     private final PositiveShareLikeRepository positiveShareLikeRepository;
     private final PositiveShareCommentRepository positiveShareCommentRepository;
     private final UserRepository userRepository;
+    private final HomeConfigService homeConfigService;
 
     public PositiveShareService(
             PositiveShareRepository positiveShareRepository,
             PositiveShareLikeRepository positiveShareLikeRepository,
             PositiveShareCommentRepository positiveShareCommentRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            HomeConfigService homeConfigService
     ) {
         this.positiveShareRepository = positiveShareRepository;
         this.positiveShareLikeRepository = positiveShareLikeRepository;
         this.positiveShareCommentRepository = positiveShareCommentRepository;
         this.userRepository = userRepository;
+        this.homeConfigService = homeConfigService;
     }
 
     @Transactional
@@ -71,7 +74,7 @@ public class PositiveShareService {
         Object publicVisible = payload.get("publicVisible");
         share.setPublicVisible(publicVisible == null || Boolean.TRUE.equals(publicVisible));
         // 普通用户发布先进入待审核，后续由管理员操作状态流转。
-        share.setStatus("PENDING");
+        share.setStatus(homeConfigService.isPositiveShareReviewRequired() ? "PENDING" : "PUBLISHED");
         share.setEncourageCount(0);
         share.setCommentCount(0);
         PositiveShare saved = positiveShareRepository.save(share);
@@ -211,6 +214,15 @@ public class PositiveShareService {
         positiveShareRepository.findById(shareId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "内容不存在"));
         return listShareCommentsInternal(shareId, page, pageSize);
+    }
+
+    public Map<String, Object> getPositiveShareReviewSwitch() {
+        return homeConfigService.getPositiveShareReviewSwitch();
+    }
+
+    @Transactional
+    public Map<String, Object> setPositiveShareReviewRequired(boolean required) {
+        return homeConfigService.setPositiveShareReviewRequired(required);
     }
 
     public Map<String, Object> listSharesForAdmin(String status, int page, int pageSize) {

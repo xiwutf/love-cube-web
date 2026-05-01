@@ -13,9 +13,9 @@
           <div class="sp-card-title">已获得 ({{ unlockedBadges.length }})</div>
           <div class="badge-grid">
             <div v-for="b in unlockedBadges" :key="b.code" class="badge-item unlocked">
-              <div class="badge-icon">{{ b.icon }}</div>
-              <div class="badge-name">{{ b.name }}</div>
-              <div class="badge-desc">{{ b.description }}</div>
+              <div class="badge-icon">{{ getBadgeIcon(b) }}</div>
+              <div class="badge-name">{{ getBadgeName(b) }}</div>
+              <div class="badge-desc">{{ getBadgeDescription(b) }}</div>
             </div>
           </div>
         </div>
@@ -26,8 +26,8 @@
           <div class="badge-grid">
             <div v-for="b in lockedBadges" :key="b.code" class="badge-item locked">
               <div class="badge-icon locked-icon">🔒</div>
-              <div class="badge-name">{{ b.name }}</div>
-              <div class="badge-desc">{{ b.condition }}</div>
+              <div class="badge-name">{{ getBadgeName(b) }}</div>
+              <div class="badge-desc">{{ getBadgeCondition(b) }}</div>
             </div>
           </div>
         </div>
@@ -57,6 +57,88 @@ const defaultBadges = [
 
 const unlockedBadges = computed(() => allBadges.value.filter(b => b.unlocked))
 const lockedBadges = computed(() => allBadges.value.filter(b => !b.unlocked))
+
+const badgeMetaMap = {
+  firstlogin: { name: '初来乍到', icon: '🎉', description: '首次登录平台', condition: '首次登录平台' },
+  firstpost: { name: '内容发布者', icon: '📝', description: '发布第一条内容', condition: '发布第一条内容' },
+  daily3: { name: '每日打卡', icon: '📅', description: '累计完成3次每日任务', condition: '累计完成3次每日任务' },
+  teammember: { name: '团体成员', icon: '👥', description: '加入或创建一个团体', condition: '加入或创建一个团体' },
+  daily7: { name: '坚持七天', icon: '🔥', description: '连续签到7天', condition: '连续签到7天' },
+  share10: { name: '分享达人', icon: '🌟', description: '累计分享10次', condition: '累计分享10次' },
+  like50: { name: '暖心使者', icon: '💖', description: '累计获得50次鼓励', condition: '累计获得50次鼓励' },
+  lv5: { name: '成长先锋', icon: '🏆', description: '达到5级', condition: '升至平台5级' }
+}
+
+function normalizeBadgeCode(badge) {
+  const raw = pickFirstString(
+    badge?.code,
+    badge?.badgeCode,
+    badge?.badge_code,
+    badge?.id
+  )
+  return raw.toLowerCase().replace(/^(badge[-_])/, '').replace(/[^a-z0-9]/g, '')
+}
+
+function getBadgeMeta(badge) {
+  return badgeMetaMap[normalizeBadgeCode(badge)] || null
+}
+
+function pickFirstString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return ''
+}
+
+function getBadgeName(badge) {
+  const raw = pickFirstString(
+    badge?.displayName,
+    badge?.display_name,
+    badge?.title,
+    badge?.badge_title,
+    badge?.label,
+    badge?.localizedName,
+    badge?.localized_name,
+    badge?.zhName,
+    badge?.zh_name,
+    badge?.name,
+    badge?.badgeName,
+    badge?.badge_name,
+    badge?.badgeTitle
+  )
+  // 避免直接展示 "badge-first-login" 这类技术字段
+  if (raw && !/^badge[-_]/i.test(raw)) return raw
+  return pickFirstString(getBadgeMeta(badge)?.name, badge?.name, badge?.code)
+}
+
+function getBadgeDescription(badge) {
+  return pickFirstString(
+    badge?.description,
+    badge?.desc,
+    badge?.subtitle,
+    badge?.conditionText,
+    badge?.condition,
+    badge?.rule,
+    getBadgeMeta(badge)?.description
+  )
+}
+
+function getBadgeCondition(badge) {
+  return pickFirstString(
+    badge?.condition,
+    badge?.conditionText,
+    badge?.rule,
+    badge?.description,
+    badge?.desc,
+    getBadgeMeta(badge)?.condition
+  )
+}
+
+function getBadgeIcon(badge) {
+  const raw = pickFirstString(badge?.icon)
+  if (raw && !raw.includes('-') && raw.length <= 4) return raw
+  return pickFirstString(getBadgeMeta(badge)?.icon, '🏅')
+}
 
 onMounted(async () => {
   loading.value = true
