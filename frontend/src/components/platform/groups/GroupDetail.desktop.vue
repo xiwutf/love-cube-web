@@ -18,7 +18,11 @@
               <h1>{{ group.name }}</h1>
               <span>{{ group.category }}</span>
             </div>
-            <p class="meta-line">{{ group.region }} · {{ group.memberCount }} 人 · {{ group.joinLabel }}</p>
+            <p class="meta-line">
+              {{ group.region }} · {{ group.memberCount }} 人
+              <template v-if="group.postCount != null"> · {{ group.postCount }} 条动态</template>
+              · {{ group.joinLabel }}
+            </p>
             <p class="group-desc">{{ group.description }}</p>
           </div>
           <div class="hero-actions">
@@ -97,15 +101,83 @@
             <div class="section-head">
               <h2>团体动态</h2>
             </div>
-            <form class="post-form" @submit.prevent="submitPost">
-              <textarea v-model.trim="postForm.content" rows="4" maxlength="500" placeholder="分享团体动态..."></textarea>
-              <input v-model.trim="postForm.imageUrls" type="text" placeholder="图片 URL，可用英文逗号分隔">
-              <div class="post-form-foot">
-                <span>图片展示区会读取动态中的 imageUrls 字段</span>
-                <button type="submit" class="primary-btn" :disabled="posting">{{ posting ? '发布中...' : '发布' }}</button>
-              </div>
-            </form>
-            <PostList :posts="posts" :error="errors.posts" empty-text="暂无动态" />
+            <template v-if="group.isMember">
+              <form class="post-form" @submit.prevent="submitPost">
+                <textarea v-model.trim="postForm.content" rows="4" maxlength="2000" placeholder="分享团体动态..."></textarea>
+                <input v-model.trim="postForm.imageUrls" type="text" placeholder="图片 URL，可用英文逗号分隔（可选）">
+                <div class="post-form-foot">
+                  <span>至少填写文字或图片链接之一</span>
+                  <button type="submit" class="primary-btn" :disabled="posting">{{ posting ? '发布中...' : '发布' }}</button>
+                </div>
+              </form>
+            </template>
+            <p v-else class="join-hint">加入团体后可以参与动态互动。</p>
+            <p v-if="errors.posts" class="inline-error">{{ errors.posts }}</p>
+            <template v-else-if="!posts.length">
+              <div class="empty-inline">{{ emptyPostsHint }}</div>
+            </template>
+            <div v-else class="post-list post-list-feed">
+              <article v-for="post in posts" :key="post.id" class="post-card">
+                <div class="post-head">
+                  <img :src="post.avatar" alt="">
+                  <div>
+                    <strong>{{ post.author }}</strong>
+                    <span>{{ post.time }}</span>
+                  </div>
+                  <em>{{ post.role }}</em>
+                  <button
+                    v-if="canDeletePost(post)"
+                    type="button"
+                    class="post-delete-btn"
+                    :disabled="deletingPostId === post.id"
+                    @click="deletePost(post)"
+                  >{{ deletingPostId === post.id ? '…' : '删除' }}</button>
+                </div>
+                <p>{{ post.content }}</p>
+                <div v-if="post.images.length" class="post-images">
+                  <img v-for="img in post.images" :key="img" :src="img" alt="">
+                </div>
+                <div class="post-actions">
+                  <button
+                    type="button"
+                    :class="{ active: post.likedByMe }"
+                    :disabled="!userStore.isLoggedIn || likingPostId === post.id"
+                    @click="togglePostLike(post)"
+                  >{{ post.likedByMe ? '已赞' : '赞' }} {{ post.likes }}</button>
+                  <button type="button" @click="toggleCommentPanel(post)">
+                    评论 {{ post.comments }}
+                  </button>
+                </div>
+                <div v-if="expandedPostId === post.id" class="comment-panel">
+                  <p v-if="commentsLoading[post.id]" class="comment-status">评论加载中...</p>
+                  <ul v-else class="comment-list">
+                    <li v-for="c in (feedComments[post.id] || [])" :key="c.id">
+                      <img :src="c.avatar" alt="">
+                      <div class="comment-body">
+                        <strong>{{ c.author }}</strong>
+                        <span>{{ c.time }}</span>
+                        <p>{{ c.content }}</p>
+                      </div>
+                      <button
+                        v-if="canDeleteComment(c)"
+                        type="button"
+                        class="comment-del"
+                        :disabled="deletingCommentKey === commentKey(post.id, c.id)"
+                        @click="deleteComment(post, c)"
+                      >删</button>
+                    </li>
+                    <li v-if="!(feedComments[post.id] || []).length" class="comment-empty">暂无评论</li>
+                  </ul>
+                  <form v-if="userStore.isLoggedIn" class="comment-form" @submit.prevent="submitComment(post)">
+                    <input v-model.trim="commentDraft[post.id]" type="text" maxlength="500" placeholder="写一条评论…">
+                    <button type="submit" class="primary-btn small" :disabled="commentPosting[post.id]">
+                      {{ commentPosting[post.id] ? '发送中' : '发送' }}
+                    </button>
+                  </form>
+                  <p v-else class="comment-login-hint">登录后即可评论</p>
+                </div>
+              </article>
+            </div>
           </section>
 
           <section v-else-if="activeTab === 'members'" class="panel-card">
@@ -194,13 +266,19 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   approveMember,
   createGroupPost,
+  createGroupPostComment,
+  deletePlatformGroupPost,
+  deletePlatformGroupPostComment,
   fetchGroupDetail,
   fetchGroupMembers,
   fetchGroupNotices,
+  fetchGroupPostComments,
   fetchGroupPosts,
   joinGroup,
+  unwrapGroupPostsList,
   rejectMember,
-  removeGroupMember
+  removeGroupMember,
+  togglePlatformGroupPostLike
 } from '@/api/groups.js'
 import { useUserStore } from '@/stores/user.js'
 
@@ -226,6 +304,14 @@ const messageType = ref('success')
 const loading = reactive({ detail: false, members: false, posts: false, notices: false })
 const errors = reactive({ detail: '', members: '', posts: '', notices: '' })
 const postForm = reactive({ content: '', imageUrls: '' })
+const expandedPostId = ref(null)
+const feedComments = reactive({})
+const commentsLoading = reactive({})
+const commentDraft = reactive({})
+const commentPosting = reactive({})
+const likingPostId = ref(null)
+const deletingPostId = ref(null)
+const deletingCommentKey = ref('')
 
 const activeTab = computed(() => {
   if (route.path.endsWith('/posts')) return 'posts'
@@ -284,6 +370,11 @@ const filteredMembers = computed(() => {
   })
 })
 
+const emptyPostsHint = computed(() => {
+  if (group.value?.isMember) return '这个团体还没有动态，来发布第一条吧。'
+  return '这个团体还没有动态。'
+})
+
 async function loadDetail() {
   loading.detail = true
   errors.detail = ''
@@ -316,7 +407,8 @@ async function loadPosts() {
   loading.posts = true
   errors.posts = ''
   try {
-    rawPosts.value = unwrapList(await fetchGroupPosts(group.value.id))
+    const res = await fetchGroupPosts(group.value.id, { page: 1, size: 80 })
+    rawPosts.value = unwrapGroupPostsList(res)
   } catch (error) {
     rawPosts.value = []
     errors.posts = error.message || '动态接口加载失败'
@@ -377,21 +469,162 @@ async function applyJoin() {
 }
 
 async function submitPost() {
-  if (!postForm.content) {
-    flashMessage('请先填写动态内容', 'error')
+  const text = postForm.content.trim()
+  const imgs = postForm.imageUrls.trim()
+  if (!text && !imgs) {
+    flashMessage('请填写文字或图片链接', 'error')
     return
   }
   posting.value = true
   try {
-    await createGroupPost(group.value.id, { content: postForm.content, imageUrls: postForm.imageUrls })
+    await createGroupPost(group.value.id, { content: text, imageUrls: imgs || undefined })
     postForm.content = ''
     postForm.imageUrls = ''
     await loadPosts()
+    await loadDetail()
     flashMessage('动态发布成功')
   } catch (error) {
     flashMessage(error.message || '动态发布失败', 'error')
   } finally {
     posting.value = false
+  }
+}
+
+function unwrapCommentItems(res) {
+  if (Array.isArray(res?.items)) return res.items
+  if (Array.isArray(res?.data?.items)) return res.data.items
+  if (Array.isArray(res)) return res
+  return []
+}
+
+function commentKey(postId, commentId) {
+  return `${postId}-${commentId}`
+}
+
+function canDeletePost(post) {
+  if (!group.value) return false
+  if (group.value.managed) return true
+  return String(post.userId) === String(userStore.userId)
+}
+
+function canDeleteComment(c) {
+  if (!group.value) return false
+  if (group.value.managed) return true
+  return String(c.userId) === String(userStore.userId)
+}
+
+async function togglePostLike(post) {
+  if (!userStore.isLoggedIn) {
+    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || `/platform/groups/${route.params.id}`)
+    router.push('/login')
+    return
+  }
+  const row = rawPosts.value.find((p) => p.id === post.id)
+  if (!row) return
+  const prevLiked = Boolean(row.likedByMe)
+  const prevCount = Number(row.likeCount ?? 0)
+  row.likedByMe = !prevLiked
+  row.likeCount = prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1
+  likingPostId.value = post.id
+  try {
+    const res = await togglePlatformGroupPostLike(post.id)
+    row.likedByMe = Boolean(res?.likedByMe)
+    row.likeCount = Number(res?.likeCount ?? row.likeCount)
+  } catch (error) {
+    row.likedByMe = prevLiked
+    row.likeCount = prevCount
+    flashMessage(error.message || '点赞失败', 'error')
+  } finally {
+    likingPostId.value = null
+  }
+}
+
+async function toggleCommentPanel(post) {
+  if (expandedPostId.value === post.id) {
+    expandedPostId.value = null
+    return
+  }
+  expandedPostId.value = post.id
+  if (!feedComments[post.id]) {
+    await loadCommentsForPost(post.id)
+  }
+}
+
+async function loadCommentsForPost(postId) {
+  commentsLoading[postId] = true
+  try {
+    const res = await fetchGroupPostComments(postId, { page: 1, size: 50 })
+    const items = unwrapCommentItems(res)
+    feedComments[postId] = items.map(normalizeComment)
+  } catch (error) {
+    feedComments[postId] = []
+    flashMessage(error.message || '评论加载失败', 'error')
+  } finally {
+    commentsLoading[postId] = false
+  }
+}
+
+function normalizeComment(item) {
+  return {
+    id: item.id,
+    userId: item.userId,
+    author: item.authorName || '成员',
+    avatar: item.authorAvatar || DEFAULT_AVATAR,
+    content: item.content || '',
+    time: formatDateTime(item.createdAt)
+  }
+}
+
+async function submitComment(post) {
+  const key = post.id
+  const text = (commentDraft[key] || '').trim()
+  if (!text) return
+  commentPosting[key] = true
+  try {
+    await createGroupPostComment(post.id, { content: text })
+    commentDraft[key] = ''
+    await loadCommentsForPost(post.id)
+    await loadPosts()
+    flashMessage('评论已发布')
+  } catch (error) {
+    flashMessage(error.message || '评论失败', 'error')
+  } finally {
+    commentPosting[key] = false
+  }
+}
+
+async function deletePost(post) {
+  if (!canDeletePost(post) || deletingPostId.value) return
+  if (!window.confirm('确定删除这条动态？')) return
+  deletingPostId.value = post.id
+  try {
+    await deletePlatformGroupPost(group.value.id, post.id)
+    expandedPostId.value = null
+    delete feedComments[post.id]
+    await loadPosts()
+    await loadDetail()
+    flashMessage('已删除动态')
+  } catch (error) {
+    flashMessage(error.message || '删除失败', 'error')
+  } finally {
+    deletingPostId.value = null
+  }
+}
+
+async function deleteComment(post, c) {
+  if (!canDeleteComment(c)) return
+  const ck = commentKey(post.id, c.id)
+  if (deletingCommentKey.value) return
+  if (!window.confirm('删除这条评论？')) return
+  deletingCommentKey.value = ck
+  try {
+    await deletePlatformGroupPostComment(post.id, c.id)
+    await loadCommentsForPost(post.id)
+    await loadPosts()
+  } catch (error) {
+    flashMessage(error.message || '删除失败', 'error')
+  } finally {
+    deletingCommentKey.value = ''
   }
 }
 
@@ -477,19 +710,22 @@ function normalizeGroup(item) {
     hasPendingRequest: Boolean(item.hasPendingRequest),
     createdDate: formatDate(item.createdAt),
     latestNotice: item.latestNotice ? normalizeNotice(item.latestNotice) : null,
-    admins: item.admins || []
+    admins: item.admins || [],
+    postCount: item.postCount != null ? Number(item.postCount) : null
   }
 }
 
 function normalizePost(item) {
   return {
     id: item.id,
+    userId: item.userId,
     author: item.authorName || '团体成员',
-    role: item.type === 'announcement' ? '公告' : '成员',
-    time: formatDate(item.createdAt) || '刚刚',
+    role: item.type === 'announcement' ? '公告' : '动态',
+    time: formatDateTime(item.createdAt),
     content: item.content || '',
     likes: Number(item.likeCount || 0),
     comments: Number(item.commentCount || 0),
+    likedByMe: Boolean(item.likedByMe),
     avatar: item.authorAvatar || DEFAULT_AVATAR,
     images: parseImages(item.imageUrls)
   }
@@ -531,9 +767,18 @@ function normalizeAdmins(items) {
 }
 
 function parseImages(value) {
-  if (Array.isArray(value)) return value.filter(Boolean)
+  if (Array.isArray(value)) return value.map(String).filter(Boolean)
   if (!value) return []
-  return String(value).split(',').map(item => item.trim()).filter(Boolean)
+  const s = String(value).trim()
+  if (s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s)
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean)
+    } catch {
+      /* ignore */
+    }
+  }
+  return s.split(',').map((item) => item.trim()).filter(Boolean)
 }
 
 function unwrapList(res) {
@@ -555,6 +800,14 @@ function formatDate(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   return date.toISOString().slice(0, 10)
+}
+
+function formatDateTime(value) {
+  if (!value) return '刚刚'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 const InfoList = defineComponent({
@@ -1008,7 +1261,7 @@ onMounted(async () => {
 
 .post-head {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   gap: var(--lc-space-3);
   align-items: center;
 }
@@ -1181,6 +1434,120 @@ onMounted(async () => {
   color: var(--lc-muted);
   background: var(--lc-surface);
   font-weight: 900;
+}
+
+.post-actions button.active {
+  color: var(--lc-blue);
+  border-color: var(--lc-blue-border);
+  background: var(--lc-blue-light);
+}
+
+.join-hint {
+  margin: 0 0 var(--lc-space-4);
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-muted);
+  background: var(--lc-bg);
+  font-weight: 800;
+}
+
+.post-delete-btn {
+  height: 28px;
+  padding: 0 var(--lc-space-2);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-subtle);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.comment-panel {
+  margin-top: var(--lc-space-3);
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+}
+
+.comment-status,
+.comment-login-hint {
+  margin: 0;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-subtle);
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0 0 var(--lc-space-3);
+  padding: 0;
+  display: grid;
+  gap: var(--lc-space-2);
+}
+
+.comment-list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: var(--lc-space-2);
+  align-items: start;
+}
+
+.comment-list li img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-body strong {
+  display: block;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text);
+}
+
+.comment-body span {
+  font-size: var(--lc-text-xs);
+  color: var(--lc-subtle);
+}
+
+.comment-body p {
+  margin: 4px 0 0;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+  line-height: 1.5;
+}
+
+.comment-empty {
+  grid-column: 1 / -1;
+  color: var(--lc-subtle);
+  font-size: var(--lc-text-sm);
+}
+
+.comment-form {
+  display: flex;
+  gap: var(--lc-space-2);
+  align-items: center;
+}
+
+.comment-form input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  font: inherit;
+}
+
+.comment-del {
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--lc-subtle);
+  font-size: var(--lc-text-xs);
+  cursor: pointer;
 }
 
 .member-item {

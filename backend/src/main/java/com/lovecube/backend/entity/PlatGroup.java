@@ -41,6 +41,12 @@ public class PlatGroup {
     @Column(name = "member_count", nullable = false)
     private Integer memberCount;
 
+    @Column(name = "post_count", nullable = false)
+    private Integer postCount = 0;
+
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
+
     @Column(nullable = false, length = 20)
     private String status;
 

@@ -7,12 +7,15 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "platform_group_post")
-public class PlatGroupPost {
+@Table(name = "platform_group_post_comment")
+public class PlatGroupPostComment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "post_id", nullable = false)
+    private Long postId;
 
     @Column(name = "group_id", nullable = false)
     private Long groupId;
@@ -20,17 +23,8 @@ public class PlatGroupPost {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false, length = 500)
     private String content;
-
-    @Column(name = "image_urls", columnDefinition = "TEXT")
-    private String imageUrls;
-
-    @Column(name = "like_count", nullable = false)
-    private Integer likeCount = 0;
-
-    @Column(name = "comment_count", nullable = false)
-    private Integer commentCount = 0;
 
     @Column(nullable = false, length = 20)
     private String status;

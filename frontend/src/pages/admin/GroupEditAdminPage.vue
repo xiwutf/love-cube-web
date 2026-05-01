@@ -254,6 +254,7 @@ const posts = ref([])
 const groupAdmins = ref([])
 const isFirstDetailLoad = ref(true)
 const pendingMembers = ref([])
+const postsLoaded = ref(false)
 const memberStatus = ref('approved')
 const saving = ref(false)
 const message = ref('')
@@ -377,8 +378,11 @@ async function loadDetail() {
 async function loadTabData(tab) {
   if (tab === 'members') {
     const st = userRole.value === 'REVIEWER' ? 'pending' : memberStatus.value
-    await loadMembers(st)
-    await loadPendingCount()
+    if (st === 'pending') {
+      await loadMembers(st)
+    } else {
+      await Promise.all([loadMembers(st), loadPendingCount()])
+    }
   }
   if (tab === 'posts') await loadPosts()
   if (tab === 'notices') await loadNotices()
@@ -498,11 +502,13 @@ async function loadPendingCount() {
 }
 
 async function loadPosts() {
+  if (postsLoaded.value) return
   loading.posts = true
   errors.posts = ''
   try {
     const data = await fetchLegacyGroupPosts(groupId)
     posts.value = unwrapList(data)
+    postsLoaded.value = true
   } catch (err) {
     posts.value = []
     errors.posts = err.message || '团体动态加载失败'
@@ -512,11 +518,13 @@ async function loadPosts() {
 }
 
 async function loadNotices() {
+  if (postsLoaded.value) return
   loading.notices = true
   errors.notices = ''
   try {
     const data = await fetchLegacyGroupPosts(groupId)
     posts.value = unwrapList(data)
+    postsLoaded.value = true
   } catch (err) {
     errors.notices = err.message || '团体公告加载失败'
   } finally {
@@ -561,8 +569,8 @@ async function approveMemberRecord(member) {
       await approveAdminGroupRequest(groupId, member.id)
     }
     flash('成员申请已通过')
+    if (group.value) group.value.memberCount++
     await loadMembers(memberStatus.value)
-    await loadDetail()
   } catch (err) {
     flash(err.message || '审核失败', 'error')
   } finally {
@@ -592,8 +600,8 @@ async function removeMemberRecord(member) {
   try {
     await removeAdminGroupMember(groupId, member.userId)
     flash('成员已移除')
+    if (group.value) group.value.memberCount--
     await loadMembers(memberStatus.value)
-    await loadDetail()
   } catch (err) {
     flash(err.message || '移除失败', 'error')
   } finally {
@@ -728,8 +736,11 @@ function flash(text, type = 'success') {
 onMounted(async () => {
   await loadDetail()
   if (errors.detail) return
-  await loadPendingCount()
-  await loadTabData(activeTab.value)
+  // members tab: loadTabData handles pending count internally
+  // other tabs: load pending count badge in parallel with tab data
+  const tasks = [loadTabData(activeTab.value)]
+  if (activeTab.value !== 'members') tasks.push(loadPendingCount())
+  await Promise.all(tasks)
 })
 </script>
 

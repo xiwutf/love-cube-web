@@ -1,5 +1,14 @@
 ﻿import { computed, reactive, ref } from 'vue'
-import { fetchGroupDetail, fetchGroupMembers, fetchGroups, fetchGroupNotices, fetchGroupPosts, joinGroup, unwrapPlatformGroupList } from '@/api/groups.js'
+import {
+  fetchGroupDetail,
+  fetchGroupMembers,
+  fetchGroups,
+  fetchGroupNotices,
+  fetchGroupPosts,
+  joinGroup,
+  unwrapGroupPostsList,
+  unwrapPlatformGroupList
+} from '@/api/groups.js'
 
 export function usePlatformGroups(groupIdRef = null) {
   const loading = ref(false)
@@ -33,11 +42,11 @@ export function usePlatformGroups(groupIdRef = null) {
       detail.value = await fetchGroupDetail(id)
       const [mRes, pRes, nRes] = await Promise.allSettled([
         fetchGroupMembers(id, { status: 'approved' }),
-        fetchGroupPosts(id),
+        fetchGroupPosts(id, { page: 1, size: 50 }),
         fetchGroupNotices(id)
       ])
       members.value = mRes.status === 'fulfilled' ? (Array.isArray(mRes.value) ? mRes.value : mRes.value?.data || []) : []
-      posts.value = pRes.status === 'fulfilled' ? (Array.isArray(pRes.value) ? pRes.value : pRes.value?.data || []) : []
+      posts.value = pRes.status === 'fulfilled' ? unwrapGroupPostsList(pRes.value) : []
       notices.value = nRes.status === 'fulfilled' ? (Array.isArray(nRes.value) ? nRes.value : nRes.value?.data || []) : []
     } finally {
       detailLoading.value = false

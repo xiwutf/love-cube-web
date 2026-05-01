@@ -4,14 +4,21 @@ import com.lovecube.backend.entity.PlatGroup;
 import com.lovecube.backend.entity.PlatGroupMember;
 import com.lovecube.backend.entity.PlatGroupNotice;
 import com.lovecube.backend.entity.PlatGroupPost;
+import com.lovecube.backend.entity.PlatGroupPostComment;
+import com.lovecube.backend.entity.PlatGroupPostLike;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.PlatGroupMemberRepository;
 import com.lovecube.backend.repository.PlatGroupNoticeRepository;
+import com.lovecube.backend.repository.PlatGroupPostCommentRepository;
+import com.lovecube.backend.repository.PlatGroupPostLikeRepository;
 import com.lovecube.backend.repository.PlatGroupPostRepository;
 import com.lovecube.backend.repository.PlatGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PlatformGroupSupport;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -29,23 +36,32 @@ public class PlatformGroupController {
     private final PlatGroupRepository groupRepository;
     private final PlatGroupMemberRepository memberRepository;
     private final PlatGroupPostRepository postRepository;
+    private final PlatGroupPostLikeRepository postLikeRepository;
+    private final PlatGroupPostCommentRepository commentRepository;
     private final PlatGroupNoticeRepository noticeRepository;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
+    private final NotificationService notificationService;
 
     public PlatformGroupController(
             PlatGroupRepository groupRepository,
             PlatGroupMemberRepository memberRepository,
             PlatGroupPostRepository postRepository,
+            PlatGroupPostLikeRepository postLikeRepository,
+            PlatGroupPostCommentRepository commentRepository,
             PlatGroupNoticeRepository noticeRepository,
             UserRepository userRepository,
-            AdminAuthService adminAuthService) {
+            AdminAuthService adminAuthService,
+            NotificationService notificationService) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
+        this.postLikeRepository = postLikeRepository;
+        this.commentRepository = commentRepository;
         this.noticeRepository = noticeRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
+        this.notificationService = notificationService;
     }
 
 
@@ -520,6 +536,14 @@ public class PlatformGroupController {
         group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
         groupRepository.save(group);
 
+        notificationService.send(
+                target.getUserId(),
+                "GROUP_JOIN_APPROVED",
+                "你的团体加入申请已通过",
+                "你加入「" + group.getName() + "」的申请已通过",
+                "platform_group",
+                String.valueOf(id));
+
         return Map.of("approved", true, "message", "Request approved");
     }
 
@@ -541,6 +565,16 @@ public class PlatformGroupController {
         target.setStatus("rejected");
         target.setUpdatedAt(LocalDateTime.now());
         memberRepository.save(target);
+
+        PlatGroup group = groupRepository.findById(id).orElse(null);
+        String groupName = group != null ? group.getName() : "团体";
+        notificationService.send(
+                target.getUserId(),
+                "GROUP_JOIN_REJECTED",
+                "你的团体加入申请未通过",
+                "你加入「" + groupName + "」的申请未通过",
+                "platform_group",
+                String.valueOf(id));
 
         return Map.of("rejected", true, "message", "Request rejected");
     }
@@ -592,28 +626,61 @@ public class PlatformGroupController {
 
 
     @GetMapping("/{id}/posts")
-    public List<Map<String, Object>> getPosts(@PathVariable Long id) {
-        groupRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+    public Map<String, Object> getPosts(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "20") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        List<PlatGroupPost> posts = postRepository.findByGroupIdAndStatusOrderByCreatedAtDesc(id, "published");
+        PlatGroup group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        assertCanViewGroupFeed(group, authHeader);
+
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        Page<PlatGroupPost> pageResult = postRepository.findByGroupIdAndStatusOrderByCreatedAtDesc(
+                id, "published", PageRequest.of(safePage - 1, safeSize));
+        List<PlatGroupPost> posts = pageResult.getContent();
+
         Set<Long> userIds = posts.stream().map(PlatGroupPost::getUserId).collect(Collectors.toSet());
-        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+        Map<Long, User> userMap = userIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
 
-        return posts.stream().map(p -> {
+        Long currentUserId = resolveOptionalUserId(authHeader);
+        Set<Long> likedPostIds = Collections.emptySet();
+        if (currentUserId != null && !posts.isEmpty()) {
+            List<Long> postIds = posts.stream().map(PlatGroupPost::getId).collect(Collectors.toList());
+            likedPostIds = new HashSet<>(postLikeRepository.findLikedPostIds(currentUserId, postIds));
+        }
+        final Set<Long> likedSet = likedPostIds;
+
+        List<Map<String, Object>> items = posts.stream().map(p -> {
             User u = userMap.get(p.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", p.getId());
+            item.put("postId", p.getId());
+            item.put("groupId", p.getGroupId());
+            item.put("userId", p.getUserId());
             item.put("content", p.getContent());
             item.put("imageUrls", p.getImageUrls());
             item.put("type", "post");
-            item.put("likeCount", 0);
+            item.put("likeCount", p.getLikeCount() == null ? 0 : p.getLikeCount());
+            item.put("commentCount", p.getCommentCount() == null ? 0 : p.getCommentCount());
+            item.put("likedByMe", likedSet.contains(p.getId()));
             item.put("createdAt", p.getCreatedAt());
             item.put("authorName", u != null ? u.getUsername() : "");
             item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", items);
+        body.put("total", pageResult.getTotalElements());
+        body.put("page", safePage);
+        body.put("pageSize", safeSize);
+        return body;
     }
 
     @PostMapping("/{id}/posts")
@@ -628,17 +695,263 @@ public class PlatformGroupController {
                 .filter(m -> "approved".equals(m.getStatus()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Join the group before posting"));
 
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        String imageUrls = normalizeImageUrls(payload.get("imageUrls"));
+        if (content.isEmpty() && (imageUrls == null || imageUrls.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "内容不能为空");
+        }
+
         PlatGroupPost post = new PlatGroupPost();
         post.setGroupId(id);
         post.setUserId(user.getUserid());
-        post.setContent(String.valueOf(payload.getOrDefault("content", "")));
-        post.setImageUrls((String) payload.get("imageUrls"));
+        post.setContent(content);
+        post.setImageUrls(imageUrls);
+        post.setLikeCount(0);
+        post.setCommentCount(0);
         post.setStatus("published");
         post.setCreatedAt(LocalDateTime.now());
         post.setUpdatedAt(LocalDateTime.now());
         postRepository.save(post);
 
-        return Map.of("id", post.getId(), "message", "Post published successfully");
+        // 更新团体活跃时间和动态数
+        groupRepository.findById(id).ifPresent(g -> {
+            g.setPostCount((g.getPostCount() == null ? 0 : g.getPostCount()) + 1);
+            g.setLastActiveAt(LocalDateTime.now());
+            groupRepository.save(g);
+        });
+
+        // 通知团体 owner/admin（不通知发帖人自己）
+        final long posterId = user.getUserid();
+        final long postId = post.getId();
+        final String groupName = groupRepository.findById(id).map(PlatGroup::getName).orElse("团体");
+        final String posterName = user.getUsername() != null ? user.getUsername() : "成员";
+        memberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(id, "approved").stream()
+                .filter(m -> ("owner".equals(m.getRole()) || "admin".equals(m.getRole()))
+                        && !m.getUserId().equals(posterId))
+                .forEach(m -> notificationService.send(
+                        m.getUserId(),
+                        "GROUP_POST_CREATED",
+                        posterName + " 在你管理的团体发布了新动态",
+                        posterName + " 在团体「" + groupName + "」发布了新动态",
+                        "platform_group",
+                        String.valueOf(id)
+                ));
+
+        return Map.of("id", postId, "message", "Post published successfully");
+    }
+
+    @DeleteMapping("/{groupId}/posts/{postId}")
+    @Transactional
+    public Map<String, Object> deletePost(
+            @PathVariable Long groupId,
+            @PathVariable Long postId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatGroupPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!post.getGroupId().equals(groupId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        boolean isManager = memberRepository.findByGroupIdAndUserId(groupId, user.getUserid())
+                .map(m -> "owner".equals(m.getRole()) || "admin".equals(m.getRole()))
+                .orElse(false) || adminAuthService.isAdmin(user);
+
+        if (!post.getUserId().equals(user.getUserid()) && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
+        }
+
+        post.setStatus("deleted");
+        post.setUpdatedAt(LocalDateTime.now());
+        postRepository.save(post);
+
+        groupRepository.findById(groupId).ifPresent(g -> {
+            g.setPostCount(Math.max(0, (g.getPostCount() == null ? 0 : g.getPostCount()) - 1));
+            groupRepository.save(g);
+        });
+
+        return Map.of("deleted", true, "message", "Post deleted");
+    }
+
+    @PostMapping("/posts/{postId}/like")
+    @Transactional
+    public Map<String, Object> toggleLike(
+            @PathVariable Long postId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatGroupPost post = postRepository.findById(postId)
+                .filter(p -> "published".equals(p.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        PlatGroup postGroup = groupRepository.findById(post.getGroupId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        assertCanViewGroupFeed(postGroup, authHeader);
+
+        Optional<PlatGroupPostLike> existing = postLikeRepository.findByPostIdAndUserId(postId, user.getUserid());
+        boolean nowLiked;
+        if (existing.isPresent()) {
+            postLikeRepository.delete(existing.get());
+            post.setLikeCount(Math.max(0, (post.getLikeCount() == null ? 0 : post.getLikeCount()) - 1));
+            nowLiked = false;
+        } else {
+            PlatGroupPostLike like = new PlatGroupPostLike();
+            like.setPostId(postId);
+            like.setUserId(user.getUserid());
+            like.setCreatedAt(LocalDateTime.now());
+            postLikeRepository.save(like);
+            post.setLikeCount((post.getLikeCount() == null ? 0 : post.getLikeCount()) + 1);
+            nowLiked = true;
+
+            // 通知动态作者（不通知自己）
+            if (!post.getUserId().equals(user.getUserid())) {
+                String actorName = user.getUsername() != null ? user.getUsername() : "有人";
+                notificationService.send(
+                        post.getUserId(),
+                        "GROUP_POST_LIKED",
+                        actorName + " 点赞了你的团体动态",
+                        actorName + " 点赞了你的团体动态",
+                        "platform_group",
+                        String.valueOf(post.getGroupId())
+                );
+            }
+        }
+        postRepository.save(post);
+
+        return Map.of("likedByMe", nowLiked, "likeCount", post.getLikeCount());
+    }
+
+    @GetMapping("/posts/{postId}/comments")
+    public Map<String, Object> getComments(
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        PlatGroupPost post = postRepository.findById(postId)
+                .filter(p -> "published".equals(p.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        PlatGroup group = groupRepository.findById(post.getGroupId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        assertCanViewGroupFeed(group, authHeader);
+
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        List<PlatGroupPostComment> comments = commentRepository
+                .findByPostIdAndStatusOrderByCreatedAtAsc(postId, "published", PageRequest.of(safePage - 1, safeSize));
+
+        Set<Long> userIds = comments.stream().map(PlatGroupPostComment::getUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = comments.stream().map(c -> {
+            User u = userMap.get(c.getUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("userId", c.getUserId());
+            item.put("content", c.getContent());
+            item.put("createdAt", c.getCreatedAt());
+            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
+            return item;
+        }).collect(Collectors.toList());
+
+        long total = commentRepository.countByPostIdAndStatus(postId, "published");
+        return Map.of("items", items, "total", total, "page", safePage, "pageSize", safeSize);
+    }
+
+    @PostMapping("/posts/{postId}/comments")
+    @Transactional
+    public Map<String, Object> addComment(
+            @PathVariable Long postId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatGroupPost post = postRepository.findById(postId)
+                .filter(p -> "published".equals(p.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        PlatGroup postGroup = groupRepository.findById(post.getGroupId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        assertCanViewGroupFeed(postGroup, authHeader);
+
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        if (content.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评论内容不能为空");
+        }
+        if (content.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评论最多 500 字");
+        }
+
+        PlatGroupPostComment comment = new PlatGroupPostComment();
+        comment.setPostId(postId);
+        comment.setGroupId(post.getGroupId());
+        comment.setUserId(user.getUserid());
+        comment.setContent(content);
+        comment.setStatus("published");
+        comment.setCreatedAt(LocalDateTime.now());
+        comment.setUpdatedAt(LocalDateTime.now());
+        commentRepository.save(comment);
+
+        post.setCommentCount((post.getCommentCount() == null ? 0 : post.getCommentCount()) + 1);
+        postRepository.save(post);
+
+        // 通知动态作者（不通知自己）
+        if (!post.getUserId().equals(user.getUserid())) {
+            String actorName = user.getUsername() != null ? user.getUsername() : "有人";
+            notificationService.send(
+                    post.getUserId(),
+                    "GROUP_POST_COMMENTED",
+                    actorName + " 评论了你的团体动态",
+                    actorName + "：" + (content.length() > 50 ? content.substring(0, 50) + "…" : content),
+                    "platform_group",
+                    String.valueOf(post.getGroupId())
+            );
+        }
+
+        User u = user;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", comment.getId());
+        result.put("userId", u.getUserid());
+        result.put("content", comment.getContent());
+        result.put("createdAt", comment.getCreatedAt());
+        result.put("authorName", u.getUsername() != null ? u.getUsername() : "");
+        result.put("authorAvatar", u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
+        return result;
+    }
+
+    @DeleteMapping("/posts/{postId}/comments/{commentId}")
+    @Transactional
+    public Map<String, Object> deleteComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatGroupPostComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+        if (!comment.getPostId().equals(postId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
+        }
+
+        boolean isManager = memberRepository.findByGroupIdAndUserId(comment.getGroupId(), user.getUserid())
+                .map(m -> "owner".equals(m.getRole()) || "admin".equals(m.getRole()))
+                .orElse(false) || adminAuthService.isAdmin(user);
+
+        if (!comment.getUserId().equals(user.getUserid()) && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
+        }
+
+        comment.setStatus("deleted");
+        comment.setUpdatedAt(LocalDateTime.now());
+        commentRepository.save(comment);
+
+        postRepository.findById(postId).ifPresent(p -> {
+            p.setCommentCount(Math.max(0, (p.getCommentCount() == null ? 0 : p.getCommentCount()) - 1));
+            postRepository.save(p);
+        });
+
+        return Map.of("deleted", true, "message", "Comment deleted");
     }
 
 
@@ -733,6 +1046,51 @@ public class PlatformGroupController {
                 .filter(m -> "approved".equals(m.getStatus())
                         && ("owner".equals(m.getRole()) || "admin".equals(m.getRole())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission"));
+    }
+
+    /**
+     * 公开加入（free）的团体：任何人可读动态；审核/邀请加入的团体：仅已通过成员或站点管理员可读。
+     */
+    private void assertCanViewGroupFeed(PlatGroup group, String authHeader) {
+        if (!"published".equals(group.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+        }
+        String jm = group.getJoinMode();
+        if ("free".equals(jm)) {
+            return;
+        }
+        User user = null;
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                user = adminAuthService.requireUser(authHeader);
+            }
+        } catch (Exception ignored) {
+        }
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看动态");
+        }
+        if (adminAuthService.isAdmin(user)) {
+            return;
+        }
+        memberRepository.findByGroupIdAndUserId(group.getId(), user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看动态"));
+    }
+
+    private static String normalizeImageUrls(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof List<?> list) {
+            String joined = list.stream()
+                    .map(Object::toString)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.joining(","));
+            return joined.isEmpty() ? null : joined;
+        }
+        String s = String.valueOf(raw).trim();
+        return s.isEmpty() ? null : s;
     }
 
     private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("MM-dd HH:mm");

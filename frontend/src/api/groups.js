@@ -7,6 +7,15 @@ function isLegacyPlatformGroupId(id) {
   return /^\d+$/.test(String(id))
 }
 
+/** 团体动态列表：数组或 { items, total, page, pageSize } */
+export function unwrapGroupPostsList(res) {
+  if (Array.isArray(res)) return res
+  if (Array.isArray(res?.items)) return res.items
+  if (Array.isArray(res?.data?.items)) return res.data.items
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
 /** Normalizes list API: plain array or paginated { items, total, page, pageSize }. */
 export function unwrapPlatformGroupList(res) {
   if (Array.isArray(res)) return res
@@ -53,11 +62,32 @@ export function fetchGroupMembers(id, params = {}) {
   return request.get(`/groups/${id}/members`, { params })
 }
 
-export function fetchGroupPosts(id) {
+export function fetchGroupPosts(id, params = {}) {
   if (isLegacyPlatformGroupId(id)) {
-    return request.get(`/platform/groups/${id}/posts`)
+    return request.get(`/platform/groups/${id}/posts`, { params })
   }
-  return request.get(`/groups/${id}/posts`)
+  return request.get(`/groups/${id}/posts`, { params })
+}
+
+/** 点赞/取消点赞（仅 platform 团体动态） */
+export function togglePlatformGroupPostLike(postId) {
+  return request.post(`/platform/groups/posts/${postId}/like`)
+}
+
+export function fetchGroupPostComments(postId, params = {}) {
+  return request.get(`/platform/groups/posts/${postId}/comments`, { params })
+}
+
+export function createGroupPostComment(postId, payload) {
+  return request.post(`/platform/groups/posts/${postId}/comments`, payload)
+}
+
+export function deletePlatformGroupPost(groupId, postId) {
+  return request.delete(`/platform/groups/${groupId}/posts/${postId}`)
+}
+
+export function deletePlatformGroupPostComment(postId, commentId) {
+  return request.delete(`/platform/groups/posts/${postId}/comments/${commentId}`)
 }
 
 /** 从 group_posts 中筛公告类 type */
@@ -106,6 +136,9 @@ export function updateGroup(id, payload) {
 }
 
 export function createGroupPost(id, payload) {
+  if (isLegacyPlatformGroupId(id)) {
+    return request.post(`/platform/groups/${id}/posts`, payload)
+  }
   return request.post(`/groups/${id}/posts`, payload)
 }
 

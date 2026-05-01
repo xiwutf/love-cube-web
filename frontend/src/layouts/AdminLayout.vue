@@ -108,28 +108,29 @@ const todayText = computed(() =>
 .admin-layout {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 264px 1fr;
+  grid-template-columns: 320px minmax(0, 1fr);
   background: #f1f5f9;
 }
 
 .admin-sidebar {
-  padding: 20px 14px;
+  padding: 16px 12px 12px;
   border-right: 1px solid #e2e8f0;
   background: #fff;
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
   display: grid;
-  align-content: start;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  align-content: stretch;
   gap: 10px;
+  overflow: hidden;
 }
 
 .admin-brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   text-decoration: none;
   color: #0f172a;
@@ -137,8 +138,8 @@ const todayText = computed(() =>
 }
 
 .admin-brand img {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   display: block;
 }
@@ -150,9 +151,9 @@ const todayText = computed(() =>
 }
 
 .admin-sidebar-card {
-  margin-top: 4px;
+  margin-top: 2px;
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -180,19 +181,35 @@ const todayText = computed(() =>
 }
 
 .admin-nav {
-  margin-top: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
   display: grid;
-  gap: 3px;
+  gap: 2px;
+  align-content: start;
+}
+
+.admin-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-nav::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.admin-nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .admin-nav a,
 .back-home {
   text-decoration: none;
   color: #475569;
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -222,11 +239,12 @@ const todayText = computed(() =>
 }
 
 .back-home {
-  margin-top: 12px;
+  margin-top: 6px;
   color: #2563eb;
   border: 1px solid #bfdbfe;
   background: #eff6ff;
-  border-radius: 10px;
+  border-radius: 12px;
+  min-height: 44px;
   justify-content: center;
   font-weight: 700;
 }
@@ -239,10 +257,11 @@ const todayText = computed(() =>
 
 .admin-main {
   min-height: 100vh;
-  padding: 20px 24px;
+  padding: 20px 24px 28px;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 16px;
+  min-width: 0;
 }
 
 .admin-main-header {
@@ -309,6 +328,9 @@ const todayText = computed(() =>
 
 .admin-main-content {
   min-height: 0;
+  min-width: 0;
+  max-width: 1400px;
+  width: 100%;
 }
 
 @media (max-width: 1023px) {
@@ -323,8 +345,10 @@ const todayText = computed(() =>
     height: auto;
     border-right: 0;
     border-bottom: 1px solid #e2e8f0;
-    gap: 8px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 6px;
     padding: 10px 12px;
+    overflow: visible;
   }
 
   .admin-sidebar-card {
@@ -332,7 +356,7 @@ const todayText = computed(() =>
   }
 
   .admin-brand {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .admin-sub {
@@ -340,9 +364,10 @@ const todayText = computed(() =>
   }
 
   .admin-nav {
-    margin-top: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .admin-nav a,

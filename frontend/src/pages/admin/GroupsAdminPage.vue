@@ -9,7 +9,7 @@
         <router-link to="/admin/platform/groups/create" class="admin-btn primary create-btn">新建团体</router-link>
       </div>
 
-      <form class="filters" @submit.prevent="load">
+      <form class="filters" @submit.prevent="load(true)">
         <label class="search-box">
           <span>搜索</span>
           <input v-model.trim="keyword" class="admin-input" type="search" placeholder="团体名称、简介">
@@ -118,6 +118,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { getAdminGroups } from '@/api/groups.js'
 
+let _cache = null
+let _cacheAt = 0
+const CACHE_TTL = 30_000
+
 const loading = ref(true)
 const error = ref('')
 const message = ref('')
@@ -150,11 +154,19 @@ const filteredItems = computed(() => {
   })
 })
 
-async function load() {
+async function load(force = false) {
   loading.value = true
   error.value = ''
   try {
-    const groups = unwrapList(await getAdminGroups()).map(normalizeGroup)
+    const now = Date.now()
+    let groups
+    if (!force && _cache && now - _cacheAt < CACHE_TTL) {
+      groups = _cache
+    } else {
+      groups = unwrapList(await getAdminGroups()).map(normalizeGroup)
+      _cache = groups
+      _cacheAt = now
+    }
     items.value = groups
   } catch (err) {
     items.value = []

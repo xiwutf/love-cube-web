@@ -222,6 +222,7 @@ import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
 import { getMyGrowth } from '@/api/growth.js'
+import { fetchMyGroups, fetchHotGroups } from '@/api/groups.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 
@@ -249,8 +250,13 @@ const editForm = reactive({
 const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
+const myFollowingCount = ref(0)
+const myFansCount = ref(0)
+const myLikesReceived = ref(0)
 const growthInfo = ref(null)
 const badges = ref([])
+const myGroupsList = ref([])
+const hotGroupsList = ref([])
 
 const mobileGrowthLevel = computed(() => {
   const d = growthInfo.value
@@ -351,14 +357,18 @@ const dailyTasks = computed(() => {
     DAILY_LIKE: '/platform/content?type=mood'
   }
   if (Array.isArray(rows) && rows.length) {
-    return rows.map(item => ({
-      title: item.name || item.code || '日常任务',
-      exp: Number(item.rewardExp ?? 0),
-      current: item.completed ? 1 : 0,
-      total: 1,
-      done: Boolean(item.completed),
-      to: codeToRoute[item.code] || '/me'
-    }))
+    return rows.map(item => {
+      const total = Number(item.targetCount || 1)
+      const current = Number(item.progress ?? (item.completed ? total : 0))
+      return {
+        title: item.name || item.code || '日常任务',
+        exp: Number(item.rewardExp ?? 0),
+        current: Math.min(current, total),
+        total,
+        done: Boolean(item.completed),
+        to: codeToRoute[item.code] || '/me'
+      }
+    })
   }
   return [
     { title: '每日签到', exp: 2, current: 0, total: 1, done: false, to: '/me' },
@@ -367,25 +377,33 @@ const dailyTasks = computed(() => {
   ]
 })
 
-const groupInfo = {
-  name: 'LoveCube 官方团队',
-  role: '管理员',
-  members: 23,
-  activity: '中等',
-  weekExp: 120
-}
+const groupInfo = computed(() => {
+  const g = myGroupsList.value[0]
+  if (!g) return { name: '暂未加入团体', role: '--', members: 0, activity: '--', weekExp: 0 }
+  const roleMap = { OWNER: '创建者', ADMIN: '管理员', MEMBER: '成员' }
+  const role = g.isOwner ? '创建者' : (roleMap[String(g.myRole || '').toUpperCase()] || '成员')
+  return {
+    name: g.name || '--',
+    role,
+    members: Number(g.memberCount || 0),
+    activity: g.memberCount > 50 ? '高' : g.memberCount > 20 ? '中等' : '较低',
+    weekExp: 0
+  }
+})
 
-const groupRanking = [
-  { rank: 1, name: 'LoveCube 官方团队', activity: 320 },
-  { rank: 2, name: '星空联谊社', activity: 280 },
-  { rank: 3, name: '绿来是你', activity: 210 }
-]
+const groupRanking = computed(() =>
+  hotGroupsList.value.slice(0, 3).map((g, i) => ({
+    rank: i + 1,
+    name: g.name || '--',
+    activity: Number(g.memberCount || 0)
+  }))
+)
 
-const displayName = computed(() => user.value?.username || user.value?.nickname || 'LoveCube 官方团队')
-const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '1')
-const locationDisplay = computed(() => user.value?.location || '河北省 保定市')
-const avatarFallback = computed(() => String(displayName.value || 'L').slice(0, 1).toUpperCase())
-const inviteCodeDisplay = computed(() => inviteCode.value || 'LC69UWM')
+const displayName = computed(() => user.value?.username || user.value?.nickname || '用户')
+const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '--')
+const locationDisplay = computed(() => user.value?.location || '未设置')
+const avatarFallback = computed(() => String(displayName.value || 'U').slice(0, 1).toUpperCase())
+const inviteCodeDisplay = computed(() => inviteCode.value || '')
 const growthProgress = computed(() => {
   const next = Math.max(1, Number(growthLevel.value.nextExp || 1))
   const cur = Number(growthLevel.value.currentExp || 0)
@@ -413,15 +431,15 @@ const registerDate = computed(() => {
   return String(raw).replace('T', ' ').slice(0, 10)
 })
 
-const profileLightStats = [
-  { label: '关注', value: '12' },
-  { label: '粉丝', value: '236' },
-  { label: '获赞', value: '1,234' }
-]
+const profileLightStats = computed(() => [
+  { label: '关注', value: myFollowingCount.value },
+  { label: '粉丝', value: myFansCount.value },
+  { label: '获赞', value: myLikesReceived.value }
+])
 
 const workspaceItems = computed(() => [
   { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
-  { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
+  { title: '每日心声', desc: '记录每日想法', value: `${myContentCount.value} 条内容`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
   { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
   { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
 ])
@@ -430,7 +448,7 @@ const overviewItems = computed(() => [
   { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
   { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
   { label: '收藏内容', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
-  { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },
+  { label: '互动热度', value: myLikesReceived.value, icon: '♨', tone: 'green', to: '/platform/positive-share' },
   { label: '当前等级', value: `Lv.${growthLevel.value.level}`, icon: '◇', tone: 'blue', to: '/modules' }
 ])
 
@@ -583,11 +601,16 @@ onMounted(async () => {
   if (route.query?.panel === 'edit') openEditPanel()
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
-  const [statsRes, inviteRes, growthRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode(), getMyGrowth()])
+  const [statsRes, inviteRes, growthRes, myGroupsRes, hotGroupsRes] = await Promise.allSettled([
+    getUserStatsCached(), getMyInviteCode(), getMyGrowth(), fetchMyGroups(), fetchHotGroups()
+  ])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
     myFavoriteCount.value = Number(statsRes.value.favoriteCount ?? 0)
+    myFollowingCount.value = Number(statsRes.value.followingCount ?? 0)
+    myFansCount.value = Number(statsRes.value.fansCount ?? 0)
+    myLikesReceived.value = Number(statsRes.value.likesReceived ?? 0)
   }
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
@@ -595,6 +618,14 @@ onMounted(async () => {
   if (growthRes.status === 'fulfilled') {
     growthInfo.value = growthRes.value || null
     badges.value = Array.isArray(growthRes.value?.badges) ? growthRes.value.badges : []
+  }
+  if (myGroupsRes.status === 'fulfilled') {
+    const raw = myGroupsRes.value
+    myGroupsList.value = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : [])
+  }
+  if (hotGroupsRes.status === 'fulfilled') {
+    const raw = hotGroupsRes.value
+    hotGroupsList.value = Array.isArray(raw) ? raw : (Array.isArray(raw?.items) ? raw.items : [])
   }
 })
 

@@ -1,9 +1,11 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.entity.UserInteraction;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.DynamicLikeRepository;
 import com.lovecube.backend.repository.DynamicRepository;
 import com.lovecube.backend.repository.EventSignupRepository;
+import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.UnifiedProfileService;
@@ -26,6 +28,7 @@ public class UserController {
     private final DynamicRepository dynamicRepository;
     private final EventSignupRepository eventSignupRepository;
     private final DynamicLikeRepository dynamicLikeRepository;
+    private final UserInteractionRepository userInteractionRepository;
 
     public UserController(
             UserService userService,
@@ -34,7 +37,8 @@ public class UserController {
             UnifiedProfileService unifiedProfileService,
             DynamicRepository dynamicRepository,
             EventSignupRepository eventSignupRepository,
-            DynamicLikeRepository dynamicLikeRepository
+            DynamicLikeRepository dynamicLikeRepository,
+            UserInteractionRepository userInteractionRepository
     ) {
         this.userService = userService;
         this.userRepository = userRepository;
@@ -43,6 +47,7 @@ public class UserController {
         this.dynamicRepository = dynamicRepository;
         this.eventSignupRepository = eventSignupRepository;
         this.dynamicLikeRepository = dynamicLikeRepository;
+        this.userInteractionRepository = userInteractionRepository;
     }
 
     @GetMapping("/users/{userId}")
@@ -114,10 +119,16 @@ public class UserController {
             long contentCount = dynamicRepository.countByUserIdAndIsDeletedFalse(userId);
             long eventCount = eventSignupRepository.countByUserId(userId);
             long favoriteCount = dynamicLikeRepository.countByUserId(userId);
+            long followingCount = userInteractionRepository.countByFromUserIdAndInteractionType(userId, UserInteraction.InteractionType.FOLLOW);
+            long fansCount = userInteractionRepository.countByToUserIdAndInteractionType(userId, UserInteraction.InteractionType.FOLLOW);
+            long likesReceived = userInteractionRepository.countByToUserIdAndInteractionType(userId, UserInteraction.InteractionType.LIKE);
             return ResponseEntity.ok(Map.of(
                     "contentCount", contentCount,
                     "eventCount", eventCount,
-                    "favoriteCount", favoriteCount
+                    "favoriteCount", favoriteCount,
+                    "followingCount", followingCount,
+                    "fansCount", fansCount,
+                    "likesReceived", likesReceived
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));

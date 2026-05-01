@@ -70,6 +70,8 @@ public final class PlatformGroupSupport {
         item.put("region", g.getRegion());
         item.put("location", g.getRegion());
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
+        item.put("postCount", g.getPostCount() == null ? 0 : g.getPostCount());
+        item.put("lastActiveAt", g.getLastActiveAt());
         item.put("description", g.getDescription());
         item.put("tags", g.getTags());
 

@@ -29,7 +29,7 @@
           :key="item.id"
           class="sp-card nt-card"
           :class="{ unread: !item.read }"
-          @click="handleRead(item)"
+          @click="openNotification(item)"
         >
           <div class="nt-dot" v-if="!item.read"></div>
           <div class="nt-type-icon">{{ typeIcon(item.type) }}</div>
@@ -51,8 +51,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { getNotifications, getNotificationsByType, markNotifRead, markAllNotifRead, getNotifUnreadCountCached } from '@/api/notification.js'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { getNotifications, markNotifRead, markAllNotifRead, getNotifUnreadCountCached } from '@/api/notification.js'
+
+const router = useRouter()
 
 const loading = ref(false)
 const loadingMore = ref(false)
@@ -70,9 +73,24 @@ const tabs = [
   { value: 'interaction', label: '互动' }
 ]
 
+function notifCategory(type) {
+  const t = String(type || '')
+  if (['GROUP_JOIN_APPROVED', 'GROUP_JOIN_REJECTED', 'GROUP_POST_CREATED'].includes(t)) return 'review'
+  if (['GROUP_POST_LIKED', 'GROUP_POST_COMMENTED'].includes(t)) return 'interaction'
+  const lower = t.toLowerCase()
+  if (lower.includes('system')) return 'system'
+  return 'interaction'
+}
+
 function typeIcon(type) {
+  const t = String(type || '')
+  if (t === 'GROUP_POST_LIKED') return '👍'
+  if (t === 'GROUP_POST_COMMENTED') return '💬'
+  if (t === 'GROUP_POST_CREATED') return '📣'
+  if (t === 'GROUP_JOIN_APPROVED') return '✅'
+  if (t === 'GROUP_JOIN_REJECTED') return '📋'
   const map = { system: '🔔', review: '📋', interaction: '💬', like: '👍', comment: '💬', follow: '👤' }
-  return map[String(type).toLowerCase()] || '📩'
+  return map[t.toLowerCase()] || '📩'
 }
 
 function formatDate(raw) {
@@ -86,17 +104,36 @@ function formatDate(raw) {
   return String(raw).replace('T', ' ').slice(0, 16)
 }
 
+function mapNotifRow(n) {
+  return {
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    content: n.content,
+    createdAt: n.createdAt,
+    read: n.isRead === true,
+    targetType: n.targetType,
+    targetId: n.targetId
+  }
+}
+
 async function fetchList(append = false) {
-  if (!append) { loading.value = true; pageOffset.value = 0 }
-  else loadingMore.value = true
+  if (!append) {
+    loading.value = true
+    pageOffset.value = PAGE_SIZE
+  } else {
+    loadingMore.value = true
+    pageOffset.value += PAGE_SIZE
+  }
   try {
-    const limit = PAGE_SIZE
-    const res = activeTab.value === 'all'
-      ? await getNotifications(limit)
-      : await getNotificationsByType(activeTab.value, limit)
-    const list = Array.isArray(res?.list) ? res.list : (Array.isArray(res) ? res : [])
-    items.value = append ? items.value.concat(list) : list
-    hasMore.value = list.length >= PAGE_SIZE
+    const res = await getNotifications(200)
+    const list = Array.isArray(res) ? res : (Array.isArray(res?.list) ? res.list : [])
+    const mapped = list.map(mapNotifRow)
+    const filtered = activeTab.value === 'all'
+      ? mapped
+      : mapped.filter((row) => notifCategory(row.type) === activeTab.value)
+    items.value = filtered.slice(0, append ? pageOffset.value : PAGE_SIZE)
+    hasMore.value = filtered.length > items.value.length
   } catch {
     if (!append) items.value = []
   } finally {
@@ -106,7 +143,6 @@ async function fetchList(append = false) {
 }
 
 async function loadMore() {
-  pageOffset.value += PAGE_SIZE
   await fetchList(true)
 }
 
@@ -115,11 +151,15 @@ function switchTab(tab) {
   fetchList()
 }
 
-async function handleRead(item) {
-  if (item.read) return
-  item.read = true
-  if (unreadCount.value > 0) unreadCount.value--
-  await markNotifRead(item.id).catch(() => {})
+async function openNotification(item) {
+  if (!item.read) {
+    item.read = true
+    if (unreadCount.value > 0) unreadCount.value--
+    await markNotifRead(item.id).catch(() => {})
+  }
+  if (item.targetType === 'platform_group' && item.targetId) {
+    router.push(`/platform/groups/${item.targetId}/posts`)
+  }
 }
 
 async function handleReadAll() {

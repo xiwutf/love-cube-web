@@ -58,7 +58,10 @@
                     <span class="pill">{{ group.category }}</span>
                   </div>
                   <p class="meta">
-                    {{ group.memberCount }} 人 · {{ group.joinModeLabel }}
+                    {{ group.memberCount }} 人
+                    <template v-if="group.postCount"> · {{ group.postCount }} 条动态</template>
+                    <template v-if="group.lastActiveLabel"> · 活跃 {{ group.lastActiveLabel }}</template>
+                    · {{ group.joinModeLabel }}
                     <template v-if="group.ownerName"> · {{ group.ownerName }}</template>
                   </p>
                   <p class="desc">{{ group.description }}</p>
@@ -98,7 +101,7 @@
                 <img :src="group.coverUrl" :alt="group.name">
                 <div>
                   <strong>{{ group.name }}</strong>
-                  <span>{{ group.region }} · {{ group.memberCount }} 人</span>
+                  <span>{{ group.region }} · {{ group.memberCount }} 人<template v-if="group.postCount"> · {{ group.postCount }} 动态</template></span>
                 </div>
               </router-link>
               <div v-if="!popularGroups.length" class="side-state">暂无</div>
@@ -168,7 +171,10 @@
                   <h2>{{ group.name }}</h2>
                   <span class="m-cat">{{ group.category }}</span>
                 </div>
-                <p class="m-meta">{{ group.region }} · {{ group.memberCount }}人</p>
+                <p class="m-meta">
+                  {{ group.region }} · {{ group.memberCount }}人
+                  <template v-if="group.postCount"> · {{ group.postCount }}条动态</template>
+                </p>
                 <p class="m-desc">{{ group.description }}</p>
 
                 <div class="m-statuses">
@@ -268,6 +274,18 @@ function joinModeLabel(g) {
   return '审核加入'
 }
 
+function formatLastActive(raw) {
+  if (raw == null || raw === '') return ''
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  const diff = Date.now() - d.getTime()
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`
+  if (diff < 86400000 * 7) return `${Math.floor(diff / 86400000)} 天前`
+  return d.toISOString().slice(0, 10)
+}
+
 function normalizeCategory(item) {
   const raw = (item.category || item.typeName || item.type || '团体').toString().trim()
   return categoryLabelMap[raw] || raw
@@ -296,7 +314,9 @@ function normalizeGroup(item) {
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
     isOwner: Boolean(item.isOwner),
-    hasPendingRequest: Boolean(item.hasPendingRequest)
+    hasPendingRequest: Boolean(item.hasPendingRequest),
+    postCount: Number(item.postCount || 0),
+    lastActiveLabel: formatLastActive(item.lastActiveAt)
   }
 }
 
@@ -907,7 +927,7 @@ onMounted(() => {
   .groups-page {
     width: 100%;
     margin: 0;
-    padding: 0 12px 16px;
+    padding: 0 12px calc(112px + env(safe-area-inset-bottom));
     box-sizing: border-box;
   }
 
