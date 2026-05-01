@@ -245,7 +245,7 @@ watch(
   color: var(--lc-slate);
   line-height: 1.75;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
   font-size: 14px;
 }
 

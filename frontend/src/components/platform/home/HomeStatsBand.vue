@@ -49,6 +49,8 @@ defineProps({
   display: grid;
   place-items: center;
   font-weight: 900;
+  background: var(--tone-bg);
+  color: var(--tone);
 }
 
 .stat-card strong {
@@ -73,11 +75,6 @@ defineProps({
 .tone-orange { --tone: var(--lc-orange); --tone-bg: var(--lc-orange-light); }
 .tone-green { --tone: var(--lc-green); --tone-bg: var(--lc-emerald-light); }
 .tone-purple { --tone: var(--lc-purple); --tone-bg: var(--lc-indigo-soft); }
-
-.stat-icon {
-  background: var(--tone-bg);
-  color: var(--tone);
-}
 
 @media (max-width: 1180px) {
   .stats-band {

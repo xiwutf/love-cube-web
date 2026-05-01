@@ -187,6 +187,8 @@ defineEmits(['media-error'])
   height: 44px;
   border-radius: 12px;
   font-weight: 900;
+  background: var(--tone-bg);
+  color: var(--tone);
 }
 
 .news-row strong,
@@ -212,11 +214,6 @@ defineEmits(['media-error'])
 .tone-orange { --tone: var(--lc-orange); --tone-bg: var(--lc-orange-light); }
 .tone-green { --tone: var(--lc-green); --tone-bg: var(--lc-emerald-light); }
 .tone-purple { --tone: var(--lc-purple); --tone-bg: var(--lc-indigo-soft); }
-
-.news-row-icon {
-  background: var(--tone-bg);
-  color: var(--tone);
-}
 
 @media (max-width: 760px) {
   .featured-news {

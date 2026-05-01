@@ -251,7 +251,7 @@ function showTimeDivider(curr, prev) {
   border-radius: 18px;
   font-size: 15px;
   line-height: 1.5;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .bubble-other {

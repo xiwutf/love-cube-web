@@ -612,7 +612,7 @@ onMounted(async () => {
   font-weight: 700;
   color: #222334;
   white-space: normal;
-  word-break: break-word;
+  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

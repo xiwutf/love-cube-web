@@ -671,7 +671,11 @@ onBeforeUnmount(() => {
 }
 
 .account-slot {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .nav-search-icon {
@@ -695,13 +699,6 @@ onBeforeUnmount(() => {
 .nav-search input::placeholder,
 .mobile-search input::placeholder {
   color: #94a3b8;
-}
-
-.account-slot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
 }
 
 .nav-action,

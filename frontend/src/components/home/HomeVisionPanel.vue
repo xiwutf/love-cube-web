@@ -102,7 +102,6 @@ import visionImage from '@/assets/底部横幅 CTA.webp'
 }
 
 .vision-mark {
-  display: none;
   position: absolute;
   right: 42px;
   top: 36px;
