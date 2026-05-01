@@ -162,6 +162,11 @@ export function removeGroupMember(groupId, memberId) {
   return request.delete(`/platform/groups/${groupId}/members/${memberId}`)
 }
 
+/** 团长调整成员角色：admin | member（仅 platform 数字 ID 团体） */
+export function patchPlatformGroupMemberRole(groupId, memberId, payload) {
+  return request.patch(`/platform/groups/${groupId}/members/${memberId}/role`, payload)
+}
+
 // ── Admin groups (back-office) ────────────────────────────────────────────────
 
 export function getAdminGroups() {

@@ -187,7 +187,7 @@
                 <input v-model.trim="memberKeyword" type="search" placeholder="搜索成员">
                 <select v-model="roleFilter" aria-label="角色筛选">
                   <option value="">全部角色</option>
-                  <option value="owner">团体负责人</option>
+                  <option value="owner">团长</option>
                   <option value="admin">管理员</option>
                   <option value="member">成员</option>
                 </select>
@@ -197,24 +197,44 @@
             <div v-else-if="filteredMembers.length" class="member-list">
               <article v-for="member in filteredMembers" :key="member.id || member.userId" class="member-item">
                 <img :src="member.avatar" :alt="member.name">
-                <div>
-                  <strong>{{ member.name }}</strong>
+                <div class="member-main">
+                  <div class="member-name-row">
+                    <strong>{{ member.name }}</strong>
+                    <span class="role-pill">{{ member.roleLabel }}</span>
+                  </div>
                   <span>{{ member.joinedAt || '未记录加入时间' }}</span>
                   <p v-if="member.status === 'pending' && member.applyReason">申请说明：{{ member.applyReason }}</p>
                 </div>
-                <em>{{ member.roleLabel }}</em>
                 <b :class="member.status">{{ member.statusLabel }}</b>
-                <div v-if="canAuditMember(member)" class="member-actions">
-                  <button type="button" :disabled="moderatingMemberId === member.id" @click="approvePendingMember(member)">通过</button>
-                  <button type="button" :disabled="moderatingMemberId === member.id" @click="rejectPendingMember(member)">拒绝</button>
+                <div class="member-actions-wrap">
+                  <div v-if="canAuditMember(member)" class="member-actions">
+                    <button type="button" :disabled="moderatingMemberId === member.id" @click="approvePendingMember(member)">通过</button>
+                    <button type="button" :disabled="moderatingMemberId === member.id" @click="rejectPendingMember(member)">拒绝</button>
+                  </div>
+                  <div v-if="canOwnerToggleAdmin(member)" class="member-actions owner-admin-actions">
+                    <button
+                      v-if="member.role === 'member'"
+                      type="button"
+                      class="role-admin-btn"
+                      :disabled="roleChangingMemberId === member.id"
+                      @click="setMemberAsAdmin(member)"
+                    >设为管理员</button>
+                    <button
+                      v-else-if="member.role === 'admin'"
+                      type="button"
+                      class="role-admin-btn muted"
+                      :disabled="roleChangingMemberId === member.id"
+                      @click="unsetMemberAdmin(member)"
+                    >取消管理员</button>
+                  </div>
+                  <button
+                    v-if="canRemoveMember(member)"
+                    type="button"
+                    class="remove-member-btn"
+                    :disabled="moderatingMemberId === member.id"
+                    @click="removeMember(member)"
+                  >移除</button>
                 </div>
-                <button
-                  v-else-if="canRemoveMember(member)"
-                  type="button"
-                  class="remove-member-btn"
-                  :disabled="moderatingMemberId === member.id"
-                  @click="removeMember(member)"
-                >移除</button>
               </article>
             </div>
             <div v-else class="empty-inline">暂无成员</div>
@@ -249,7 +269,7 @@
             <h2>团体资料</h2>
             <InfoList :group="group" compact />
           </section>
-          <section class="side-card">
+          <section v-if="activeTab === 'home'" class="side-card">
             <h2>成员概况</h2>
             <p>{{ group.memberCount }} 位成员 · {{ admins.length }} 位管理员</p>
             <router-link :to="`/platform/groups/${group.id}/members`">查看成员列表</router-link>
@@ -278,6 +298,7 @@ import {
   unwrapGroupPostsList,
   rejectMember,
   removeGroupMember,
+  patchPlatformGroupMemberRole,
   togglePlatformGroupPostLike
 } from '@/api/groups.js'
 import { useUserStore } from '@/stores/user.js'
@@ -298,6 +319,7 @@ const expandedNoticeId = ref(null)
 const joining = ref(false)
 const posting = ref(false)
 const moderatingMemberId = ref(null)
+const roleChangingMemberId = ref(null)
 const message = ref('')
 const messageType = ref('success')
 
@@ -640,6 +662,14 @@ function canRemoveMember(member) {
   )
 }
 
+function canOwnerToggleAdmin(member) {
+  return (
+    group.value?.isOwner &&
+    member.status === 'approved' &&
+    (member.role === 'member' || member.role === 'admin')
+  )
+}
+
 async function removeMember(member) {
   if (!canRemoveMember(member) || moderatingMemberId.value) return
   if (!window.confirm(`确定将「${member.name}」移出团体？`)) return
@@ -685,6 +715,36 @@ async function rejectPendingMember(member) {
   }
 }
 
+async function setMemberAsAdmin(member) {
+  if (!canOwnerToggleAdmin(member) || member.role !== 'member' || roleChangingMemberId.value) return
+  roleChangingMemberId.value = member.id
+  try {
+    await patchPlatformGroupMemberRole(group.value.id, member.id, { role: 'admin' })
+    await loadDetail()
+    await loadMembers()
+    flashMessage('已设为管理员')
+  } catch (error) {
+    flashMessage(error.message || '设置失败', 'error')
+  } finally {
+    roleChangingMemberId.value = null
+  }
+}
+
+async function unsetMemberAdmin(member) {
+  if (!canOwnerToggleAdmin(member) || member.role !== 'admin' || roleChangingMemberId.value) return
+  roleChangingMemberId.value = member.id
+  try {
+    await patchPlatformGroupMemberRole(group.value.id, member.id, { role: 'member' })
+    await loadDetail()
+    await loadMembers()
+    flashMessage('已取消管理员')
+  } catch (error) {
+    flashMessage(error.message || '操作失败', 'error')
+  } finally {
+    roleChangingMemberId.value = null
+  }
+}
+
 function toggleNotice(id) {
   expandedNoticeId.value = expandedNoticeId.value === id ? null : id
 }
@@ -707,6 +767,7 @@ function normalizeGroup(item) {
     joinLabel,
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
+    isOwner: Boolean(item.isOwner),
     hasPendingRequest: Boolean(item.hasPendingRequest),
     createdDate: formatDate(item.createdAt),
     latestNotice: item.latestNotice ? normalizeNotice(item.latestNotice) : null,
@@ -749,7 +810,7 @@ function normalizeMember(item) {
     name: item.username || '未命名成员',
     avatar: item.avatarUrl || DEFAULT_AVATAR,
     role,
-    roleLabel: role === 'owner' ? '团体负责人' : role === 'admin' ? '管理员' : '成员',
+    roleLabel: role === 'owner' ? '团长' : role === 'admin' ? '管理员' : '成员',
     status,
     statusLabel: status === 'approved' ? '已加入' : status === 'pending' ? '申请中' : status === 'left' ? '已退出' : status,
     joinedAt: formatDate(item.joinedAt),
@@ -762,7 +823,7 @@ function normalizeAdmins(items) {
     userId: item.userId || index,
     name: item.name || '管理员',
     avatar: item.avatar || DEFAULT_AVATAR,
-    roleLabel: item.role === 'owner' ? '团体负责人' : '管理员'
+    roleLabel: item.role === 'owner' ? '团长' : '管理员'
   }))
 }
 
@@ -1552,10 +1613,65 @@ onMounted(async () => {
 
 .member-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   gap: var(--lc-space-3);
   align-items: center;
   padding: var(--lc-space-3);
+}
+
+.member-main {
+  min-width: 0;
+}
+
+.member-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lc-space-2);
+}
+
+.role-pill {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 2px var(--lc-space-2);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.member-actions-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--lc-space-2);
+}
+
+.owner-admin-actions button:last-child {
+  color: var(--lc-blue);
+}
+
+.role-admin-btn {
+  height: 30px;
+  border: 1px solid var(--lc-blue-border);
+  border-radius: var(--lc-radius-xs);
+  padding: 0 var(--lc-space-3);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.role-admin-btn.muted {
+  border-color: var(--lc-border);
+  color: var(--lc-muted);
+}
+
+.role-admin-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .member-item b.pending {
@@ -1671,6 +1787,14 @@ onMounted(async () => {
 
   .member-item {
     grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .member-actions-wrap {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
   }
 
   .member-actions {

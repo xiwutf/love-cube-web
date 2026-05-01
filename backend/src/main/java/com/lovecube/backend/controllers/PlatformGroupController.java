@@ -624,6 +624,52 @@ public class PlatformGroupController {
         return Map.of("removed", true, "message", "Member removed");
     }
 
+    private static final int MAX_GROUP_ADMINS = 5;
+
+    @PatchMapping("/{id}/members/{memberId}/role")
+    @Transactional
+    public Map<String, Object> patchMemberRole(
+            @PathVariable Long id,
+            @PathVariable Long memberId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()) && "owner".equals(m.getRole()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团长可设置管理员"));
+
+        PlatGroupMember target = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member record not found"));
+        if (!id.equals(target.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid member");
+        }
+        if ("owner".equals(target.getRole())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不能修改团长角色");
+        }
+        if (!"approved".equals(target.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "仅可对已通过成员调整角色");
+        }
+
+        String role = String.valueOf(body != null ? body.getOrDefault("role", "") : "").trim().toLowerCase();
+        if (!"admin".equals(role) && !"member".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role 仅支持 admin 或 member");
+        }
+
+        if ("admin".equals(role) && !"admin".equals(target.getRole())) {
+            long adminCount = memberRepository.countByGroupIdAndStatusAndRole(id, "approved", "admin");
+            if (adminCount >= MAX_GROUP_ADMINS) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理员最多 " + MAX_GROUP_ADMINS + " 人");
+            }
+        }
+
+        target.setRole(role);
+        target.setUpdatedAt(LocalDateTime.now());
+        memberRepository.save(target);
+
+        return Map.of("role", role, "message", "已更新角色");
+    }
+
 
     @GetMapping("/{id}/posts")
     public Map<String, Object> getPosts(
