@@ -2,11 +2,11 @@
   <section class="panel platform-card">
     <header class="panel-head">
       <div>
-        <p class="kicker">业务运营</p>
-        <h3>联谊互动运营</h3>
-        <p class="desc">查看互动活跃度，聚焦即时反馈。</p>
+        <p class="kicker">数据区</p>
+        <h3>联谊侧互动</h3>
+        <p class="desc">点赞、私信等活跃度参考。处理认证与举报请用功能地图「审核与安全」。</p>
       </div>
-      <router-link to="/admin/verifications" class="entry-btn">进入联谊后台</router-link>
+      <router-link to="/admin/verifications" class="entry-btn">去认证审核</router-link>
     </header>
 
     <div class="panel-visual">

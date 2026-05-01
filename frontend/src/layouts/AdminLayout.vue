@@ -8,16 +8,38 @@
       <p class="admin-sub">运营后台</p>
 
       <section class="admin-sidebar-card">
-        <p class="admin-sidebar-card-label">当前模块</p>
+        <p class="admin-sidebar-card-label">当前页面</p>
         <p class="admin-sidebar-card-value">{{ currentSection }}</p>
         <p class="admin-sidebar-card-meta">{{ todayText }}</p>
       </section>
 
-      <nav class="admin-nav">
-        <router-link v-for="item in visibleNavItems" :key="item.to" :to="item.to">
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-        </router-link>
+      <div class="admin-sidebar-guide">
+        <p class="admin-sidebar-guide-title">怎么用</p>
+        <p class="admin-sidebar-guide-text">
+          左侧菜单与总览里的「功能地图」一致。点进模块即可办事；子页用顶栏「返回」。
+        </p>
+      </div>
+
+      <nav class="admin-nav" aria-label="后台功能导航">
+        <div v-for="entry in visibleNavEntries" :key="entry.key" class="admin-nav-row">
+          <p v-if="entry.kind === 'section'" class="admin-nav-section">{{ entry.label }}</p>
+          <router-link
+            v-else
+            v-slot="{ isActive, isExactActive, href, navigate }"
+            :to="entry.to"
+            custom
+          >
+            <a
+              :href="href"
+              class="admin-nav-link"
+              :class="{ 'is-active': entry.to === '/admin' ? isExactActive : isActive }"
+              @click="navigate"
+            >
+              <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>
+              <span>{{ entry.label }}</span>
+            </a>
+          </router-link>
+        </div>
       </nav>
 
       <router-link to="/" class="back-home">返回平台官网</router-link>
@@ -25,9 +47,10 @@
 
     <main class="admin-main">
       <header class="admin-main-header">
-        <div>
-          <p class="admin-main-kicker">Admin Workspace</p>
+        <div class="admin-main-heading">
+          <p class="admin-main-kicker">管理后台</p>
           <h1 class="admin-main-title">{{ currentSection }}</h1>
+          <p v-if="pageSubtitle" class="admin-main-subtitle">{{ pageSubtitle }}</p>
         </div>
         <div class="admin-main-actions">
           <RouteBackButton v-if="showRouteBackButton" class="admin-route-back" />
@@ -48,57 +71,38 @@ import { useRoute } from 'vue-router'
 import RouteBackButton from '@/components/RouteBackButton.vue'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 import { useUserStore } from '@/stores/user.js'
+import {
+  ADMIN_NAV_GROUPS,
+  filterAdminNavGroups,
+  getAdminPageSubtitle,
+  resolveAdminSectionTitle
+} from '@/constants/adminNavigation.js'
 
 const route = useRoute()
 const userStore = useUserStore()
 
-// 所有菜单定义，permission 为 null 表示所有管理员可见
-const ALL_NAV_ITEMS = [
-  { to: '/admin',                   label: '总览面板',    icon: '◉', permission: null },
-  { to: '/admin/announcements',     label: '公告管理',    icon: '◎', permission: 'content.announcement.manage' },
-  { to: '/admin/articles',          label: '资讯管理',    icon: '◈', permission: 'content.article.manage' },
-  { to: '/admin/events',            label: '活动管理',    icon: '◍', permission: 'content.event.manage' },
-  { to: '/admin/feedbacks',         label: '用户反馈',    icon: '◓', permission: 'content.manage' },
-  { to: '/admin/positive-shares',   label: '心声审核',    icon: '◐', permission: 'review.manage' },
-  { to: '/admin/verifications',     label: '认证审核',    icon: '◑', permission: 'review.manage' },
-  { to: '/admin/reports',           label: '举报处理',    icon: '◒', permission: 'review.manage' },
-  { to: '/admin/users',             label: '用户管理',    icon: '◌', permission: 'user.manage' },
-  { to: '/admin/invites',           label: '邀请记录',    icon: '◇', permission: 'user.manage' },
-  { to: '/admin/modules',           label: '模块管理',    icon: '◆', permission: 'system.manage' },
-  { to: '/admin/home-config',       label: '首页配置',    icon: '◉', permission: 'system.manage' },
-  { to: '/admin/analytics',         label: '访客分析',    icon: '◍', permission: 'system.manage' },
-  { to: '/admin/platform/groups',   label: '全站团体管理', icon: '◈', permission: 'group.manage.all' },
-  { to: '/admin/my-groups',         label: '我的团体',    icon: '◈', permission: 'group.manage.own' }
-]
-
-const sectionMap = {
-  '/admin': '总览面板',
-  '/admin/announcements': '公告管理',
-  '/admin/articles': '资讯管理',
-  '/admin/positive-shares': '心声审核',
-  '/admin/events': '活动管理',
-  '/admin/users': '用户管理',
-  '/admin/invites': '邀请记录',
-  '/admin/verifications': '认证审核',
-  '/admin/reports': '举报处理',
-  '/admin/feedbacks': '用户反馈',
-  '/admin/modules': '模块管理',
-  '/admin/home-config': '首页配置',
-  '/admin/analytics': '访客分析',
-  '/admin/platform/groups': '全站团体管理',
-  '/admin/my-groups': '我的团体',
-  '/admin/403': '无权限'
-}
-
-const visibleNavItems = computed(() =>
-  ALL_NAV_ITEMS.filter(item =>
-    item.permission === null || userStore.hasPermission(item.permission)
-  )
+const visibleNavGroups = computed(() =>
+  filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission)
 )
+
+/** 扁平列表：便于单 v-for + 合法 key，避免 template 片段与 key 规则冲突 */
+const visibleNavEntries = computed(() => {
+  const rows = []
+  for (const group of visibleNavGroups.value) {
+    rows.push({ kind: 'section', key: `s-${group.id}`, label: group.label })
+    for (const item of group.items) {
+      rows.push({ kind: 'link', key: item.to, ...item })
+    }
+  }
+  return rows
+})
+
+const visibleNavItems = computed(() => visibleNavGroups.value.flatMap(g => g.items))
 
 const navHomePaths = computed(() => new Set(visibleNavItems.value.map(item => item.to)))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
-const currentSection = computed(() => sectionMap[route.path] || '管理中心')
+const currentSection = computed(() => resolveAdminSectionTitle(route.path))
+const pageSubtitle = computed(() => getAdminPageSubtitle(route.path))
 const todayText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
 )
@@ -109,13 +113,13 @@ const todayText = computed(() =>
   min-height: 100vh;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  background: #f1f5f9;
+  background: var(--lc-soft);
 }
 
 .admin-sidebar {
   padding: 16px 12px 12px;
-  border-right: 1px solid #e2e8f0;
-  background: #fff;
+  border-right: 1px solid var(--lc-border);
+  background: var(--lc-surface);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -133,7 +137,7 @@ const todayText = computed(() =>
   font-size: 16px;
   font-weight: 800;
   text-decoration: none;
-  color: #0f172a;
+  color: var(--lc-text);
   letter-spacing: .01em;
 }
 
@@ -146,7 +150,7 @@ const todayText = computed(() =>
 
 .admin-sub {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-weight: 600;
 }
 
@@ -154,14 +158,14 @@ const todayText = computed(() =>
   margin-top: 2px;
   border-radius: 12px;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-bg);
 }
 
 .admin-sidebar-card-label {
   margin: 0;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   text-transform: uppercase;
   letter-spacing: .08em;
   font-weight: 700;
@@ -170,14 +174,49 @@ const todayText = computed(() =>
 .admin-sidebar-card-value {
   margin: 8px 0 2px;
   font-size: 17px;
-  color: #0f172a;
+  color: var(--lc-text);
   font-weight: 700;
 }
 
 .admin-sidebar-card-meta {
   margin: 0;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--lc-subtle);
+}
+
+.admin-sidebar-guide {
+  border-radius: 10px;
+  padding: 10px 11px;
+  border: 1px dashed var(--lc-blue-border);
+  background: var(--lc-blue-light);
+}
+
+.admin-sidebar-guide-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lc-blue-dark);
+  letter-spacing: 0.04em;
+}
+
+.admin-sidebar-guide-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lc-muted);
+}
+
+.admin-nav-section {
+  margin: 0;
+  padding: 12px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lc-subtle);
+  letter-spacing: .06em;
+}
+
+.admin-nav-section:first-of-type {
+  padding-top: 4px;
 }
 
 .admin-nav {
@@ -189,12 +228,16 @@ const todayText = computed(() =>
   align-content: start;
 }
 
+.admin-nav-row {
+  display: contents;
+}
+
 .admin-nav::-webkit-scrollbar {
   width: 6px;
 }
 
 .admin-nav::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--lc-border);
   border-radius: 999px;
 }
 
@@ -202,10 +245,9 @@ const todayText = computed(() =>
   background: transparent;
 }
 
-.admin-nav a,
-.back-home {
+.admin-nav-link {
   text-decoration: none;
-  color: #475569;
+  color: var(--lc-muted);
   padding: 8px 10px;
   border-radius: 10px;
   font-weight: 600;
@@ -213,46 +255,52 @@ const todayText = computed(() =>
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all .18s ease;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
-.admin-nav a:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+.admin-nav-link:hover {
+  background: var(--lc-soft);
+  color: var(--lc-text);
 }
 
 .nav-icon {
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 12px;
   flex-shrink: 0;
 }
 
-.admin-nav a.router-link-exact-active {
-  background: #eff6ff;
-  color: #1d4ed8;
+.admin-nav-link.is-active {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue-mid);
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px #bfdbfe;
+  box-shadow: inset 0 0 0 1px var(--lc-blue-border);
 }
 
-.admin-nav a.router-link-exact-active .nav-icon {
-  color: #2563eb;
+.admin-nav-link.is-active .nav-icon {
+  color: var(--lc-blue);
 }
 
 .back-home {
   margin-top: 6px;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  text-decoration: none;
+  color: var(--lc-blue);
+  border: 1px solid var(--lc-blue-border);
+  background: var(--lc-blue-light);
   border-radius: 12px;
   min-height: 44px;
   justify-content: center;
   font-weight: 700;
+  padding: 8px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 
 .back-home:hover {
   background: #dbeafe;
   border-color: #93c5fd;
-  color: #1e3a8a;
+  color: var(--lc-blue-dark);
 }
 
 .admin-main {
@@ -265,44 +313,57 @@ const todayText = computed(() =>
 }
 
 .admin-main-header {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--lc-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--lc-surface);
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+  box-shadow: var(--lc-shadow-sm);
 }
 
 .admin-main-kicker {
   margin: 0;
-  color: #94a3b8;
+  color: var(--lc-subtle);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .12em;
   font-weight: 700;
 }
 
+.admin-main-heading {
+  min-width: 0;
+}
+
 .admin-main-title {
   margin: 6px 0 0;
   font-size: 26px;
   line-height: 1.15;
-  color: #0f172a;
+  color: var(--lc-text);
   font-weight: 800;
+}
+
+.admin-main-subtitle {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--lc-muted);
+  font-weight: 500;
+  max-width: 40rem;
 }
 
 .admin-home-link {
   text-decoration: none;
-  color: #2563eb;
+  color: var(--lc-blue);
   font-weight: 700;
   font-size: 13px;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
+  border: 1px solid var(--lc-blue-border);
+  background: var(--lc-blue-light);
   border-radius: 8px;
   padding: 8px 14px;
-  transition: all .18s ease;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 
 .admin-main-actions {
@@ -316,20 +377,20 @@ const todayText = computed(() =>
 }
 
 .admin-route-back:hover {
-  border-color: #bfdbfe;
-  color: #2563eb;
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue);
 }
 
 .admin-home-link:hover {
   background: #dbeafe;
   border-color: #93c5fd;
-  color: #1e3a8a;
+  color: var(--lc-blue-dark);
 }
 
 .admin-main-content {
   min-height: 0;
   min-width: 0;
-  max-width: 1400px;
+  max-width: min(1480px, 100%);
   width: 100%;
 }
 
@@ -344,7 +405,7 @@ const todayText = computed(() =>
     z-index: 50;
     height: auto;
     border-right: 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--lc-border);
     grid-template-rows: auto auto minmax(0, 1fr) auto;
     gap: 6px;
     padding: 10px 12px;
@@ -352,6 +413,10 @@ const todayText = computed(() =>
   }
 
   .admin-sidebar-card {
+    display: none;
+  }
+
+  .admin-sidebar-guide {
     display: none;
   }
 
@@ -370,7 +435,17 @@ const todayText = computed(() =>
     padding-right: 0;
   }
 
-  .admin-nav a,
+  .admin-nav-section {
+    grid-column: 1 / -1;
+    padding: 10px 10px 4px;
+  }
+
+  .admin-nav-link {
+    justify-content: center;
+    font-size: 12px;
+    padding: 7px 6px;
+  }
+
   .back-home {
     justify-content: center;
     font-size: 12px;

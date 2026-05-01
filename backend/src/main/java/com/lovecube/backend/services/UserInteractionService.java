@@ -5,6 +5,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,11 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -234,6 +238,60 @@ public class UserInteractionService {
 
     public List<Long> getActedUserIds(Long userId) {
         return interactionRepository.findActedUserIdsByFromUserId(userId);
+    }
+
+    /**
+     * 认识模块：分页查看自己划过的记录（喜欢含普通喜欢与超级喜欢、跳过、或全部按时间线）
+     *
+     * @param tab liked | skipped | all
+     */
+    public Map<String, Object> getMatchBrowseHistoryPage(Long userId, String tab, int pageOneBased, int pageSize) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("无效的用户ID");
+        }
+        String key = tab == null ? "" : tab.trim().toLowerCase(Locale.ROOT);
+        Set<UserInteraction.InteractionType> types = switch (key) {
+            case "skipped" -> EnumSet.of(UserInteraction.InteractionType.SKIP);
+            case "all" -> EnumSet.of(
+                    UserInteraction.InteractionType.LIKE,
+                    UserInteraction.InteractionType.SUPER_LIKE,
+                    UserInteraction.InteractionType.SKIP);
+            default -> EnumSet.of(UserInteraction.InteractionType.LIKE, UserInteraction.InteractionType.SUPER_LIKE);
+        };
+
+        int safePage = Math.max(pageOneBased, 1);
+        int safeSize = Math.min(Math.max(pageSize, 1), 50);
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize);
+        Page<UserInteraction> pageResult = interactionRepository
+                .findByFromUserIdAndInteractionTypeInOrderByCreatedAtDesc(userId, types, pageable);
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (UserInteraction interaction : pageResult.getContent()) {
+            Long targetId = interaction.getToUserId();
+            User targetUser = userRepository.findById(targetId).orElse(null);
+            if (targetUser == null) {
+                continue;
+            }
+            Map<String, Object> row = new HashMap<>();
+            row.put("userId", targetUser.getUserid());
+            row.put("nickname", targetUser.getUsername());
+            row.put("profilePhoto", targetUser.getProfilePhoto());
+            row.put("avatar", targetUser.getProfilePhoto());
+            row.put("age", targetUser.getAge());
+            row.put("location", targetUser.getLocation());
+            row.put("occupation", targetUser.getOccupation());
+            row.put("interactionType", interaction.getInteractionType().name().toLowerCase(Locale.ROOT));
+            row.put("actedAt", interaction.getCreatedAt());
+            rows.add(row);
+        }
+
+        Map<String, Object> out = new HashMap<>();
+        out.put("list", rows);
+        out.put("page", safePage);
+        out.put("size", safeSize);
+        out.put("total", pageResult.getTotalElements());
+        out.put("hasMore", pageResult.hasNext());
+        return out;
     }
 
     public UserInteraction sendGift(Long fromUserId, Long toUserId, Long giftId, Integer giftCount, String message) {

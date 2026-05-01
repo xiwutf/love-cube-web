@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -214,6 +215,43 @@ public class InteractionController {
         }
         List<Map<String, Object>> list = interactionService.getMutualLikeUsers(currentUser.getUserid());
         return ResponseEntity.ok(list);
+    }
+
+    /**
+     * 认识页：分页查看自己划过的人（喜欢 / 超级喜欢、跳过、或全部时间线）
+     *
+     * @param tab liked（默认）| skipped | all
+     */
+    @GetMapping("/match-history")
+    public ResponseEntity<?> getMatchBrowseHistory(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(defaultValue = "liked") String tab,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+            }
+            int safePage = page == null || page < 1 ? 1 : page;
+            int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 50);
+            Map<String, Object> payload = interactionService.getMatchBrowseHistoryPage(
+                    currentUser.getUserid(), tab, safePage, safeSize);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", payload.get("list"));
+            response.put("page", payload.get("page"));
+            response.put("size", payload.get("size"));
+            response.put("total", payload.get("total"));
+            response.put("hasMore", payload.get("hasMore"));
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "加载失败"));
+        }
     }
 
     /**

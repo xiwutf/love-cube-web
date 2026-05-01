@@ -109,18 +109,18 @@ public class PlatformGroupController {
                     .collect(Collectors.toList());
         }
 
-        Map<Long, PlatGroupMember> memberMap = loadUserMemberMap(currentUserId);
-        Map<Long, User> ownerUsers = loadOwnersForGroups(groups);
-        List<Map<String, Object>> summaries = groups.stream()
-                .map(g -> PlatformGroupSupport.buildGroupSummary(g, memberMap, ownerUsers))
-                .collect(Collectors.toList());
-
         int safePage = Math.max(1, page);
         int safeSize = Math.min(100, Math.max(1, pageSize));
-        int total = summaries.size();
+        int total = groups.size();
         int from = Math.min((safePage - 1) * safeSize, total);
         int to = Math.min(from + safeSize, total);
-        List<Map<String, Object>> items = from < total ? summaries.subList(from, to) : Collections.emptyList();
+        List<PlatGroup> pageGroups = from < total ? groups.subList(from, to) : Collections.emptyList();
+
+        Map<Long, PlatGroupMember> memberMap = loadUserMemberMap(currentUserId);
+        Map<Long, User> ownerUsers = loadOwnersForGroups(pageGroups);
+        List<Map<String, Object>> items = pageGroups.stream()
+                .map(g -> PlatformGroupSupport.buildGroupSummary(g, memberMap, ownerUsers))
+                .collect(Collectors.toList());
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("items", items);

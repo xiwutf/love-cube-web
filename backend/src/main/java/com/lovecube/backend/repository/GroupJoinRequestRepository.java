@@ -3,10 +3,13 @@ package com.lovecube.backend.repository;
 import com.lovecube.backend.entity.GroupJoinRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinRequest, Long> {
+
+    List<GroupJoinRequest> findByUserIdAndGroupIdInAndStatus(Long userId, Collection<String> groupIds, String status);
 
     Optional<GroupJoinRequest> findTopByGroupIdAndUserIdAndStatusOrderByRequestedAtDesc(
             String groupId, Long userId, String status);

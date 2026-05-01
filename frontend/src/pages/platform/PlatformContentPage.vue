@@ -16,9 +16,19 @@ import ContentTabs from '@/components/platform/content/ContentTabs.vue'
 import ContentFilterBar from '@/components/platform/content/ContentFilterBar.vue'
 import ContentList from '@/components/platform/content/ContentList.vue'
 import ContentEmpty from '@/components/platform/content/ContentEmpty.vue'
-import { fetchAnnouncements, fetchArticles, fetchEvents } from '@/api/platformContent.js'
-import { commentPositiveShare, fetchPositiveShares, likePositiveShare, unlikePositiveShare } from '@/api/positiveShare.js'
-import { PLATFORM_CONTENT_TYPES, PLATFORM_SORTS, platformContentList } from '@/mock/platformContent.js'
+import {
+  fetchAnnouncements,
+  fetchArticles,
+  fetchEvents,
+  fetchPlatformContentFeed
+} from '@/api/platformContent.js'
+import {
+  commentPositiveShare,
+  fetchPositiveShares,
+  likePositiveShare,
+  unlikePositiveShare
+} from '@/api/positiveShare.js'
+import { PLATFORM_CONTENT_TYPES, PLATFORM_SORTS } from '@/mock/platformContent.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,6 +64,42 @@ function unwrapList(res) {
   if (Array.isArray(res?.records)) return res.records
   if (Array.isArray(res?.content)) return res.content
   return []
+}
+
+/** 聚合接口体：兼容 { announcements, ... } 或 { data: { ... } } */
+function unwrapContentFeedBody(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const inner = raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw
+  if (
+    inner &&
+    typeof inner === 'object' &&
+    ('announcements' in inner || 'articles' in inner || 'events' in inner || 'positiveShares' in inner)
+  ) {
+    return inner
+  }
+  return null
+}
+
+function mergeNormalizedFromFeedBody(body) {
+  const announcements = unwrapList(body.announcements).map(normalizeAnnouncement)
+  const articles = unwrapList(body.articles).map(normalizeArticle)
+  const events = unwrapList(body.events).map(normalizeEvent)
+  const moods = unwrapList(body.positiveShares).map(normalizePositiveShare)
+  return [...announcements, ...articles, ...events, ...moods]
+}
+
+async function loadContentListLegacy() {
+  const [annRes, artRes, eventRes, moodRes] = await Promise.allSettled([
+    fetchAnnouncements({ status: 'published', limit: 30 }),
+    fetchArticles({ status: 'published', limit: 30 }),
+    fetchEvents({ status: 'published', limit: 30 }),
+    fetchPositiveShares({ tab: 'latest', pageNum: 1, pageSize: 50 })
+  ])
+  const announcements = annRes.status === 'fulfilled' ? unwrapList(annRes.value).map(normalizeAnnouncement) : []
+  const articles = artRes.status === 'fulfilled' ? unwrapList(artRes.value).map(normalizeArticle) : []
+  const events = eventRes.status === 'fulfilled' ? unwrapList(eventRes.value).map(normalizeEvent) : []
+  const moods = moodRes.status === 'fulfilled' ? unwrapList(moodRes.value).map(normalizePositiveShare) : []
+  return [...announcements, ...articles, ...events, ...moods]
 }
 
 function resolveTypeFromArticle(item) {
@@ -177,20 +223,17 @@ async function handleComment(item) {
 }
 
 onMounted(async () => {
-  const [annRes, artRes, eventRes, moodRes] = await Promise.allSettled([
-    fetchAnnouncements({ status: 'published', limit: 30 }),
-    fetchArticles({ status: 'published', limit: 30 }),
-    fetchEvents({ status: 'published', limit: 30 }),
-    fetchPositiveShares({ tab: 'latest', pageNum: 1, pageSize: 50 })
-  ])
-
-  const announcements = annRes.status === 'fulfilled' ? unwrapList(annRes.value).map(normalizeAnnouncement) : []
-  const articles = artRes.status === 'fulfilled' ? unwrapList(artRes.value).map(normalizeArticle) : []
-  const events = eventRes.status === 'fulfilled' ? unwrapList(eventRes.value).map(normalizeEvent) : []
-  const moods = moodRes.status === 'fulfilled' ? unwrapList(moodRes.value).map(normalizePositiveShare) : []
-  const merged = [...announcements, ...articles, ...events, ...moods]
-
-  contentList.value = merged.length ? merged : platformContentList
+  try {
+    const raw = await fetchPlatformContentFeed({ limit: 30 })
+    const body = unwrapContentFeedBody(raw)
+    if (body) {
+      contentList.value = mergeNormalizedFromFeedBody(body)
+      return
+    }
+  } catch {
+    // 未部署 content-feed 或网络错误：回退四条接口（与改聚合接口前行为一致）
+  }
+  contentList.value = await loadContentListLegacy()
 })
 </script>
 

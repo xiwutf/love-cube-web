@@ -11,6 +11,10 @@
           <van-icon name="friends-o" size="18" />
           <span>查看全部</span>
         </button>
+        <button class="header-btn" @click="goBrowseHistory">
+          <van-icon name="clock-o" size="18" />
+          <span>浏览记录</span>
+        </button>
         <button class="header-btn" @click="showFilter = true">
           <van-icon name="filter-o" size="18" />
           <span>筛选</span>
@@ -260,6 +264,10 @@ function goAllOppositeUsers() {
   router.push('/fellowship/match/all')
 }
 
+function goBrowseHistory() {
+  router.push('/fellowship/match/history')
+}
+
 function setTopCardRef(el) {
   topCardRef.value = el
 }
@@ -309,8 +317,11 @@ onMounted(loadCards)
 }
 .match-header-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+  max-width: 68%;
 }
 .header-btn {
   display: flex;

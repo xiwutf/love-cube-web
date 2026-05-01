@@ -1,7 +1,17 @@
 <template>
   <section class="admin-page dashboard-page">
+    <header class="dashboard-welcome platform-card">
+      <p class="welcome-kicker">工作台</p>
+      <h2 class="welcome-title">你好，{{ displayName }}</h2>
+      <p class="welcome-text">
+        建议先浏览下方<strong>功能地图</strong>（与左侧菜单一致），再根据需要查看数据区。同页另有「第一次用后台」分步说明（宽屏在右侧，窄屏在数据区下方）。
+      </p>
+    </header>
+
     <div class="dashboard-shell">
       <main class="dashboard-main">
+        <AdminModuleDirectory />
+
         <TodayStats :loading="loading" :items="todayStats" />
 
         <section class="operation-zone">
@@ -13,7 +23,7 @@
       </main>
 
       <aside class="dashboard-side">
-        <QuickActions />
+        <AdminHowTo />
       </aside>
     </div>
 
@@ -27,11 +37,19 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getAdminStats } from '@/api/adminContent.js'
+import { useUserStore } from '@/stores/user.js'
 import TodayStats from './components/TodayStats.vue'
 import ContentPanel from './components/ContentPanel.vue'
 import SocialPanel from './components/SocialPanel.vue'
 import GovernanceBar from './components/GovernanceBar.vue'
-import QuickActions from './components/QuickActions.vue'
+import AdminModuleDirectory from './components/AdminModuleDirectory.vue'
+import AdminHowTo from './components/AdminHowTo.vue'
+
+const userStore = useUserStore()
+
+const displayName = computed(
+  () => userStore.nickname || userStore.userInfo?.username || '管理员'
+)
 
 const loading = ref(true)
 const error = ref('')
@@ -131,9 +149,44 @@ onMounted(load)
 </script>
 
 <style scoped>
+.dashboard-welcome {
+  margin-bottom: var(--lc-space-6);
+  padding: var(--lc-space-5) var(--lc-space-6);
+  border: 1px solid var(--lc-border);
+}
+
+.welcome-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lc-subtle);
+  letter-spacing: 0.06em;
+}
+
+.welcome-title {
+  margin: 8px 0 0;
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-weight: 800;
+  color: var(--lc-text);
+  line-height: 1.2;
+}
+
+.welcome-text {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lc-muted);
+  max-width: 40rem;
+}
+
+.welcome-text strong {
+  color: var(--lc-text-deep);
+  font-weight: 700;
+}
+
 .dashboard-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: var(--lc-space-6);
   align-items: start;
 }
@@ -161,6 +214,12 @@ onMounted(load)
 
   .dashboard-side {
     position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .operation-zone {
+    grid-template-columns: 1fr;
   }
 }
 </style>

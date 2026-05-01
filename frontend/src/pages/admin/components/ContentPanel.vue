@@ -2,11 +2,11 @@
   <section class="panel platform-card">
     <header class="panel-head">
       <div>
-        <p class="kicker">业务运营</p>
-        <h3>平台内容运营</h3>
-        <p class="desc">管理平台内容生态，追踪发布状态。</p>
+        <p class="kicker">数据区</p>
+        <h3>官网内容体量</h3>
+        <p class="desc">公告、文章、活动数量概况。编辑请用功能地图中的「内容与运营」。</p>
       </div>
-      <router-link to="/admin/announcements" class="entry-btn">进入内容管理</router-link>
+      <router-link to="/admin/announcements" class="entry-btn">去公告管理</router-link>
     </header>
 
     <div class="panel-visual">

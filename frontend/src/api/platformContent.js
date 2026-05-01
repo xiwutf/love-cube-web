@@ -1,5 +1,10 @@
 import request from './request.js'
 
+/** 平台内容页：公告 + 资讯 + 活动 + 每日心声（一次请求） */
+export function fetchPlatformContentFeed(params = { limit: 30 }) {
+  return request.get('/platform/content-feed', { params })
+}
+
 export function fetchAnnouncements(params = { status: 'published' }) {
   return request.get('/announcements', { params })
 }

@@ -88,8 +88,9 @@
         <h2>热门团体</h2>
         <span>查看更多</span>
       </div>
-      <div class="hot-list">
-        <div v-for="item in hotGroups" :key="item.name" class="hot-item">
+      <div v-if="!hotLoading && !hotGroups.length" class="side-empty">暂无热门团体</div>
+      <div v-else class="hot-list">
+        <div v-for="item in hotGroups" :key="String(item.id)" class="hot-item">
           <div class="hot-avatar" :class="item.avatarClass">{{ item.name.slice(0, 1) }}</div>
           <div>
             <p>{{ item.name }}</p>
@@ -111,13 +112,19 @@
         <h2>团体动态</h2>
         <span>查看更多</span>
       </div>
-      <div class="feed-list">
-        <div v-for="feed in feeds" :key="feed.title" class="feed-item">
-          <div class="feed-avatar" :class="feed.avatarClass"></div>
+      <div v-if="!feedLoading && !feeds.length" class="side-empty">暂无动态</div>
+      <div v-else class="feed-list">
+        <div v-for="feed in feeds" :key="feed.id" class="feed-item">
+          <div
+            class="feed-avatar"
+            :class="feed.avatarUrl ? 'feed-avatar--cover' : feed.avatarClass"
+          >
+            <img v-if="feed.avatarUrl" :src="feed.avatarUrl" alt="">
+          </div>
           <div>
             <p>
               {{ feed.title }}
-              <span>{{ feed.role }}</span>
+              <span v-if="feed.role">{{ feed.role }}</span>
             </p>
             <small>{{ feed.content }}</small>
           </div>
@@ -146,13 +153,23 @@
 import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
-import { fetchGroups, joinGroup } from '@/api/groups.js'
+import {
+  fetchGroups,
+  fetchGroupFeed,
+  fetchHotGroups,
+  joinGroup,
+  unwrapPlatformGroupList
+} from '@/api/groups.js'
 
 const keyword = ref('')
 const activeFilter = ref('all')
 const activeTab = ref('all')
 const loading = ref(false)
+const hotLoading = ref(false)
+const feedLoading = ref(false)
 const remoteGroups = ref([])
+const hotGroups = ref([])
+const feeds = ref([])
 
 const filters = [
   { label: '全部地区', value: 'all' },
@@ -166,95 +183,6 @@ const tabs = [
   { label: '申请中', value: 'pending' }
 ]
 
-const groups = [
-  {
-    id: 1,
-    name: '北京青年团契',
-    type: '地区团体',
-    location: '北京',
-    members: 120,
-    description: '我们是一个充满爱与活力的青年团契，欢迎志同道合的朋友加入。',
-    status: 'joined',
-    joined: true,
-    coverClass: 'cover-sunrise',
-    icon: 'cross'
-  },
-  {
-    id: 2,
-    name: '上海教会团体',
-    type: '教会团体',
-    location: '上海',
-    members: 256,
-    description: '以上海教会为依托，发布教会通知和活动信息。',
-    status: 'all',
-    joined: false,
-    coverClass: 'cover-church',
-    icon: 'wap-home-o'
-  },
-  {
-    id: 3,
-    name: '广州祷告小组',
-    type: '小组',
-    location: '广州',
-    members: 68,
-    description: '垂听我们的祷告，一起为彼此祷告吧。',
-    status: 'pending',
-    joined: false,
-    pending: true,
-    coverClass: 'cover-pray',
-    icon: 'like-o'
-  },
-  {
-    id: 4,
-    name: '读经分享小组',
-    type: '学习小组',
-    location: '全国',
-    members: 86,
-    description: '一起读经，一起成长，在神的话语中扎根。',
-    status: 'all',
-    joined: false,
-    coverClass: 'cover-book',
-    icon: 'notes-o'
-  },
-  {
-    id: 5,
-    name: '音乐敬拜团',
-    type: '兴趣团体',
-    location: '全国',
-    members: 45,
-    description: '用音乐赞美神，服侍教会，感动更多人认识神。',
-    status: 'joined',
-    joined: true,
-    coverClass: 'cover-music',
-    icon: 'music-o'
-  },
-  {
-    id: 6,
-    name: '家庭团契小组',
-    type: '生活团契',
-    location: '深圳',
-    members: 32,
-    description: '在主里建立美好的家庭关系，分享生活点滴。',
-    status: 'all',
-    joined: false,
-    coverClass: 'cover-family',
-    icon: 'friends-o'
-  }
-]
-
-const hotGroups = [
-  { name: '深圳青年团契', location: '深圳', members: 98, joined: true, avatarClass: 'avatar-green' },
-  { name: '祷告同行小组', location: '全国', members: 76, joined: false, avatarClass: 'avatar-pink' },
-  { name: '周末公益小组', location: '北京', members: 55, joined: false, avatarClass: 'avatar-blue' },
-  { name: '婚前辅导小组', location: '全国', members: 42, joined: false, avatarClass: 'avatar-purple' }
-]
-
-const feeds = [
-  { title: '北京青年团契', role: '管理员', content: '发布了新的活动', time: '2小时前', avatarClass: 'avatar-blue' },
-  { title: '读经分享小组', role: '管理员', content: '更新了团体公告', time: '3小时前', avatarClass: 'avatar-purple' },
-  { title: '音乐敬拜团', role: '管理员', content: '添加了 3 位新成员', time: '5小时前', avatarClass: 'avatar-pink' }
-]
-
 const features = [
   { title: '多元团体', desc: '覆盖信仰、兴趣、生活等多种团体类型', icon: 'friends-o' },
   { title: '共同成长', desc: '在团体中彼此陪伴，分享信仰与生活', icon: 'fire-o' },
@@ -262,11 +190,9 @@ const features = [
   { title: '安全可信', desc: '真实身份认证，打造安全可信的团体环境', icon: 'shield-o' }
 ]
 
-const displayGroups = computed(() => (remoteGroups.value.length ? remoteGroups.value : groups))
-
 const visibleGroups = computed(() => {
   const term = keyword.value.trim().toLowerCase()
-  return displayGroups.value.filter((group) => {
+  return remoteGroups.value.filter((group) => {
     const matchTab =
       activeTab.value === 'all' ||
       (activeTab.value === 'joined' && group.joined) ||
@@ -286,18 +212,60 @@ const visibleGroups = computed(() => {
 
 onMounted(() => {
   loadGroups()
+  loadHot()
+  loadFeed()
 })
 
 async function loadGroups() {
   loading.value = true
   try {
-    const data = await fetchGroups({ status: 'published', pageSize: 200 })
-    const list = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : [])
+    const data = await fetchGroups({ pageSize: 200 })
+    const list = unwrapPlatformGroupList(data)
     remoteGroups.value = list.map(normalizeGroup)
   } catch {
     remoteGroups.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function loadHot() {
+  hotLoading.value = true
+  try {
+    const data = await fetchHotGroups()
+    const list = Array.isArray(data) ? data : unwrapPlatformGroupList(data)
+    hotGroups.value = list.map(normalizeGroup)
+  } catch {
+    hotGroups.value = []
+  } finally {
+    hotLoading.value = false
+  }
+}
+
+async function loadFeed() {
+  feedLoading.value = true
+  try {
+    const data = await fetchGroupFeed()
+    const list = Array.isArray(data) ? data : []
+    feeds.value = list.map(normalizeFeedItem)
+  } catch {
+    feeds.value = []
+  } finally {
+    feedLoading.value = false
+  }
+}
+
+function normalizeFeedItem(item, index) {
+  const avatarClass = ['avatar-blue', 'avatar-purple', 'avatar-pink', 'avatar-green'][index % 4]
+  const id = item.id != null ? String(item.id) : `feed-${index}-${item.createdAt ?? index}`
+  return {
+    id,
+    title: item.groupName || '团体动态',
+    role: item.authorName || '',
+    content: item.text || item.content || '',
+    time: item.time || '',
+    avatarClass,
+    avatarUrl: item.avatarUrl || ''
   }
 }
 
@@ -337,17 +305,11 @@ async function handleJoin(group) {
     showToast('该团体当前仅展示，暂不支持直接申请')
     return
   }
-  if (!remoteGroups.value.length) {
-    showToast(`已提交加入${group.name}的申请`)
-    return
-  }
 
   try {
     const res = await joinGroup(group.id)
     showToast(res?.message || '申请已提交')
-    group.joined = Boolean(res?.joined)
-    group.pending = Boolean(res?.pending)
-    group.status = group.pending ? 'pending' : group.status
+    await Promise.all([loadGroups(), loadHot()])
   } catch (error) {
     showToast({ message: error?.message || '申请失败，请稍后重试', type: 'fail' })
   }
@@ -708,6 +670,14 @@ async function handleJoin(group) {
   font-weight: 700;
 }
 
+.side-empty {
+  margin: 0;
+  padding: 8px 0;
+  color: #8898aa;
+  font-size: 13px;
+  text-align: center;
+}
+
 .hot-list,
 .feed-list {
   display: grid;
@@ -764,6 +734,18 @@ async function handleJoin(group) {
 .feed-avatar {
   width: 36px;
   height: 36px;
+}
+
+.feed-avatar--cover {
+  padding: 0;
+  overflow: hidden;
+}
+
+.feed-avatar--cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .feed-item p span {

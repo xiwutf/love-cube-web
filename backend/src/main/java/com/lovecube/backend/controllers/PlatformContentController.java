@@ -15,6 +15,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.HomeConfigService;
+import com.lovecube.backend.services.PositiveShareService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class PlatformContentController {
     private final HomeConfigRepository homeConfigRepository;
     private final DynamicRepository dynamicRepository;
     private final GrowthService growthService;
+    private final PositiveShareService positiveShareService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
@@ -52,7 +54,8 @@ public class PlatformContentController {
             UserRepository userRepository,
             HomeConfigRepository homeConfigRepository,
             DynamicRepository dynamicRepository,
-            GrowthService growthService
+            GrowthService growthService,
+            PositiveShareService positiveShareService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -64,6 +67,41 @@ public class PlatformContentController {
         this.homeConfigRepository = homeConfigRepository;
         this.dynamicRepository = dynamicRepository;
         this.growthService = growthService;
+        this.positiveShareService = positiveShareService;
+    }
+
+    /**
+     * 平台「内容」页聚合：公告、资讯、活动、每日心声（已发布），各取最多 limit 条。
+     */
+    @GetMapping("/platform/content-feed")
+    public Map<String, Object> getPlatformContentFeed(
+            @RequestParam(defaultValue = "30") int limit,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        List<Announcement> announcements = announcementRepository.findByStatusPinnedFirst("published").stream()
+                .limit(safeLimit)
+                .toList();
+        List<Article> articles = articleRepository.findByStatusPinnedFirst("published").stream()
+                .limit(safeLimit)
+                .toList();
+        List<PlatformEvent> events = platformEventRepository.findByStatusPinnedFirst("published").stream()
+                .limit(safeLimit)
+                .toList();
+        Long currentUserId = null;
+        if (authHeader != null && !authHeader.isBlank()) {
+            try {
+                currentUserId = adminAuthService.requireUser(authHeader).getUserid();
+            } catch (Exception ignored) {
+            }
+        }
+        Map<String, Object> positiveShares = positiveShareService.listShares("latest", 1, safeLimit, currentUserId);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("announcements", announcements);
+        body.put("articles", articles);
+        body.put("events", events);
+        body.put("positiveShares", positiveShares);
+        return body;
     }
 
     @GetMapping("/announcements")

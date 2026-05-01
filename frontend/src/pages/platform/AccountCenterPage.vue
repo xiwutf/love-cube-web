@@ -15,13 +15,7 @@
               <span class="mh-verify-tag" :class="{ 'is-verified': user?.verificationStatus === 'approved' }">{{ verifyLabel }}</span>
               <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
-            <router-link class="mh-badge-row" to="/me/badges" aria-label="我的徽章">
-              <div class="mh-badge-icons">
-                <span v-for="(icon, index) in mobileBadgeIcons" :key="`mh-badge-${index}`" class="mh-badge-icon">{{ icon }}</span>
-              </div>
-              <span class="mh-badge-text">我的徽章</span>
-              <span class="mh-badge-arrow">›</span>
-            </router-link>
+            <MhHeroBadgeLink :badges="badges" />
             <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
           </div>
           <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
@@ -218,6 +212,7 @@ import { getMyInviteCode } from '@/api/invite.js'
 import { getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
+import MhHeroBadgeLink from '@/components/platform/me/MhHeroBadgeLink.vue'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -287,27 +282,6 @@ const mobileGrowthProgress = computed(() => {
 })
 
 const mobileCompletedCount = computed(() => mobileDailyTasks.value.filter(t => t.done).length)
-const mobileBadgeIcons = computed(() => {
-  const allBadges = Array.isArray(badges.value) ? badges.value : []
-  const preset = ['⭐', '🛡️', '💗', '🏅']
-  const nameMap = {
-    '新手上路': '⭐',
-    '活跃达人': '💗',
-    '热心帮助': '🛡️',
-    '官方认证': '🏅'
-  }
-
-  const sanitizeIcon = (item, index) => {
-    const raw = String(item?.icon || '').trim()
-    if (raw && !raw.includes('-') && raw.length <= 4) return raw
-    const byName = nameMap[String(item?.name || '').trim()]
-    if (byName) return byName
-    return preset[index % preset.length]
-  }
-
-  if (allBadges.length) return allBadges.slice(0, 4).map(sanitizeIcon)
-  return preset
-})
 
 const mobileGridItems = [
   { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
@@ -1993,49 +1967,6 @@ onBeforeUnmount(() => {
   margin-top: 6px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.55);
-}
-
-.mh-badge-row {
-  margin-top: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.15);
-  text-decoration: none;
-  max-width: 100%;
-}
-
-.mh-badge-icons {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.mh-badge-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 14px;
-  line-height: 1;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.mh-badge-text {
-  font-size: 12px;
-  color: var(--lc-indigo-light);
-  line-height: 1;
-}
-
-.mh-badge-arrow {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1;
 }
 
 .mh-edit-btn {

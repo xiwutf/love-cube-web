@@ -6,6 +6,26 @@ function unwrapList(res) {
   return []
 }
 
+/**
+ * 认识页：分页查看自己划过的人（喜欢含超级喜欢、跳过、全部时间线）
+ * @param {{ tab?: 'liked'|'skipped'|'all', page?: number, size?: number }} params
+ */
+export async function getMatchBrowseHistory(params = {}) {
+  const tab = params.tab || 'liked'
+  const page = params.page || 1
+  const size = params.size || 20
+  const data = await request.get('/interactions/match-history', {
+    params: { tab, page, size }
+  })
+  return {
+    list: Array.isArray(data?.data) ? data.data : [],
+    page: Number(data?.page ?? page),
+    size: Number(data?.size ?? size),
+    total: Number(data?.total ?? 0),
+    hasMore: Boolean(data?.hasMore)
+  }
+}
+
 export async function getMatchList(params = {}) {
   const query = {}
   if (params?.gender === 'male') query.gender = 1

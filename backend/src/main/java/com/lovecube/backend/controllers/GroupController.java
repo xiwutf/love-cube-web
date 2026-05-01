@@ -4,10 +4,12 @@ import com.lovecube.backend.entity.GroupJoinRequest;
 import com.lovecube.backend.entity.GroupMember;
 import com.lovecube.backend.entity.GroupPost;
 import com.lovecube.backend.entity.PlatformGroup;
+import com.lovecube.backend.entity.PlatformGroupAdmin;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.GroupJoinRequestRepository;
 import com.lovecube.backend.repository.GroupMemberRepository;
 import com.lovecube.backend.repository.GroupPostRepository;
+import com.lovecube.backend.repository.PlatformGroupAdminRepository;
 import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
@@ -31,6 +33,7 @@ public class GroupController {
     private final GroupMemberRepository memberRepository;
     private final GroupPostRepository postRepository;
     private final GroupJoinRequestRepository joinRequestRepository;
+    private final PlatformGroupAdminRepository platformGroupAdminRepository;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
     private final GrowthService growthService;
@@ -40,6 +43,7 @@ public class GroupController {
             GroupMemberRepository memberRepository,
             GroupPostRepository postRepository,
             GroupJoinRequestRepository joinRequestRepository,
+            PlatformGroupAdminRepository platformGroupAdminRepository,
             UserRepository userRepository,
             AdminAuthService adminAuthService,
             GrowthService growthService
@@ -48,6 +52,7 @@ public class GroupController {
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.platformGroupAdminRepository = platformGroupAdminRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
         this.growthService = growthService;
@@ -92,15 +97,13 @@ public class GroupController {
                     .collect(Collectors.toList());
         }
         Long currentUserId = resolveOptionalUserId(authHeader);
-        List<Map<String, Object>> summaries = groups.stream()
-                .map(g -> buildGroupSummary(g, currentUserId))
-                .collect(Collectors.toList());
         int safePage = Math.max(1, page);
         int safeSize = Math.min(100, Math.max(1, pageSize));
-        int total = summaries.size();
+        int total = groups.size();
         int from = Math.min((safePage - 1) * safeSize, total);
         int to = Math.min(from + safeSize, total);
-        List<Map<String, Object>> items = from < total ? summaries.subList(from, to) : Collections.emptyList();
+        List<PlatformGroup> pageGroups = from < total ? groups.subList(from, to) : Collections.emptyList();
+        List<Map<String, Object>> items = buildGroupSummariesBatch(pageGroups, currentUserId);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("items", items);
         body.put("total", total);
@@ -173,7 +176,7 @@ public class GroupController {
                 .sorted(Comparator.comparing(PlatformGroup::getMemberCount, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(5)
                 .collect(Collectors.toList());
-        return top.stream().map(g -> buildGroupSummary(g, currentUserId)).collect(Collectors.toList());
+        return buildGroupSummariesBatch(top, currentUserId);
     }
 
     @GetMapping("/{id}")
@@ -337,6 +340,101 @@ public class GroupController {
         group.setMemberCount(Math.max(0, count - 1));
         groupRepository.save(group);
         return Map.of("left", true, "message", "已退出团体");
+    }
+
+    /**
+     * 列表页专用：对当前页批量查库，避免对每个团体重复查询（原实现为明显的 N+1）。
+     */
+    private List<Map<String, Object>> buildGroupSummariesBatch(List<PlatformGroup> groups, Long currentUserId) {
+        if (groups.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<Long> ownerUids = groups.stream()
+                .map(g -> g.getOwnerUserId() != null ? g.getOwnerUserId() : g.getCreatedBy())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> ownerNames = ownerUids.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(ownerUids).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u.getUsername() != null ? u.getUsername() : ""));
+
+        Set<String> pageGroupIds = groups.stream().map(PlatformGroup::getId).collect(Collectors.toSet());
+
+        Map<String, GroupMember> memberByGroupId = Collections.emptyMap();
+        Set<String> pendingGroupIds = Collections.emptySet();
+        Set<String> managedGroupIds = Collections.emptySet();
+
+        if (currentUserId != null) {
+            memberByGroupId = memberRepository.findByUserId(currentUserId).stream()
+                    .filter(m -> pageGroupIds.contains(m.getGroupId()))
+                    .collect(Collectors.toMap(GroupMember::getGroupId, m -> m, (a, b) -> a));
+
+            if (!pageGroupIds.isEmpty()) {
+                pendingGroupIds = joinRequestRepository
+                        .findByUserIdAndGroupIdInAndStatus(currentUserId, pageGroupIds, "pending")
+                        .stream()
+                        .map(GroupJoinRequest::getGroupId)
+                        .collect(Collectors.toSet());
+            }
+
+            List<PlatformGroupAdmin> userAdmins = platformGroupAdminRepository.findByUserId(currentUserId);
+            managedGroupIds = userAdmins.stream()
+                    .map(PlatformGroupAdmin::getGroupId)
+                    .filter(pageGroupIds::contains)
+                    .collect(Collectors.toSet());
+        }
+
+        List<Map<String, Object>> out = new ArrayList<>(groups.size());
+        for (PlatformGroup g : groups) {
+            out.add(buildGroupSummaryFromBatch(
+                    g, currentUserId, ownerNames, memberByGroupId, pendingGroupIds, managedGroupIds));
+        }
+        return out;
+    }
+
+    private Map<String, Object> buildGroupSummaryFromBatch(
+            PlatformGroup g,
+            Long currentUserId,
+            Map<Long, String> ownerNames,
+            Map<String, GroupMember> memberByGroupId,
+            Set<String> pendingGroupIds,
+            Set<String> managedGroupIds) {
+
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", g.getId());
+        item.put("name", g.getName());
+        item.put("description", g.getDescription());
+        item.put("category", g.getCategory());
+        item.put("coverUrl", g.getCoverUrl());
+        item.put("status", g.getStatus());
+        String jt = g.getJoinType();
+        item.put("joinType", jt);
+        boolean isOpen = "open".equals(jt);
+        item.put("joinMode", isOpen ? "free" : "audit");
+        item.put("joinModeKey", isOpen ? "open" : "audit");
+        item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
+        item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
+        item.put("createdAt", g.getCreatedAt());
+        Long ownerUid = g.getOwnerUserId() != null ? g.getOwnerUserId() : g.getCreatedBy();
+        String ownerName = ownerUid != null ? ownerNames.getOrDefault(ownerUid, "") : "";
+        item.put("ownerName", ownerName);
+        item.put("tags", "");
+        if (currentUserId != null) {
+            GroupMember gm = memberByGroupId.get(g.getId());
+            item.put("isMember", gm != null);
+            item.put("hasPendingRequest", pendingGroupIds.contains(g.getId()));
+            boolean managed = managedGroupIds.contains(g.getId());
+            item.put("managed", managed);
+            boolean isOwnerMember = gm != null && "owner".equalsIgnoreCase(gm.getRole());
+            boolean isOwnerUid = ownerUid != null && ownerUid.equals(currentUserId);
+            item.put("isOwner", isOwnerMember || isOwnerUid || managed);
+        } else {
+            item.put("isMember", false);
+            item.put("hasPendingRequest", false);
+            item.put("managed", false);
+            item.put("isOwner", false);
+        }
+        return item;
     }
 
     private Map<String, Object> buildGroupSummary(PlatformGroup g, Long currentUserId) {

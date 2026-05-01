@@ -1,8 +1,8 @@
 <template>
   <section class="governance">
     <header class="bar-head">
-      <h3>平台治理</h3>
-      <p>弱化展示，聚焦待处理风险与审核流。</p>
+      <h3>待办与风控入口</h3>
+      <p>数字旁按钮可进入对应处理页；与「审核与安全」「用户与团体」模块相同。</p>
     </header>
 
     <div class="bar-grid">

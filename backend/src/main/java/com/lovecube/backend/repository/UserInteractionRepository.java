@@ -1,6 +1,7 @@
 package com.lovecube.backend.repository;
 
 import com.lovecube.backend.entity.UserInteraction;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -114,6 +115,12 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     @Query("SELECT DISTINCT ui.toUserId FROM UserInteraction ui WHERE ui.fromUserId = :userId " +
            "AND ui.interactionType IN ('LIKE', 'SUPER_LIKE', 'SKIP')")
     List<Long> findActedUserIdsByFromUserId(@Param("userId") Long userId);
+
+    /**
+     * 认识页：当前用户发出的喜欢 / 超级喜欢 / 跳过记录（按时间倒序，数据库分页）
+     */
+    Page<UserInteraction> findByFromUserIdAndInteractionTypeInOrderByCreatedAtDesc(
+            Long fromUserId, Collection<UserInteraction.InteractionType> types, Pageable pageable);
 
     /**
      * 批量标记互动为已读

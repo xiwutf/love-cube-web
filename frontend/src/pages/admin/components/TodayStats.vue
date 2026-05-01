@@ -2,8 +2,9 @@
   <section class="today-wrap platform-card">
     <header class="section-head">
       <div>
-        <p class="kicker">今日运营概览</p>
-        <h2>3 秒看懂当前运营状态</h2>
+        <p class="kicker">数据区 · 参考指标</p>
+        <h2>今日运营快照</h2>
+        <p class="section-note">以下为汇总数字，办理具体业务请用上方功能地图或左侧菜单。</p>
       </div>
     </header>
 
@@ -44,6 +45,14 @@ defineProps({
 .section-head h2 {
   margin: 8px 0 0;
   font-size: 24px;
+}
+
+.section-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--lc-muted);
+  max-width: 36rem;
 }
 
 .kicker {

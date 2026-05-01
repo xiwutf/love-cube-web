@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
 
+    List<GroupMember> findByUserId(Long userId);
+
     List<GroupMember> findByGroupIdOrderByJoinedAtAsc(String groupId);
 
     Optional<GroupMember> findByGroupIdAndUserId(String groupId, Long userId);
