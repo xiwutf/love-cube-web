@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="modules-page">
     <div class="mc">
       <section class="mp-hero">
@@ -69,7 +69,7 @@
               <h3>我的常用</h3>
               <span class="side-manage">管理</span>
             </div>
-            <router-link class="side-link" to="/fellowship">联谊交友</router-link>
+            <router-link class="side-link" to="/fellowship">找对象</router-link>
             <router-link class="side-link" to="/platform/positive-share">每日心声</router-link>
             <router-link class="side-link" to="/events">活动中心</router-link>
             <router-link class="side-link" to="/articles">内容资讯</router-link>
@@ -110,8 +110,8 @@ const stats = ref([
 const defaultModules = [
   {
     moduleKey:   'fellowship',
-    name:        '联谊交友',
-    description: '真实资料认证、私信互动举报治理的联谊社交服务',
+    name:        '找对象',
+    description: '真实资料认证、私信互动举报治理的找对象社交服务',
     status:      'active',
     entryRoute:  '/fellowship',
     icon:        ICONS.heart,
@@ -625,4 +625,5 @@ onMounted(async () => {
   }
 }
 </style>
+
 

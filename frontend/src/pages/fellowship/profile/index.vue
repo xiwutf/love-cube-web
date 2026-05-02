@@ -1,6 +1,6 @@
-﻿<template>
+<template>
   <div class="fellowship-profile-page">
-    <NavBar title="联谊资料" />
+    <NavBar title="找对象资料" />
 
     <div v-if="store.loading" class="loading-wrap">
       <van-loading color="#ff6b8a" />
@@ -86,5 +86,6 @@ onMounted(async () => {
 }
 .action-wrap { margin: 16px 12px; }
 </style>
+
 
 

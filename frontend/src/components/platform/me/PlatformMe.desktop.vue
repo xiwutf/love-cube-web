@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page me-page">
     <div class="me-mobile" aria-label="平台个人中心（移动端）">
       <!-- 用户信息卡片 -->
@@ -301,7 +301,6 @@ const mobileGridItems = [
   { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
   { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
   { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
-  { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
   { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
   { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
   { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
@@ -2243,31 +2242,31 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .mh-card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--lc-text);
 }
 
 .mh-card-meta {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--lc-subtle);
 }
 
 .mh-task-list {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 7px;
 }
 
 .mh-task-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   border-radius: 12px;
   background: var(--lc-bg);
   border: 1px solid var(--lc-soft-alt);
@@ -2279,14 +2278,14 @@ onBeforeUnmount(() => {
 }
 
 .mh-task-check {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--lc-border);
+  border: 1.5px solid var(--lc-border);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: transparent;
 }
@@ -2303,7 +2302,7 @@ onBeforeUnmount(() => {
 }
 
 .mh-task-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--lc-text);
   white-space: nowrap;
@@ -2312,17 +2311,17 @@ onBeforeUnmount(() => {
 }
 
 .mh-task-exp {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--lc-subtle);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .mh-task-action {
   flex: 0 0 auto;
   border: 1px solid var(--lc-blue-border);
   border-radius: 999px;
-  padding: 5px 13px;
-  font-size: 12px;
+  padding: 4px 11px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--lc-indigo);
   background: var(--lc-surface);

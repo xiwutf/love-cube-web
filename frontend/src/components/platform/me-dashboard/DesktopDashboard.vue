@@ -13,6 +13,7 @@
         class="profile-panel"
         :user="user"
         :display-name="displayName"
+        :growth-title="growthLevel?.name || ''"
         :user-id-display="userIdDisplay"
         :location-display="locationDisplay"
         :invite-code-display="inviteCodeDisplay"

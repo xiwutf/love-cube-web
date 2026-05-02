@@ -32,7 +32,7 @@
 
     <div class="actions">
       <button type="button" class="btn btn-ghost" @click="$emit('edit')">编辑资料</button>
-      <button type="button" class="btn btn-primary" @click="$emit('open-fellowship')">切换联谊中心</button>
+      <button type="button" class="btn btn-primary" @click="$emit('open-fellowship')">去看看</button>
     </div>
   </section>
 </template>

@@ -23,11 +23,28 @@ public class GrowthService {
             Map.entry("COMMENT_CONTENT", 3),
             Map.entry("LIKED_BY_OTHERS", 2),
             Map.entry("FIRST_POST_BONUS", 20),
-            Map.entry("ALL_TASKS_COMPLETE", 20)
+            Map.entry("ALL_TASKS_COMPLETE", 20),
+            // 团体模块任务奖励
+            Map.entry("GROUP_CHECKIN", 2),
+            Map.entry("GROUP_POST_TASK", 5),
+            Map.entry("GROUP_COMMENT_TASK", 3),
+            Map.entry("GROUP_LIKE_TASK", 1)
     );
 
     private static final int[] LEVEL_EXP_RULES = {0, 100, 300, 600, 1000};
-    private static final String[] LEVEL_TITLES = {"新手用户", "新手创作者", "活跃用户", "内容达人", "社区骨干"};
+
+    /**
+     * 平台成长称号（按等级段，与 EXP 档位独立，便于后续扩展等级上限）。
+     */
+    public static String getUserTitle(int level) {
+        int lv = level <= 0 ? 1 : level;
+        if (lv <= 4) return "新手成员";
+        if (lv <= 9) return "积极参与者";
+        if (lv <= 19) return "坚持行动者";
+        if (lv <= 29) return "团体活跃者";
+        if (lv <= 49) return "自律达人";
+        return "团体领航者";
+    }
 
     private final UserGrowthRepository userGrowthRepository;
     private final UserGrowthLogRepository userGrowthLogRepository;
@@ -85,7 +102,7 @@ public class GrowthService {
                 "recorded", true,
                 "exp", exp,
                 "level", growth.getLevel(),
-                "title", growth.getTitle(),
+                "title", getUserTitle(safeInt(growth.getLevel())),
                 "totalExp", growth.getExp()
         );
     }
@@ -123,16 +140,16 @@ public class GrowthService {
         int nextLevelExp = resolveNextLevelExp(growth.getExp());
         int neededExp = Math.max(0, nextLevelExp - growth.getExp());
 
-        return Map.of(
-                "level", growth.getLevel(),
-                "exp", growth.getExp(),
-                "title", growth.getTitle(),
-                "nextLevelExp", nextLevelExp,
-                "neededExpToNextLevel", neededExp,
-                "today", today.toString(),
-                "dailyTasks", taskRows,
-                "badges", badgeRows
-        );
+        Map<String, Object> overview = new LinkedHashMap<>();
+        overview.put("level", growth.getLevel());
+        overview.put("exp", growth.getExp());
+        overview.put("title", getUserTitle(safeInt(growth.getLevel())));
+        overview.put("nextLevelExp", nextLevelExp);
+        overview.put("neededExpToNextLevel", neededExp);
+        overview.put("today", today.toString());
+        overview.put("dailyTasks", taskRows);
+        overview.put("badges", badgeRows);
+        return overview;
     }
 
     public Map<String, Object> claimDailyTask(Long userId, String taskCode) {
@@ -179,7 +196,7 @@ public class GrowthService {
                 "rewardExp", reward,
                 "bonusExp", bonusExp,
                 "level", growth.getLevel(),
-                "title", growth.getTitle(),
+                "title", getUserTitle(safeInt(growth.getLevel())),
                 "totalExp", growth.getExp()
         );
     }
@@ -195,7 +212,7 @@ public class GrowthService {
             growth.setUserId(userId);
             growth.setLevel(1);
             growth.setExp(0);
-            growth.setTitle("新手用户");
+            growth.setTitle(getUserTitle(1));
             return userGrowthRepository.save(growth);
         });
     }
@@ -298,7 +315,7 @@ public class GrowthService {
             }
         }
         growth.setLevel(level);
-        growth.setTitle(LEVEL_TITLES[level - 1]);
+        growth.setTitle(getUserTitle(level));
     }
 
     private int resolveNextLevelExp(int exp) {

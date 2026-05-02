@@ -1,20 +1,33 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.PlatGroup;
+import com.lovecube.backend.entity.PlatGroupActivity;
+import com.lovecube.backend.entity.PlatGroupActivitySignup;
+import com.lovecube.backend.entity.PlatGroupCheckin;
 import com.lovecube.backend.entity.PlatGroupMember;
 import com.lovecube.backend.entity.PlatGroupNotice;
 import com.lovecube.backend.entity.PlatGroupPost;
 import com.lovecube.backend.entity.PlatGroupPostComment;
 import com.lovecube.backend.entity.PlatGroupPostLike;
+import com.lovecube.backend.entity.PlatGroupTaskProgress;
+import com.lovecube.backend.entity.UserGrowth;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.repository.PlatGroupActivityRepository;
+import com.lovecube.backend.repository.PlatGroupActivitySignupRepository;
+import com.lovecube.backend.repository.PlatGroupCheckinRepository;
 import com.lovecube.backend.repository.PlatGroupMemberRepository;
 import com.lovecube.backend.repository.PlatGroupNoticeRepository;
 import com.lovecube.backend.repository.PlatGroupPostCommentRepository;
 import com.lovecube.backend.repository.PlatGroupPostLikeRepository;
 import com.lovecube.backend.repository.PlatGroupPostRepository;
 import com.lovecube.backend.repository.PlatGroupRepository;
+import com.lovecube.backend.repository.PlatCheckinCommentRepository;
+import com.lovecube.backend.repository.PlatCheckinLikeRepository;
+import com.lovecube.backend.repository.PlatGroupTaskProgressRepository;
+import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PlatformGroupSupport;
 import org.springframework.data.domain.Page;
@@ -24,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -42,6 +56,32 @@ public class PlatformGroupController {
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
     private final NotificationService notificationService;
+    private final PlatGroupCheckinRepository checkinRepository;
+    private final PlatGroupTaskProgressRepository taskProgressRepository;
+    private final PlatGroupActivityRepository activityRepository;
+    private final PlatGroupActivitySignupRepository activitySignupRepository;
+    private final GrowthService growthService;
+    private final PlatCheckinLikeRepository checkinLikeRepository;
+    private final PlatCheckinCommentRepository checkinCommentRepository;
+    private final UserGrowthRepository userGrowthRepository;
+
+    // 团体任务定义（code → 名称/EXP奖励/对应成长action）
+    private static final Map<String, String> TASK_NAMES = Map.of(
+            "CHECKIN", "今日打卡",
+            "POST", "发布一条团体动态",
+            "COMMENT", "评论一次团体动态",
+            "LIKE", "点赞一次团体动态"
+    );
+    private static final Map<String, Integer> TASK_REWARDS = Map.of(
+            "CHECKIN", 2, "POST", 5, "COMMENT", 3, "LIKE", 1
+    );
+    private static final Map<String, String> TASK_ACTION_TYPES = Map.of(
+            "CHECKIN", "GROUP_CHECKIN",
+            "POST", "GROUP_POST_TASK",
+            "COMMENT", "GROUP_COMMENT_TASK",
+            "LIKE", "GROUP_LIKE_TASK"
+    );
+    private static final List<String> TASK_ORDER = List.of("CHECKIN", "POST", "COMMENT", "LIKE");
 
     public PlatformGroupController(
             PlatGroupRepository groupRepository,
@@ -52,7 +92,15 @@ public class PlatformGroupController {
             PlatGroupNoticeRepository noticeRepository,
             UserRepository userRepository,
             AdminAuthService adminAuthService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            PlatGroupCheckinRepository checkinRepository,
+            PlatGroupTaskProgressRepository taskProgressRepository,
+            PlatGroupActivityRepository activityRepository,
+            PlatGroupActivitySignupRepository activitySignupRepository,
+            GrowthService growthService,
+            PlatCheckinLikeRepository checkinLikeRepository,
+            PlatCheckinCommentRepository checkinCommentRepository,
+            UserGrowthRepository userGrowthRepository) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
@@ -62,6 +110,14 @@ public class PlatformGroupController {
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
         this.notificationService = notificationService;
+        this.checkinRepository = checkinRepository;
+        this.taskProgressRepository = taskProgressRepository;
+        this.activityRepository = activityRepository;
+        this.activitySignupRepository = activitySignupRepository;
+        this.growthService = growthService;
+        this.checkinLikeRepository = checkinLikeRepository;
+        this.checkinCommentRepository = checkinCommentRepository;
+        this.userGrowthRepository = userGrowthRepository;
     }
 
 
@@ -766,22 +822,40 @@ public class PlatformGroupController {
             groupRepository.save(g);
         });
 
-        // 通知团体 owner/admin（不通知发帖人自己）
+        // 发帖人本人：消息中心可查看发布回执
         final long posterId = user.getUserid();
         final long postId = post.getId();
         final String groupName = groupRepository.findById(id).map(PlatGroup::getName).orElse("团体");
         final String posterName = user.getUsername() != null ? user.getUsername() : "成员";
+        notificationService.send(
+                posterId,
+                "GROUP_POST_CREATED",
+                "你发布了一条团体动态",
+                "你已在团体「" + groupName + "」发布新动态",
+                "platform_group",
+                String.valueOf(id)
+        );
+        // 其余已通过成员：管理员用「你管理的团体」文案，普通成员用统一动态提醒
         memberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(id, "approved").stream()
-                .filter(m -> ("owner".equals(m.getRole()) || "admin".equals(m.getRole()))
-                        && !m.getUserId().equals(posterId))
-                .forEach(m -> notificationService.send(
-                        m.getUserId(),
-                        "GROUP_POST_CREATED",
-                        posterName + " 在你管理的团体发布了新动态",
-                        posterName + " 在团体「" + groupName + "」发布了新动态",
-                        "platform_group",
-                        String.valueOf(id)
-                ));
+                .filter(m -> !m.getUserId().equals(posterId))
+                .forEach(m -> {
+                    boolean isManager = "owner".equals(m.getRole()) || "admin".equals(m.getRole());
+                    String title = isManager
+                            ? posterName + " 在你管理的团体发布了新动态"
+                            : posterName + " 在团体「" + groupName + "」发布了新动态";
+                    String body = posterName + " 在团体「" + groupName + "」发布了新动态";
+                    notificationService.send(
+                            m.getUserId(),
+                            "GROUP_POST_CREATED",
+                            title,
+                            body,
+                            "platform_group",
+                            String.valueOf(id)
+                    );
+                });
+
+        // 发帖完成团体"发布动态"任务
+        completeGroupTask(id, user.getUserid(), "POST");
 
         return Map.of("id", postId, "message", "Post published successfully");
     }
@@ -848,6 +922,9 @@ public class PlatformGroupController {
             postLikeRepository.save(like);
             post.setLikeCount((post.getLikeCount() == null ? 0 : post.getLikeCount()) + 1);
             nowLiked = true;
+
+            // 点赞完成团体"点赞"任务
+            completeGroupTask(post.getGroupId(), user.getUserid(), "LIKE");
 
             // 通知动态作者（不通知自己）
             if (!post.getUserId().equals(user.getUserid())) {
@@ -941,6 +1018,9 @@ public class PlatformGroupController {
 
         post.setCommentCount((post.getCommentCount() == null ? 0 : post.getCommentCount()) + 1);
         postRepository.save(post);
+
+        // 评论完成团体"评论"任务
+        completeGroupTask(post.getGroupId(), user.getUserid(), "COMMENT");
 
         // 通知动态作者（不通知自己）
         if (!post.getUserId().equals(user.getUserid())) {
@@ -1148,5 +1228,721 @@ public class PlatformGroupController {
         if (minutes < 60) return minutes + " minutes ago";
         if (minutes < 1440) return (minutes / 60) + " hours ago";
         return dt.format(DF);
+    }
+
+    // ── 打卡 ──────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/checkins/summary")
+    public Map<String, Object> checkinSummary(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        LocalDate today = LocalDate.now();
+        int todayCount = checkinRepository.countByGroupIdAndCheckinDate(id, today);
+
+        boolean checkedInToday = false;
+        int myStreakDays = 0;
+        Long userId = resolveOptionalUserId(authHeader);
+        if (userId != null) {
+            checkedInToday = checkinRepository.findByGroupIdAndUserIdAndCheckinDate(id, userId, today).isPresent();
+            myStreakDays = checkinRepository.findTopByGroupIdAndUserIdOrderByCheckinDateDesc(id, userId)
+                    .map(c -> c.getStreakDays() != null ? c.getStreakDays() : 1)
+                    .orElse(0);
+        }
+
+        List<PlatGroupCheckin> recent = checkinRepository.findByGroupIdOrderByCreatedAtDesc(id, PageRequest.of(0, 20));
+        Set<Long> userIds = recent.stream().map(PlatGroupCheckin::getUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userIds.isEmpty() ? Collections.emptyMap()
+                : userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> recentList = recent.stream().map(c -> {
+            User u = userMap.get(c.getUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("userId", c.getUserId());
+            item.put("username", u != null ? u.getUsername() : "");
+            item.put("avatar", u != null ? u.getProfilePhoto() : "");
+            item.put("checkinType", c.getCheckinType());
+            item.put("content", c.getContent() != null ? c.getContent() : "");
+            item.put("streakDays", c.getStreakDays());
+            item.put("createdAt", c.getCreatedAt());
+            return item;
+        }).collect(Collectors.toList());
+        if (!recentList.isEmpty()) {
+            Set<Long> uids = recent.stream().map(PlatGroupCheckin::getUserId).collect(Collectors.toSet());
+            Map<Long, Integer> lvl = userGrowthRepository.findByUserIdIn(uids).stream()
+                    .collect(Collectors.toMap(
+                            UserGrowth::getUserId,
+                            g -> g.getLevel() != null ? g.getLevel() : 1,
+                            (a, b) -> a));
+            for (Map<String, Object> item : recentList) {
+                long uid = ((Number) item.get("userId")).longValue();
+                item.put("title", GrowthService.getUserTitle(lvl.getOrDefault(uid, 1)));
+            }
+        }
+        enrichCheckinFeedItems(recentList, userId);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("checkedInToday", checkedInToday);
+        result.put("todayCount", todayCount);
+        result.put("myStreakDays", myStreakDays);
+        result.put("recentCheckins", recentList);
+        return result;
+    }
+
+    /**
+     * 团体打卡排行榜（仅已通过成员；需登录）。
+     */
+    @GetMapping("/{id}/checkins/rankings")
+    public Map<String, Object> checkinRankings(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "daily") String type,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看排行榜"));
+
+        String t = type != null ? type.trim().toLowerCase() : "daily";
+        if (!"daily".equals(t) && !"streak".equals(t)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "type 仅支持 daily 或 streak");
+        }
+
+        List<PlatGroupMember> members = memberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(id, "approved");
+        if (members.isEmpty()) {
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("type", t);
+            empty.put("items", Collections.emptyList());
+            empty.put("currentUser", null);
+            return empty;
+        }
+
+        LocalDate today = LocalDate.now();
+        Map<Long, PlatGroupCheckin> todayByUser = checkinRepository.findByGroupIdAndCheckinDateOrderByCreatedAtAsc(id, today)
+                .stream()
+                .collect(Collectors.toMap(PlatGroupCheckin::getUserId, c -> c, (a, b) -> a));
+
+        Map<Long, Integer> streakByUser = new HashMap<>();
+        for (Object[] row : checkinRepository.findLatestStreakByUserForGroup(id)) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) continue;
+            streakByUser.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+        }
+
+        List<RankScratch> scratches = new ArrayList<>();
+        for (PlatGroupMember m : members) {
+            Long uid = m.getUserId();
+            PlatGroupCheckin td = todayByUser.get(uid);
+            boolean checked = td != null;
+            scratches.add(new RankScratch(uid, checked, checked ? td.getCreatedAt() : null,
+                    checked ? 1 : 0, streakByUser.getOrDefault(uid, 0)));
+        }
+
+        Comparator<RankScratch> dailyCmp = Comparator
+                .comparing((RankScratch r) -> r.checkedToday).reversed()
+                .thenComparing(RankScratch::getTodayCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing((RankScratch r) -> r.streakDays).reversed()
+                .thenComparing((RankScratch r) -> r.userId);
+        Comparator<RankScratch> streakCmp = Comparator
+                .comparing((RankScratch r) -> r.streakDays).reversed()
+                .thenComparing((RankScratch r) -> r.checkedToday).reversed()
+                .thenComparing(RankScratch::getTodayCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing((RankScratch r) -> r.userId);
+
+        scratches.sort("streak".equals(t) ? streakCmp : dailyCmp);
+        for (int i = 0; i < scratches.size(); i++) {
+            scratches.get(i).rank = i + 1;
+        }
+
+        Set<Long> allUserIds = scratches.stream().map(s -> s.userId).collect(Collectors.toSet());
+        Map<Long, User> users = userRepository.findAllById(allUserIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+        Map<Long, Integer> levelByUser = userGrowthRepository.findByUserIdIn(allUserIds).stream()
+                .collect(Collectors.toMap(UserGrowth::getUserId, g -> g.getLevel() != null ? g.getLevel() : 1));
+
+        List<Map<String, Object>> fullRows = scratches.stream()
+                .map(s -> toRankingRow(s, users.get(s.userId), levelByUser.getOrDefault(s.userId, 1), user.getUserid()))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> top20 = fullRows.stream().limit(20).collect(Collectors.toList());
+        Map<String, Object> current = fullRows.stream()
+                .filter(r -> Boolean.TRUE.equals(r.get("isCurrentUser")))
+                .findFirst()
+                .orElse(Collections.emptyMap());
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("type", t);
+        body.put("items", top20);
+        body.put("currentUser", current);
+        return body;
+    }
+
+    private static final class RankScratch {
+        final Long userId;
+        final boolean checkedToday;
+        final LocalDateTime todayCreatedAt;
+        final int checkinCount;
+        final int streakDays;
+        int rank;
+
+        RankScratch(Long userId, boolean checkedToday, LocalDateTime todayCreatedAt, int checkinCount, int streakDays) {
+            this.userId = userId;
+            this.checkedToday = checkedToday;
+            this.todayCreatedAt = todayCreatedAt;
+            this.checkinCount = checkinCount;
+            this.streakDays = streakDays;
+        }
+
+        LocalDateTime getTodayCreatedAt() {
+            return todayCreatedAt;
+        }
+    }
+
+    private Map<String, Object> toRankingRow(RankScratch s, User u, int level, Long currentUserId) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("userId", s.userId);
+        row.put("nickname", u != null ? u.getUsername() : "");
+        row.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
+        row.put("checkinCount", s.checkinCount);
+        row.put("streakDays", s.streakDays);
+        row.put("rank", s.rank);
+        row.put("isCurrentUser", currentUserId != null && currentUserId.equals(s.userId));
+        row.put("title", GrowthService.getUserTitle(level));
+        return row;
+    }
+
+    private void enrichCheckinFeedItems(List<Map<String, Object>> items, Long currentUserId) {
+        if (items == null || items.isEmpty()) return;
+        List<Long> ids = items.stream()
+                .map(m -> m.get("id"))
+                .filter(Objects::nonNull)
+                .map(id -> ((Number) id).longValue())
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) return;
+
+        Map<Long, Long> likeCountMap = toLongCountMap(checkinLikeRepository.countByCheckinIdInGrouped(ids));
+        Map<Long, Long> commentCountMap = toLongCountMap(checkinCommentRepository.countByCheckinIdInGrouped(ids));
+        Set<Long> likedSet = Collections.emptySet();
+        if (currentUserId != null) {
+            likedSet = new HashSet<>(checkinLikeRepository.findCheckinIdsLikedByUser(currentUserId, ids));
+        }
+        final Set<Long> likedFinal = likedSet;
+        for (Map<String, Object> item : items) {
+            long cid = ((Number) item.get("id")).longValue();
+            item.put("likeCount", likeCountMap.getOrDefault(cid, 0L).intValue());
+            item.put("commentCount", commentCountMap.getOrDefault(cid, 0L).intValue());
+            item.put("likedByCurrentUser", likedFinal.contains(cid));
+        }
+    }
+
+    private static Map<Long, Long> toLongCountMap(List<Object[]> rows) {
+        if (rows == null || rows.isEmpty()) return Collections.emptyMap();
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) continue;
+            map.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+        }
+        return map;
+    }
+
+    @PostMapping("/{id}/checkins")
+    @Transactional
+    public Map<String, Object> createCheckin(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可以打卡"));
+
+        LocalDate today = LocalDate.now();
+        if (checkinRepository.findByGroupIdAndUserIdAndCheckinDate(id, user.getUserid(), today).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "今天已经打卡过了");
+        }
+
+        String checkinType = String.valueOf(payload.getOrDefault("checkinType", "other")).trim();
+        List<String> validTypes = List.of("thanks", "prayer", "study", "exercise", "share", "other");
+        if (!validTypes.contains(checkinType)) checkinType = "other";
+
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        if (content.length() > 500) content = content.substring(0, 500);
+
+        // 计算连续打卡天数
+        int streakDays = 1;
+        Optional<PlatGroupCheckin> previous = checkinRepository.findTopByGroupIdAndUserIdOrderByCheckinDateDesc(id, user.getUserid());
+        if (previous.isPresent() && today.minusDays(1).equals(previous.get().getCheckinDate())) {
+            streakDays = (previous.get().getStreakDays() != null ? previous.get().getStreakDays() : 1) + 1;
+        }
+
+        PlatGroupCheckin checkin = new PlatGroupCheckin();
+        checkin.setGroupId(id);
+        checkin.setUserId(user.getUserid());
+        checkin.setCheckinDate(today);
+        checkin.setCheckinType(checkinType);
+        checkin.setContent(content.isBlank() ? null : content);
+        checkin.setStreakDays(streakDays);
+        checkin.setCreatedAt(LocalDateTime.now());
+        checkinRepository.save(checkin);
+
+        // 打卡完成团体"打卡"任务（EXP 在用户领取任务奖励时才发放，此处只标记完成）
+        completeGroupTask(id, user.getUserid(), "CHECKIN");
+
+        // 通知
+        notificationService.send(user.getUserid(), "GROUP_CHECKIN_CREATED",
+                "打卡成功",
+                "你已在团体完成今日打卡，连续打卡 " + streakDays + " 天",
+                "platform_group", String.valueOf(id));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", checkin.getId());
+        result.put("streakDays", streakDays);
+        result.put("message", "打卡成功");
+        return result;
+    }
+
+    // ── 团体任务 ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/tasks/today")
+    public List<Map<String, Object>> todayTasks(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看任务"));
+
+        LocalDate today = LocalDate.now();
+        Map<String, PlatGroupTaskProgress> progressMap = taskProgressRepository
+                .findByGroupIdAndUserIdAndTaskDate(id, user.getUserid(), today)
+                .stream()
+                .collect(Collectors.toMap(PlatGroupTaskProgress::getTaskCode, p -> p));
+
+        return TASK_ORDER.stream().map(code -> {
+            PlatGroupTaskProgress p = progressMap.get(code);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("taskCode", code);
+            item.put("name", TASK_NAMES.getOrDefault(code, code));
+            item.put("rewardExp", TASK_REWARDS.getOrDefault(code, 0));
+            item.put("completed", p != null && p.getCompleted() == 1);
+            item.put("claimed", p != null && p.getClaimed() == 1);
+            item.put("completedAt", p != null ? p.getCompletedAt() : null);
+            item.put("claimedAt", p != null ? p.getClaimedAt() : null);
+            return item;
+        }).collect(Collectors.toList());
+    }
+
+    @PostMapping("/{id}/tasks/{taskCode}/claim")
+    @Transactional
+    public Map<String, Object> claimTask(
+            @PathVariable Long id,
+            @PathVariable String taskCode,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可领取奖励"));
+
+        if (!TASK_NAMES.containsKey(taskCode)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "无效的任务代码");
+        }
+
+        LocalDate today = LocalDate.now();
+        PlatGroupTaskProgress progress = taskProgressRepository
+                .findByGroupIdAndUserIdAndTaskCodeAndTaskDate(id, user.getUserid(), taskCode, today)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "任务尚未完成"));
+
+        if (progress.getCompleted() != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "任务尚未完成");
+        }
+        if (progress.getClaimed() == 1) {
+            return Map.of("claimed", false, "message", "奖励已领取");
+        }
+
+        progress.setClaimed(1);
+        progress.setClaimedAt(LocalDateTime.now());
+        taskProgressRepository.save(progress);
+
+        String actionType = TASK_ACTION_TYPES.getOrDefault(taskCode, "GROUP_CHECKIN");
+        String bizId = "GROUP_TASK_" + id + "_" + taskCode + "_" + today;
+        growthService.recordAction(user.getUserid(), actionType, bizId);
+
+        int rewardExp = TASK_REWARDS.getOrDefault(taskCode, 0);
+        notificationService.send(user.getUserid(), "GROUP_TASK_REWARD_CLAIMED",
+                "你领取了团体任务奖励：+" + rewardExp + " EXP",
+                "任务「" + TASK_NAMES.getOrDefault(taskCode, taskCode) + "」奖励已到账",
+                "platform_group", String.valueOf(id));
+
+        return Map.of("claimed", true, "taskCode", taskCode, "rewardExp", rewardExp, "message", "奖励已领取");
+    }
+
+    // ── 团体活动 ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/activities")
+    public Map<String, Object> listActivities(
+            @PathVariable Long id,
+            @RequestParam(required = false) String filter,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        Long userId = resolveOptionalUserId(authHeader);
+        List<PlatGroupActivity> all = activityRepository.findByGroupIdOrderByStartTimeDesc(id);
+
+        // filter: upcoming(已发布且未结束) / ended / all，默认返回全部
+        if ("upcoming".equals(filter)) {
+            LocalDateTime now = LocalDateTime.now();
+            all = all.stream()
+                    .filter(a -> "published".equals(a.getStatus()) && a.getEndTime().isAfter(now))
+                    .collect(Collectors.toList());
+        } else if ("ended".equals(filter)) {
+            LocalDateTime now = LocalDateTime.now();
+            all = all.stream()
+                    .filter(a -> "ended".equals(a.getStatus()) ||
+                            ("published".equals(a.getStatus()) && !a.getEndTime().isAfter(now)))
+                    .collect(Collectors.toList());
+        }
+
+        int total = all.size();
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(50, Math.max(1, size));
+        int from = Math.min((safePage - 1) * safeSize, total);
+        int to = Math.min(from + safeSize, total);
+        List<PlatGroupActivity> pageItems = from < total ? all.subList(from, to) : Collections.emptyList();
+
+        Set<Long> userIds = pageItems.stream().map(PlatGroupActivity::getCreatorUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userIds.isEmpty() ? Collections.emptyMap()
+                : userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getUserid, u -> u));
+
+        // 当前用户报名状态（精准查询，避免全表扫描）
+        Set<Long> signedUpIds = Collections.emptySet();
+        if (userId != null && !pageItems.isEmpty()) {
+            List<Long> activityIds = pageItems.stream().map(PlatGroupActivity::getId).collect(Collectors.toList());
+            signedUpIds = activitySignupRepository
+                    .findByActivityIdInAndUserIdAndStatus(activityIds, userId, "signed_up")
+                    .stream()
+                    .map(PlatGroupActivitySignup::getActivityId)
+                    .collect(Collectors.toSet());
+        }
+        final Set<Long> signedSet = signedUpIds;
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Map<String, Object>> items = pageItems.stream().map(a -> {
+            User creator = userMap.get(a.getCreatorUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", a.getId());
+            item.put("title", a.getTitle());
+            item.put("description", a.getDescription() != null ? a.getDescription() : "");
+            item.put("startTime", a.getStartTime());
+            item.put("endTime", a.getEndTime());
+            item.put("location", a.getLocation() != null ? a.getLocation() : "");
+            item.put("maxParticipants", a.getMaxParticipants());
+            item.put("participantCount", a.getParticipantCount());
+            item.put("status", a.getStatus());
+            item.put("isEnded", !a.getEndTime().isAfter(now));
+            item.put("signedUpByMe", signedSet.contains(a.getId()));
+            item.put("creatorName", creator != null ? creator.getUsername() : "");
+            item.put("createdAt", a.getCreatedAt());
+            return item;
+        }).collect(Collectors.toList());
+
+        return Map.of("items", items, "total", total, "page", safePage, "pageSize", safeSize);
+    }
+
+    @PostMapping("/{id}/activities")
+    @Transactional
+    public Map<String, Object> createActivity(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload) {
+
+        requireManagerRole(id, authHeader);
+        User user = adminAuthService.requireUser(authHeader);
+        PlatGroup group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        String title = String.valueOf(payload.getOrDefault("title", "")).trim();
+        if (title.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动标题不能为空");
+        if (title.length() > 200) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "标题最多 200 字");
+
+        String startStr = String.valueOf(payload.getOrDefault("startTime", "")).trim();
+        String endStr = String.valueOf(payload.getOrDefault("endTime", "")).trim();
+        if (startStr.isBlank() || endStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动时间不能为空");
+        }
+
+        LocalDateTime startTime, endTime;
+        try {
+            startTime = LocalDateTime.parse(startStr);
+            endTime = LocalDateTime.parse(endStr);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "时间格式不正确，请使用 ISO 8601 格式");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "结束时间必须晚于开始时间");
+        }
+
+        PlatGroupActivity activity = new PlatGroupActivity();
+        activity.setGroupId(id);
+        activity.setCreatorUserId(user.getUserid());
+        activity.setTitle(title);
+        activity.setDescription(String.valueOf(payload.getOrDefault("description", "")).trim());
+        activity.setStartTime(startTime);
+        activity.setEndTime(endTime);
+        String location = String.valueOf(payload.getOrDefault("location", "")).trim();
+        activity.setLocation(location.isBlank() ? null : location);
+        Object maxP = payload.get("maxParticipants");
+        activity.setMaxParticipants(maxP != null ? Math.max(0, Integer.parseInt(String.valueOf(maxP))) : 0);
+        activity.setStatus("published");
+        activity.setParticipantCount(0);
+        activity.setCreatedAt(LocalDateTime.now());
+        activity.setUpdatedAt(LocalDateTime.now());
+        activityRepository.save(activity);
+
+        // 通知团体成员
+        final String activityTitle = title;
+        memberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(id, "approved").stream()
+                .filter(m -> !m.getUserId().equals(user.getUserid()))
+                .forEach(m -> notificationService.send(
+                        m.getUserId(), "GROUP_ACTIVITY_PUBLISHED",
+                        "团体发布了新活动：" + activityTitle,
+                        "团体「" + group.getName() + "」发布了新活动，快去报名吧！",
+                        "platform_group", String.valueOf(id)));
+
+        return Map.of("id", activity.getId(), "message", "活动已发布");
+    }
+
+    @GetMapping("/{id}/activities/{activityId}")
+    public Map<String, Object> getActivity(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        PlatGroupActivity activity = activityRepository.findByIdAndGroupId(activityId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found"));
+
+        Long userId = resolveOptionalUserId(authHeader);
+        boolean signedUp = false;
+        if (userId != null) {
+            signedUp = activitySignupRepository.findByActivityIdAndUserId(activityId, userId)
+                    .map(s -> "signed_up".equals(s.getStatus()))
+                    .orElse(false);
+        }
+
+        User creator = userRepository.findById(activity.getCreatorUserId()).orElse(null);
+        LocalDateTime now = LocalDateTime.now();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", activity.getId());
+        result.put("groupId", activity.getGroupId());
+        result.put("title", activity.getTitle());
+        result.put("description", activity.getDescription() != null ? activity.getDescription() : "");
+        result.put("startTime", activity.getStartTime());
+        result.put("endTime", activity.getEndTime());
+        result.put("location", activity.getLocation() != null ? activity.getLocation() : "");
+        result.put("maxParticipants", activity.getMaxParticipants());
+        result.put("participantCount", activity.getParticipantCount());
+        result.put("status", activity.getStatus());
+        result.put("isEnded", !activity.getEndTime().isAfter(now));
+        result.put("signedUpByMe", signedUp);
+        result.put("creatorName", creator != null ? creator.getUsername() : "");
+        result.put("createdAt", activity.getCreatedAt());
+        return result;
+    }
+
+    @PostMapping("/{id}/activities/{activityId}/signup")
+    @Transactional
+    public Map<String, Object> signUpActivity(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可报名活动"));
+
+        PlatGroupActivity activity = activityRepository.findByIdAndGroupId(activityId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found"));
+        if (!"published".equals(activity.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动不可报名");
+        }
+        if (activity.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动已结束");
+        }
+        if (activity.getMaxParticipants() > 0
+                && activity.getParticipantCount() >= activity.getMaxParticipants()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "报名人数已满");
+        }
+
+        Optional<PlatGroupActivitySignup> existing = activitySignupRepository.findByActivityIdAndUserId(activityId, user.getUserid());
+        if (existing.isPresent()) {
+            PlatGroupActivitySignup s = existing.get();
+            if ("signed_up".equals(s.getStatus())) {
+                return Map.of("signedUp", true, "message", "已报名");
+            }
+            s.setStatus("signed_up");
+            s.setUpdatedAt(LocalDateTime.now());
+            activitySignupRepository.save(s);
+        } else {
+            PlatGroupActivitySignup signup = new PlatGroupActivitySignup();
+            signup.setActivityId(activityId);
+            signup.setGroupId(id);
+            signup.setUserId(user.getUserid());
+            signup.setStatus("signed_up");
+            signup.setCreatedAt(LocalDateTime.now());
+            signup.setUpdatedAt(LocalDateTime.now());
+            activitySignupRepository.save(signup);
+        }
+
+        activityRepository.incrementParticipantCount(activityId);
+
+        // 通知活动创建者（不通知自己）
+        if (!user.getUserid().equals(activity.getCreatorUserId())) {
+            String actorName = user.getUsername() != null ? user.getUsername() : "有人";
+            notificationService.send(activity.getCreatorUserId(), "GROUP_ACTIVITY_SIGNED_UP",
+                    actorName + " 报名了你发布的活动",
+                    actorName + " 报名了活动「" + activity.getTitle() + "」",
+                    "platform_group", String.valueOf(id));
+        }
+
+        int updatedCount = activityRepository.findById(activityId).map(PlatGroupActivity::getParticipantCount).orElse(0);
+        return Map.of("signedUp", true, "participantCount", updatedCount, "message", "报名成功");
+    }
+
+    @PostMapping("/{id}/activities/{activityId}/cancel-signup")
+    @Transactional
+    public Map<String, Object> cancelSignUp(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+
+        PlatGroupActivity activity = activityRepository.findByIdAndGroupId(activityId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found"));
+        if (activity.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动已结束，无法取消报名");
+        }
+
+        PlatGroupActivitySignup signup = activitySignupRepository
+                .findByActivityIdAndUserId(activityId, user.getUserid())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "你未报名此活动"));
+        if (!"signed_up".equals(signup.getStatus())) {
+            return Map.of("cancelled", true, "message", "已取消报名");
+        }
+
+        signup.setStatus("cancelled");
+        signup.setUpdatedAt(LocalDateTime.now());
+        activitySignupRepository.save(signup);
+
+        activityRepository.decrementParticipantCount(activityId);
+
+        int updatedCount = activityRepository.findById(activityId).map(PlatGroupActivity::getParticipantCount).orElse(0);
+        return Map.of("cancelled", true, "participantCount", updatedCount, "message", "已取消报名");
+    }
+
+    @PatchMapping("/{id}/activities/{activityId}")
+    @Transactional
+    public Map<String, Object> updateActivity(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload) {
+
+        requireManagerRole(id, authHeader);
+        PlatGroupActivity activity = activityRepository.findByIdAndGroupId(activityId, id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found"));
+
+        if (payload.containsKey("title")) {
+            String title = String.valueOf(payload.get("title")).trim();
+            if (!title.isBlank()) activity.setTitle(title);
+        }
+        if (payload.containsKey("description")) {
+            activity.setDescription(String.valueOf(payload.get("description")).trim());
+        }
+        if (payload.containsKey("location")) {
+            String loc = String.valueOf(payload.get("location")).trim();
+            activity.setLocation(loc.isBlank() ? null : loc);
+        }
+        if (payload.containsKey("startTime")) {
+            try { activity.setStartTime(LocalDateTime.parse(String.valueOf(payload.get("startTime")))); } catch (Exception ignored) {}
+        }
+        if (payload.containsKey("endTime")) {
+            try { activity.setEndTime(LocalDateTime.parse(String.valueOf(payload.get("endTime")))); } catch (Exception ignored) {}
+        }
+        if (!activity.getEndTime().isAfter(activity.getStartTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "结束时间必须晚于开始时间");
+        }
+        if (payload.containsKey("maxParticipants")) {
+            activity.setMaxParticipants(Math.max(0, Integer.parseInt(String.valueOf(payload.get("maxParticipants")))));
+        }
+        if (payload.containsKey("status")) {
+            String newStatus = String.valueOf(payload.get("status")).trim();
+            if (List.of("published", "cancelled", "ended").contains(newStatus)) {
+                activity.setStatus(newStatus);
+                // 取消活动时通知报名成员
+                if ("cancelled".equals(newStatus)) {
+                    List<PlatGroupActivitySignup> signups = activitySignupRepository.findByActivityId(activityId);
+                    final String actTitle = activity.getTitle();
+                    signups.stream().filter(s -> "signed_up".equals(s.getStatus())).forEach(s ->
+                            notificationService.send(s.getUserId(), "GROUP_ACTIVITY_CANCELLED",
+                                    "团体活动已取消：" + actTitle,
+                                    "你报名的活动「" + actTitle + "」已被取消",
+                                    "platform_group", String.valueOf(id)));
+                }
+            }
+        }
+
+        activity.setUpdatedAt(LocalDateTime.now());
+        activityRepository.save(activity);
+        return Map.of("updated", true, "message", "活动已更新");
+    }
+
+    // ── 任务进度辅助（在现有发帖/评论/点赞逻辑中调用） ─────────────────────
+
+    private void completeGroupTask(Long groupId, Long userId, String taskCode) {
+        if (!TASK_NAMES.containsKey(taskCode)) return;
+        LocalDate today = LocalDate.now();
+        PlatGroupTaskProgress progress = taskProgressRepository
+                .findByGroupIdAndUserIdAndTaskCodeAndTaskDate(groupId, userId, taskCode, today)
+                .orElseGet(() -> {
+                    PlatGroupTaskProgress p = new PlatGroupTaskProgress();
+                    p.setGroupId(groupId);
+                    p.setUserId(userId);
+                    p.setTaskCode(taskCode);
+                    p.setTaskDate(today);
+                    p.setCompleted(0);
+                    p.setClaimed(0);
+                    return p;
+                });
+        if (progress.getCompleted() == 0) {
+            progress.setCompleted(1);
+            progress.setCompletedAt(LocalDateTime.now());
+            taskProgressRepository.save(progress);
+        }
     }
 }

@@ -25,14 +25,21 @@ const quickEntries = [
   { label: '每日心声', type: 'mood' },
   { label: '平台动态', type: 'dynamic' },
   { label: '活动中心', type: 'event' },
-  { label: 'AI工具', type: 'ai' }
+  { label: 'AI工具', type: 'ai' },
+  { label: '联谊', type: 'match' }
 ]
 const featured = computed(() => platformContentList.slice(0, 4))
 const latest = computed(() => platformContentList.slice(0, 5))
 
 function goContent(){ router.push('/platform/content') }
 function goPublish(){ router.push('/platform/publish') }
-function goQuick(type){ router.push({ path: '/platform/content', query: { type } }) }
+function goQuick(type){
+  if (type === 'match') {
+    router.push('/fellowship')
+    return
+  }
+  router.push({ path: '/platform/content', query: { type } })
+}
 function openDetail(item){ if (item?.id) router.push('/platform/content') }
 </script>
 

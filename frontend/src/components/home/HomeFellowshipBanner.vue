@@ -1,14 +1,14 @@
 <template>
   <section class="fellowship-banner">
     <div class="banner-copy">
-      <p>LoveCube 联谊专区</p>
-      <h2>真诚相遇，认真开始</h2>
+      <p>找对象</p>
+      <h2>完善资料，看看有没有合适的人</h2>
       <ul>
         <li>实名认证</li>
         <li>精准匹配</li>
         <li>安全可靠</li>
       </ul>
-      <router-link to="/fellowship-intro">进入专区 →</router-link>
+      <router-link to="/fellowship">去看看 →</router-link>
     </div>
     <div class="banner-visual" aria-hidden="true">
       <img :src="fellowshipImage" alt="">

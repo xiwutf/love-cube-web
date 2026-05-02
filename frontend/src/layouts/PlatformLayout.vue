@@ -107,7 +107,7 @@
       <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
     </nav>
 
-    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊介绍</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
+    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">找对象</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
     <transition name="menu-fade"><div v-if="menuOpen" class="mobile-menu-mask" @click="menuOpen = false" /></transition>
     <transition name="menu-slide">
@@ -212,7 +212,7 @@ const coCreationForm = ref({
   contact: ''
 })
 
-const focusModuleOptions = ['联谊交友', '活动中心', '内容资讯', '平台动态', '本地服务', 'AI工具', '个人中心', '其他']
+const focusModuleOptions = ['找对象', '活动中心', '内容资讯', '平台动态', '本地服务', 'AI工具', '个人中心', '其他']
 const goalOptions = [
   { label: '认识新朋友', icon: '友', color: '#7c3aed', bg: '#f1e9ff' },
   { label: '找对象', icon: '心', color: '#ec4899', bg: '#fde7f3' },
@@ -236,7 +236,7 @@ const navItems = [
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动' },
   { to: '/platform/groups', label: '团队' },
-  { to: '/fellowship-intro', label: '联谊介绍' }
+  { to: '/fellowship-intro', label: '找对象' }
 ]
 
 const mobileModuleNavItems = [
@@ -245,7 +245,7 @@ const mobileModuleNavItems = [
   { to: '/announcements', label: '平台动态' },
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动中心' },
-  { to: '/fellowship-intro', label: '联谊介绍' }
+  { to: '/fellowship-intro', label: '找对象' }
 ]
 const mobileAccountNavItems = computed(() => {
   const accountItems = [{ to: '/messages', label: '平台消息中心' }]
@@ -1996,3 +1996,4 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 </style>
+

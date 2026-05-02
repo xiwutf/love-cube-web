@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="settings-page">
     <NavBar title="设置" />
 
@@ -6,7 +6,7 @@
       <van-cell title="统一账号中心" is-link @click="router.push('/account')" />
       <van-cell title="修改密码" is-link @click="router.push('/fellowship/change-password')" />
       <van-cell
-        title="关闭联谊模块"
+        title="关闭找对象功能"
         is-link
         :value="deactivating ? '处理中' : '手动关闭'"
         @click="handleDeactivateFellowship"
@@ -76,18 +76,18 @@ function handleClearCache() {
 
 function handleDeactivateFellowship() {
   if (!isFellowshipEnabled.value) {
-    showToast({ message: '联谊模块当前已关闭', type: 'fail' })
+    showToast({ message: '找对象功能当前已关闭', type: 'fail' })
     return
   }
   showConfirmDialog({
-    title: '关闭联谊模块',
-    message: '关闭后你将无法进入联谊功能，可随时在联谊首页重新开通。确认关闭吗？'
+    title: '关闭找对象功能',
+    message: '关闭后你将无法使用找对象功能，可随时在找对象首页重新开通。确认关闭吗？'
   })
     .then(async () => {
       deactivating.value = true
       try {
         await userStore.deactivateFellowship()
-        showToast({ message: '联谊模块已关闭', type: 'success' })
+        showToast({ message: '找对象功能已关闭', type: 'success' })
         router.replace('/fellowship')
       } catch (error) {
         showToast({ message: error?.message || '关闭失败，请稍后重试', type: 'fail' })
@@ -100,7 +100,7 @@ function handleDeactivateFellowship() {
 
 function handleToggleMatchVisible() {
   if (!isFellowshipEnabled.value) {
-    showToast({ message: '请先开通联谊模块', type: 'fail' })
+    showToast({ message: '请先开通找对象功能', type: 'fail' })
     return
   }
   if (savingMatchVisible.value) {
@@ -112,7 +112,7 @@ function handleToggleMatchVisible() {
     title: `${actionText}匹配列表`,
     message: nextVisible
       ? '开启后你会出现在推荐/匹配列表中，其他用户可看到你。确认开启吗？'
-      : '关闭后你将不会出现在推荐/匹配列表中，但仍可浏览联谊模块。确认关闭吗？'
+      : '关闭后你将不会出现在推荐/匹配列表中，但仍可浏览找对象功能。确认关闭吗？'
   })
     .then(async () => {
       savingMatchVisible.value = true
@@ -134,4 +134,5 @@ function handleToggleMatchVisible() {
 .group { margin-top: 12px; }
 :deep(.danger-text) { color: #ee0a24; }
 </style>
+
 

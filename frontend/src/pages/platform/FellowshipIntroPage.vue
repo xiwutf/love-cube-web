@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="fellowship-intro-page">
     <section class="intro-hero">
       <div class="intro-hero-bg" />
@@ -10,10 +10,10 @@
           遇见更好的生活
         </h1>
         <p class="intro-subtitle">
-          为青年打造真实可靠的联谊交友平台，连接真实资料、互动体验与平台治理能力。
+          为青年打造真实可靠的找对象平台，连接真实资料、互动体验与平台治理能力。
         </p>
         <div class="intro-actions">
-          <router-link to="/fellowship" class="intro-btn intro-btn-primary">进入联谊模块</router-link>
+          <router-link to="/fellowship" class="intro-btn intro-btn-primary">去看看</router-link>
           <router-link to="/fellowship/profile/edit" class="intro-btn intro-btn-ghost">完善资料</router-link>
           <router-link to="/policies/content-policy" class="intro-btn intro-btn-rule">了解规则</router-link>
         </div>
@@ -469,5 +469,6 @@
   }
 }
 </style>
+
 
 

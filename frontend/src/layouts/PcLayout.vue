@@ -44,7 +44,7 @@
             <h4>平台</h4>
             <router-link to="/modules">模块中心</router-link>
             <router-link to="/announcements">平台动态</router-link>
-            <router-link to="/fellowship-intro">联谊介绍</router-link>
+            <router-link to="/fellowship-intro">找对象</router-link>
           </section>
           <section class="pc-footer-col">
             <h4>内容</h4>
@@ -84,7 +84,7 @@ const navItems = [
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动' },
   { to: '/platform/groups', label: '团队' },
-  { to: '/fellowship-intro', label: '联谊介绍' }
+  { to: '/fellowship-intro', label: '找对象' }
 ]
 
 function isActive(basePath) {
@@ -346,3 +346,4 @@ onBeforeUnmount(() => {
   color: var(--lc-muted, #64748b);
 }
 </style>
+

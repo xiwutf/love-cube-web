@@ -268,6 +268,26 @@ public class AdminAuthService {
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有团体拥有者或超级管理员可删除团体");
     }
 
+    /** 与 {@link #requireGroupManagePermission} 一致（不抛异常），用于前台「团体管理」能力。 */
+    public boolean hasPlatformGroupManageAccess(User user, String groupId) {
+        if (user == null || groupId == null || groupId.isBlank()) return false;
+        if (hasGroupManageAll(user)) return true;
+        String r = findGroupRoleAcrossAliases(user, groupId);
+        if (r != null && (GroupAdminRoleConstants.OWNER.equals(r) || GroupAdminRoleConstants.ADMIN.equals(r))) {
+            return true;
+        }
+        return isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId);
+    }
+
+    /** 与 {@link #requireGroupReviewPermission} 一致（不抛异常），用于入团申请审核入口。 */
+    public boolean hasPlatformGroupJoinReviewAccess(User user, String groupId) {
+        if (user == null || groupId == null || groupId.isBlank()) return false;
+        if (hasGroupManageAll(user)) return true;
+        String r = findGroupRoleAcrossAliases(user, groupId);
+        if (GroupAdminRoleConstants.canReview(r)) return true;
+        return isGroupOwnerOrCreatorAcrossAliases(user.getUserid(), groupId);
+    }
+
     /**
      * 写入或更新 platform_group_admin；重复 group_id + user_id 时更新角色。
      * 并确保用户具备后台 GROUP_OWNER 入口角色码。

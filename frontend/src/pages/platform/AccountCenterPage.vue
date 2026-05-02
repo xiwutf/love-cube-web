@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="platform-page me-page">
     <div class="me-mobile" aria-label="平台个人中心（移动端）">
       <!-- 用户信息卡片 -->
@@ -288,7 +288,6 @@ const mobileGridItems = [
   { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
   { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
   { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
-  { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
   { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
   { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
   { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
@@ -343,7 +342,7 @@ const groupInfo = {
 
 const groupRanking = [
   { rank: 1, name: 'LoveCube 官方团队', activity: 320 },
-  { rank: 2, name: '星空联谊社', activity: 280 },
+  { rank: 2, name: '星空缘分社', activity: 280 },
   { rank: 3, name: '绿来是你', activity: 210 }
 ]
 

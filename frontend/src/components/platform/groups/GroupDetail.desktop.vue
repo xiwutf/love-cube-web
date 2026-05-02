@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="group-detail-page">
     <div v-if="loading.detail" class="loading-state">加载团体详情中...</div>
     <div v-else-if="errors.detail" class="error-state">
@@ -30,7 +30,7 @@
               {{ joining ? '处理中...' : joinButtonText }}
             </button>
             <router-link
-              v-if="group.managed"
+              v-if="group.managed || group.canReviewJoins"
               class="manage-link"
               :to="`/platform/groups/${group.id}/members`"
             >团体管理</router-link>
@@ -49,52 +49,184 @@
       <section class="content-grid">
         <main class="main-panel">
           <template v-if="activeTab === 'home'">
-            <section class="panel-card">
-              <div class="section-head">
-                <h2>最新公告</h2>
-                <router-link :to="`/platform/groups/${group.id}/notices`">查看全部</router-link>
-              </div>
-              <article v-if="latestNotice" class="notice-card compact">
-                <strong>{{ latestNotice.title }}</strong>
-                <p>{{ latestNotice.content }}</p>
-                <time>{{ latestNotice.date }}</time>
-              </article>
-              <div v-else-if="errors.notices" class="inline-error">{{ errors.notices }}</div>
-              <div v-else class="empty-inline">暂无公告</div>
-            </section>
-
-            <section class="panel-card">
-              <div class="section-head">
-                <h2>最新动态</h2>
-                <router-link :to="`/platform/groups/${group.id}/posts`">查看全部</router-link>
-              </div>
-              <PostList :posts="posts.slice(0, 1)" :error="errors.posts" empty-text="暂无动态" />
-            </section>
-
-            <section class="home-grid">
-              <article class="panel-card info-card">
-                <h2>团体资料</h2>
-                <InfoList :group="group" />
-              </article>
-              <article class="panel-card admins-card">
-                <h2>管理员</h2>
-                <div v-if="admins.length" class="admin-list">
-                  <div v-for="admin in admins" :key="admin.userId || admin.name" class="admin-item">
-                    <img :src="admin.avatar" :alt="admin.name">
-                    <span>{{ admin.name }}</span>
-                    <em>{{ admin.roleLabel }}</em>
+            <div class="home-two-col">
+              <!-- 左列：打卡 + 动态 -->
+              <div class="home-col">
+                <!-- 今日打卡 -->
+                <section class="panel-card">
+                  <div class="section-head">
+                    <h2>今日打卡</h2>
+                    <div class="section-head-links">
+                      <button type="button" class="text-link-btn" @click="goToTab('checkin')">查看全部</button>
+                      <button v-if="userStore.isLoggedIn && group.isMember" type="button" class="text-link-btn" @click="goToTab('checkin')">排行榜</button>
+                    </div>
                   </div>
-                </div>
-                <div v-else class="empty-inline">暂无管理员信息</div>
-              </article>
-              <article class="panel-card activity-placeholder">
-                <h2>近期活动</h2>
-                <div>
-                  <strong>活动能力建设中</strong>
-                  <p>后续会在这里展示团体近期活动、报名状态与地点时间。</p>
-                </div>
-              </article>
-            </section>
+                  <div v-if="loading.checkin" class="empty-inline">加载中...</div>
+                  <template v-else>
+                    <p class="home-guide-text">
+                      <template v-if="userStore.isLoggedIn && group.isMember && checkinSummary.checkedInToday">
+                        今日已打卡，连续 {{ checkinSummary.myStreakDays }} 天，继续保持 💪
+                      </template>
+                      <template v-else-if="userStore.isLoggedIn && group.isMember">
+                        今日已有 {{ checkinSummary.todayCount }} 人打卡，来记录一下今天吧
+                      </template>
+                      <template v-else>加入团体后可参与每日打卡</template>
+                    </p>
+                    <div class="home-checkin-stats">
+                      <div class="home-stat">
+                        <span class="home-stat-val">{{ checkinSummary.todayCount }}</span>
+                        <span class="home-stat-label">今日打卡人数</span>
+                      </div>
+                      <template v-if="userStore.isLoggedIn && group.isMember">
+                        <div class="home-stat">
+                          <span class="home-stat-val">{{ checkinSummary.myStreakDays }}</span>
+                          <span class="home-stat-label">连续打卡天数</span>
+                        </div>
+                        <div class="home-stat">
+                          <span class="home-stat-val" :class="{ 'stat-green': checkinSummary.checkedInToday }">
+                            {{ checkinSummary.checkedInToday ? '已打卡' : '未打卡' }}
+                          </span>
+                          <span class="home-stat-label">今日状态</span>
+                        </div>
+                      </template>
+                    </div>
+                    <div class="home-card-foot">
+                      <span v-if="checkinSummary.checkedInToday && userStore.isLoggedIn" class="checkin-done-hint">✓ 今日已完成打卡</span>
+                      <span v-else-if="!group.isMember" class="home-muted-hint">加入团体后参与每日打卡</span>
+                      <button v-else type="button" class="primary-btn small" @click="goToTab('checkin')">立即打卡</button>
+                    </div>
+                  </template>
+                </section>
+
+                <!-- 最新动态 -->
+                <section class="panel-card">
+                  <div class="section-head">
+                    <h2>最新动态</h2>
+                    <button type="button" class="text-link-btn" @click="goToTab('posts')">查看全部</button>
+                  </div>
+                  <div v-if="loading.posts" class="empty-inline">加载中...</div>
+                  <div v-else-if="errors.posts" class="inline-error">{{ errors.posts }}</div>
+                  <template v-else>
+                    <p class="home-guide-text">
+                      {{ posts.length ? '团体最近有新讨论，来看看大家在聊什么' : '这个团体还没有动态，来发布第一条吧' }}
+                    </p>
+                    <form v-if="group.isMember" class="quick-post-form" @submit.prevent="submitQuickPost">
+                      <textarea
+                        v-model="quickPostContent"
+                        rows="2"
+                        maxlength="2000"
+                        placeholder="说点什么，和团体成员分享一下..."
+                      ></textarea>
+                      <div class="quick-post-foot">
+                        <button
+                          type="submit"
+                          class="primary-btn small"
+                          :disabled="quickPosting || !quickPostContent.trim()"
+                        >{{ quickPosting ? '发布中...' : '发布' }}</button>
+                      </div>
+                    </form>
+                    <template v-if="posts.slice(0, 3).length">
+                      <article v-for="post in posts.slice(0, 3)" :key="post.id" class="home-post-item">
+                        <img :src="post.avatar" :alt="post.author" class="home-post-avatar">
+                        <div class="home-post-body">
+                          <div class="home-post-meta">
+                            <strong>{{ post.author }}</strong>
+                            <span>{{ post.time }}</span>
+                          </div>
+                          <p class="home-post-excerpt">{{ post.content }}</p>
+                          <div class="home-post-stats">
+                            <span>赞 {{ post.likes }}</span>
+                            <span>评论 {{ post.comments }}</span>
+                          </div>
+                        </div>
+                      </article>
+                    </template>
+                    <div v-else class="empty-inline">还没有人发布动态，来说第一句话吧</div>
+                  </template>
+                </section>
+              </div>
+
+              <!-- 右列：任务 + 活动 + 公告 -->
+              <div class="home-col">
+                <!-- 今日任务（仅登录成员） -->
+                <section v-if="userStore.isLoggedIn && group.isMember" class="panel-card">
+                  <div class="section-head">
+                    <h2>今日任务</h2>
+                    <button type="button" class="text-link-btn" @click="goToTab('tasks')">查看全部</button>
+                  </div>
+                  <div v-if="loading.tasks" class="empty-inline">加载中...</div>
+                  <template v-else>
+                    <p class="home-guide-text">
+                      <template v-if="claimableCount > 0">你有 {{ claimableCount }} 个奖励待领取</template>
+                      <template v-else-if="incompleteTasks.length > 0">再完成 {{ incompleteTasks.length }} 个任务可领取奖励</template>
+                      <template v-else>今日任务已全部完成 🎉</template>
+                    </p>
+                    <div class="home-task-summary">
+                      <span class="task-progress-text">
+                        已完成 {{ todayTasks.filter((t) => t.completed).length }} / {{ todayTasks.length }} 项
+                      </span>
+                      <span v-if="claimableCount > 0" class="claimable-badge">{{ claimableCount }} 个奖励待领取</span>
+                    </div>
+                    <div v-if="incompleteTasks.length" class="home-task-list">
+                      <div v-for="task in incompleteTasks.slice(0, 2)" :key="task.taskCode" class="home-task-item">
+                        <span class="task-status-dot"></span>
+                        <span>{{ task.name }}</span>
+                        <span class="task-reward">+{{ task.rewardExp }} EXP</span>
+                      </div>
+                    </div>
+                    <div v-else class="home-task-done">所有任务已完成 🎉</div>
+                    <div class="home-card-foot">
+                      <button type="button" class="primary-btn small" @click="goToTab('tasks')">
+                        {{ claimableCount > 0 ? '领取奖励' : '去完成任务' }}
+                      </button>
+                    </div>
+                  </template>
+                </section>
+
+                <!-- 最近活动 -->
+                <section class="panel-card">
+                  <div class="section-head">
+                    <h2>最近活动</h2>
+                    <button type="button" class="text-link-btn" @click="goToTab('activities')">查看全部</button>
+                  </div>
+                  <p class="home-guide-text">
+                    {{ upcomingActivities.length ? `近期有 ${upcomingActivities.length} 个活动可参与` : '暂无近期活动，期待下次相聚' }}
+                  </p>
+                  <div v-if="upcomingActivities.length" class="home-activity-list">
+                    <article v-for="act in upcomingActivities" :key="act.id" class="home-activity-item">
+                      <div class="home-activity-head">
+                        <strong>{{ act.title }}</strong>
+                        <span :class="['activity-status', activityStatusClass(act)]">{{ activityStatusLabel(act) }}</span>
+                      </div>
+                      <div class="home-activity-meta">
+                        <span>🕐 {{ formatActivityTime(act.startTime) }}</span>
+                        <span v-if="act.location">📍 {{ act.location }}</span>
+                        <span>👥 {{ act.participantCount }}{{ act.maxParticipants > 0 ? ' / ' + act.maxParticipants : '' }} 人</span>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <!-- 团体公告 -->
+                <section class="panel-card">
+                  <div class="section-head">
+                    <h2>团体公告</h2>
+                    <button type="button" class="text-link-btn" @click="goToTab('notices')">查看全部</button>
+                  </div>
+                  <p class="home-guide-text">
+                    {{ notices.length ? '请留意团体最新通知' : '暂无公告，请保持关注' }}
+                  </p>
+                  <div v-if="errors.notices" class="inline-error">{{ errors.notices }}</div>
+                  <div v-else-if="notices.slice(0, 2).length" class="home-notice-list">
+                    <article v-for="notice in notices.slice(0, 2)" :key="notice.id" class="notice-card compact">
+                      <strong>{{ notice.title }}</strong>
+                      <p>{{ notice.content }}</p>
+                      <time>{{ notice.date }}</time>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </div>
           </template>
 
           <section v-else-if="activeTab === 'posts'" class="panel-card">
@@ -258,6 +390,303 @@
             <div v-else class="empty-inline">暂无公告</div>
           </section>
 
+          <!-- 打卡 tab -->
+          <section v-else-if="activeTab === 'checkin'" class="panel-card">
+            <div class="section-head">
+              <h2>团体打卡</h2>
+            </div>
+            <div v-if="loading.checkin" class="empty-inline">加载中...</div>
+            <template v-else>
+              <p class="checkin-play-hint" role="note">
+                今日打卡、点赞互动、进入排行榜，连续参与可提升称号。
+              </p>
+              <div class="checkin-summary">
+                <div class="checkin-stat">
+                  <span class="stat-val">{{ checkinSummary.todayCount }}</span>
+                  <span class="stat-label">今日打卡人数</span>
+                </div>
+                <template v-if="userStore.isLoggedIn">
+                  <div class="checkin-stat">
+                    <span class="stat-val">{{ checkinSummary.myStreakDays }}</span>
+                    <span class="stat-label">我的连续天数</span>
+                  </div>
+                  <div class="checkin-stat">
+                    <span class="stat-val" :class="{ 'checked': checkinSummary.checkedInToday }">
+                      {{ checkinSummary.checkedInToday ? '✓ 已打卡' : '未打卡' }}
+                    </span>
+                    <span class="stat-label">今日状态</span>
+                  </div>
+                </template>
+              </div>
+
+              <section v-if="userStore.isLoggedIn && group.isMember" class="rankings-card" aria-label="打卡排行榜">
+                <div class="sub-section-head"><span>排行榜</span></div>
+                <div class="ranking-tabs" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="rankingTab === 'daily'"
+                    :class="{ active: rankingTab === 'daily' }"
+                    @click="setRankingTab('daily')"
+                  >今日打卡榜</button>
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="rankingTab === 'streak'"
+                    :class="{ active: rankingTab === 'streak' }"
+                    @click="setRankingTab('streak')"
+                  >连续打卡榜</button>
+                </div>
+                <div v-if="loadingRankings" class="empty-inline">加载中...</div>
+                <p v-else-if="rankingEmptyHint" class="ranking-empty-hint">{{ rankingEmptyHint }}</p>
+                <ol v-else class="ranking-list">
+                  <li
+                    v-for="(row, idx) in rankingDisplayRows"
+                    :key="row.userId + '-' + idx"
+                    :class="rankingRowClasses(row, idx)"
+                  >
+                    <span class="rank-medal" aria-hidden="true">{{ rankSlotDisplay(row, idx) }}</span>
+                    <img class="rank-avatar" :src="row.avatarUrl || defaultAvatar" alt="">
+                    <div class="rank-main">
+                      <div class="rank-name-line">
+                        <strong class="rank-nickname">{{ row.nickname || '成员' }}</strong>
+                        <span v-if="row.title" class="user-title-pill rank-title-pill">{{ row.title }}</span>
+                        <span v-if="row.__appendedMe" class="rank-append-tag">我的排名</span>
+                      </div>
+                      <div class="rank-meta">
+                        <span>第 {{ row.rank }} 名</span>
+                        <span v-if="rankingTab === 'daily'">今日打卡 {{ row.checkinCount }} 次</span>
+                        <span>连续 {{ row.streakDays }} 天</span>
+                      </div>
+                    </div>
+                  </li>
+                </ol>
+              </section>
+
+              <template v-if="group.isMember && !checkinSummary.checkedInToday">
+                <form class="checkin-form" @submit.prevent="submitCheckin">
+                  <div class="checkin-types">
+                    <button
+                      v-for="t in checkinTypes"
+                      :key="t.value"
+                      type="button"
+                      :class="{ active: checkinForm.type === t.value }"
+                      @click="checkinForm.type = t.value"
+                    >{{ t.label }}</button>
+                  </div>
+                  <textarea v-model.trim="checkinForm.content" rows="2" maxlength="200"
+                    placeholder="打卡一句话（可选）"></textarea>
+                  <div class="post-form-foot">
+                    <span>{{ checkinForm.type ? checkinTypeLabels[checkinForm.type] : '选择打卡类型' }}</span>
+                    <button type="submit" class="primary-btn" :disabled="checkingIn || !checkinForm.type">
+                      {{ checkingIn ? '打卡中...' : '立即打卡' }}
+                    </button>
+                  </div>
+                </form>
+              </template>
+              <div v-else-if="!group.isMember" class="join-hint">加入团体后可参与每日打卡。</div>
+              <div v-else class="join-hint checkin-done">✓ 今日已打卡，明天再来吧！</div>
+
+              <div class="sub-section-head">
+                <span>最近打卡</span>
+              </div>
+              <div v-if="checkinSummary.recentCheckins?.length" class="checkin-list">
+                <div v-for="c in checkinSummary.recentCheckins" :key="c.id" class="checkin-item">
+                  <img :src="c.avatar || defaultAvatar" :alt="c.username">
+                  <div class="checkin-body">
+                    <div class="checkin-userline">
+                      <strong class="checkin-username">{{ c.username }}</strong>
+                      <span v-if="c.title" class="user-title-pill checkin-title-pill">{{ c.title }}</span>
+                    </div>
+                    <p v-if="c.content" class="checkin-text">{{ c.content }}</p>
+                    <p class="checkin-submeta">
+                      {{ checkinTypeLabels[c.checkinType] || c.checkinType }} · 连续 {{ c.streakDays }} 天
+                    </p>
+                    <time class="checkin-time">{{ formatDateTime(c.createdAt) }}</time>
+                    <div v-if="userStore.isLoggedIn && group.isMember" class="checkin-social-row">
+                      <button
+                        type="button"
+                        class="checkin-social-btn"
+                        :class="{ active: c.likedByCurrentUser }"
+                        :disabled="checkinLikeBusyId === c.id"
+                        @click="toggleLikeCheckin(c)"
+                      >赞 {{ c.likeCount ?? 0 }}</button>
+                      <button
+                        type="button"
+                        class="checkin-social-btn"
+                        :class="{ 'is-open': expandedCheckinId === c.id }"
+                        @click="toggleCommentsBlock(c)"
+                      >评论 {{ c.commentCount ?? 0 }}</button>
+                    </div>
+                    <div v-if="expandedCheckinId === c.id" class="checkin-comments-panel">
+                      <p v-if="checkinCommentsLoading[c.id]" class="empty-inline">加载评论...</p>
+                      <template v-else>
+                        <ul class="checkin-comment-list">
+                          <li v-for="cm in visibleCommentsFor(c.id)" :key="cm.id" class="checkin-comment-li">
+                            <span class="cc-author">{{ cm.nickname || '用户' }}</span>
+                            <span class="cc-text">{{ cm.content }}</span>
+                            <time class="cc-time">{{ formatDateTime(cm.createdAt) }}</time>
+                            <button
+                              v-if="Number(cm.userId) === currentUserIdNum"
+                              type="button"
+                              class="cc-del"
+                              @click="deleteMyCheckinComment(c.id, cm.id)"
+                            >删除</button>
+                          </li>
+                          <li v-if="!(checkinCommentsById[c.id] || []).length" class="checkin-comment-empty">
+                            还没有评论，来说一句吧
+                          </li>
+                        </ul>
+                        <button
+                          v-if="hasMoreComments(c.id)"
+                          type="button"
+                          class="checkin-comments-more"
+                          @click="showAllCommentsFor(c.id)"
+                        >查看更多评论</button>
+                      </template>
+                      <div class="checkin-comment-form">
+                        <input
+                          v-model="checkinCommentDraft[c.id]"
+                          type="text"
+                          maxlength="200"
+                          placeholder="写一条评论..."
+                          class="checkin-comment-input"
+                        >
+                        <button type="button" class="primary-btn small" :disabled="checkinCommentPosting" @click="submitCheckinComment(c)">
+                          发送
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-inline">暂无打卡记录</div>
+            </template>
+          </section>
+
+          <!-- 任务 tab -->
+          <section v-else-if="activeTab === 'tasks'" class="panel-card">
+            <div class="section-head">
+              <h2>今日任务</h2>
+              <span class="task-date">{{ todayStr }}</span>
+            </div>
+            <div v-if="!group.isMember" class="join-hint">加入团体后可参与每日任务。</div>
+            <div v-else-if="loading.tasks" class="empty-inline">加载中...</div>
+            <div v-else class="task-list">
+              <div v-for="task in todayTasks" :key="task.taskCode" class="task-item">
+                <div class="task-info">
+                  <span :class="['task-status-dot', task.completed ? 'done' : '']"></span>
+                  <div>
+                    <strong>{{ task.name }}</strong>
+                    <span class="task-reward">+{{ task.rewardExp }} EXP</span>
+                  </div>
+                </div>
+                <div class="task-action">
+                  <span v-if="task.claimed" class="task-claimed">已领取</span>
+                  <button
+                    v-else-if="task.completed"
+                    type="button"
+                    class="primary-btn small"
+                    :disabled="claimingTask === task.taskCode"
+                    @click="claimTask(task)"
+                  >{{ claimingTask === task.taskCode ? '领取中...' : '领取奖励' }}</button>
+                  <span v-else class="task-pending">未完成</span>
+                </div>
+              </div>
+              <div v-if="!todayTasks.length" class="empty-inline">暂无任务数据</div>
+            </div>
+          </section>
+
+          <!-- 活动 tab -->
+          <section v-else-if="activeTab === 'activities'" class="panel-card">
+            <div class="section-head">
+              <h2>团体活动</h2>
+              <button v-if="group.managed" type="button" class="primary-btn small" @click="showCreateActivity = !showCreateActivity">
+                {{ showCreateActivity ? '取消' : '发布活动' }}
+              </button>
+            </div>
+
+            <form v-if="showCreateActivity" class="activity-form" @submit.prevent="submitActivity">
+              <input v-model.trim="activityForm.title" type="text" maxlength="200" placeholder="活动标题 *" required>
+              <textarea v-model.trim="activityForm.description" rows="3" maxlength="2000" placeholder="活动简介"></textarea>
+              <div class="activity-form-row">
+                <div>
+                  <label>开始时间 *</label>
+                  <input v-model="activityForm.startTime" type="datetime-local" required>
+                </div>
+                <div>
+                  <label>结束时间 *</label>
+                  <input v-model="activityForm.endTime" type="datetime-local" required>
+                </div>
+              </div>
+              <div class="activity-form-row">
+                <div>
+                  <label>地点</label>
+                  <input v-model.trim="activityForm.location" type="text" maxlength="200" placeholder="活动地点">
+                </div>
+                <div>
+                  <label>人数上限（0=不限）</label>
+                  <input v-model.number="activityForm.maxParticipants" type="number" min="0" max="9999">
+                </div>
+              </div>
+              <div class="post-form-foot">
+                <span></span>
+                <button type="submit" class="primary-btn" :disabled="creatingActivity">
+                  {{ creatingActivity ? '发布中...' : '确认发布' }}
+                </button>
+              </div>
+            </form>
+
+            <template v-if="loading.activities">
+              <div class="empty-inline">加载中...</div>
+            </template>
+            <template v-else>
+              <div v-if="!activities.length" class="empty-inline">暂无活动</div>
+              <div v-else class="activity-list">
+              <article v-for="act in activities" :key="act.id" class="activity-card">
+                <div class="activity-head">
+                  <strong>{{ act.title }}</strong>
+                  <span :class="['activity-status', activityStatusClass(act)]">
+                    {{ activityStatusLabel(act) }}
+                  </span>
+                </div>
+                <p v-if="act.description" class="activity-desc">{{ act.description }}</p>
+                <div class="activity-meta">
+                  <span>🕐 {{ formatActivityTime(act.startTime) }} — {{ formatActivityTime(act.endTime) }}</span>
+                  <span v-if="act.location">📍 {{ act.location }}</span>
+                  <span>👥 {{ act.participantCount }}{{ act.maxParticipants > 0 ? ' / ' + act.maxParticipants : '' }} 人</span>
+                </div>
+                <div class="activity-actions">
+                  <template v-if="!act.isEnded && act.status === 'published'">
+                    <button
+                      v-if="!act.signedUpByMe"
+                      type="button"
+                      class="primary-btn small"
+                      :disabled="signingActivityId === act.id"
+                      @click="signUp(act)"
+                    >{{ signingActivityId === act.id ? '报名中...' : '立即报名' }}</button>
+                    <button
+                      v-else
+                      type="button"
+                      class="cancel-signup-btn"
+                      :disabled="signingActivityId === act.id"
+                      @click="cancelSignUp(act)"
+                    >{{ signingActivityId === act.id ? '处理中...' : '取消报名' }}</button>
+                  </template>
+                  <span v-if="act.signedUpByMe && !act.isEnded" class="signed-badge">已报名</span>
+                  <button
+                    v-if="group.managed && act.status === 'published'"
+                    type="button"
+                    class="cancel-activity-btn"
+                    :disabled="cancellingActivityId === act.id"
+                    @click="cancelActivity(act)"
+                  >取消活动</button>
+                </div>
+              </article>
+            </div>
+            </template>
+          </section>
+
           <section v-else class="panel-card info-card">
             <h2>团体资料</h2>
             <InfoList :group="group" />
@@ -285,6 +714,7 @@ import { computed, defineComponent, h, onMounted, reactive, ref, watch } from 'v
 import { useRoute, useRouter } from 'vue-router'
 import {
   approveMember,
+  approveAdminGroupRequest,
   createGroupPost,
   createGroupPostComment,
   deletePlatformGroupPost,
@@ -294,21 +724,56 @@ import {
   fetchGroupNotices,
   fetchGroupPostComments,
   fetchGroupPosts,
+  getAdminGroupJoinRequests,
+  isLegacyPlatformGroupId,
   joinGroup,
   unwrapGroupPostsList,
   rejectMember,
+  rejectAdminGroupRequest,
   removeGroupMember,
   patchPlatformGroupMemberRole,
-  togglePlatformGroupPostLike
+  togglePlatformGroupPostLike,
+  fetchCheckinSummary,
+  createCheckin,
+  fetchCheckinRankings,
+  likePlatformCheckin,
+  unlikePlatformCheckin,
+  fetchPlatformCheckinComments,
+  createPlatformCheckinComment,
+  deletePlatformCheckinComment,
+  fetchTodayTasks,
+  claimGroupTask,
+  fetchGroupActivities,
+  createGroupActivity,
+  signUpGroupActivity,
+  cancelGroupActivitySignup,
+  updateGroupActivity
 } from '@/api/groups.js'
 import { useUserStore } from '@/stores/user.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
+const defaultAvatar = DEFAULT_AVATAR
+
+const checkinTypes = [
+  { value: 'thanks', label: '感谢' },
+  { value: 'prayer', label: '祷告' },
+  { value: 'study', label: '学习' },
+  { value: 'exercise', label: '运动' },
+  { value: 'share', label: '分享' },
+  { value: 'other', label: '其他' }
+]
+const checkinTypeLabels = {
+  thanks: '感谢', prayer: '祷告', study: '学习',
+  exercise: '运动', share: '分享', other: '其他'
+}
+
+const todayStr = new Date().toISOString().slice(0, 10)
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const currentUserIdNum = computed(() => Number(userStore.userInfo?.id || userStore.userId || 0))
 const group = ref(null)
 const rawMembers = ref([])
 const rawPosts = ref([])
@@ -323,9 +788,40 @@ const roleChangingMemberId = ref(null)
 const message = ref('')
 const messageType = ref('success')
 
-const loading = reactive({ detail: false, members: false, posts: false, notices: false })
+const loading = reactive({ detail: false, members: false, posts: false, notices: false, checkin: false, tasks: false, activities: false })
 const errors = reactive({ detail: '', members: '', posts: '', notices: '' })
+
+// 打卡
+const checkinSummary = reactive({ checkedInToday: false, todayCount: 0, myStreakDays: 0, recentCheckins: [] })
+const checkinForm = reactive({ type: '', content: '' })
+const checkingIn = ref(false)
+const rankingTab = ref('daily')
+const rankingsPayload = reactive({ items: [], currentUser: null })
+const loadingRankings = ref(false)
+const expandedCheckinId = ref(null)
+const checkinCommentsById = reactive({})
+const checkinCommentsLoading = reactive({})
+const checkinCommentDraft = reactive({})
+const checkinCommentPosting = ref(false)
+const checkinLikeBusyId = ref(null)
+/** 某条打卡下是否展开全部评论（否则只展示前 3 条） */
+const checkinCommentsShowAll = reactive({})
+
+// 任务
+const todayTasks = ref([])
+const claimingTask = ref('')
+
+// 活动
+const activities = ref([])
+const upcomingActivities = ref([])
+const showCreateActivity = ref(false)
+const activityForm = reactive({ title: '', description: '', startTime: '', endTime: '', location: '', maxParticipants: 0 })
+const creatingActivity = ref(false)
+const signingActivityId = ref(null)
+const cancellingActivityId = ref(null)
 const postForm = reactive({ content: '', imageUrls: '' })
+const quickPostContent = ref('')
+const quickPosting = ref(false)
 const expandedPostId = ref(null)
 const feedComments = reactive({})
 const commentsLoading = reactive({})
@@ -340,6 +836,9 @@ const activeTab = computed(() => {
   if (route.path.endsWith('/members')) return 'members'
   if (route.path.endsWith('/notices')) return 'notices'
   if (route.path.endsWith('/profile')) return 'profile'
+  if (route.path.endsWith('/checkin')) return 'checkin'
+  if (route.path.endsWith('/tasks')) return 'tasks'
+  if (route.path.endsWith('/activities')) return 'activities'
   return 'home'
 })
 
@@ -348,6 +847,9 @@ const tabs = computed(() => {
   return [
     { key: 'home', label: '首页', to: `/platform/groups/${id}` },
     { key: 'posts', label: '动态', to: `/platform/groups/${id}/posts` },
+    { key: 'checkin', label: '打卡', to: `/platform/groups/${id}/checkin` },
+    { key: 'tasks', label: '任务', to: `/platform/groups/${id}/tasks` },
+    { key: 'activities', label: '活动', to: `/platform/groups/${id}/activities` },
     { key: 'members', label: '成员', to: `/platform/groups/${id}/members` },
     { key: 'notices', label: '公告', to: `/platform/groups/${id}/notices` },
     { key: 'profile', label: '资料', to: `/platform/groups/${id}/profile` }
@@ -397,6 +899,24 @@ const emptyPostsHint = computed(() => {
   return '这个团体还没有动态。'
 })
 
+const claimableCount = computed(() => todayTasks.value.filter((t) => t.completed && !t.claimed).length)
+const incompleteTasks = computed(() => todayTasks.value.filter((t) => !t.completed))
+
+const rankingEmptyHint = computed(() => {
+  if (rankingTab.value !== 'daily') return ''
+  if (Number(checkinSummary.todayCount || 0) > 0) return ''
+  return '今天还没有人打卡，来成为第一个吧'
+})
+
+const rankingDisplayRows = computed(() => {
+  const items = Array.isArray(rankingsPayload.items) ? rankingsPayload.items : []
+  const me = rankingsPayload.currentUser
+  if (!me || me.rank == null) return items
+  const inTop = items.some((r) => r.isCurrentUser)
+  if (inTop) return items
+  return [...items, { ...me, __appendedMe: true }]
+})
+
 async function loadDetail() {
   loading.detail = true
   errors.detail = ''
@@ -411,12 +931,47 @@ async function loadDetail() {
   }
 }
 
+function mapJoinRequestToMemberRow(r) {
+  return {
+    joinRequestId: r.id,
+    id: `jr-${r.id}`,
+    userId: r.userId,
+    name: r.username || '申请者',
+    avatar: r.avatarUrl || DEFAULT_AVATAR,
+    role: 'member',
+    roleLabel: '待入团',
+    status: 'pending',
+    statusLabel: '申请中',
+    joinedAt: formatDate(r.requestedAt),
+    applyReason: r.message || '',
+    isJoinRequest: true
+  }
+}
+
 async function loadMembers() {
   loading.members = true
   errors.members = ''
   try {
-    const status = group.value?.managed ? 'all' : 'approved'
-    rawMembers.value = unwrapList(await fetchGroupMembers(group.value.id, { status }))
+    const gid = group.value.id
+    const legacy = isLegacyPlatformGroupId(gid)
+    const canSeePending = Boolean(group.value?.managed || group.value?.canReviewJoins)
+    const status = legacy && canSeePending ? 'all' : 'approved'
+    const members = unwrapList(await fetchGroupMembers(gid, { status }))
+    let pendingRows = []
+    if (!legacy && canSeePending && joinModeKey.value === 'audit') {
+      try {
+        const reqs = await getAdminGroupJoinRequests(gid, 'pending')
+        const list = Array.isArray(reqs) ? reqs : unwrapList(reqs)
+        pendingRows = list.map(mapJoinRequestToMemberRow)
+      } catch {
+        pendingRows = []
+      }
+    }
+    const approvedIds = new Set(
+      members.filter((m) => (m.status || 'approved') === 'approved').map((m) => Number(m.userId))
+    )
+    pendingRows = pendingRows.filter((p) => !approvedIds.has(Number(p.userId)))
+    rawMembers.value = [...pendingRows, ...members]
   } catch (error) {
     rawMembers.value = []
     errors.members = error.message || '成员接口加载失败'
@@ -454,7 +1009,315 @@ async function loadNotices() {
 
 async function loadRelatedData() {
   if (!group.value?.id) return
-  await Promise.all([loadMembers(), loadPosts(), loadNotices()])
+  await Promise.all([loadMembers(), loadPosts(), loadNotices(), loadActivitiesForHome(), loadCheckinSummary(), loadTodayTasks()])
+}
+
+async function loadCheckinSummary() {
+  if (!group.value?.id) return
+  loading.checkin = true
+  try {
+    const data = await fetchCheckinSummary(group.value.id)
+    Object.assign(checkinSummary, {
+      checkedInToday: Boolean(data?.checkedInToday),
+      todayCount: Number(data?.todayCount ?? 0),
+      myStreakDays: Number(data?.myStreakDays ?? 0),
+      recentCheckins: Array.isArray(data?.recentCheckins) ? data.recentCheckins : []
+    })
+  } catch {
+    /* silent */
+  } finally {
+    loading.checkin = false
+  }
+}
+
+async function loadRankings() {
+  if (!group.value?.id || !userStore.isLoggedIn || !group.value.isMember) return
+  loadingRankings.value = true
+  try {
+    const res = await fetchCheckinRankings(group.value.id, rankingTab.value)
+    rankingsPayload.items = Array.isArray(res?.items) ? res.items : []
+    rankingsPayload.currentUser = res?.currentUser && Object.keys(res.currentUser).length ? res.currentUser : null
+  } catch {
+    rankingsPayload.items = []
+    rankingsPayload.currentUser = null
+  } finally {
+    loadingRankings.value = false
+  }
+}
+
+function setRankingTab(tab) {
+  if (rankingTab.value === tab) return
+  rankingTab.value = tab
+  loadRankings()
+}
+
+function rankMedal(index) {
+  if (index === 0) return '🥇'
+  if (index === 1) return '🥈'
+  if (index === 2) return '🥉'
+  return String(index + 1)
+}
+
+function rankSlotDisplay(row, idx) {
+  if (!row.__appendedMe && idx < 3) return rankMedal(idx)
+  return String(row.rank ?? idx + 1)
+}
+
+function rankingRowClasses(row, idx) {
+  const parts = ['ranking-row']
+  if (row.isCurrentUser || row.__appendedMe) parts.push('ranking-row--me')
+  if (idx < 3 && !row.__appendedMe) parts.push('ranking-row--top3')
+  else if (!row.isCurrentUser && !row.__appendedMe) parts.push('ranking-row--plain')
+  if (row.__appendedMe) parts.push('ranking-row--appended')
+  return parts.join(' ')
+}
+
+function visibleCommentsFor(checkinId) {
+  const all = checkinCommentsById[checkinId] || []
+  if (checkinCommentsShowAll[checkinId]) return all
+  return all.slice(0, 3)
+}
+
+function hasMoreComments(checkinId) {
+  const all = checkinCommentsById[checkinId] || []
+  return all.length > 3 && !checkinCommentsShowAll[checkinId]
+}
+
+function showAllCommentsFor(checkinId) {
+  checkinCommentsShowAll[checkinId] = true
+}
+
+async function toggleLikeCheckin(c) {
+  if (!userStore.isLoggedIn || !group.value?.isMember || checkinLikeBusyId.value) return
+  const id = c.id
+  checkinLikeBusyId.value = id
+  try {
+    if (c.likedByCurrentUser) {
+      const res = await unlikePlatformCheckin(id)
+      c.likedByCurrentUser = false
+      c.likeCount = Number(res?.likeCount ?? 0)
+    } else {
+      const res = await likePlatformCheckin(id)
+      c.likedByCurrentUser = true
+      c.likeCount = Number(res?.likeCount ?? 0)
+    }
+  } catch (err) {
+    flashMessage(err.message || '操作失败', 'error')
+  } finally {
+    checkinLikeBusyId.value = null
+  }
+}
+
+function toggleCommentsBlock(c) {
+  const id = c.id
+  if (expandedCheckinId.value === id) {
+    expandedCheckinId.value = null
+    return
+  }
+  expandedCheckinId.value = id
+  checkinCommentsShowAll[id] = false
+  if (!checkinCommentsById[id]) loadCheckinCommentsList(id)
+}
+
+async function loadCheckinCommentsList(checkinId) {
+  checkinCommentsLoading[checkinId] = true
+  try {
+    const res = await fetchPlatformCheckinComments(checkinId, { page: 1, size: 50 })
+    checkinCommentsById[checkinId] = Array.isArray(res?.items) ? res.items : []
+  } catch {
+    checkinCommentsById[checkinId] = []
+  } finally {
+    checkinCommentsLoading[checkinId] = false
+  }
+}
+
+async function submitCheckinComment(c) {
+  const id = c.id
+  const text = String(checkinCommentDraft[id] || '').trim()
+  if (!text || checkinCommentPosting.value) return
+  checkinCommentPosting.value = true
+  try {
+    await createPlatformCheckinComment(id, { content: text })
+    checkinCommentDraft[id] = ''
+    c.commentCount = Number(c.commentCount || 0) + 1
+    const wasAll = Boolean(checkinCommentsShowAll[id])
+    await loadCheckinCommentsList(id)
+    if (wasAll) checkinCommentsShowAll[id] = true
+  } catch (err) {
+    flashMessage(err.message || '评论失败', 'error')
+  } finally {
+    checkinCommentPosting.value = false
+  }
+}
+
+async function deleteMyCheckinComment(checkinId, commentId) {
+  try {
+    await deletePlatformCheckinComment(commentId)
+    const list = checkinCommentsById[checkinId] || []
+    const idx = list.findIndex((x) => x.id === commentId)
+    if (idx >= 0) list.splice(idx, 1)
+    const c = checkinSummary.recentCheckins?.find((x) => x.id === checkinId)
+    if (c) c.commentCount = Math.max(0, Number(c.commentCount || 0) - 1)
+  } catch (err) {
+    flashMessage(err.message || '删除失败', 'error')
+  }
+}
+
+async function loadTodayTasks() {
+  if (!group.value?.id || !userStore.isLoggedIn) return
+  loading.tasks = true
+  try {
+    const data = await fetchTodayTasks(group.value.id)
+    todayTasks.value = Array.isArray(data) ? data : []
+  } catch {
+    todayTasks.value = []
+  } finally {
+    loading.tasks = false
+  }
+}
+
+async function loadActivities() {
+  if (!group.value?.id) return
+  loading.activities = true
+  try {
+    const res = await fetchGroupActivities(group.value.id, { page: 1, size: 50 })
+    activities.value = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : [])
+  } catch {
+    activities.value = []
+  } finally {
+    loading.activities = false
+  }
+}
+
+async function loadActivitiesForHome() {
+  if (!group.value?.id) return
+  try {
+    const res = await fetchGroupActivities(group.value.id, { filter: 'upcoming', page: 1, size: 3 })
+    upcomingActivities.value = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : [])
+  } catch {
+    upcomingActivities.value = []
+  }
+}
+
+async function submitCheckin() {
+  if (!checkinForm.type || checkingIn.value) return
+  checkingIn.value = true
+  try {
+    await createCheckin(group.value.id, { checkinType: checkinForm.type, content: checkinForm.content })
+    checkinForm.content = ''
+    checkinForm.type = ''
+    await loadCheckinSummary()
+    await loadRankings()
+    await loadTodayTasks()
+    flashMessage('打卡成功！')
+  } catch (err) {
+    flashMessage(err.message || '打卡失败', 'error')
+  } finally {
+    checkingIn.value = false
+  }
+}
+
+async function claimTask(task) {
+  if (claimingTask.value) return
+  claimingTask.value = task.taskCode
+  try {
+    const res = await claimGroupTask(group.value.id, task.taskCode)
+    await loadTodayTasks()
+    flashMessage(res?.message || `已领取 +${task.rewardExp} EXP`)
+  } catch (err) {
+    flashMessage(err.message || '领取失败', 'error')
+  } finally {
+    claimingTask.value = ''
+  }
+}
+
+async function submitActivity() {
+  if (creatingActivity.value) return
+  creatingActivity.value = true
+  try {
+    const payload = {
+      title: activityForm.title,
+      description: activityForm.description,
+      startTime: activityForm.startTime ? activityForm.startTime + ':00' : '',
+      endTime: activityForm.endTime ? activityForm.endTime + ':00' : '',
+      location: activityForm.location,
+      maxParticipants: activityForm.maxParticipants
+    }
+    await createGroupActivity(group.value.id, payload)
+    showCreateActivity.value = false
+    Object.assign(activityForm, { title: '', description: '', startTime: '', endTime: '', location: '', maxParticipants: 0 })
+    await loadActivities()
+    await loadActivitiesForHome()
+    flashMessage('活动已发布')
+  } catch (err) {
+    flashMessage(err.message || '发布失败', 'error')
+  } finally {
+    creatingActivity.value = false
+  }
+}
+
+async function signUp(act) {
+  if (!userStore.isLoggedIn) { router.push('/login'); return }
+  signingActivityId.value = act.id
+  try {
+    await signUpGroupActivity(group.value.id, act.id)
+    await loadActivities()
+    flashMessage('报名成功')
+  } catch (err) {
+    flashMessage(err.message || '报名失败', 'error')
+  } finally {
+    signingActivityId.value = null
+  }
+}
+
+async function cancelSignUp(act) {
+  signingActivityId.value = act.id
+  try {
+    await cancelGroupActivitySignup(group.value.id, act.id)
+    await loadActivities()
+    flashMessage('已取消报名')
+  } catch (err) {
+    flashMessage(err.message || '取消失败', 'error')
+  } finally {
+    signingActivityId.value = null
+  }
+}
+
+async function cancelActivity(act) {
+  if (!window.confirm(`确定取消活动「${act.title}」？取消后无法恢复。`)) return
+  cancellingActivityId.value = act.id
+  try {
+    await updateGroupActivity(group.value.id, act.id, { status: 'cancelled' })
+    await loadActivities()
+    flashMessage('活动已取消')
+  } catch (err) {
+    flashMessage(err.message || '操作失败', 'error')
+  } finally {
+    cancellingActivityId.value = null
+  }
+}
+
+function formatActivityTime(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function activityStatusLabel(act) {
+  if (act.status === 'cancelled') return '已取消'
+  if (act.isEnded) return '已结束'
+  const now = Date.now()
+  const start = act.startTime ? new Date(act.startTime).getTime() : 0
+  if (start > now) return '即将开始'
+  return '进行中'
+}
+
+function activityStatusClass(act) {
+  if (act.status === 'cancelled') return 'cancelled'
+  if (act.isEnded) return 'ended'
+  return 'published'
 }
 
 async function applyJoin() {
@@ -509,6 +1372,23 @@ async function submitPost() {
     flashMessage(error.message || '动态发布失败', 'error')
   } finally {
     posting.value = false
+  }
+}
+
+async function submitQuickPost() {
+  const text = quickPostContent.value.trim()
+  if (!text || quickPosting.value) return
+  quickPosting.value = true
+  try {
+    await createGroupPost(group.value.id, { content: text })
+    quickPostContent.value = ''
+    await loadPosts()
+    await loadDetail()
+    flashMessage('动态发布成功')
+  } catch (error) {
+    flashMessage(error.message || '动态发布失败', 'error')
+  } finally {
+    quickPosting.value = false
   }
 }
 
@@ -651,7 +1531,9 @@ async function deleteComment(post, c) {
 }
 
 function canAuditMember(member) {
-  return group.value?.managed && member.status === 'pending'
+  if (member.status !== 'pending') return false
+  if (member.isJoinRequest) return Boolean(group.value?.canReviewJoins)
+  return Boolean(group.value?.managed)
 }
 
 function canRemoveMember(member) {
@@ -690,7 +1572,9 @@ async function approvePendingMember(member) {
   if (!canAuditMember(member) || moderatingMemberId.value) return
   moderatingMemberId.value = member.id
   try {
-    const res = await approveMember(group.value.id, member.id)
+    const res = member.isJoinRequest
+      ? await approveAdminGroupRequest(group.value.id, member.joinRequestId)
+      : await approveMember(group.value.id, member.id)
     await loadDetail()
     await loadMembers()
     flashMessage(res?.message || '已通过申请')
@@ -705,7 +1589,10 @@ async function rejectPendingMember(member) {
   if (!canAuditMember(member) || moderatingMemberId.value) return
   moderatingMemberId.value = member.id
   try {
-    const res = await rejectMember(group.value.id, member.id)
+    const res = member.isJoinRequest
+      ? await rejectAdminGroupRequest(group.value.id, member.joinRequestId)
+      : await rejectMember(group.value.id, member.id)
+    await loadDetail()
     await loadMembers()
     flashMessage(res?.message || '已拒绝申请')
   } catch (error) {
@@ -749,6 +1636,21 @@ function toggleNotice(id) {
   expandedNoticeId.value = expandedNoticeId.value === id ? null : id
 }
 
+function goToTab(key) {
+  const id = group.value?.id || route.params.id
+  const pathMap = {
+    home: `/platform/groups/${id}`,
+    posts: `/platform/groups/${id}/posts`,
+    checkin: `/platform/groups/${id}/checkin`,
+    tasks: `/platform/groups/${id}/tasks`,
+    activities: `/platform/groups/${id}/activities`,
+    members: `/platform/groups/${id}/members`,
+    notices: `/platform/groups/${id}/notices`,
+    profile: `/platform/groups/${id}/profile`
+  }
+  if (pathMap[key]) router.push(pathMap[key])
+}
+
 function normalizeGroup(item) {
   const jm = item.joinMode
   const key = item.joinModeKey || (jm === 'free' ? 'open' : jm === 'invite' ? 'invite' : 'audit')
@@ -767,6 +1669,7 @@ function normalizeGroup(item) {
     joinLabel,
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
+    canReviewJoins: Boolean(item.canReviewJoins),
     isOwner: Boolean(item.isOwner),
     hasPendingRequest: Boolean(item.hasPendingRequest),
     createdDate: formatDate(item.createdAt),
@@ -909,9 +1812,24 @@ watch(() => route.params.id, async () => {
   await loadRelatedData()
 })
 
+watch(activeTab, async (tab) => {
+  if (!group.value?.id) return
+  if (tab === 'checkin') {
+    await loadCheckinSummary()
+    await loadRankings()
+  } else if (tab === 'tasks') await loadTodayTasks()
+  else if (tab === 'activities') await loadActivities()
+})
+
 onMounted(async () => {
   await loadDetail()
   await loadRelatedData()
+  // 若初始直接落在新 tab
+  if (activeTab.value === 'checkin') {
+    await loadCheckinSummary()
+    await loadRankings()
+  } else if (activeTab.value === 'tasks') await loadTodayTasks()
+  else if (activeTab.value === 'activities') await loadActivities()
 })
 </script>
 
@@ -1753,9 +2671,711 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
+  .home-two-col {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 280px);
+  }
+
   .home-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── tabs 防止换行 ── */
+.tabs a { white-space: nowrap; }
+
+/* ── 近期活动预览 ── */
+.activity-preview h2 { margin: 0; }
+.activity-mini-list { display: grid; gap: var(--lc-space-3); margin-top: var(--lc-space-3); }
+.activity-mini-item {
+  display: grid;
+  gap: var(--lc-space-1);
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+.activity-mini-item strong { color: var(--lc-text); font-size: var(--lc-text-sm); }
+.activity-mini-item span { color: var(--lc-muted); font-size: var(--lc-text-xs); }
+.act-location, .act-count { font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+
+/* ── 子标题（替代裸 h3） ── */
+.sub-section-head {
+  margin: var(--lc-space-5) 0 var(--lc-space-3);
+  color: var(--lc-text);
+  font-size: var(--lc-text-base);
+  font-weight: 900;
+}
+
+/* ── 打卡 ── */
+.checkin-summary {
+  display: flex;
+  gap: var(--lc-space-5);
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+  margin-bottom: var(--lc-space-4);
+}
+.checkin-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.stat-val { font-size: 22px; font-weight: 900; color: var(--lc-blue); }
+.stat-val.checked { color: var(--lc-green); }
+.stat-label { font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+.checkin-types { display: flex; flex-wrap: wrap; gap: var(--lc-space-2); margin-bottom: var(--lc-space-3); }
+.checkin-types button {
+  height: 32px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: 999px;
+  color: var(--lc-muted);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+.checkin-types button.active {
+  border-color: var(--lc-blue);
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+.checkin-form { display: grid; gap: var(--lc-space-3); margin-bottom: var(--lc-space-5); }
+.checkin-form textarea {
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  font: inherit;
+  resize: vertical;
+}
+.checkin-done { color: var(--lc-green); background: var(--lc-green-light); }
+.checkin-play-hint {
+  margin: 0 0 var(--lc-space-4);
+  padding: var(--lc-space-2) var(--lc-space-3);
+  font-size: var(--lc-text-xs);
+  color: var(--lc-muted);
+  line-height: 1.5;
+  background: var(--lc-bg);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+}
+.checkin-list { display: grid; gap: var(--lc-space-3); margin-top: var(--lc-space-3); }
+.checkin-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: var(--lc-space-3);
+  align-items: start;
+}
+.checkin-item img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.checkin-userline {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.checkin-username {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text);
+}
+.checkin-title-pill {
+  flex: 0 1 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.checkin-text { margin: 6px 0 0; font-size: var(--lc-text-sm); color: var(--lc-muted); }
+.checkin-submeta {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--lc-subtle);
+  line-height: 1.4;
+}
+.checkin-time { display: block; margin-top: 4px; font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+
+.section-head-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-3);
+  align-items: center;
+}
+
+.user-title-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--lc-muted);
+  background: var(--lc-soft-alt);
+  line-height: 1.4;
+}
+
+.rankings-card {
+  margin: var(--lc-space-4) 0 var(--lc-space-5);
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.ranking-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-3);
+}
+
+.ranking-tabs button {
+  height: 32px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: 999px;
+  background: var(--lc-surface);
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ranking-tabs button.active {
+  border-color: var(--lc-blue);
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.ranking-empty-hint {
+  margin: 0;
+  padding: var(--lc-space-3);
+  text-align: center;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+}
+
+.ranking-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--lc-space-2);
+  max-width: 100%;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 40px 36px minmax(0, 1fr);
+  gap: var(--lc-space-3);
+  align-items: center;
+  padding: var(--lc-space-2) var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ranking-row--plain {
+  border-color: var(--lc-soft-alt);
+  opacity: 0.98;
+}
+
+.ranking-row--top3 {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.35);
+}
+
+.ranking-row--me {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(239, 246, 255, 0.65);
+}
+
+.ranking-row--top3.ranking-row--me {
+  box-shadow:
+    inset 3px 0 0 rgba(245, 158, 11, 0.35),
+    inset 0 0 0 999px rgba(239, 246, 255, 0.4);
+}
+
+.ranking-row--appended {
+  border-style: dashed;
+}
+
+.rank-medal {
+  font-size: 17px;
+  text-align: center;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-row--plain .rank-medal {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--lc-subtle);
+}
+
+.rank-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.rank-main {
+  min-width: 0;
+}
+
+.rank-name-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.rank-nickname {
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-title-pill {
+  flex: 0 1 auto;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+
+.rank-append-tag {
+  font-size: var(--lc-text-xs);
+  color: var(--lc-blue);
+  font-weight: 800;
+}
+
+.rank-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  font-size: var(--lc-text-xs);
+  color: var(--lc-subtle);
+  margin-top: 2px;
+}
+
+.checkin-social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--lc-space-3);
+}
+
+.checkin-social-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--lc-border);
+  border-radius: 999px;
+  background: var(--lc-surface);
+  color: var(--lc-muted);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checkin-social-btn.active {
+  border-color: var(--lc-pink);
+  color: var(--lc-pink);
+  background: var(--lc-pink-light);
+}
+
+.checkin-social-btn.is-open {
+  border-color: rgba(59, 130, 246, 0.45);
+  color: var(--lc-blue);
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.checkin-comments-panel {
+  margin-top: var(--lc-space-2);
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+
+.checkin-comment-list {
+  list-style: none;
+  margin: 0 0 var(--lc-space-3);
+  padding: 0;
+  display: grid;
+  gap: var(--lc-space-2);
+}
+
+.checkin-comment-li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  font-size: var(--lc-text-xs);
+  color: var(--lc-muted);
+  align-items: baseline;
+}
+
+.checkin-comment-empty {
+  margin: 0;
+  padding: var(--lc-space-2) 0;
+  font-size: var(--lc-text-xs);
+  color: var(--lc-subtle);
+  text-align: center;
+  list-style: none;
+}
+
+.checkin-comments-more {
+  display: block;
+  width: 100%;
+  margin: 0 0 var(--lc-space-3);
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--lc-blue);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.cc-author {
+  font-weight: 800;
+  color: var(--lc-text);
+}
+
+.cc-text {
+  grid-column: 1 / -1;
+  word-break: break-word;
+}
+
+.cc-time {
+  color: var(--lc-subtle);
+  font-size: 10px;
+}
+
+.cc-del {
+  grid-column: 2;
+  grid-row: 1;
+  border: none;
+  background: none;
+  color: var(--lc-red);
+  font-size: var(--lc-text-xs);
+  cursor: pointer;
+  padding: 0;
+}
+
+.checkin-comment-form {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--lc-space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.checkin-comment-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.checkin-comment-form .primary-btn.small {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .rank-name-line {
+    flex-wrap: wrap;
+  }
+
+  .rank-title-pill {
+    max-width: 100%;
+  }
+
+  .checkin-userline {
+    flex-wrap: wrap;
+  }
+
+  .checkin-title-pill {
+    max-width: 100%;
+  }
+
+  .checkin-comment-form {
+    flex-wrap: wrap;
+  }
+
+  .checkin-comment-input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .checkin-comment-form .primary-btn.small {
+    width: 100%;
+  }
+}
+
+/* ── 任务 ── */
+.task-list { display: grid; gap: var(--lc-space-3); }
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--lc-space-4);
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+.task-info { display: flex; align-items: center; gap: var(--lc-space-3); }
+.task-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lc-border);
+  flex: 0 0 10px;
+}
+.task-status-dot.done { background: var(--lc-green); }
+.task-info strong { display: block; color: var(--lc-text); font-size: var(--lc-text-sm); }
+.task-reward { font-size: var(--lc-text-xs); color: var(--lc-blue); font-weight: 800; }
+.task-claimed { color: var(--lc-green); font-size: var(--lc-text-sm); font-weight: 800; }
+.task-pending { color: var(--lc-subtle); font-size: var(--lc-text-sm); }
+.task-date { color: var(--lc-subtle); font-size: var(--lc-text-sm); }
+
+/* ── 活动 ── */
+.activity-form {
+  display: grid;
+  gap: var(--lc-space-3);
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+  margin-bottom: var(--lc-space-5);
+}
+.activity-form input, .activity-form textarea, .activity-form select {
+  width: 100%;
+  padding: var(--lc-space-2) var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-text);
+  background: var(--lc-surface);
+  font: inherit;
+}
+.activity-form textarea { resize: vertical; }
+.activity-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--lc-space-3); }
+.activity-form-row label { display: block; margin-bottom: 4px; font-size: var(--lc-text-xs); color: var(--lc-subtle); font-weight: 800; }
+.activity-list { display: grid; gap: var(--lc-space-4); margin-top: var(--lc-space-3); }
+.activity-card {
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+.activity-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--lc-space-3); margin-bottom: var(--lc-space-2); }
+.activity-head strong { color: var(--lc-text); font-size: var(--lc-text-base); }
+.activity-status {
+  flex: 0 0 auto;
+  padding: 3px var(--lc-space-2);
+  border-radius: 999px;
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+.activity-status.ended, .activity-status.cancelled {
+  color: var(--lc-muted);
+  background: var(--lc-bg);
+}
+.activity-desc { margin: 0 0 var(--lc-space-2); color: var(--lc-muted); font-size: var(--lc-text-sm); line-height: 1.6; }
+.activity-meta { display: flex; flex-wrap: wrap; gap: var(--lc-space-3); margin-bottom: var(--lc-space-3); }
+.activity-meta span { font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+.activity-actions { display: flex; flex-wrap: wrap; gap: var(--lc-space-2); align-items: center; }
+.signed-badge { font-size: var(--lc-text-xs); color: var(--lc-green); font-weight: 800; }
+.cancel-signup-btn {
+  height: 30px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-muted);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.cancel-activity-btn {
+  height: 30px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-red);
+  background: var(--lc-surface);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ── 按钮形式的 tab 跳转链接 ── */
+.text-link-btn {
+  border: 0;
+  padding: 0;
+  color: var(--lc-blue);
+  background: transparent;
+  font-size: var(--lc-text-sm);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* ── 首页打卡卡片 ── */
+.home-checkin-stats {
+  display: flex;
+  gap: var(--lc-space-4);
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+  margin-bottom: var(--lc-space-3);
+}
+.home-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.home-stat-val { font-size: 22px; font-weight: 900; color: var(--lc-blue); }
+.home-stat-val.stat-green { color: var(--lc-green); }
+.home-stat-label { font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+.home-card-foot { display: flex; justify-content: flex-end; margin-top: var(--lc-space-2); }
+.checkin-done-hint { font-size: var(--lc-text-sm); color: var(--lc-green); font-weight: 800; }
+.home-muted-hint { font-size: var(--lc-text-sm); color: var(--lc-subtle); }
+
+/* ── 首页任务卡片 ── */
+.home-task-summary { display: flex; align-items: center; gap: var(--lc-space-3); margin-bottom: var(--lc-space-3); }
+.task-progress-text { font-size: var(--lc-text-sm); color: var(--lc-muted); font-weight: 800; }
+.claimable-badge {
+  padding: 2px var(--lc-space-2);
+  border-radius: 999px;
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  color: var(--lc-amber);
+  background: var(--lc-amber-light);
+}
+.home-task-list { display: grid; gap: var(--lc-space-2); margin-bottom: var(--lc-space-2); }
+.home-task-item { display: flex; align-items: center; gap: var(--lc-space-2); font-size: var(--lc-text-sm); color: var(--lc-muted); }
+.home-task-done { margin-bottom: var(--lc-space-2); font-size: var(--lc-text-sm); color: var(--lc-green); font-weight: 800; }
+
+/* ── 首页动态列表 ── */
+.home-post-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: var(--lc-space-3);
+  align-items: start;
+  padding: var(--lc-space-3) 0;
+  border-bottom: 1px solid var(--lc-border);
+}
+.home-post-item:last-child { border-bottom: 0; }
+.home-post-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.home-post-meta { display: flex; align-items: center; gap: var(--lc-space-2); margin-bottom: 4px; }
+.home-post-meta strong { font-size: var(--lc-text-sm); color: var(--lc-text); }
+.home-post-meta span { font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+.home-post-excerpt {
+  margin: 0 0 4px;
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.home-post-stats { display: flex; gap: var(--lc-space-3); font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+
+/* ── 首页活动列表 ── */
+.home-activity-list { display: grid; gap: var(--lc-space-3); }
+.home-activity-item {
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+.home-activity-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--lc-space-2); margin-bottom: var(--lc-space-1); }
+.home-activity-head strong { color: var(--lc-text); font-size: var(--lc-text-sm); }
+.home-activity-meta { display: flex; flex-wrap: wrap; gap: var(--lc-space-2); font-size: var(--lc-text-xs); color: var(--lc-subtle); }
+
+/* ── 首页公告列表 ── */
+.home-notice-list { display: grid; gap: var(--lc-space-3); }
+
+/* ── tabs 隐藏滚动条保持横向滑动 ── */
+.tabs { scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+
+/* ── 首页两列布局 ── */
+.home-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: var(--lc-space-4);
+  align-items: start;
+}
+
+.home-col {
+  display: grid;
+  gap: var(--lc-space-4);
+  align-content: start;
+}
+
+/* ── 行动引导文案 ── */
+.home-guide-text {
+  margin: 0 0 var(--lc-space-3);
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+  line-height: 1.6;
+  font-weight: 800;
+}
+
+/* ── 首页轻量发动态表单 ── */
+.quick-post-form {
+  display: grid;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-4);
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+
+.quick-post-form textarea {
+  width: 100%;
+  padding: var(--lc-space-2) var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-text);
+  background: var(--lc-surface);
+  font: inherit;
+  font-size: var(--lc-text-sm);
+  resize: none;
+  box-sizing: border-box;
+}
+
+.quick-post-form textarea:focus {
+  outline: none;
+  border-color: var(--lc-blue-border);
+}
+
+.quick-post-foot {
+  display: flex;
+  justify-content: flex-end;
 }
 
 @media (max-width: 760px) {
@@ -1774,6 +3394,15 @@ onMounted(async () => {
   .member-tools > div {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .home-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .home-two-col .section-head {
+    flex-direction: row;
+    align-items: center;
   }
 
   .tabs {

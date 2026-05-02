@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div :class="['login-page', isFellowshipRoute ? 'is-fellowship' : 'is-platform']">
     <div class="login-shell">
       <section class="login-card">
@@ -74,7 +74,7 @@
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
               </van-cell-group>
-              <p class="register-tip">注册后默认仅开通平台账号；联谊模块需本人手动点击开通</p>
+              <p class="register-tip">注册后默认仅开通平台账号；找对象功能需本人手动点击开通</p>
               <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
@@ -147,7 +147,7 @@ async function handleRegister() {
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: '是否现在去开通联谊模块？',
+      message: '是否现在去开通找对象功能？',
       confirmButtonText: '去开通',
       cancelButtonText: '稍后再说'
     })
@@ -323,4 +323,5 @@ async function handleRegister() {
   }
 }
 </style>
+
 

@@ -177,7 +177,7 @@ const fallbackPendingUpdates = [
 
 const coreModules = [
   { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/', icon: '⚙', tone: 'pink' },
-  { title: 'LoveCube', desc: '联谊交友专区\n真诚相遇，认真开始', to: '/fellowship-intro', icon: '♥', tone: 'pink' },
+  { title: '找对象', desc: '完善资料，看看有没有合适的人', to: '/fellowship', icon: '♥', tone: 'pink' },
   { title: '团队', desc: '寻找你的团体\n连接志同道合的伙伴', to: '/platform/groups', icon: '◎', tone: 'green' },
   { title: '活动中心', desc: '线上线下活动\n发现有趣的人和事', to: '/events', icon: '♔', tone: 'orange' },
   { title: 'AI 工具', desc: '智能助手、效率工具\n让生活更高效', to: '/modules', icon: '✣', tone: 'violet' },
@@ -216,7 +216,7 @@ const heroStats = computed(() => [
 const quickActionLinks = computed(() => [
   { label: '先看活动', to: '/events' },
   { label: '查看公告', to: '/announcements' },
-  { label: '进入交友区', to: '/fellowship-intro' },
+  { label: '去看看', to: '/fellowship' },
   { label: '个人中心', to: '/me' }
 ])
 

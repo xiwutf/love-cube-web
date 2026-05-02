@@ -1,8 +1,8 @@
-﻿<template>
+<template>
   <section class="platform-page messages-page">
     <div class="platform-card messages-header">
       <h1>平台消息中心</h1>
-      <p>统一接收平台通知、系统公告活动知、内容互动，并提供联谊消息入口</p>
+      <p>统一接收平台通知、系统公告活动知、内容互动，并提供找对象消息入口</p>
     </div>
 
     <div class="platform-card">
@@ -55,10 +55,10 @@
           </div>
         </van-tab>
 
-        <van-tab title="联谊消息">
+        <van-tab title="找对象消息">
           <div class="fellowship-entry">
-            <p>联谊消息在业务模块内查看，平台消息中心仅提供入口</p>
-            <router-link class="platform-btn platform-btn-primary" to="/fellowship/messages">进入联谊消息</router-link>
+            <p>找对象消息在业务模块内查看，平台消息中心仅提供入口</p>
+            <router-link class="platform-btn platform-btn-primary" to="/fellowship/messages">去看看</router-link>
           </div>
         </van-tab>
 
@@ -186,4 +186,5 @@ onMounted(async () => {
   color: var(--lc-muted);
 }
 </style>
+
 

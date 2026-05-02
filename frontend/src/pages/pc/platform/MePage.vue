@@ -181,7 +181,7 @@ const groupInfo = {
 
 const groupRanking = [
   { rank: 1, name: 'LoveCube 官方团队', activity: 320 },
-  { rank: 2, name: '星空联谊社', activity: 280 },
+  { rank: 2, name: '星空缘分社', activity: 280 },
   { rank: 3, name: '绿来是你', activity: 210 }
 ]
 

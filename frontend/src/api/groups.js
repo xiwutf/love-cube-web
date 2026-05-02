@@ -2,7 +2,7 @@ import request from './request.js'
 
 // ── Platform groups (public module) ──────────────────────────────────────────
 
-function isLegacyPlatformGroupId(id) {
+export function isLegacyPlatformGroupId(id) {
   if (id === null || id === undefined) return false
   return /^\d+$/.test(String(id))
 }
@@ -165,6 +165,77 @@ export function removeGroupMember(groupId, memberId) {
 /** 团长调整成员角色：admin | member（仅 platform 数字 ID 团体） */
 export function patchPlatformGroupMemberRole(groupId, memberId, payload) {
   return request.patch(`/platform/groups/${groupId}/members/${memberId}/role`, payload)
+}
+
+// ── 打卡 ─────────────────────────────────────────────────────────────────────
+
+export function fetchCheckinSummary(groupId) {
+  return request.get(`/platform/groups/${groupId}/checkins/summary`)
+}
+
+export function createCheckin(groupId, payload) {
+  return request.post(`/platform/groups/${groupId}/checkins`, payload)
+}
+
+/** 团体打卡排行榜 type: daily | streak（需登录且为团体成员） */
+export function fetchCheckinRankings(groupId, type = 'daily') {
+  return request.get(`/platform/groups/${groupId}/checkins/rankings`, { params: { type } })
+}
+
+export function likePlatformCheckin(checkinId) {
+  return request.post(`/platform/checkins/${checkinId}/like`)
+}
+
+export function unlikePlatformCheckin(checkinId) {
+  return request.delete(`/platform/checkins/${checkinId}/like`)
+}
+
+export function fetchPlatformCheckinComments(checkinId, params = {}) {
+  return request.get(`/platform/checkins/${checkinId}/comments`, { params })
+}
+
+export function createPlatformCheckinComment(checkinId, payload) {
+  return request.post(`/platform/checkins/${checkinId}/comments`, payload)
+}
+
+export function deletePlatformCheckinComment(commentId) {
+  return request.delete(`/platform/checkins/comments/${commentId}`)
+}
+
+// ── 团体任务 ──────────────────────────────────────────────────────────────────
+
+export function fetchTodayTasks(groupId) {
+  return request.get(`/platform/groups/${groupId}/tasks/today`)
+}
+
+export function claimGroupTask(groupId, taskCode) {
+  return request.post(`/platform/groups/${groupId}/tasks/${taskCode}/claim`)
+}
+
+// ── 团体活动 ──────────────────────────────────────────────────────────────────
+
+export function fetchGroupActivities(groupId, params = {}) {
+  return request.get(`/platform/groups/${groupId}/activities`, { params })
+}
+
+export function createGroupActivity(groupId, payload) {
+  return request.post(`/platform/groups/${groupId}/activities`, payload)
+}
+
+export function fetchGroupActivity(groupId, activityId) {
+  return request.get(`/platform/groups/${groupId}/activities/${activityId}`)
+}
+
+export function signUpGroupActivity(groupId, activityId) {
+  return request.post(`/platform/groups/${groupId}/activities/${activityId}/signup`)
+}
+
+export function cancelGroupActivitySignup(groupId, activityId) {
+  return request.post(`/platform/groups/${groupId}/activities/${activityId}/cancel-signup`)
+}
+
+export function updateGroupActivity(groupId, activityId, payload) {
+  return request.patch(`/platform/groups/${groupId}/activities/${activityId}`, payload)
 }
 
 // ── Admin groups (back-office) ────────────────────────────────────────────────

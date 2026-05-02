@@ -1,6 +1,6 @@
-﻿<template>
+<template>
   <div class="fellowship-profile-edit-page">
-    <NavBar title="编辑联谊资料" />
+    <NavBar title="编辑找对象资料" />
 
     <van-form class="form-wrap" @submit="handleSubmit">
       <van-cell-group inset>
@@ -214,4 +214,5 @@ async function handleSubmit() {
 .form-wrap { padding: 12px 0 24px; }
 .btn-wrap { margin: 20px 16px 0; }
 </style>
+
 
