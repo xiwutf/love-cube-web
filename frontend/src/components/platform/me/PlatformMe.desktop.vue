@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="platform-page me-page">
     <div class="me-mobile" aria-label="平台个人中心（移动端）">
       <!-- 用户信息卡片 -->
@@ -16,7 +16,25 @@
               <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
             <MhHeroBadgeLink :badges="badges" />
-            <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
+            <div class="mh-hero-meta" aria-label="账号与邀请码">
+              <span class="mh-meta-line">
+                <span class="mh-meta-id">UID {{ userIdDisplay }}</span>
+                <span class="mh-meta-sep" aria-hidden="true">·</span>
+                <span class="mh-meta-code">{{ inviteLineValue }}</span>
+                <button
+                  v-if="inviteCodeDisplay"
+                  type="button"
+                  class="mh-meta-copy"
+                  @click="copyInviteCode"
+                >复制</button>
+                <router-link
+                  v-else-if="inviteCodeReady"
+                  class="mh-meta-copy mh-meta-link"
+                  to="/fellowship/invite"
+                >查看</router-link>
+              </span>
+              <span v-if="copyFeedback" class="mh-meta-feedback" :class="{ err: copyFeedbackError }">{{ copyFeedback }}</span>
+            </div>
           </div>
           <div class="mh-hero-actions">
             <router-link class="mh-message-btn" to="/me/notifications">
@@ -233,6 +251,7 @@ const saveMessage = ref('')
 const saveError = ref(false)
 const { pickAndUpload, uploading } = useImageUpload()
 const inviteCode = ref('')
+const inviteCodeReady = ref(false)
 const copyFeedback = ref('')
 const copyFeedbackError = ref(false)
 const editForm = reactive({
@@ -301,6 +320,8 @@ const mobileGridItems = [
   { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
   { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
   { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
+  { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
+  { title: '邀请码', icon: '▭', tone: 'amber', to: '/fellowship/invite', tip: '邀请好友加入' },
   { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
   { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
   { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
@@ -377,6 +398,11 @@ const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '--
 const locationDisplay = computed(() => user.value?.location || '未设置')
 const avatarFallback = computed(() => String(displayName.value || 'U').slice(0, 1).toUpperCase())
 const inviteCodeDisplay = computed(() => inviteCode.value || '')
+const inviteLineValue = computed(() => {
+  if (inviteCodeDisplay.value) return inviteCodeDisplay.value
+  if (!inviteCodeReady.value) return '加载中…'
+  return '—'
+})
 const growthProgress = computed(() => {
   const next = Math.max(1, Number(growthLevel.value.nextExp || 1))
   const cur = Number(growthLevel.value.currentExp || 0)
@@ -588,6 +614,7 @@ onMounted(async () => {
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
   }
+  inviteCodeReady.value = true
   if (growthRes.status === 'fulfilled') {
     growthInfo.value = growthRes.value || null
     badges.value = Array.isArray(growthRes.value?.badges) ? growthRes.value.badges : []
@@ -2001,10 +2028,67 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.65);
 }
 
-.mh-hero-id {
+.mh-hero-meta {
   margin-top: 6px;
   font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.mh-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  line-height: 1.35;
+}
+
+.mh-meta-id {
+  flex: 0 0 auto;
   color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+}
+
+.mh-meta-sep {
+  color: rgba(255, 255, 255, 0.35);
+  user-select: none;
+}
+
+.mh-meta-code {
+  min-width: 0;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.95);
+  word-break: break-all;
+}
+
+.mh-meta-copy {
+  flex: 0 0 auto;
+  margin-left: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.mh-meta-link {
+  display: inline-block;
+}
+
+.mh-meta-feedback {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mh-meta-feedback.err {
+  color: #fecaca;
 }
 
 .mh-hero-actions {

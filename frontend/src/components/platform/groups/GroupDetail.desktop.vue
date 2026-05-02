@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="group-detail-page">
     <div v-if="loading.detail" class="loading-state">加载团体详情中...</div>
     <div v-else-if="errors.detail" class="error-state">
@@ -2027,6 +2027,11 @@ onMounted(async () => {
   border-top: 0;
   padding: 0 var(--lc-space-6);
   border-radius: 0 0 var(--lc-radius) var(--lc-radius);
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tabs a {
@@ -2037,6 +2042,7 @@ onMounted(async () => {
   text-decoration: none;
   font-size: var(--lc-text-base);
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .tabs a.active {
@@ -2680,9 +2686,6 @@ onMounted(async () => {
   }
 }
 
-/* ── tabs 防止换行 ── */
-.tabs a { white-space: nowrap; }
-
 /* ── 近期活动预览 ── */
 .activity-preview h2 { margin: 0; }
 .activity-mini-list { display: grid; gap: var(--lc-space-3); margin-top: var(--lc-space-3); }
@@ -3058,7 +3061,7 @@ onMounted(async () => {
 
 .cc-text {
   grid-column: 1 / -1;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cc-time {
@@ -3316,10 +3319,6 @@ onMounted(async () => {
 
 /* ── 首页公告列表 ── */
 .home-notice-list { display: grid; gap: var(--lc-space-3); }
-
-/* ── tabs 隐藏滚动条保持横向滑动 ── */
-.tabs { scrollbar-width: none; }
-.tabs::-webkit-scrollbar { display: none; }
 
 /* ── 首页两列布局 ── */
 .home-two-col {
