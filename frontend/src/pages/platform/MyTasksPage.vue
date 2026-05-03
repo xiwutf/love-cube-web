@@ -8,6 +8,33 @@
     <div class="sp-body">
       <p v-if="loading" class="sp-status">加载中...</p>
       <template v-else>
+        <p v-if="accountHint" class="sp-hint">{{ accountHint }}</p>
+
+        <!-- 账号成长任务 -->
+        <div v-if="accountTasks.length" class="sp-card account-block">
+          <div class="sp-card-title">账号成长任务</div>
+          <p class="sp-sub">一次性任务，经验更多；完成后请先点「领取」。</p>
+          <div class="task-list">
+            <div v-for="task in accountTasks" :key="task.code" class="task-row account" :class="{ done: task.completed }">
+              <div class="task-check">{{ task.completed ? '✓' : '' }}</div>
+              <div class="task-body">
+                <div class="task-name">{{ task.title }}</div>
+                <div class="task-exp">+{{ task.exp }} 经验</div>
+              </div>
+              <button
+                v-if="task.completed"
+                type="button"
+                class="task-btn claim"
+                :disabled="claimingAccount === task.code"
+                @click="claimOneAccount(task.code)"
+              >
+                {{ claimingAccount === task.code ? '…' : '领取' }}
+              </button>
+              <router-link v-else class="task-btn" :to="task.to">去完成</router-link>
+            </div>
+          </div>
+        </div>
+
         <!-- 进度汇总 -->
         <div class="sp-card task-summary">
           <div class="ts-level">
@@ -58,21 +85,80 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getMyGrowth } from '@/api/growth.js'
+import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 
 const loading = ref(false)
 const growthLevel = ref(1)
 const growthName = ref('新手用户')
 const tasks = ref([])
+const accountTasks = ref([])
+const claimingAccount = ref('')
+const accountHint = ref('')
 
 const codeToRoute = {
   DAILY_LOGIN: '/me',
-  DAILY_POST: '/platform/positive-share',
-  DAILY_VIEW: '/articles',
-  DAILY_LIKE: '/platform/positive-share'
+  DAILY_POST: '/platform/publish',
+  DAILY_COMMENT: '/platform/content?type=mood',
+  DAILY_VIEW: '/platform/content',
+  DAILY_LIKE: '/platform/content?type=mood'
+}
+
+function accountTaskRoute(code) {
+  const map = {
+    ACC_AVATAR: { path: '/me', query: { panel: 'edit' } },
+    ACC_PHOTO: '/me/profile',
+    ACC_BIO: { path: '/me', query: { panel: 'edit' } },
+    ACC_JOIN_GROUP: '/platform/groups',
+    ACC_FIRST_POST: '/platform/publish',
+    ACC_BIND_PHONE: '/me/security'
+  }
+  return map[code] || '/me'
 }
 
 const completedCount = computed(() => tasks.value.filter(t => t.done).length)
+
+async function claimOneAccount(code) {
+  if (!code || claimingAccount.value) return
+  claimingAccount.value = code
+  accountHint.value = ''
+  try {
+    const res = await claimAccountTask(code)
+    if (res?.claimed) {
+      accountHint.value = `已领取 +${Number(res.rewardExp ?? 0)} 经验`
+      const data = await getMyGrowth()
+      growthLevel.value = Number(data?.level ?? 1)
+      growthName.value = data?.title || '新手用户'
+      const rows = data?.dailyTasks
+      if (Array.isArray(rows) && rows.length) {
+        tasks.value = rows.map(item => ({
+          title: item.name || item.code,
+          exp: Number(item.rewardExp ?? 0),
+          current: Number(item.progress ?? 0),
+          total: Number(item.targetCount ?? 1),
+          done: Boolean(item.completed),
+          to: codeToRoute[item.code] || '/me'
+        }))
+      }
+      const acc = data?.accountTasks
+      accountTasks.value = Array.isArray(acc)
+        ? acc.map(item => ({
+            code: item.code,
+            title: item.name || item.code,
+            exp: Number(item.rewardExp ?? 0),
+            completed: Boolean(item.completed),
+            to: accountTaskRoute(item.code)
+          }))
+        : []
+    } else {
+      accountHint.value = String(res?.message || '暂不可领取')
+    }
+  } catch (e) {
+    accountHint.value = e?.response?.data?.message || '领取失败，请稍后重试'
+  } finally {
+    claimingAccount.value = ''
+    window.setTimeout(() => { accountHint.value = '' }, 4000)
+  }
+}
 
 const expSources = [
   { icon: '📅', label: '每日登录', exp: 2 },
@@ -108,8 +194,19 @@ onMounted(async () => {
     } else {
       tasks.value = mockTasks
     }
+    const acc = res?.accountTasks
+    accountTasks.value = Array.isArray(acc)
+      ? acc.map(item => ({
+          code: item.code,
+          title: item.name || item.code,
+          exp: Number(item.rewardExp ?? 0),
+          completed: Boolean(item.completed),
+          to: accountTaskRoute(item.code)
+        }))
+      : []
   } catch {
     tasks.value = mockTasks
+    accountTasks.value = []
   } finally {
     loading.value = false
   }
@@ -137,6 +234,33 @@ onMounted(async () => {
 }
 .sp-status { text-align: center; padding: 40px 0; color: var(--lc-subtle); font-size: 14px; }
 .sp-empty::before { display: block; font-size: 32px; margin-bottom: 10px; content: "✅"; }
+
+.sp-hint {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lc-emerald);
+  margin: 0 0 10px;
+}
+
+.account-block .sp-sub {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  color: var(--lc-subtle);
+  line-height: 1.45;
+}
+
+.task-btn.claim {
+  border-color: var(--lc-violet);
+  color: var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-violet), var(--lc-indigo));
+  cursor: pointer;
+}
+
+.task-btn.claim:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 .sp-card {
   background: var(--lc-surface); border: 1px solid var(--lc-soft-alt); border-radius: 16px;

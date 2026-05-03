@@ -9,4 +9,6 @@ public interface UserPhotoRepository extends JpaRepository<UserPhoto, Long> {
     List<UserPhoto> findByUserIdOrderBySortOrderAscIdAsc(Long userId);
 
     void deleteByUserId(Long userId);
+
+    long countByUserIdAndStatus(Long userId, String status);
 }

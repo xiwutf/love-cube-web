@@ -28,6 +28,35 @@
       <GrowthPanel class="growth-panel" :growth-level="growthLevel" :growth-progress="growthProgress" :compact="true" />
 
       <section ref="tasksPanelRef" class="card top-task-card task-panel" aria-label="今日任务">
+        <div v-if="accountTasks.length" class="account-task-section" aria-label="账号成长任务">
+          <header class="panel-head sub">
+            <div>
+              <h2>账号成长任务 <span>一次性 · 经验更多</span></h2>
+            </div>
+            <p>待领取 <b>{{ accountClaimableCount }}</b></p>
+          </header>
+          <div class="top-task-list">
+            <div v-for="task in accountTasks" :key="task.code" class="top-task-row account-row" :class="{ done: task.completed }">
+              <span class="task-dot" :class="{ ok: task.completed }" aria-hidden="true">{{ task.completed ? '✓' : '' }}</span>
+              <strong>{{ task.title }}</strong>
+              <span class="exp">+{{ task.exp }} 经验</span>
+              <span class="mini-track" aria-hidden="true"><span :style="{ width: task.completed ? '100%' : '0%' }" /></span>
+              <small>{{ task.completed ? '可领' : '未完成' }}</small>
+              <button
+                v-if="task.completed"
+                type="button"
+                class="claim-task-btn"
+                :disabled="claimingAccountCode === task.code"
+                @click="$emit('claim-account-task', task.code)"
+              >
+                {{ claimingAccountCode === task.code ? '…' : '领取' }}
+              </button>
+              <router-link v-else class="go-task-link" :to="task.to">去完成</router-link>
+            </div>
+          </div>
+          <div class="task-section-divider" role="separator" />
+        </div>
+
         <header class="panel-head">
           <div>
             <h2>今日任务 <span>每日 0 点刷新</span></h2>
@@ -87,6 +116,9 @@ const props = defineProps({
   growthProgress: { type: String, required: true },
   completedTaskCount: { type: Number, required: true },
   dailyTasks: { type: Array, required: true },
+  /** { code, title, exp, completed, to } */
+  accountTasks: { type: Array, default: () => [] },
+  claimingAccountCode: { type: String, default: '' },
   overviewItems: { type: Array, required: true },
   groupInfo: { type: Object, required: true },
   groupRanking: { type: Array, required: true },
@@ -96,9 +128,12 @@ const props = defineProps({
   onCopyInvite: { type: Function, required: true },
 })
 
+defineEmits(['claim-account-task'])
+
 const router = useRouter()
 const tasksPanelRef = ref(null)
 const dailyTaskTotal = computed(() => props.dailyTasks.length)
+const accountClaimableCount = computed(() => props.accountTasks.filter((t) => t.completed).length)
 const coreOverviewItems = computed(() => props.overviewItems.slice(0, 3))
 
 const achievementItems = computed(() => [
@@ -282,6 +317,53 @@ function taskProgress(task) {
   align-items: center;
   min-height: 26px;
   font-size: 12px;
+}
+
+.top-task-row.account-row {
+  grid-template-columns: 22px minmax(0, 1fr) 76px 56px 44px minmax(72px, auto);
+}
+
+.claim-task-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--dash-primary);
+  background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-dark));
+  color: var(--dash-card);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.claim-task-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.go-task-link {
+  justify-self: end;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--dash-border);
+  background: var(--dash-soft);
+  color: var(--dash-primary-dark);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  text-align: center;
+}
+
+.task-section-divider {
+  height: 1px;
+  margin: 14px 0 6px;
+  background: linear-gradient(90deg, transparent, var(--dash-border), transparent);
+}
+
+.panel-head.sub h2 {
+  font-size: 15px;
+}
+
+.panel-head.sub h2 span {
+  font-size: 11px;
 }
 
 .top-task-row strong {

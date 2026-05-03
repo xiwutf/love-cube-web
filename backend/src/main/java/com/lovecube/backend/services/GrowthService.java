@@ -1,6 +1,7 @@
 package com.lovecube.backend.services;
 
 import com.lovecube.backend.entity.*;
+import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,11 @@ public class GrowthService {
     private final UserDailyTaskProgressRepository userDailyTaskProgressRepository;
     private final BadgeRepository badgeRepository;
     private final UserBadgeRepository userBadgeRepository;
+    private final AccountTaskRepository accountTaskRepository;
+    private final UserAccountTaskProgressRepository userAccountTaskProgressRepository;
+    private final UserRepository userRepository;
+    private final UserPhotoRepository userPhotoRepository;
+    private final PlatGroupMemberRepository platGroupMemberRepository;
 
     public GrowthService(
             UserGrowthRepository userGrowthRepository,
@@ -59,7 +65,12 @@ public class GrowthService {
             DailyTaskRepository dailyTaskRepository,
             UserDailyTaskProgressRepository userDailyTaskProgressRepository,
             BadgeRepository badgeRepository,
-            UserBadgeRepository userBadgeRepository
+            UserBadgeRepository userBadgeRepository,
+            AccountTaskRepository accountTaskRepository,
+            UserAccountTaskProgressRepository userAccountTaskProgressRepository,
+            UserRepository userRepository,
+            UserPhotoRepository userPhotoRepository,
+            PlatGroupMemberRepository platGroupMemberRepository
     ) {
         this.userGrowthRepository = userGrowthRepository;
         this.userGrowthLogRepository = userGrowthLogRepository;
@@ -67,6 +78,11 @@ public class GrowthService {
         this.userDailyTaskProgressRepository = userDailyTaskProgressRepository;
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
+        this.accountTaskRepository = accountTaskRepository;
+        this.userAccountTaskProgressRepository = userAccountTaskProgressRepository;
+        this.userRepository = userRepository;
+        this.userPhotoRepository = userPhotoRepository;
+        this.platGroupMemberRepository = platGroupMemberRepository;
     }
 
     public Map<String, Object> recordAction(Long userId, String actionType, String bizId) {
@@ -107,8 +123,9 @@ public class GrowthService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> getGrowthOverview(Long userId) {
+        syncAccountTaskCompletion(userId);
         UserGrowth growth = getOrCreateGrowth(userId);
         List<DailyTask> tasks = dailyTaskRepository.findByEnabledOrderBySortNoAsc(1);
         LocalDate today = LocalDate.now();
@@ -148,8 +165,48 @@ public class GrowthService {
         overview.put("neededExpToNextLevel", neededExp);
         overview.put("today", today.toString());
         overview.put("dailyTasks", taskRows);
+        overview.put("accountTasks", buildAccountTaskRows(userId));
         overview.put("badges", badgeRows);
         return overview;
+    }
+
+    /**
+     * 一次性账号任务：根据资料与行为自动标记完成，奖励需主动领取。
+     */
+    public Map<String, Object> claimAccountTask(Long userId, String taskCode) {
+        AccountTask task = accountTaskRepository.findByCode(taskCode)
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在"));
+        if (safeInt(task.getEnabled()) != 1) {
+            throw new IllegalArgumentException("任务已停用");
+        }
+        UserAccountTaskProgress progress = userAccountTaskProgressRepository
+                .findByUserIdAndTaskCode(userId, taskCode)
+                .orElseThrow(() -> new IllegalArgumentException("任务尚未完成"));
+        if (safeInt(progress.getCompleted()) != 1) {
+            throw new IllegalArgumentException("任务尚未完成");
+        }
+        if (safeInt(progress.getClaimed()) == 1) {
+            return Map.of("claimed", false, "message", "奖励已领取");
+        }
+
+        progress.setClaimed(1);
+        userAccountTaskProgressRepository.save(progress);
+
+        UserGrowth growth = getOrCreateGrowth(userId);
+        int reward = Math.max(0, safeInt(task.getRewardExp()));
+        growth.setExp(safeInt(growth.getExp()) + reward);
+        refreshLevelAndTitle(growth);
+        userGrowthRepository.save(growth);
+        refreshBadges(userId);
+
+        return Map.of(
+                "claimed", true,
+                "taskCode", taskCode,
+                "rewardExp", reward,
+                "level", growth.getLevel(),
+                "title", getUserTitle(safeInt(growth.getLevel())),
+                "totalExp", growth.getExp()
+        );
     }
 
     public Map<String, Object> claimDailyTask(Long userId, String taskCode) {
@@ -215,6 +272,79 @@ public class GrowthService {
             growth.setTitle(getUserTitle(1));
             return userGrowthRepository.save(growth);
         });
+    }
+
+    private void syncAccountTaskCompletion(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return;
+        }
+        List<AccountTask> accountTasks = accountTaskRepository.findByEnabledOrderBySortNoAsc(1);
+        for (AccountTask task : accountTasks) {
+            UserAccountTaskProgress existing = userAccountTaskProgressRepository
+                    .findByUserIdAndTaskCode(userId, task.getCode())
+                    .orElse(null);
+            if (existing != null && safeInt(existing.getClaimed()) == 1) {
+                continue;
+            }
+            if (!evaluateAccountTaskCheck(task.getCheckType(), user, userId)) {
+                continue;
+            }
+            UserAccountTaskProgress row = existing != null ? existing : new UserAccountTaskProgress();
+            if (existing == null) {
+                row.setUserId(userId);
+                row.setTaskCode(task.getCode());
+            }
+            row.setCompleted(1);
+            userAccountTaskProgressRepository.save(row);
+        }
+    }
+
+    private boolean evaluateAccountTaskCheck(String checkType, User user, Long userId) {
+        if (checkType == null) {
+            return false;
+        }
+        return switch (checkType.trim()) {
+            case "HAS_PROFILE_PHOTO" -> {
+                String p = user.getProfilePhoto();
+                yield p != null && !p.isBlank();
+            }
+            case "HAS_GALLERY_PHOTO" -> userPhotoRepository.countByUserIdAndStatus(userId, "ACTIVE") > 0;
+            case "IN_APPROVED_PLATFORM_GROUP" -> platGroupMemberRepository.existsByUserIdAndStatus(userId, "approved");
+            case "HAS_BIO_MIN_LEN" -> {
+                String bio = user.getBio();
+                yield bio != null && bio.trim().length() >= 8;
+            }
+            case "HAS_POSTED_CONTENT" -> userGrowthLogRepository.countByUserIdAndActionType(userId, "POST_CONTENT") >= 1;
+            case "HAS_PHONE_BOUND" -> {
+                String phone = user.getPhoneNumber();
+                yield phone != null && !phone.isBlank();
+            }
+            default -> false;
+        };
+    }
+
+    private List<Map<String, Object>> buildAccountTaskRows(Long userId) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (AccountTask task : accountTaskRepository.findByEnabledOrderBySortNoAsc(1)) {
+            UserAccountTaskProgress p = userAccountTaskProgressRepository
+                    .findByUserIdAndTaskCode(userId, task.getCode())
+                    .orElse(null);
+            if (p != null && safeInt(p.getClaimed()) == 1) {
+                continue;
+            }
+            boolean completed = p != null && safeInt(p.getCompleted()) == 1;
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("code", task.getCode());
+            item.put("name", task.getName());
+            item.put("checkType", task.getCheckType());
+            item.put("targetCount", 1);
+            item.put("progress", completed ? 1 : 0);
+            item.put("completed", completed);
+            item.put("rewardExp", safeInt(task.getRewardExp()));
+            rows.add(item);
+        }
+        return rows;
     }
 
     private void updateDailyTaskProgress(Long userId, String actionType) {

@@ -55,6 +55,19 @@ public class GrowthController {
         }
     }
 
+    @PostMapping("/account-tasks/{taskCode}/claim")
+    public ResponseEntity<?> claimAccountTask(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable String taskCode
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        try {
+            return ResponseEntity.ok(growthService.claimAccountTask(user.getUserid(), taskCode));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
+        }
+    }
+
     @GetMapping("/badges/me")
     public ResponseEntity<List<Map<String, Object>>> getMyBadges(@RequestHeader("Authorization") String authHeader) {
         User user = adminAuthService.requireUser(authHeader);

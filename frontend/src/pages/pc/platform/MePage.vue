@@ -13,6 +13,8 @@
       :growth-progress="growthProgress"
       :completed-task-count="completedTaskCount"
       :daily-tasks="dailyTasks"
+      :account-tasks="dashboardAccountTasks"
+      :claiming-account-code="claimingAccountCode"
       :overview-items="overviewItems"
       :group-info="groupInfo"
       :group-ranking="groupRanking"
@@ -20,6 +22,7 @@
       :on-open-settings="openSettingsPanel"
       :on-open-edit="openEditPanel"
       :on-copy-invite="copyInviteCode"
+      @claim-account-task="onClaimAccountTask"
     />
     <section class="badge-panel" aria-label="我的徽章">
       <h3>我的徽章</h3>
@@ -105,7 +108,7 @@ import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
-import { getMyGrowth } from '@/api/growth.js'
+import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 
@@ -135,6 +138,48 @@ const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
 const growthInfo = ref(null)
 const badges = ref([])
+const claimingAccountCode = ref('')
+
+function accountGrowthTaskRoutePc(code) {
+  const routes = {
+    ACC_AVATAR: { path: '/pc/platform/me', query: { panel: 'edit' } },
+    ACC_PHOTO: '/me/profile',
+    ACC_BIO: { path: '/pc/platform/me', query: { panel: 'edit' } },
+    ACC_JOIN_GROUP: '/platform/groups',
+    ACC_FIRST_POST: '/platform/positive-share',
+    ACC_BIND_PHONE: '/me/security'
+  }
+  return routes[code] || { path: '/pc/platform/me' }
+}
+
+const dashboardAccountTasks = computed(() => {
+  const rows = growthInfo.value?.accountTasks
+  if (!Array.isArray(rows) || !rows.length) return []
+  return rows.map((item) => ({
+    code: item.code,
+    title: item.name || item.code,
+    exp: Number(item.rewardExp ?? 0),
+    completed: Boolean(item.completed),
+    to: accountGrowthTaskRoutePc(item.code)
+  }))
+})
+
+async function onClaimAccountTask(code) {
+  if (!code || claimingAccountCode.value) return
+  claimingAccountCode.value = code
+  try {
+    const res = await claimAccountTask(code)
+    if (res?.claimed) {
+      const g = await getMyGrowth()
+      growthInfo.value = g || null
+      badges.value = Array.isArray(g?.badges) ? g.badges : []
+    }
+  } catch {
+    /* 静默失败，工作台以重新进入页面为准 */
+  } finally {
+    claimingAccountCode.value = ''
+  }
+}
 
 const growthLevel = computed(() => {
   const data = growthInfo.value

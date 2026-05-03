@@ -52,27 +52,18 @@
         </div>
       </div>
 
-      <!-- 成长信息 -->
-      <div class="mh-card mh-growth-card">
-        <div class="mh-growth-left">
-          <div class="mh-growth-name-row">
-            <span class="mh-growth-name">{{ mobileGrowthLevel.name }}</span>
-            <span class="mh-growth-hint">还差 {{ Math.max(0, mobileGrowthLevel.nextExp - mobileGrowthLevel.currentExp) }} 经验升级</span>
-          </div>
-          <div class="mh-exp-bar">
-            <div class="mh-exp-fill" :style="{ width: mobileGrowthProgress }"></div>
-          </div>
-          <div class="mh-exp-label">{{ mobileGrowthLevel.currentExp }} / {{ mobileGrowthLevel.nextExp }} EXP</div>
+      <!-- 成长信息（紧凑：称号 + 数值一行，细进度条一行；任务/徽章见任务中心与上方入口） -->
+      <div class="mh-card mh-growth-slim">
+        <div class="mh-grow-line1">
+          <span class="mh-grow-title">{{ mobileGrowthLevel.name }}</span>
+          <span class="mh-grow-nums">
+            {{ mobileGrowthLevel.currentExp }}/{{ mobileGrowthLevel.nextExp }}
+            <span class="mh-grow-sep" aria-hidden="true">·</span>
+            还差 {{ Math.max(0, mobileGrowthLevel.nextExp - mobileGrowthLevel.currentExp) }} 经验
+          </span>
         </div>
-        <div class="mh-growth-right">
-          <div class="mh-growth-stat">
-            <strong>{{ mobileCompletedCount }}/{{ mobileDailyTasks.length }}</strong>
-            <small>今日任务</small>
-          </div>
-          <div class="mh-growth-stat">
-            <strong>{{ badges.length || 0 }}</strong>
-            <small>我的徽章</small>
-          </div>
+        <div class="mh-exp-bar mh-exp-bar--slim" role="progressbar" :aria-valuenow="mobileGrowthLevel.currentExp" :aria-valuemin="0" :aria-valuemax="mobileGrowthLevel.nextExp">
+          <div class="mh-exp-fill" :style="{ width: mobileGrowthProgress }"></div>
         </div>
       </div>
 
@@ -87,23 +78,15 @@
         </div>
       </div>
 
-      <!-- 今日任务 -->
-      <div class="mh-card mh-task-card">
-        <div class="mh-card-head">
-          <span class="mh-card-title">今日任务</span>
-          <span class="mh-card-meta">已完成 {{ mobileCompletedCount }}/{{ mobileDailyTasks.length }} · 每日 0 点刷新</span>
+      <!-- 任务中心：列表与领取在 /me/tasks，此处仅保留入口 -->
+      <router-link class="mh-card mh-task-entry" to="/me/tasks">
+        <span class="mh-task-entry-icon" aria-hidden="true">✅</span>
+        <div class="mh-task-entry-body">
+          <span class="mh-task-entry-title">任务中心</span>
+          <span class="mh-task-entry-meta">{{ mobileTaskEntrySubtitle }}</span>
         </div>
-        <div class="mh-task-list">
-          <div v-for="task in mobileDailyTasks" :key="task.title" class="mh-task-row" :class="{ done: task.done }">
-            <div class="mh-task-check">{{ task.done ? '✓' : '' }}</div>
-            <div class="mh-task-body">
-              <div class="mh-task-name">{{ task.title }}</div>
-              <div class="mh-task-exp">+{{ task.exp }} 经验</div>
-            </div>
-            <router-link :to="task.to" class="mh-task-action" :class="{ done: task.done }">{{ task.done ? '已完成' : '去完成' }}</router-link>
-          </div>
-        </div>
-      </div>
+        <span class="mh-task-entry-arrow" aria-hidden="true">›</span>
+      </router-link>
 
       <!-- 设置列表 -->
       <div class="mh-card mh-settings-card">
@@ -150,6 +133,8 @@
       :growth-progress="growthProgress"
       :completed-task-count="completedTaskCount"
       :daily-tasks="dailyTasks"
+      :account-tasks="dashboardAccountTasks"
+      :claiming-account-code="claimingAccountCode"
       :overview-items="overviewItems"
       :group-info="groupInfo"
       :group-ranking="groupRanking"
@@ -157,6 +142,7 @@
       :on-open-settings="openSettingsPanel"
       :on-open-edit="openEditPanel"
       :on-copy-invite="copyInviteCode"
+      @claim-account-task="onClaimAccountTask"
     />
 
     <div v-if="editOpen" class="me-modal-backdrop" @click.self="closeEditPanel">
@@ -233,7 +219,7 @@ import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
-import { getMyGrowth } from '@/api/growth.js'
+import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { fetchMyGroups, fetchHotGroups } from '@/api/groups.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
@@ -269,6 +255,68 @@ const myFansCount = ref(0)
 const myLikesReceived = ref(0)
 const growthInfo = ref(null)
 const badges = ref([])
+const claimingAccountCode = ref('')
+
+function accountGrowthTaskRoute(code) {
+  const routes = {
+    ACC_AVATAR: { path: '/me', query: { panel: 'edit' } },
+    ACC_PHOTO: '/me/profile',
+    ACC_BIO: { path: '/me', query: { panel: 'edit' } },
+    ACC_JOIN_GROUP: '/platform/groups',
+    ACC_FIRST_POST: '/platform/publish',
+    ACC_BIND_PHONE: '/me/security'
+  }
+  return routes[code] || '/me'
+}
+
+const dashboardAccountTasks = computed(() => {
+  const rows = growthInfo.value?.accountTasks
+  if (!Array.isArray(rows) || !rows.length) return []
+  return rows.map((item) => ({
+    code: item.code,
+    title: item.name || item.code,
+    exp: Number(item.rewardExp ?? 0),
+    completed: Boolean(item.completed),
+    to: accountGrowthTaskRoute(item.code)
+  }))
+})
+
+const mobileAccountTasks = computed(() => dashboardAccountTasks.value)
+
+const mobileTaskEntrySubtitle = computed(() => {
+  const dailyList = mobileDailyTasks.value
+  const dailyTotal = dailyList.length
+  const dailyDone = mobileCompletedCount.value
+  const acc = mobileAccountTasks.value
+  const accLen = acc.length
+  const claimable = acc.filter((t) => t.completed).length
+  const dailyPart = dailyTotal ? `今日 ${dailyDone}/${dailyTotal}` : '今日任务'
+  let accPart = '成长任务已领完'
+  if (accLen > 0) {
+    accPart =
+      claimable > 0
+        ? `成长 ${accLen} 项 · ${claimable} 项可领经验`
+        : `成长 ${accLen} 项进行中`
+  }
+  return `${dailyPart} · ${accPart}`
+})
+
+async function onClaimAccountTask(code) {
+  if (!code || claimingAccountCode.value) return
+  claimingAccountCode.value = code
+  try {
+    const res = await claimAccountTask(code)
+    if (res?.claimed) {
+      const g = await getMyGrowth()
+      growthInfo.value = g || null
+      badges.value = Array.isArray(g?.badges) ? g.badges : []
+    }
+  } catch {
+    /* 工作台领取失败时可重新尝试 */
+  } finally {
+    claimingAccountCode.value = ''
+  }
+}
 const myGroupsList = ref([])
 const hotGroupsList = ref([])
 
@@ -322,7 +370,6 @@ const mobileGridItems = [
   { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
   { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
   { title: '邀请码', icon: '▭', tone: 'amber', to: '/fellowship/invite', tip: '邀请好友加入' },
-  { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
   { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
   { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
   { title: '问题工单', icon: '💡', tone: 'violet', to: '/me/feedback', tip: '提交得+5经验' }
@@ -2180,35 +2227,92 @@ onBeforeUnmount(() => {
   padding: 16px;
 }
 
-/* ── Growth card ─────────────────────────────────────────── */
-.mh-growth-card {
+.mh-task-entry {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mh-growth-left {
+.mh-task-entry:active {
+  background: var(--lc-bg);
+}
+
+.mh-task-entry-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.14));
+  font-size: 18px;
+}
+
+.mh-task-entry-body {
   flex: 1;
   min-width: 0;
-}
-
-.mh-growth-name-row {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.mh-growth-name {
-  font-size: 15px;
+.mh-task-entry-title {
+  font-size: 14px;
   font-weight: 800;
   color: var(--lc-text);
 }
 
-.mh-growth-hint {
+.mh-task-entry-meta {
   font-size: 11px;
   color: var(--lc-subtle);
+  line-height: 1.35;
+}
+
+.mh-task-entry-arrow {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--lc-subtle);
+  font-weight: 300;
+}
+
+/* ── Growth slim bar ─────────────────────────────────────── */
+.mh-growth-slim {
+  padding: 10px 14px 12px;
+}
+
+.mh-grow-line1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.mh-grow-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--lc-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mh-grow-nums {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lc-subtle);
+  white-space: nowrap;
+}
+
+.mh-grow-sep {
+  margin: 0 4px;
+  opacity: 0.45;
 }
 
 .mh-exp-bar {
@@ -2218,49 +2322,15 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.mh-exp-bar--slim {
+  height: 5px;
+}
+
 .mh-exp-fill {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--lc-violet), var(--lc-indigo));
   transition: width 0.5s ease;
-}
-
-.mh-exp-label {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--lc-subtle);
-  text-align: right;
-}
-
-.mh-growth-right {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.mh-growth-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 14px;
-  border-radius: 12px;
-  background: var(--lc-bg);
-  gap: 2px;
-  min-width: 68px;
-  text-align: center;
-}
-
-.mh-growth-stat strong {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--lc-text);
-  line-height: 1;
-}
-
-.mh-growth-stat small {
-  font-size: 10px;
-  color: var(--lc-subtle);
 }
 
 /* ── Function grid ───────────────────────────────────────── */

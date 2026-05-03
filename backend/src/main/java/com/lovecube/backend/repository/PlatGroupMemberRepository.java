@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface PlatGroupMemberRepository extends JpaRepository<PlatGroupMember, Long> {
 
+    boolean existsByUserIdAndStatus(Long userId, String status);
+
     Optional<PlatGroupMember> findByGroupIdAndUserId(Long groupId, Long userId);
 
     List<PlatGroupMember> findByGroupIdAndStatusOrderByJoinedAtAsc(Long groupId, String status);
