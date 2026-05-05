@@ -12,6 +12,7 @@ import com.lovecube.backend.entity.PlatGroupPostLike;
 import com.lovecube.backend.entity.PlatGroupTaskProgress;
 import com.lovecube.backend.entity.UserGrowth;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.PlatGroupActivityRepository;
 import com.lovecube.backend.repository.PlatGroupActivitySignupRepository;
 import com.lovecube.backend.repository.PlatGroupCheckinRepository;
@@ -479,6 +480,7 @@ public class PlatformGroupController {
             m.setApplyReason(reason);
             m.setUpdatedAt(LocalDateTime.now());
             memberRepository.save(m);
+            notifyGroupManagersJoinRequest(id, group, user);
             return Map.of("joined", false, "pending", true, "message", "Request submitted, waiting for approval");
         }
 
@@ -501,7 +503,32 @@ public class PlatformGroupController {
         member.setStatus("pending");
         member.setApplyReason(reason);
         memberRepository.save(member);
+        notifyGroupManagersJoinRequest(id, group, user);
         return Map.of("joined", false, "pending", true, "message", "Request submitted, waiting for approval");
+    }
+
+    private void notifyGroupManagersJoinRequest(Long groupId, PlatGroup group, User applicant) {
+        String groupName = group.getName() != null ? group.getName() : "团体";
+        String applicantName = applicant.getUsername() != null ? applicant.getUsername() : "有用户";
+        memberRepository.findByGroupIdAndStatusOrderByJoinedAtAsc(groupId, "approved").stream()
+                .filter(m -> {
+                    String r = m.getRole() == null ? "" : m.getRole().toLowerCase(Locale.ROOT);
+                    return "owner".equals(r) || "admin".equals(r) || "reviewer".equals(r);
+                })
+                .filter(m -> !m.getUserId().equals(applicant.getUserid()))
+                .forEach(m -> {
+                    try {
+                        notificationService.createNotification(
+                                m.getUserId(),
+                                NotificationCatalog.TYPE_GROUP_JOIN_REQUEST,
+                                applicantName + " 申请加入「" + groupName + "」",
+                                applicantName + " 申请加入你管理的团体「" + groupName + "」，请及时审核。",
+                                "/fellowship/groups",
+                                "platform_group",
+                                String.valueOf(groupId));
+                    } catch (Exception ignored) {
+                    }
+                });
     }
 
 
@@ -592,11 +619,12 @@ public class PlatformGroupController {
         group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
         groupRepository.save(group);
 
-        notificationService.send(
+        notificationService.createNotification(
                 target.getUserId(),
-                "GROUP_JOIN_APPROVED",
+                NotificationCatalog.TYPE_GROUP_APPLICATION_APPROVED,
                 "你的团体加入申请已通过",
                 "你加入「" + group.getName() + "」的申请已通过",
+                "/fellowship/groups",
                 "platform_group",
                 String.valueOf(id));
 
@@ -624,11 +652,12 @@ public class PlatformGroupController {
 
         PlatGroup group = groupRepository.findById(id).orElse(null);
         String groupName = group != null ? group.getName() : "团体";
-        notificationService.send(
+        notificationService.createNotification(
                 target.getUserId(),
-                "GROUP_JOIN_REJECTED",
+                NotificationCatalog.TYPE_GROUP_APPLICATION_REJECTED,
                 "你的团体加入申请未通过",
                 "你加入「" + groupName + "」的申请未通过",
+                "/fellowship/groups",
                 "platform_group",
                 String.valueOf(id));
 

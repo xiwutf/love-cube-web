@@ -39,6 +39,11 @@ export default {
       meta: { module: 'admin', permission: 'review.manage' }
     },
     {
+      path: 'help-requests',
+      component: () => import('@/pages/admin/HelpRequestsAdminPage.vue'),
+      meta: { module: 'admin', permission: 'review.manage' }
+    },
+    {
       path: 'verifications',
       component: () => import('@/pages/admin/VerificationsAdminPage.vue'),
       meta: { module: 'admin', permission: 'review.manage' }

@@ -11,6 +11,8 @@ export default {
     { path: 'match', component: () => import('@/pages/fellowship/MatchPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'messages', component: () => import('@/pages/fellowship/MessagePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'me', component: () => import('@/pages/fellowship/MePage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'notifications', component: () => import('@/pages/notifications/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'notification-settings', component: () => import('@/pages/notification-settings/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
 
     { path: 'search', component: () => import('@/pages/search/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'match/all', component: () => import('@/pages/match/all.vue'), meta: { module: 'fellowship', requiresAuth: true } },

@@ -210,10 +210,15 @@ async function loadVisitor() {
 async function loadNotifications() {
   loadingNotif.value = true
   try {
-    const data = normalizeListPayload(await getNotifications(10))
+    const res = await getNotifications({ page: 0, pageSize: 10, limit: 10 })
+    const data = normalizeListPayload(res)
     notifList.value = data
-    const unreadCount = notifList.value.filter((item) => !item.isRead).length
-    msgStore.setUnreadNotification(unreadCount)
+    try {
+      const unreadRes = await getNotifUnreadCountCached(0)
+      msgStore.setUnreadNotification(Number(unreadRes?.count || 0))
+    } catch {
+      msgStore.setUnreadNotification(notifList.value.filter((item) => !item.isRead).length)
+    }
   } catch {
     showToast({ message: '通知加载失败', type: 'fail' })
   } finally {

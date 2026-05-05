@@ -1,6 +1,7 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.UserInteractionService;
@@ -61,10 +62,10 @@ public class InteractionController {
 
                 String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
                 try {
-                    notificationService.send(userId, "LIKE", "有人喜欢你",
+                    notificationService.send(userId, NotificationCatalog.TYPE_PROFILE_LIKED, "有人喜欢你",
                         senderName + " 喜欢了你", "USER", String.valueOf(currentUser.getUserid()));
                     if (matched) {
-                        notificationService.send(userId, "LIKE", "你们配对成功！",
+                        notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
                             "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
                             String.valueOf(currentUser.getUserid()));
                     }
@@ -110,6 +111,17 @@ public class InteractionController {
             } else {
                 // 如果没有关注，则关注
                 interactionService.followUser(currentUser.getUserid(), userId);
+                String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
+                try {
+                    notificationService.createNotification(
+                            userId,
+                            NotificationCatalog.TYPE_USER_FOLLOWED,
+                            senderName + " 关注了你",
+                            senderName + " 关注了你",
+                            "/fellowship/user-profile/" + currentUser.getUserid(),
+                            "USER",
+                            String.valueOf(currentUser.getUserid()));
+                } catch (Exception ignored) {}
                 return ResponseEntity.ok(Map.of(
                     "message", "关注成功",
                     "isFollowing", true
@@ -158,6 +170,16 @@ public class InteractionController {
             }
             interactionService.superLikeUser(currentUser.getUserid(), userId);
             boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
+            String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
+            try {
+                notificationService.send(userId, NotificationCatalog.TYPE_PROFILE_LIKED, "有人超级喜欢你",
+                        senderName + " 超级喜欢了你", "USER", String.valueOf(currentUser.getUserid()));
+                if (matched) {
+                    notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
+                            "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
+                            String.valueOf(currentUser.getUserid()));
+                }
+            } catch (Exception ignored) {}
             java.util.Map<String, Object> result = new java.util.HashMap<>();
             result.put("message", "超级喜欢成功");
             result.put("isLiked", true);

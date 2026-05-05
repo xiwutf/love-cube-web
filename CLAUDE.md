@@ -162,4 +162,4 @@ GitHub Actions (`.github/workflows/deploy.yml`) deploys to `lovecube.xifg.com.cn
 ## Further Reference
 
 - `AGENTS.md` — decision guide for matching task types to the correct files and layers; includes pre/post coding checklists and common error table
-- `DEVGUIDE.md` — detailed coding patterns, API response formats, fellowship-specific patterns, and a new-feature checklist
+- `DEVGUIDE.md` — detailed coding patterns, API response formats, fellowship-specific patterns, and a new-feature checklist; **§10** is the mandatory notification-system integration guide (`NotificationService` / `NotificationDispatchService`, no direct `user_notifications` or `push_status` in business code)

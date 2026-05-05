@@ -66,6 +66,13 @@ export const ADMIN_NAV_GROUPS = [
         blurb: '审核用户发布的心声内容'
       },
       {
+        to: '/admin/help-requests',
+        label: '互助审核',
+        icon: '✥',
+        permission: 'review.manage',
+        blurb: '审核互助广场需求，通过后公开展示'
+      },
+      {
         to: '/admin/verifications',
         label: '认证审核',
         icon: '◑',
@@ -162,6 +169,7 @@ const SECTION_TITLES = {
   '/admin/announcements': '公告管理',
   '/admin/articles': '资讯管理',
   '/admin/positive-shares': '心声审核',
+  '/admin/help-requests': '互助审核',
   '/admin/events': '活动管理',
   '/admin/users': '用户管理',
   '/admin/invites': '邀请记录',
@@ -185,6 +193,7 @@ const PAGE_SUBTITLES = {
   '/admin/events': '创建活动、维护时间与名额，查看报名情况。',
   '/admin/feedbacks': '查看用户提交的反馈与建议并跟进处理。',
   '/admin/positive-shares': '审核用户「心声」内容，通过或驳回。',
+  '/admin/help-requests': '审核用户提交的互助需求，通过后出现在互助广场。',
   '/admin/verifications': '处理实名与资料类认证申请。',
   '/admin/reports': '查看举报详情，记录处理结果。',
   '/admin/users': '搜索用户、查看状态，必要时限制账号行为。',

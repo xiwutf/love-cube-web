@@ -4,6 +4,7 @@ import com.lovecube.backend.entity.PositiveShare;
 import com.lovecube.backend.entity.PositiveShareComment;
 import com.lovecube.backend.entity.PositiveShareLike;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.PositiveShareCommentRepository;
 import com.lovecube.backend.repository.PositiveShareLikeRepository;
 import com.lovecube.backend.repository.PositiveShareRepository;
@@ -36,19 +37,22 @@ public class PositiveShareService {
     private final PositiveShareCommentRepository positiveShareCommentRepository;
     private final UserRepository userRepository;
     private final HomeConfigService homeConfigService;
+    private final NotificationService notificationService;
 
     public PositiveShareService(
             PositiveShareRepository positiveShareRepository,
             PositiveShareLikeRepository positiveShareLikeRepository,
             PositiveShareCommentRepository positiveShareCommentRepository,
             UserRepository userRepository,
-            HomeConfigService homeConfigService
+            HomeConfigService homeConfigService,
+            NotificationService notificationService
     ) {
         this.positiveShareRepository = positiveShareRepository;
         this.positiveShareLikeRepository = positiveShareLikeRepository;
         this.positiveShareCommentRepository = positiveShareCommentRepository;
         this.userRepository = userRepository;
         this.homeConfigService = homeConfigService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -147,6 +151,21 @@ public class PositiveShareService {
             positiveShareLikeRepository.save(like);
             share.setEncourageCount((share.getEncourageCount() == null ? 0 : share.getEncourageCount()) + 1);
             positiveShareRepository.save(share);
+            if (!share.getUserId().equals(userId)) {
+                User actor = userRepository.findById(userId).orElse(null);
+                String actorName = actor != null && actor.getUsername() != null ? actor.getUsername() : "有人";
+                try {
+                    notificationService.createNotification(
+                            share.getUserId(),
+                            NotificationCatalog.TYPE_CONTENT_LIKED,
+                            actorName + " 点赞了你的心声",
+                            actorName + " 为你的每日心声点赞",
+                            "/fellowship/discover",
+                            "POSITIVE_SHARE",
+                            String.valueOf(shareId));
+                } catch (Exception ignored) {
+                }
+            }
         }
         return Map.of(
                 "liked", true,
@@ -188,6 +207,20 @@ public class PositiveShareService {
         share.setCommentCount((share.getCommentCount() == null ? 0 : share.getCommentCount()) + 1);
         positiveShareRepository.save(share);
         User user = userRepository.findById(userId).orElse(null);
+        if (!share.getUserId().equals(userId)) {
+            String actorName = user != null && user.getUsername() != null ? user.getUsername() : "有人";
+            try {
+                notificationService.createNotification(
+                        share.getUserId(),
+                        NotificationCatalog.TYPE_CONTENT_COMMENTED,
+                        actorName + " 评论了你的心声",
+                        actorName + "：" + (cleanContent.length() > 80 ? cleanContent.substring(0, 80) + "…" : cleanContent),
+                        "/fellowship/discover",
+                        "POSITIVE_SHARE",
+                        String.valueOf(shareId));
+            } catch (Exception ignored) {
+            }
+        }
         return Map.of(
                 "id", saved.getId(),
                 "content", saved.getContent(),
@@ -272,8 +305,33 @@ public class PositiveShareService {
         }
         PositiveShare share = positiveShareRepository.findById(shareId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "内容不存在"));
+        String prev = share.getStatus();
         share.setStatus(normalized);
         positiveShareRepository.save(share);
+        if (share.getUserId() != null && !normalized.equals(prev)) {
+            try {
+                if ("PUBLISHED".equals(normalized)) {
+                    notificationService.createNotification(
+                            share.getUserId(),
+                            NotificationCatalog.TYPE_CONTENT_MODERATION_PASSED,
+                            "你的心声已审核通过",
+                            "你发布的每日心声已通过审核并对外展示。",
+                            "/fellowship/discover",
+                            "POSITIVE_SHARE",
+                            String.valueOf(share.getId()));
+                } else if ("REJECTED".equals(normalized)) {
+                    notificationService.createNotification(
+                            share.getUserId(),
+                            NotificationCatalog.TYPE_CONTENT_MODERATION_REJECTED,
+                            "你的心声未通过审核",
+                            "你发布的每日心声未通过审核，请修改后重新提交。",
+                            "/fellowship/discover",
+                            "POSITIVE_SHARE",
+                            String.valueOf(share.getId()));
+                }
+            } catch (Exception ignored) {
+            }
+        }
         return Map.of(
                 "id", share.getId(),
                 "status", share.getStatus(),

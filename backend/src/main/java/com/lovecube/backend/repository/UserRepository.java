@@ -167,4 +167,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE LOWER(COALESCE(u.userStatus, '')) = LOWER(:userStatus) AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
     long countVisibleUsersByStatus(@Param("userStatus") String userStatus, @Param("hiddenPhone") String hiddenPhone);
+
+    @Query("SELECT u.userid FROM User u WHERE LOWER(COALESCE(u.userStatus, 'normal')) <> 'disabled'")
+    Page<Long> findActiveUserIds(Pageable pageable);
 }

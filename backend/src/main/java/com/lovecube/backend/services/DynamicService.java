@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lovecube.backend.entity.Dynamic;
 import com.lovecube.backend.entity.DynamicLike;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.DynamicLikeRepository;
 import com.lovecube.backend.repository.DynamicRepository;
 import com.lovecube.backend.repository.UserRepository;
@@ -31,6 +32,9 @@ public class DynamicService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -87,6 +91,21 @@ public class DynamicService {
             like.setUserId(userId);
             dynamicLikeRepository.save(like);
             dynamic.setLikeCount(dynamic.getLikeCount() + 1);
+            if (!dynamic.getUserId().equals(userId)) {
+                User actor = userRepository.findById(userId).orElse(null);
+                String actorName = actor != null && actor.getUsername() != null ? actor.getUsername() : "有人";
+                try {
+                    notificationService.createNotification(
+                            dynamic.getUserId(),
+                            NotificationCatalog.TYPE_CONTENT_LIKED,
+                            actorName + " 点赞了你的动态",
+                            actorName + " 点赞了你的动态",
+                            "/fellowship/dynamic",
+                            "DYNAMIC",
+                            String.valueOf(dynamicId));
+                } catch (Exception ignored) {
+                }
+            }
         }
 
         dynamicRepository.save(dynamic);

@@ -7,7 +7,7 @@
         <button class="header-icon-btn" @click="router.push('/fellowship/settings')">
           <van-icon name="setting-o" size="20" />
         </button>
-        <button class="header-icon-btn" @click="router.push('/fellowship/messages?tab=notification')">
+        <button class="header-icon-btn" @click="router.push('/fellowship/notifications')">
           <van-icon name="bell" size="20" />
           <span v-if="notificationCount > 0" class="badge-dot">{{ notificationCount }}</span>
         </button>
@@ -278,6 +278,14 @@ const identityPerks = ['真人核验', '资料可信', '优先推荐']
 const menuItems = computed(() => {
   const s = fellowshipStats.value
   return [
+    {
+      key: 'notifications',
+      title: '消息中心',
+      sub: notificationCount.value > 0 ? `${notificationCount.value}条未读` : '系统与互动通知',
+      icon: 'bell',
+      to: '/fellowship/notifications',
+      theme: 'rose'
+    },
     { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
     { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
     { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/liked-me', theme: 'yellow' },
@@ -995,6 +1003,7 @@ onMounted(async () => {
   z-index: 1;
 }
 
+.menu-rose { background: linear-gradient(135deg, #fff0f3, #ffd6e5); color: #e91e8c; }
 .menu-pink { background: linear-gradient(135deg, #ffe5ef, #ffd0e2); color: #ff3f8f; }
 .menu-blue { background: linear-gradient(135deg, #edf3ff, #dce8ff); color: #4c87ff; }
 .menu-yellow { background: linear-gradient(135deg, #fff4dc, #ffe3ad); color: #f0a11c; }

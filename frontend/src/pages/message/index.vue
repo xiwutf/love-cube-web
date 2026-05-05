@@ -159,6 +159,7 @@ import {
 } from '@/api/message.js'
 import {
   getNotifications,
+  unwrapNotificationList,
   getNotifUnreadCount,
   markNotifRead,
   markAllNotifRead
@@ -240,7 +241,7 @@ async function loadNotifications() {
   loadingNotif.value = true
   try {
     const data = await getNotifications(50)
-    notifList.value = Array.isArray(data) ? data : []
+    notifList.value = unwrapNotificationList(data)
     msgStore.clearNotification()
   } finally {
     loadingNotif.value = false

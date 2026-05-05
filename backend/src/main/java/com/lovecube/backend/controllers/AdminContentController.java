@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -135,6 +136,10 @@ public class AdminContentController {
             @RequestBody Announcement payload
     ) {
         adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_ANNOUNCEMENT_MANAGE);
+        Optional<Announcement> previous = Optional.empty();
+        if (payload.getId() != null && !payload.getId().isBlank()) {
+            previous = announcementRepository.findById(payload.getId());
+        }
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("announcement-" + UUID.randomUUID());
         }
@@ -147,7 +152,21 @@ public class AdminContentController {
         if (payload.getPopupEnabled() == null) {
             payload.setPopupEnabled(false);
         }
-        return announcementRepository.save(payload);
+        String prevStatus = previous.map(Announcement::getStatus).orElse("");
+        Announcement saved = announcementRepository.save(payload);
+        boolean nowPublished = "published".equalsIgnoreCase(saved.getStatus());
+        boolean wasPublished = prevStatus != null && "published".equalsIgnoreCase(prevStatus);
+        if (nowPublished && !wasPublished && (Boolean.TRUE.equals(saved.getPinned()) || Boolean.TRUE.equals(saved.getPopupEnabled()))) {
+            try {
+                notificationService.broadcastPlatformAnnouncement(
+                        saved.getTitle(),
+                        saved.getSummary() != null && !saved.getSummary().isBlank() ? saved.getSummary() : saved.getTitle(),
+                        saved.getId(),
+                        "/platform/announcements?id=" + saved.getId());
+            } catch (Exception ignored) {
+            }
+        }
+        return saved;
     }
 
     @GetMapping("/articles")

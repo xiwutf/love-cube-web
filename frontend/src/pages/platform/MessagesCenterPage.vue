@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getNotifications, getNotificationsByType, markAllNotifRead } from '@/api/notification.js'
+import { getNotifications, getNotificationsByType, markAllNotifRead, unwrapNotificationList } from '@/api/notification.js'
 
 const activeTab = ref(0)
 const platformNotices = ref([])
@@ -111,15 +111,15 @@ onMounted(async () => {
   ])
 
   if (platformRes.status === 'fulfilled') {
-    const rows = Array.isArray(platformRes.value) ? platformRes.value : []
+    const rows = unwrapNotificationList(platformRes.value)
     platformNotices.value = rows.map((item, i) => normalizeNotif(item, i, '平台通知'))
   }
   if (eventRes.status === 'fulfilled') {
-    const rows = Array.isArray(eventRes.value) ? eventRes.value : []
+    const rows = unwrapNotificationList(eventRes.value)
     eventNotices.value = rows.map((item, i) => normalizeNotif(item, i, '活动提醒'))
   }
   if (interactionRes.status === 'fulfilled') {
-    const rows = Array.isArray(interactionRes.value) ? interactionRes.value : []
+    const rows = unwrapNotificationList(interactionRes.value)
     contentInteractions.value = rows.map((item, i) => normalizeNotif(item, i, '内容互动'))
   }
 })

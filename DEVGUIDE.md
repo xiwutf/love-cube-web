@@ -15,6 +15,7 @@
 7. [标准代码模式](#7-标准代码模式)
 8. [已知陷阱 / 避坑清单](#8-已知陷阱--避坑清单)
 9. [新功能开发 Checklist](#9-新功能开发-checklist)
+10. [通知系统接入规范](#10-通知系统接入规范)
 
 ---
 
@@ -757,6 +758,7 @@ public void createRecord(Long userId, Long targetId) {
 | 非幂等写操作 | 直接 save 不检查 | 先 `existsBy...` |
 | like 不返回 matched | `Map.of("isLiked", true)` | 加 `matched` 和 `matchedUserId` 字段 |
 | 多余的 URL 前缀 | `@RequestMapping("/admin/api/matches")` | `@RequestMapping("/api/matches")` |
+| 消息中心绕规范 | Controller / 业务 Service 直接写 `user_notifications` 或 `push_status` | 见 [§10](#10-通知系统接入规范)：创建走 `NotificationService`，微信与 `push_status` 走 `NotificationDispatchService` |
 
 ### 数据库陷阱
 
@@ -798,6 +800,7 @@ public void createRecord(Long userId, Long targetId) {
 - [ ] 写操作保证幂等（先 check exists）
 - [ ] 推荐类接口过滤已操作用户（调 `findActedUserIdsByFromUserId`）
 - [ ] 匹配成功时响应包含 `matched` 字段
+- [ ] 若涉及用户消息中心 / 业务通知：遵守 [§10 通知系统接入规范](#10-通知系统接入规范)（`NotificationService` 统一持久化；`NotificationDispatchService` 仅内存计算微信占位与 `push_status`；Controller 不写 `user_notifications`）
 
 ### 联调
 
@@ -814,4 +817,46 @@ public void createRecord(Long userId, Long targetId) {
 
 ---
 
-*最后更新：2026-05-01*
+## 10. 通知系统接入规范
+
+> 本节约束**用户消息中心**（`user_notifications` / `user_notification_settings`）与微信占位推送的接入方式。违反本节视为架构违规，Code Review 应打回。
+
+### 10.1 创建入口（强制）
+
+1. **所有业务通知必须通过 `NotificationService` 创建**（或该类对外暴露的专用方法，如 `notifyXxx`）。业务层禁止绕过 `NotificationService` 自行拼装通知实体并持久化。
+2. **`Controller` 不允许直接写 `user_notifications` 表**（禁止在 Controller 中注入 `UserNotificationRepository` 等并 `save` 通知行；查询类接口除外时仍应委托给专门 Service，且不得承担「造通知」职责）。
+
+### 10.2 微信与推送状态（强制）
+
+3. **微信推送占位与 `push_status` 取值**只允许由 `NotificationDispatchService` 在内存中计算（如 `applyPushInMemory`）；**对 `user_notifications` 的写入**（含首次 `save` 与已读等更新）统一由 `NotificationService` 调用 `UserNotificationRepository` 完成。业务 Service、Controller 不得直连微信 SDK、HTTP 客户端调用微信开放平台接口，也不得在业务分支里自行更新 `push_channel` / `push_status`。
+4. **`PROFILE_VIEWED`（浏览/访客类）通知禁止走实时微信推送**：仅允许站内送达；dispatch 层不得为其产生「已发微信」类语义（如占位 MOCK 发往微信）。
+5. **在真实微信公众号接入完成之前，禁止调用任何外部微信 API**（含模板消息、订阅消息、客服消息等）。当前仅允许站内通知 + 库内字段预留与占位逻辑。
+
+### 10.3 默认开关策略（与 `NotificationCatalog` 对齐）
+
+6. **互动类通知**：默认**仅站内开启**；**微信侧默认关闭**（用户可在设置中自行打开，且需已绑定微信）。
+7. **重要类通知**：默认**站内开启**；**微信侧默认开启（预留）**——表示产品默认意图为「可推送」；实际是否发出仍受绑定状态、`NotificationDispatchService` 决策与公众号接入进度约束。
+
+### 10.4 新增类型与业务接入文档
+
+8. **新增通知类型必须先在 `NotificationCatalog`（`com.lovecube.backend.notification.NotificationCatalog`）中补全**：分级（重要 / 互动 / 系统）、默认站内/微信开关、Tab 归类等；禁止在业务代码里散落「魔法字符串」且无目录定义。
+9. **每新增一处业务接入**，在 PR / 设计说明中必须写清：
+   - **触发时机**（何种事件、同步还是异步、是否幂等）；
+   - **接收人**（单用户、多用户、广播范围）；
+   - **`related_type` / `related_id`**（与前端跳转、去重、审计一致）；
+   - **`link_url`**（站内打开路径约定，与联谊层 `/fellowship/` 等路由一致）。
+
+### 10.5 禁止项小结
+
+10. **禁止在业务代码中写死 `push_status`**（例如硬编码 `MOCK_SENT`、`PENDING`）。推送结果只能由消息保存后的统一 dispatch 流程写入。
+
+| ❌ 禁止 | ✅ 正确 |
+|--------|--------|
+| Controller / 任意业务 Service 内 `save(userNotification)` 造数据 | 调用 `NotificationService` 的创建/通知方法 |
+| 业务类里 `wechatClient.send...` 或更新 `push_status` | `NotificationDispatchService` 只做内存侧决策；落库仍只经 `NotificationService` |
+| 新增类型只写枚举或常量、不更新 `NotificationCatalog` | 先补目录，再写业务触发 |
+| 未接入公众号即调用外部微信 API | 仅站内 + 预留字段；接入后集中改 dispatch 层 |
+
+---
+
+*最后更新：2026-05-04*

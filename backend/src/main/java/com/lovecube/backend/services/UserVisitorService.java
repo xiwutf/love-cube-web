@@ -2,6 +2,7 @@ package com.lovecube.backend.services;
 
 import com.lovecube.backend.entity.UserVisitor;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserVisitorRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
@@ -36,6 +37,9 @@ public class UserVisitorService {
 
     @Autowired
     private UnifiedProfileService unifiedProfileService;
+
+    @Autowired
+    private NotificationService notificationService;
     
     /**
      * 记录访客访问
@@ -60,8 +64,24 @@ public class UserVisitorService {
         visitor.setIsNewVisitor(isFirstVisit);
         visitor.setIpAddress(ipAddress);
         visitor.setDeviceInfo(deviceInfo);
-        
-        return visitorRepository.save(visitor);
+
+        UserVisitor saved = visitorRepository.save(visitor);
+        if (saved != null && isFirstVisit) {
+            User visitorUser = userRepository.findById(visitorUserId).orElse(null);
+            String actorName = visitorUser != null && visitorUser.getUsername() != null ? visitorUser.getUsername() : "有人";
+            try {
+                notificationService.createNotification(
+                        visitedUserId,
+                        NotificationCatalog.TYPE_PROFILE_VIEWED,
+                        actorName + " 浏览了你的资料",
+                        actorName + " 查看了你的个人主页",
+                        "/fellowship/user-profile/" + visitorUserId,
+                        "USER",
+                        String.valueOf(visitorUserId));
+            } catch (Exception ignored) {
+            }
+        }
+        return saved;
     }
     
     /**

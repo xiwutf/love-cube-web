@@ -127,7 +127,7 @@ async function fetchList(append = false) {
   }
   try {
     const res = await getNotifications(200)
-    const list = Array.isArray(res) ? res : (Array.isArray(res?.list) ? res.list : [])
+    const list = Array.isArray(res) ? res : res?.items || res?.content || res?.list || []
     const mapped = list.map(mapNotifRow)
     const filtered = activeTab.value === 'all'
       ? mapped

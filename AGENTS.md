@@ -19,6 +19,7 @@
   │
   ├─ 涉及后端（Controller / Service / Repository）？
   │    └─ 是 → 读 DEVGUIDE.md §4 §5（后端规范 + API 规范）
+  │         若涉及用户消息 / 通知 / 微信占位推送 → 额外读 DEVGUIDE.md §10（通知系统接入规范）
   │
   └─ 涉及前端 UI？
        │
@@ -132,6 +133,7 @@
 | 标准代码模式（Vue 组件、API、Store） | `DEVGUIDE.md` | §7 |
 | 已知陷阱、高频错误 | `DEVGUIDE.md` | §8 |
 | 新功能完整开发流程 Checklist | `DEVGUIDE.md` | §9 |
+| 用户消息中心 / 业务通知 / 微信占位推送接入 | `DEVGUIDE.md` | §10 |
 | PC / Mobile UI 分离规范 | `docs/ui-architecture.md` | 全文 |
 
 ---
@@ -220,6 +222,7 @@
 | Mobile 页面引 DesktopDashboard | Mobile 页面只用 mobile 组件 |
 | 顺手修改无关文件 | 只改任务清单里的文件 |
 | 旧路由页面直接修改做 UI 分离 | 新建文件放 `pc/` 或 `mobile/`，旧文件不动 |
+| 业务里直接写 `user_notifications` 或 `push_status`、或 Controller 造通知 | 只通过 `NotificationService` 创建；微信与 `push_status` 只由 `NotificationDispatchService` 处理（见 `DEVGUIDE.md` §10） |
 
 ---
 
@@ -228,7 +231,7 @@
 ```
 AGENTS.md          ← 你现在在这里。所有 AI 的入口，先读这个
 CLAUDE.md          ← 项目全貌（架构、命令、环境）
-DEVGUIDE.md        ← 详细开发规范（前端/后端/DB/代码模式）
+DEVGUIDE.md        ← 详细开发规范（前端/后端/DB/代码模式；§10 通知系统接入）
 docs/
   ui-architecture.md  ← PC/Mobile UI 分离规范（新架构专用）
 CHANGELOG.md       ← 版本记录
