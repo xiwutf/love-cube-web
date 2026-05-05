@@ -169,7 +169,6 @@ const directoryGroups = computed(() => {
   color: var(--lc-text);
   white-space: normal;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 .dir-card-blurb {
@@ -181,7 +180,6 @@ const directoryGroups = computed(() => {
   color: var(--lc-muted);
   white-space: normal;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 @media (max-width: 600px) {
