@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+
 public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> {
 
     @Query("""
@@ -25,4 +27,8 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> 
             ORDER BY r.createdAt DESC
             """)
     Page<HelpRequest> pageAdmin(@Param("status") String status, Pageable pageable);
+
+    long countByStatus(String status);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 }

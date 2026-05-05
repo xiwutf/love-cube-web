@@ -91,4 +91,12 @@ public interface SiteVisitLogRepository extends JpaRepository<SiteVisitLog, Long
             WHERE created_at BETWEEN :start AND :end
             """, nativeQuery = true)
     List<String> findReferrers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM (
+              SELECT visitor_id FROM site_visit_log WHERE created_at >= :start
+              GROUP BY visitor_id HAVING COUNT(*) >= 2
+            ) t
+            """, nativeQuery = true)
+    long countRepeatVisitorsSince(@Param("start") LocalDateTime start);
 }

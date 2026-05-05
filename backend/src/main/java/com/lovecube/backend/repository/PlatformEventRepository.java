@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PlatformEventRepository extends JpaRepository<PlatformEvent, String> {
@@ -21,4 +22,6 @@ public interface PlatformEventRepository extends JpaRepository<PlatformEvent, St
 
     @Query("SELECT e FROM PlatformEvent e WHERE e.status = :status ORDER BY CASE WHEN e.pinned = true THEN 0 ELSE 1 END, e.eventTime DESC")
     List<PlatformEvent> findByStatusPinnedFirst(@Param("status") String status);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 }

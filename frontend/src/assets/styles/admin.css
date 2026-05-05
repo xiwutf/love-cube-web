@@ -11,7 +11,9 @@
 
 .admin-page {
   width: 100%;
-  padding: 0 32px 32px;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0 24px 28px;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--lc-text);
 }
@@ -22,6 +24,7 @@
   border-radius: var(--lc-radius);
   box-shadow: var(--lc-shadow-sm);
   background: var(--lc-surface);
+  padding: 18px 20px;
 }
 
 .admin-page .platform-title {
@@ -46,9 +49,9 @@
 /* ── Toolbar ─────────────────────────────────────────────── */
 
 .admin-toolbar {
-  margin-top: 14px;
+  margin-top: 16px;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -60,7 +63,7 @@
 .admin-textarea {
   border: 1px solid var(--lc-border);
   border-radius: var(--lc-radius-sm);
-  padding: 9px 12px;
+  padding: 10px 12px;
   font-size: 14px;
   background: #fff;
   color: var(--lc-text);
@@ -69,7 +72,7 @@
 
 .admin-input,
 .admin-select {
-  min-height: 40px;
+  min-height: 42px;
 }
 
 .admin-input:focus,
@@ -94,12 +97,13 @@
   background: #fff;
   color: var(--lc-muted);
   border-radius: var(--lc-radius-sm);
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 13px;
   font-weight: 700;
-  min-height: 36px;
+  min-height: 38px;
   cursor: pointer;
   transition: var(--lc-transition);
+  white-space: nowrap;
 }
 
 .admin-btn:hover:not(:disabled) {
@@ -231,7 +235,7 @@
 /* ── Table ───────────────────────────────────────────────── */
 
 .admin-table-wrap {
-  margin-top: 14px;
+  margin-top: 16px;
   border: 1px solid var(--lc-border);
   border-radius: var(--lc-radius);
   background: #fff;
@@ -242,13 +246,13 @@
 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  min-width: 1040px;
 }
 
 .admin-table th,
 .admin-table td {
   text-align: left;
-  padding: 12px 16px;
+  padding: 14px 14px;
   border-bottom: 1px solid var(--lc-border);
   vertical-align: top;
 }
@@ -284,6 +288,36 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+.admin-cell-actions .admin-row-meta {
+  margin-left: 4px;
+}
+
+/* ── Admin Detail Form Blocks ────────────────────────────── */
+
+.admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-detail-field {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-detail-label {
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-detail-flags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
 }
 
 /* ── Mobile note ─────────────────────────────────────────── */
@@ -341,5 +375,17 @@
 
   .admin-toolbar {
     gap: 8px;
+  }
+}
+
+@media (max-width: 1360px) {
+  .admin-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .admin-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

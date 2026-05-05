@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+
 @Repository
 public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
     
@@ -40,4 +42,12 @@ public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
      */
     @Query("SELECT d FROM Dynamic d WHERE d.isDeleted = false ORDER BY d.likeCount DESC, d.createdAt DESC")
     Page<Dynamic> findHotDynamics(Pageable pageable);
+
+    long countByIsDeletedFalseAndCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    @Query("SELECT COALESCE(SUM(d.commentCount), 0) FROM Dynamic d WHERE d.isDeleted = false")
+    long sumCommentCountVisible();
+
+    @Query("SELECT COALESCE(SUM(d.likeCount), 0) FROM Dynamic d WHERE d.isDeleted = false")
+    long sumLikeCountVisible();
 } 

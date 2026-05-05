@@ -18,7 +18,7 @@
       <div class="info-panel info-panel-compact">
         <header class="panel-head">
           <h2>更新日志</h2>
-          <router-link to="/announcements">查看全部 →</router-link>
+          <router-link to="/platform/changelog">查看全部 →</router-link>
         </header>
         <div class="log-list">
           <article v-for="item in changelogItems" :key="`${item.version}-${item.title}`" class="log-row">
@@ -32,7 +32,7 @@
       <div class="info-panel info-panel-compact">
         <header class="panel-head">
           <h2>待更新</h2>
-          <router-link to="/announcements">查看全部 →</router-link>
+          <router-link to="/platform/pending-updates">查看全部 →</router-link>
         </header>
         <div class="pending-list">
           <article v-for="item in pendingItems" :key="item.id || item.title" class="pending-row">

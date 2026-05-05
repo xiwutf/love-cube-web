@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -12,5 +13,9 @@ public interface InviteRecordRepository extends JpaRepository<InviteRecord, Long
     long countByInviterUserIdAndStatus(Long inviterUserId, String status);
 
     List<InviteRecord> findByInviterUserIdAndStatusOrderByCreatedAtDesc(Long inviterUserId, String status);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByStatus(String status);
 }
 

@@ -41,7 +41,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in rows" :key="item.id">
+          <tr v-for="item in paginatedRows" :key="item.id">
             <td>{{ item.id }}</td>
             <td>{{ item.inviteCode }}</td>
             <td>{{ item.inviterUserId }} / {{ item.inviterName || '-' }}</td>
@@ -57,7 +57,7 @@
     </section>
 
     <div class="admin-list admin-mobile-only">
-      <article v-for="item in rows" :key="item.id" class="admin-row">
+      <article v-for="item in paginatedRows" :key="item.id" class="admin-row">
         <div class="admin-row-head">
           <strong>{{ item.inviteCode }}</strong>
           <span class="admin-tag active">{{ item.status || '-' }}</span>
@@ -70,16 +70,44 @@
       </article>
       <van-empty v-if="!loading && !rows.length" description="暂无邀请记录" />
     </div>
+
+    <section v-if="rows.length" class="platform-card invite-pagination-card">
+      <div class="admin-pagination">
+        <span class="total-count">共 {{ rows.length }} 条</span>
+        <label class="admin-page-size">
+          每页
+          <select v-model.number="pageSize" class="admin-select">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+          </select>
+          条
+        </label>
+        <div class="admin-page-actions">
+          <button class="admin-btn" type="button" :disabled="currentPage <= 1" @click="goPrevPage">上一页</button>
+          <span class="admin-page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+          <button class="admin-btn" type="button" :disabled="currentPage >= totalPages" @click="goNextPage">下一页</button>
+        </div>
+        <div class="jump-page">
+          <span>跳至</span>
+          <input v-model.number="jumpPageInput" type="number" min="1" :max="totalPages">
+          <button class="admin-btn" type="button" @click="goToPage">确定</button>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { showToast } from 'vant'
 import { getAdminInvites } from '@/api/invite.js'
 
 const loading = ref(false)
 const rows = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const jumpPageInput = ref(1)
 const filters = reactive({
   inviterUserId: '',
   inviteeUserId: '',
@@ -87,6 +115,13 @@ const filters = reactive({
   startTime: '',
   endTime: '',
   status: ''
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(rows.value.length / pageSize.value)))
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return rows.value.slice(start, end)
 })
 
 function buildParams() {
@@ -105,11 +140,28 @@ async function loadInvites() {
   try {
     const data = await getAdminInvites(buildParams())
     rows.value = Array.isArray(data) ? data : []
+    currentPage.value = 1
+    jumpPageInput.value = 1
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '邀请记录加载失败' })
   } finally {
     loading.value = false
   }
+}
+
+function goPrevPage() {
+  if (currentPage.value > 1) currentPage.value -= 1
+}
+
+function goNextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value += 1
+}
+
+function goToPage() {
+  const target = Number(jumpPageInput.value)
+  if (!Number.isFinite(target)) return
+  currentPage.value = Math.min(totalPages.value, Math.max(1, Math.floor(target)))
+  jumpPageInput.value = currentPage.value
 }
 
 function resetFilters() {
@@ -130,6 +182,16 @@ function formatDate(value) {
 }
 
 onMounted(loadInvites)
+
+watch(pageSize, () => {
+  currentPage.value = 1
+  jumpPageInput.value = 1
+})
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+  if (jumpPageInput.value > pages) jumpPageInput.value = pages
+})
 </script>
 
 <style scoped>
@@ -162,6 +224,62 @@ onMounted(loadInvites)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.invite-pagination-card {
+  margin-top: 12px;
+}
+
+.admin-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lc-muted-light);
+  font-size: 13px;
+}
+
+.admin-page-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-page-indicator {
+  min-width: 56px;
+  text-align: center;
+  color: var(--lc-slate);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.total-count {
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.jump-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lc-muted-light);
+  font-size: 13px;
+}
+
+.jump-page input {
+  width: 64px;
+  height: 34px;
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  text-align: center;
 }
 
 @media (max-width: 1023px) {

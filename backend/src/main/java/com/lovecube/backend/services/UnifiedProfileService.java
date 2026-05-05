@@ -1,6 +1,5 @@
 package com.lovecube.backend.services;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lovecube.backend.entity.FellowshipProfile;
 import com.lovecube.backend.entity.FellowshipProfileMain;
@@ -418,19 +417,11 @@ public class UnifiedProfileService {
     }
 
     public List<String> getUserPhotos(Long userId) {
-        List<String> fromTable = userPhotoRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
+        return userPhotoRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
                 .filter(p -> "ACTIVE".equalsIgnoreCase(p.getStatus()))
                 .map(UserPhoto::getPhotoUrl)
                 .filter(Objects::nonNull)
                 .toList();
-        if (!fromTable.isEmpty()) {
-            return fromTable;
-        }
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            return List.of();
-        }
-        return parsePhotosJson(user.getPhotos());
     }
 
     @Transactional
@@ -811,17 +802,6 @@ public class UnifiedProfileService {
             throw new IllegalArgumentException("昵称最多 20 个字符");
         }
         return nickname;
-    }
-
-    private List<String> parsePhotosJson(String photosJson) {
-        if (photosJson == null || photosJson.trim().isEmpty()) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(photosJson, new TypeReference<List<String>>() {});
-        } catch (Exception ignored) {
-            return List.of();
-        }
     }
 
     private String writePhotosJson(List<String> urls) {

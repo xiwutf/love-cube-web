@@ -26,3 +26,5 @@ spring:
 lovecube:
   seed:
     enabled: false
+  admin:
+    dashboard-stats-cache-seconds: 0

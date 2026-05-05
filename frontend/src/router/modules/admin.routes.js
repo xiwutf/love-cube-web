@@ -31,6 +31,11 @@ export default {
       component: () => import('@/pages/admin/FeedbacksAdminPage.vue'),
       meta: { module: 'admin', permission: 'content.manage' }
     },
+    {
+      path: 'local-resources',
+      component: () => import('@/pages/admin/LocalResourcesAdminPage.vue'),
+      meta: { module: 'admin', permission: 'content.manage' }
+    },
 
     // 审核模块（REVIEWER / CONTENT_ADMIN / SUPER_ADMIN）
     {

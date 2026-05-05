@@ -5,12 +5,34 @@
     <HomeQuickEntry :entries="quickEntries" @go="goQuick" />
     <HomeFeatured :items="featured" @open="openDetail" />
     <HomeActivityBanner text="运营活动位：本周活动报名进行中，欢迎参与。" />
+    <section class="local-recommend platform-card">
+      <div class="local-head">
+        <div>
+          <h3>本地推荐</h3>
+          <p>发现附近的人、活动、圈子和实用信息</p>
+        </div>
+        <button type="button" class="platform-btn" @click="goLocal">查看更多</button>
+      </div>
+      <div v-if="localRecommendations.length" class="local-list">
+        <button
+          v-for="item in localRecommendations"
+          :key="item.id"
+          type="button"
+          class="local-item"
+          @click="goLocal"
+        >
+          <strong>{{ item.title }}</strong>
+          <span>{{ item.location || '地点待补充' }} · 热度 {{ item.heat || 0 }}</span>
+        </button>
+      </div>
+      <p v-else class="local-empty-tip">暂无本地推荐。</p>
+    </section>
     <HomeFeedPreview :items="latest" @more="goContent" />
   </main>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import HomeHero from '@/components/platform/home/HomeHero.vue'
 import HomeNotice from '@/components/platform/home/HomeNotice.vue'
@@ -19,6 +41,7 @@ import HomeFeatured from '@/components/platform/home/HomeFeatured.vue'
 import HomeActivityBanner from '@/components/platform/home/HomeActivityBanner.vue'
 import HomeFeedPreview from '@/components/platform/home/HomeFeedPreview.vue'
 import { platformNotices, platformContentList } from '@/mock/platformContent.js'
+import { getLocalResources } from '@/api/localResources.js'
 
 const router = useRouter()
 const quickEntries = [
@@ -30,9 +53,11 @@ const quickEntries = [
 ]
 const featured = computed(() => platformContentList.slice(0, 4))
 const latest = computed(() => platformContentList.slice(0, 5))
+const localRecommendations = ref([])
 
 function goContent(){ router.push('/platform/content') }
 function goPublish(){ router.push('/platform/publish') }
+function goLocal(){ router.push('/platform/local') }
 function goQuick(type){
   if (type === 'match') {
     router.push('/fellowship')
@@ -41,8 +66,32 @@ function goQuick(type){
   router.push({ path: '/platform/content', query: { type } })
 }
 function openDetail(item){ if (item?.id) router.push('/platform/content') }
+
+async function loadLocalRecommendations() {
+  try {
+    const data = await getLocalResources()
+    const list = Array.isArray(data) ? data : []
+    localRecommendations.value = list
+      .sort((a, b) => Number(b?.heat || 0) - Number(a?.heat || 0))
+      .slice(0, 3)
+  } catch {
+    localRecommendations.value = []
+  }
+}
+
+onMounted(loadLocalRecommendations)
 </script>
 
 <style scoped>
 .platform-home{width:min(100% - 24px,560px);margin:16px auto;display:grid;gap:12px;padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+.local-recommend { border: 1px solid var(--lc-blue-border); background: linear-gradient(135deg, var(--lc-surface), var(--lc-blue-light)); }
+.local-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.local-head h3 { margin: 0; font-size: 18px; color: var(--lc-text); }
+.local-head p { margin: 6px 0 0; color: var(--lc-muted); font-size: 13px; }
+.local-list { margin-top: 10px; display: grid; gap: 8px; }
+.local-item { width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; background: var(--lc-surface); border: 1px solid var(--lc-border); display: grid; gap: 2px; cursor: pointer; }
+.local-item strong { font-size: 14px; color: var(--lc-text); }
+.local-item span { font-size: 12px; color: var(--lc-muted); }
+.local-item:hover { border-color: var(--lc-blue-border); background: var(--lc-blue-light); }
+.local-empty-tip { margin: 10px 0 0; font-size: 13px; color: var(--lc-subtle); }
 </style>

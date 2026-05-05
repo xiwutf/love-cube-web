@@ -2,8 +2,14 @@
   <section class="help-square">
     <header class="hero">
       <div class="hero-text">
+        <p class="hero-kicker">Help Hub</p>
         <h1>互助广场</h1>
         <p class="hero-desc">需求 → 互助 → 解决 → 信任沉淀。成功标准是「有多少需求被真正解决」。</p>
+        <div class="hero-metrics">
+          <span class="metric-chip">当前需求 {{ items.length }}</span>
+          <span class="metric-chip">总回应 {{ totalReplies }}</span>
+          <span class="metric-chip">高热度 {{ hotCount }}</span>
+        </div>
         <div class="hero-actions">
           <router-link v-if="userStore.isLoggedIn" to="/platform/help/create" class="btn primary">发布需求</router-link>
           <router-link v-else to="/login" class="btn primary">登录后发布</router-link>
@@ -104,7 +110,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchHelpRequests } from '@/api/help.js'
 import { useUserStore } from '@/stores/user.js'
 
@@ -125,6 +131,9 @@ const typeFilters = [
   { value: 'ASK_EXP', label: '求经验' },
   { value: 'OTHER', label: '其他' }
 ]
+
+const totalReplies = computed(() => items.value.reduce((sum, row) => sum + Number(row.replyCount || 0), 0))
+const hotCount = computed(() => items.value.filter(row => Number(row.replyCount || 0) >= 3).length)
 
 const TYPE_LABELS = {
   JOB_SEEK: '找工作',
@@ -181,18 +190,46 @@ onMounted(() => load(1))
 
 <style scoped>
 .help-square {
-  max-width: 1120px;
+  width: calc(100% - 48px);
   margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1.5rem 0 3rem;
   color: var(--lc-text);
 }
 
 .hero {
+  position: relative;
+  overflow: hidden;
   margin-bottom: 1.5rem;
   padding: 1.5rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--lc-blue-light), var(--lc-surface));
+  border-radius: 16px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--lc-blue-light) 82%, #ffffff 18%), var(--lc-surface));
   border: 1px solid var(--lc-blue-border);
+  box-shadow: 0 14px 36px -24px color-mix(in srgb, var(--lc-blue) 36%, transparent);
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -60px;
+  top: -72px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--lc-indigo) 34%, transparent), transparent 72%);
+  pointer-events: none;
+}
+
+.hero-kicker {
+  display: inline-flex;
+  margin: 0 0 0.5rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--lc-indigo);
+  background: color-mix(in srgb, var(--lc-indigo-light) 66%, #fff 34%);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .hero-text h1 {
@@ -212,6 +249,25 @@ onMounted(() => load(1))
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.95rem;
+}
+
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.32rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--lc-blue-border) 82%, #fff 18%);
+  background: color-mix(in srgb, var(--lc-surface) 80%, var(--lc-blue-light) 20%);
+  color: color-mix(in srgb, var(--lc-text) 74%, var(--lc-blue) 26%);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 .btn {
@@ -287,8 +343,9 @@ onMounted(() => load(1))
   font-size: 0.9rem;
   background: var(--lc-surface);
   border: 1px solid var(--lc-border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 16px 28px -26px color-mix(in srgb, var(--lc-text) 40%, transparent);
 }
 
 .help-table th,
@@ -363,9 +420,10 @@ onMounted(() => load(1))
 
 .card {
   padding: 1rem;
-  border-radius: 12px;
+  border-radius: 14px;
   border: 1px solid var(--lc-border);
   background: var(--lc-surface);
+  box-shadow: 0 12px 24px -24px color-mix(in srgb, var(--lc-text) 40%, transparent);
 }
 
 .card-top {
@@ -436,6 +494,25 @@ onMounted(() => load(1))
 
   .mobile-only {
     display: none;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .help-square {
+    width: calc(100% - 32px);
+  }
+}
+
+@media (max-width: 900px) {
+
+  .hero {
+    padding: 1.1rem 1rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .help-square {
+    width: calc(100% - 24px);
   }
 }
 </style>

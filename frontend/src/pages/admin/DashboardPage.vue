@@ -6,6 +6,18 @@
       <p class="welcome-text">
         建议先浏览下方<strong>功能地图</strong>（与左侧菜单一致），再根据需要查看数据区。同页另有「第一次用后台」分步说明（宽屏在右侧，窄屏在数据区下方）。
       </p>
+      <p v-if="statsCacheTtlSeconds > 0" class="cache-hint">
+        汇总数据在服务端缓存约 {{ statsCacheTtlSeconds }} 秒以降低数据库压力；需要立即看到最新数可点「强制刷新统计」。
+        <button type="button" class="admin-btn cache-refresh-btn" :disabled="loading" @click="load(true)">
+          {{ loading ? '加载中…' : '强制刷新统计' }}
+        </button>
+      </p>
+      <p v-else class="cache-hint cache-hint--live">
+        当前为实时汇总（服务端未启用统计缓存）。仍可通过「重新拉取」触发带 refresh 的请求。
+        <button type="button" class="admin-btn cache-refresh-btn" :disabled="loading" @click="load(true)">
+          {{ loading ? '加载中…' : '重新拉取' }}
+        </button>
+      </p>
     </header>
 
     <div class="dashboard-shell">
@@ -20,6 +32,57 @@
         </section>
 
         <GovernanceBar :loading="loading" :items="governanceItems" />
+
+        <section class="extended-grid">
+          <AdminMetricsSection
+            title="社群与小组"
+            description="官网团体、成员、帖子、入组申请；含小组活动与平台活动报名。"
+            link-to="/admin/platform/groups"
+            link-text="团体管理"
+            :loading="loading"
+            :items="communityMetrics"
+          />
+          <AdminMetricsSection
+            title="求助与正能量"
+            description="互助求助各状态与今日回复；正能量待审与评论。"
+            link-to="/admin/help-requests"
+            link-text="求助管理"
+            :loading="loading"
+            :items="helpShareMetrics"
+          />
+          <AdminMetricsSection
+            title="互动与匹配"
+            description="动态条数与累计评论/点赞；匹配记录（今日与近7日）。"
+            :loading="loading"
+            :items="engagementMetrics"
+          />
+          <AdminMetricsSection
+            title="用户增长与资产"
+            description="联谊资料、日任务完成、徽章、黑名单、邀请与相册照片。"
+            link-to="/admin/invites"
+            link-text="邀请记录"
+            :loading="loading"
+            :items="growthMetrics"
+          />
+          <AdminMetricsSection
+            title="流量与消息"
+            description="近7日去重访客、多次访问访客；站内通知体量。"
+            link-to="/admin/analytics"
+            link-text="访客分析"
+            :loading="loading"
+            :items="visitorAndNotifyMetrics"
+          />
+        </section>
+
+        <section v-if="reportReasons.length" class="report-reasons platform-card">
+          <h3 class="rr-title">举报原因 Top（近7日）</h3>
+          <ol class="rr-list">
+            <li v-for="(row, idx) in reportReasons" :key="idx">
+              <span class="rr-reason">{{ row.reason }}</span>
+              <span class="rr-count">{{ row.count }}</span>
+            </li>
+          </ol>
+        </section>
       </main>
 
       <aside class="dashboard-side">
@@ -29,7 +92,7 @@
 
     <div v-if="error" class="admin-error">
       <p>{{ error }}</p>
-      <button class="admin-btn" @click="load">重新加载</button>
+      <button class="admin-btn" @click="load(false)">重新加载</button>
     </div>
   </section>
 </template>
@@ -44,6 +107,7 @@ import SocialPanel from './components/SocialPanel.vue'
 import GovernanceBar from './components/GovernanceBar.vue'
 import AdminModuleDirectory from './components/AdminModuleDirectory.vue'
 import AdminHowTo from './components/AdminHowTo.vue'
+import AdminMetricsSection from './components/AdminMetricsSection.vue'
 
 const userStore = useUserStore()
 
@@ -70,12 +134,26 @@ const stats = ref({
   pendingFeedbacks: 0,
   todayReports: 0,
   handledReports: 0,
-  pendingTasks: 0
+  pendingTasks: 0,
+  communityData: {},
+  helpAndShareData: {},
+  engagementData: {},
+  growthData: {},
+  visitorQualityData: {},
+  notificationData: {},
+  reportInsightData: {},
+  statsCacheTtlSeconds: 0
 })
 
 function pick(groupKey, key) {
   return stats.value?.[groupKey]?.[key] ?? stats.value?.[key] ?? 0
 }
+
+const statsCacheTtlSeconds = computed(() => {
+  const v = stats.value?.statsCacheTtlSeconds
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+})
 
 const todayStats = computed(() => [
   {
@@ -116,7 +194,8 @@ const contentMetrics = computed(() => [
   { label: '公告数', value: pick('contentData', 'totalAnnouncements') },
   { label: '文章数', value: pick('contentData', 'totalArticles') },
   { label: '活动数', value: pick('contentData', 'totalEvents') },
-  { label: '推荐内容', value: pick('contentData', 'recommendedContent') }
+  { label: '推荐内容', value: pick('contentData', 'recommendedContent') },
+  { label: '近30天新发布', value: pick('contentData', 'contentPublishedLast30d') }
 ])
 
 const socialMetrics = computed(() => [
@@ -129,15 +208,82 @@ const socialMetrics = computed(() => [
 const governanceItems = computed(() => [
   { label: '待处理举报', value: pick('fellowshipData', 'pendingReports') || pick('governanceData', 'todayReports'), to: '/admin/reports', actionText: '去处理' },
   { label: '已处理举报', value: pick('governanceData', 'handledReports'), to: '/admin/reports', actionText: '查看记录' },
+  { label: '近7日举报', value: pick('governanceData', 'reportsLast7d'), to: '/admin/reports', actionText: '查看' },
   { label: '待审核内容', value: pick('fellowshipData', 'pendingVerifications'), to: '/admin/verifications', actionText: '去审核' },
   { label: '封禁用户', value: pick('governanceData', 'bannedUsers') || pick('userData', 'bannedUsers'), to: '/admin/users', actionText: '查看列表' }
 ])
 
-async function load() {
+const communityMetrics = computed(() => [
+  { label: '活跃小组', value: pick('communityData', 'activeGroups') },
+  { label: '小组总数', value: pick('communityData', 'totalGroups') },
+  { label: '成员关系行', value: pick('communityData', 'groupMembersTotal') },
+  { label: '帖子总数', value: pick('communityData', 'groupPostsTotal') },
+  { label: '今日新帖', value: pick('communityData', 'groupPostsToday') },
+  { label: '待审入组', value: pick('communityData', 'pendingGroupJoinRequests') },
+  { label: '今日入组申请', value: pick('communityData', 'groupJoinRequestsToday') },
+  { label: '活动报名(总)', value: pick('communityData', 'platActivitySignupsTotal') },
+  { label: '活动报名(今)', value: pick('communityData', 'platActivitySignupsToday') },
+  { label: '平台活动报名', value: pick('communityData', 'eventSignupsTotal') },
+  { label: '今日平台报名', value: pick('communityData', 'eventSignupsToday') },
+  { label: '30天新建小组', value: pick('communityData', 'groupsCreatedLast30d') }
+])
+
+const helpShareMetrics = computed(() => [
+  { label: '求助待处理', value: pick('helpAndShareData', 'helpRequestsPending') },
+  { label: '求助进行中', value: pick('helpAndShareData', 'helpRequestsActive') },
+  { label: '求助已解决', value: pick('helpAndShareData', 'helpRequestsResolved') },
+  { label: '求助已关闭', value: pick('helpAndShareData', 'helpRequestsClosed') },
+  { label: '今日新求助', value: pick('helpAndShareData', 'helpRequestsToday') },
+  { label: '今日新回复', value: pick('helpAndShareData', 'helpRepliesToday') },
+  { label: '正能量已发布', value: pick('helpAndShareData', 'positiveSharesPublished') },
+  { label: '正能量待审', value: pick('helpAndShareData', 'positiveSharesPending') },
+  { label: '今日新投稿', value: pick('helpAndShareData', 'positiveSharesToday') },
+  { label: '评论总数', value: pick('helpAndShareData', 'positiveShareCommentsTotal') },
+  { label: '今日新评论', value: pick('helpAndShareData', 'positiveShareCommentsToday') }
+])
+
+const engagementMetrics = computed(() => [
+  { label: '动态总数', value: pick('engagementData', 'dynamicsTotal') },
+  { label: '今日动态', value: pick('engagementData', 'dynamicsToday') },
+  { label: '近7日动态', value: pick('engagementData', 'dynamicsSevenDays') },
+  { label: '动态评论累计', value: pick('engagementData', 'dynamicCommentsSum') },
+  { label: '动态点赞累计', value: pick('engagementData', 'dynamicLikesSum') },
+  { label: '匹配记录总', value: pick('engagementData', 'matchRecordsTotal') },
+  { label: '今日匹配', value: pick('engagementData', 'matchRecordsToday') },
+  { label: '近7日匹配', value: pick('engagementData', 'matchRecordsSevenDays') }
+])
+
+const growthMetrics = computed(() => [
+  { label: '联谊资料数', value: pick('growthData', 'fellowshipProfilesTotal') },
+  { label: '资料较完整', value: pick('growthData', 'fellowshipProfilesBasicFilled') },
+  { label: '今日完成任务', value: pick('growthData', 'dailyTasksCompletedToday') },
+  { label: '已发放徽章', value: pick('growthData', 'userBadgesGranted') },
+  { label: '黑名单记录', value: pick('growthData', 'blacklistEntries') },
+  { label: '邀请记录总', value: pick('growthData', 'inviteRecordsTotal') },
+  { label: '邀请成功', value: pick('growthData', 'inviteSuccessTotal') },
+  { label: '今日邀请', value: pick('growthData', 'inviteRecordsToday') },
+  { label: '用户相册图', value: pick('growthData', 'userPhotosTotal') },
+  { label: '今日新照片', value: pick('growthData', 'userPhotosToday') }
+])
+
+const visitorAndNotifyMetrics = computed(() => [
+  { label: '近7日UV', value: pick('visitorQualityData', 'visitorsUv7d') },
+  { label: '7日回访访客', value: pick('visitorQualityData', 'repeatVisitors7d') },
+  { label: '通知总数', value: pick('notificationData', 'totalNotifications') },
+  { label: '未读通知', value: pick('notificationData', 'unreadNotifications') },
+  { label: '今日新通知', value: pick('notificationData', 'todayNotifications') }
+])
+
+const reportReasons = computed(() => {
+  const rows = stats.value?.reportInsightData?.reportReasonTop
+  return Array.isArray(rows) ? rows : []
+})
+
+async function load(forceRefresh = false) {
   loading.value = true
   error.value = ''
   try {
-    stats.value = await getAdminStats()
+    stats.value = await getAdminStats(forceRefresh)
   } catch (e) {
     error.value = e.message || '统计信息加载失败'
   } finally {
@@ -145,7 +291,7 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => load(false))
 </script>
 
 <style scoped>
@@ -182,6 +328,26 @@ onMounted(load)
 .welcome-text strong {
   color: var(--lc-text-deep);
   font-weight: 700;
+}
+
+.cache-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--lc-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.cache-refresh-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.cache-hint--live {
+  opacity: 0.95;
 }
 
 .dashboard-shell {
@@ -221,5 +387,53 @@ onMounted(load)
   .operation-zone {
     grid-template-columns: 1fr;
   }
+}
+
+.extended-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lc-space-5);
+}
+
+@media (max-width: 1100px) {
+  .extended-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-reasons {
+  padding: var(--lc-space-5) var(--lc-space-6);
+  border: 1px solid var(--lc-border);
+}
+
+.rr-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.rr-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--lc-text);
+}
+
+.rr-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.rr-reason {
+  color: var(--lc-muted);
+}
+
+.rr-count {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 </style>

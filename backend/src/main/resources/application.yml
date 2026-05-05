@@ -101,3 +101,7 @@ wechat:
     login:
       path: /api/wechat/login
 
+lovecube:
+  admin:
+    # 工作台 /api/admin/stats 聚合结果内存缓存秒数；0 表示不缓存（多实例各自 JVM 内生效）
+    dashboard-stats-cache-seconds: 45

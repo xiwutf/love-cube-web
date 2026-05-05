@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -22,4 +23,6 @@ public interface MatchRecordRepository extends JpaRepository<MatchRecord, Long>
     @Query("SELECT m.matchedUserId FROM MatchRecord m WHERE m.userId = :userId AND m.matchedUserId IN :matchedUserIds")
     List<Long> findExistingMatchedUserIds(@Param("userId") Long userId,
                                           @Param("matchedUserIds") Collection<Long> matchedUserIds);
+
+    long countByCreatedAtGreaterThanEqual(Date since);
 }

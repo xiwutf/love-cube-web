@@ -5,6 +5,7 @@
         <div>
           <h1 class="platform-title">团体管理</h1>
           <p class="platform-subtitle">管理平台公共团体、成员审核、动态与公告。</p>
+          <p class="scope-hint">数据口径：此页展示全站团体（平台监管视角）。</p>
         </div>
         <router-link to="/admin/platform/groups/create" class="admin-btn primary create-btn">新建团体</router-link>
       </div>
@@ -246,6 +247,12 @@ onMounted(load)
 .create-btn {
   flex-shrink: 0;
   text-decoration: none;
+}
+
+.scope-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--lc-subtle);
 }
 
 .filters {

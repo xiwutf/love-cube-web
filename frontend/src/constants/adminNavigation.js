@@ -50,6 +50,13 @@ export const ADMIN_NAV_GROUPS = [
         icon: '◓',
         permission: 'content.manage',
         blurb: '查看与处理用户留言'
+      },
+      {
+        to: '/admin/local-resources',
+        label: '本地资源管理',
+        icon: '◉',
+        permission: 'content.manage',
+        blurb: '维护本地人、活动、圈子与实用资源'
       }
     ]
   },
@@ -176,6 +183,7 @@ const SECTION_TITLES = {
   '/admin/verifications': '认证审核',
   '/admin/reports': '举报处理',
   '/admin/feedbacks': '用户反馈',
+  '/admin/local-resources': '本地资源管理',
   '/admin/modules': '模块管理',
   '/admin/home-config': '首页配置',
   '/admin/analytics': '访客分析',
@@ -192,6 +200,7 @@ const PAGE_SUBTITLES = {
   '/admin/articles': '撰写或维护资讯正文、封面与推荐状态。',
   '/admin/events': '创建活动、维护时间与名额，查看报名情况。',
   '/admin/feedbacks': '查看用户提交的反馈与建议并跟进处理。',
+  '/admin/local-resources': '维护本地资源内容并控制发布、下架状态。',
   '/admin/positive-shares': '审核用户「心声」内容，通过或驳回。',
   '/admin/help-requests': '审核用户提交的互助需求，通过后出现在互助广场。',
   '/admin/verifications': '处理实名与资料类认证申请。',

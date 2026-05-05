@@ -32,7 +32,6 @@
               :class="{ 'is-active': item.to === '/admin' ? isExactActive : isActive }"
               @click="navigate"
             >
-              <span class="dir-card-icon" aria-hidden="true">{{ item.icon }}</span>
               <span class="dir-card-name">{{ item.label }}</span>
               <span class="dir-card-blurb">{{ item.blurb }}</span>
             </a>
@@ -60,6 +59,14 @@ const directoryGroups = computed(() => {
 .module-directory {
   padding: var(--lc-space-6);
   border: 1px solid var(--lc-border);
+  isolation: isolate;
+}
+
+.module-directory,
+.module-directory * {
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
 }
 
 .dir-head {
@@ -69,18 +76,19 @@ const directoryGroups = computed(() => {
 .dir-title {
   margin: 0;
   font-size: clamp(1.2rem, 1.4vw, 1.45rem);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--lc-text);
-  letter-spacing: 0.02em;
-  line-height: 1.25;
+  letter-spacing: 0;
+  line-height: 1.45;
 }
 
 .dir-lead {
   margin: var(--lc-space-2) 0 0;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.8;
   color: var(--lc-muted);
   max-width: 52rem;
+  font-weight: 400;
 }
 
 .dir-lead--muted {
@@ -95,13 +103,17 @@ const directoryGroups = computed(() => {
 
 .dir-group-head {
   margin-bottom: var(--lc-space-3);
+  position: relative;
+  z-index: 2;
+  background: var(--lc-bg);
 }
 
 .dir-group-title {
   margin: 0;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--lc-text-deep);
+  line-height: 1.5;
 }
 
 .dir-group-hint {
@@ -116,13 +128,14 @@ const directoryGroups = computed(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--lc-space-3);
+  margin-top: 8px;
+  position: relative;
+  z-index: 1;
+  clear: both;
 }
 
 .dir-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  display: block;
   padding: 14px 14px 16px;
   border-radius: var(--lc-radius-sm);
   border: 1px solid var(--lc-border);
@@ -131,7 +144,8 @@ const directoryGroups = computed(() => {
   color: var(--lc-text);
   box-shadow: var(--lc-shadow-sm);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-  min-height: 108px;
+  min-height: 92px;
+  position: static;
 }
 
 .dir-card:hover {
@@ -146,26 +160,28 @@ const directoryGroups = computed(() => {
   box-shadow: inset 0 0 0 1px var(--lc-blue-border);
 }
 
-.dir-card-icon {
-  font-size: 14px;
-  color: var(--lc-subtle);
-  line-height: 1;
-}
-
-.dir-card.is-active .dir-card-icon {
-  color: var(--lc-blue);
-}
-
 .dir-card-name {
+  display: block;
+  width: 100%;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.3;
+  color: var(--lc-text);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .dir-card-blurb {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--lc-muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 600px) {

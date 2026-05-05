@@ -101,7 +101,7 @@
 
     <nav class="mobile-quick-nav">
       <router-link to="/platform" :class="{ 'is-active': isActive('/platform') || route.path === '/' }">首页</router-link>
-      <router-link to="/platform/content" :class="{ 'is-active': isActive('/platform/content') }">内容</router-link>
+      <router-link to="/platform/local" :class="{ 'is-active': isActive('/platform/local') }">本地</router-link>
       <router-link to="/platform/publish" class="mobile-publish-entry" :class="{ 'is-active': isActive('/platform/publish') }">发布</router-link>
       <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团体</router-link>
       <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
@@ -230,6 +230,7 @@ const usageIssueCount = computed(() => coCreationForm.value.usageIssue.length)
 
 const navItems = [
   { to: '/', label: '首页' },
+  { to: '/platform/local', label: '本地' },
   { to: '/platform/positive-share', label: '每日心声' },
   { to: '/platform/help', label: '互助广场' },
   { to: '/modules', label: '模块中心' },
@@ -242,6 +243,7 @@ const navItems = [
 
 const mobileModuleNavItems = [
   { to: '/', label: '首页' },
+  { to: '/platform/local', label: '本地推荐' },
   { to: '/platform/help', label: '互助' },
   { to: '/modules', label: '模块中心' },
   { to: '/announcements', label: '平台动态' },

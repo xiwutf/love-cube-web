@@ -43,4 +43,8 @@ public interface PositiveShareRepository extends JpaRepository<PositiveShare, Lo
             @Param("statuses") Collection<String> statuses,
             Pageable pageable
     );
+
+    long countByStatus(String status);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 }

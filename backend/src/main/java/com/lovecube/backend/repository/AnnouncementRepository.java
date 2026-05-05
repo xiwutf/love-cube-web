@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AnnouncementRepository extends JpaRepository<Announcement, String> {
@@ -16,4 +17,7 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Stri
 
     @Query("SELECT a FROM Announcement a WHERE a.status = :status ORDER BY CASE WHEN a.pinned = true THEN 0 ELSE 1 END, a.publishDate DESC")
     List<Announcement> findByStatusPinnedFirst(@Param("status") String status);
+
+    @Query("SELECT COUNT(a) FROM Announcement a WHERE a.status = 'published' AND a.publishDate >= :since")
+    long countPublishedSince(@Param("since") LocalDateTime since);
 }

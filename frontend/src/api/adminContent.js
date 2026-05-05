@@ -25,9 +25,13 @@ export function resetAdminUserPassword(userId) {
   return request.put(`/admin/users/${userId}/reset-password`)
 }
 
+export function getAdminUserPhotos(userId) {
+  return request.get(`/admin/users/${userId}/photos`)
+}
+
 // Stats
-export function getAdminStats() {
-  return request.get('/admin/stats')
+export function getAdminStats(refresh = false) {
+  return request.get('/admin/stats', { params: refresh ? { refresh: true } : {} })
 }
 
 export function getAdminAuthContext() {
@@ -71,6 +75,31 @@ export function saveEvent(payload) {
 
 export function deleteEvent(id) {
   return request.delete(`/admin/events/${id}`)
+}
+
+// Local resources
+export function getAdminLocalResources() {
+  return request.get('/admin/local-resources')
+}
+
+export function createAdminLocalResource(payload) {
+  return request.post('/admin/local-resources', payload)
+}
+
+export function updateAdminLocalResource(id, payload) {
+  return request.put(`/admin/local-resources/${id}`, payload)
+}
+
+export function deleteAdminLocalResource(id) {
+  return request.delete(`/admin/local-resources/${id}`)
+}
+
+export function offlineAdminLocalResource(id) {
+  return request.post(`/admin/local-resources/${id}/offline`)
+}
+
+export function publishAdminLocalResource(id) {
+  return request.post(`/admin/local-resources/${id}/publish`)
 }
 
 // Verifications

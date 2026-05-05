@@ -54,12 +54,17 @@
       <article class="platform-card analytics-panel">
         <h3>热门页面</h3>
         <div class="rank-list">
-          <div v-for="(item, idx) in topPages.items" :key="`${item.url}-${idx}`" class="rank-item">
-            <span class="rank-index">{{ idx + 1 }}</span>
+          <div v-for="(item, idx) in paginatedTopPages" :key="`${item.url}-${idx}`" class="rank-item">
+            <span class="rank-index">{{ (topPagesPage - 1) * topPagesPageSize + idx + 1 }}</span>
             <span class="rank-title">{{ item.url || '/' }}</span>
             <strong>PV {{ item.pv }} · UV {{ item.uv }}</strong>
           </div>
           <p v-if="!topPages.items.length" class="empty-text">暂无页面数据</p>
+        </div>
+        <div v-if="topPages.items.length > topPagesPageSize" class="mini-pagination">
+          <button class="admin-btn" :disabled="topPagesPage <= 1 || loading" @click="changeTopPagesPage(topPagesPage - 1)">上一页</button>
+          <span>第 {{ topPagesPage }} / {{ topPagesTotalPages }} 页</span>
+          <button class="admin-btn" :disabled="topPagesPage >= topPagesTotalPages || loading" @click="changeTopPagesPage(topPagesPage + 1)">下一页</button>
         </div>
       </article>
     </section>
@@ -126,7 +131,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   getAdminAnalyticsClientDistribution,
   getAdminAnalyticsOverview,
@@ -153,6 +158,15 @@ const topPages = reactive({ items: [] })
 const sources = reactive({ items: [] })
 const client = reactive({ devices: [], browsers: [], os: [] })
 const visitors = reactive({ total: 0, page: 1, pageSize: 20, items: [] })
+const topPagesPage = ref(1)
+const topPagesPageSize = 6
+
+const topPagesTotalPages = computed(() => Math.max(1, Math.ceil(topPages.items.length / topPagesPageSize)))
+const paginatedTopPages = computed(() => {
+  const start = (topPagesPage.value - 1) * topPagesPageSize
+  const end = start + topPagesPageSize
+  return topPages.items.slice(start, end)
+})
 
 function assign(target, patch, fallback = {}) {
   Object.assign(target, fallback, patch || {})
@@ -188,6 +202,10 @@ function changePage(nextPage) {
   loadAll()
 }
 
+function changeTopPagesPage(nextPage) {
+  topPagesPage.value = Math.min(topPagesTotalPages.value, Math.max(1, nextPage))
+}
+
 function formatTime(value) {
   if (!value) return '-'
   const date = new Date(value)
@@ -197,8 +215,18 @@ function formatTime(value) {
 
 watch(range, () => {
   visitors.page = 1
+  topPagesPage.value = 1
   loadAll()
 })
+
+watch(
+  () => topPages.items.length,
+  () => {
+    if (topPagesPage.value > topPagesTotalPages.value) {
+      topPagesPage.value = topPagesTotalPages.value
+    }
+  }
+)
 
 onMounted(loadAll)
 </script>
@@ -230,6 +258,13 @@ onMounted(loadAll)
 .pagination-bar {
   display: flex; justify-content: flex-end; align-items: center; gap: 10px;
   padding: 10px 14px; border-top: 1px solid var(--lc-border);
+}
+.mini-pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 @media (max-width: 1023px) {
   .analytics-hero { flex-direction: column; align-items: flex-start; }

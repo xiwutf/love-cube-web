@@ -13,4 +13,6 @@ public interface UserDailyTaskProgressRepository extends JpaRepository<UserDaily
     Optional<UserDailyTaskProgress> findByUserIdAndTaskCodeAndTaskDate(Long userId, String taskCode, LocalDate taskDate);
 
     long countByUserIdAndCompleted(Long userId, Integer completed);
+
+    long countByTaskDateAndCompleted(LocalDate taskDate, Integer completed);
 }

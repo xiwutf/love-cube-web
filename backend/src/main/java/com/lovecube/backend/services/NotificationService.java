@@ -18,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * 通知系统唯一入口：业务侧创建与变更用户消息须通过本类，禁止绕过本类直接写 {@code user_notifications}。
@@ -242,5 +244,14 @@ public class NotificationService {
             );
             default -> null;
         };
+    }
+
+    /** 管理端工作台：通知体量汇总（只读统计）。 */
+    public Map<String, Long> getAdminDashboardNotificationStats(LocalDateTime todayStart) {
+        Map<String, Long> m = new LinkedHashMap<>();
+        m.put("totalNotifications", userNotificationRepository.count());
+        m.put("unreadNotifications", userNotificationRepository.countByIsReadFalse());
+        m.put("todayNotifications", userNotificationRepository.countByCreatedAtGreaterThanEqual(todayStart));
+        return m;
     }
 }

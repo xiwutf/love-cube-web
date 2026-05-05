@@ -2,24 +2,26 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
+import com.lovecube.backend.entity.FellowshipProfileMain;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
-import com.lovecube.backend.entity.UserInteraction;
 import com.lovecube.backend.entity.UserFeedback;
+import com.lovecube.backend.entity.UserPhoto;
 import com.lovecube.backend.entity.UserVerification;
 import com.lovecube.backend.entity.VerificationRequest;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
-import com.lovecube.backend.repository.ChatMessageRepository;
+import com.lovecube.backend.repository.FellowshipProfileMainRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserFeedbackRepository;
-import com.lovecube.backend.repository.UserInteractionRepository;
+import com.lovecube.backend.repository.UserPhotoRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.AdminDashboardStatsService;
 import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.HomeConfigService;
 import com.lovecube.backend.services.NotificationService;
@@ -32,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,8 +58,9 @@ public class AdminContentController {
     private final UserVerificationRepository userVerificationRepository;
     private final ReportRecordRepository reportRecordRepository;
     private final UserFeedbackRepository userFeedbackRepository;
-    private final UserInteractionRepository userInteractionRepository;
-    private final ChatMessageRepository chatMessageRepository;
+    private final UserPhotoRepository userPhotoRepository;
+    private final FellowshipProfileMainRepository fellowshipProfileMainRepository;
+    private final AdminDashboardStatsService adminDashboardStatsService;
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
     private final NotificationService notificationService;
@@ -72,8 +76,9 @@ public class AdminContentController {
             UserVerificationRepository userVerificationRepository,
             ReportRecordRepository reportRecordRepository,
             UserFeedbackRepository userFeedbackRepository,
-            UserInteractionRepository userInteractionRepository,
-            ChatMessageRepository chatMessageRepository,
+            UserPhotoRepository userPhotoRepository,
+            FellowshipProfileMainRepository fellowshipProfileMainRepository,
+            AdminDashboardStatsService adminDashboardStatsService,
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService,
             NotificationService notificationService,
@@ -88,8 +93,9 @@ public class AdminContentController {
         this.userVerificationRepository = userVerificationRepository;
         this.reportRecordRepository = reportRecordRepository;
         this.userFeedbackRepository = userFeedbackRepository;
-        this.userInteractionRepository = userInteractionRepository;
-        this.chatMessageRepository = chatMessageRepository;
+        this.userPhotoRepository = userPhotoRepository;
+        this.fellowshipProfileMainRepository = fellowshipProfileMainRepository;
+        this.adminDashboardStatsService = adminDashboardStatsService;
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
         this.notificationService = notificationService;
@@ -221,17 +227,50 @@ public class AdminContentController {
     public List<Map<String, Object>> listUsers(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
-
-        return userRepository.findAll().stream()
+        List<User> visibleUsers = userRepository.findAll().stream()
                 .filter(user -> hiddenSuperAdminOperator || !adminAuthService.isHiddenSuperAdmin(user))
+                .collect(Collectors.toList());
+        List<Long> userIds = visibleUsers.stream()
+                .map(User::getUserid)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        Map<Long, Long> uploadedPhotoCountMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<Object[]> groupedCounts = userPhotoRepository.countGroupedByUserIds(userIds);
+            for (Object[] row : groupedCounts) {
+                if (row == null || row.length < 2) {
+                    continue;
+                }
+                Long uid = row[0] instanceof Number ? ((Number) row[0]).longValue() : null;
+                Long count = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+                if (uid != null) {
+                    uploadedPhotoCountMap.put(uid, count);
+                }
+            }
+        }
+        Map<Long, FellowshipProfileMain> mainProfileMap = userIds.isEmpty()
+                ? Map.of()
+                : fellowshipProfileMainRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(FellowshipProfileMain::getUserId, item -> item, (a, b) -> a));
+
+        return visibleUsers.stream()
                 .map(user -> {
+                    long uploadedPhotoCount = uploadedPhotoCountMap.getOrDefault(user.getUserid(), 0L);
+                    Integer genderCode = user.getGender();
+                    if (genderCode == null) {
+                        FellowshipProfileMain mainProfile = mainProfileMap.get(user.getUserid());
+                        genderCode = parseGenderCodeFromText(mainProfile == null ? null : mainProfile.getGender());
+                    }
                     Map<String, Object> item = new HashMap<>();
                     item.put("userId", user.getUserid());
                     item.put("username", user.getUsername() == null ? "" : user.getUsername());
                     item.put("phone", user.getPhoneNumber() == null ? "" : user.getPhoneNumber());
+                    item.put("gender", genderCode);
                     item.put("role", normalizeRoleForView(user.getRole(), adminAuthService.isAdmin(user)));
                     item.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
                     item.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
+                    item.put("uploadedPhotoCount", uploadedPhotoCount);
+                    item.put("hasUploadedPhotos", uploadedPhotoCount > 0);
                     item.put("verificationStatus", "none");
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
@@ -244,6 +283,29 @@ public class AdminContentController {
                             && !adminAuthService.isHiddenSuperAdmin(user));
                     return item;
                 }).collect(Collectors.toList());
+    }
+
+    @GetMapping("/users/{userId}/photos")
+    public Map<String, Object> listUserPhotos(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable Long userId
+    ) {
+        User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
+        User target = userRepository.findById(userId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在"));
+        if (!adminAuthService.isHiddenSuperAdmin(operator) && adminAuthService.isHiddenSuperAdmin(target)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "用户不存在");
+        }
+
+        List<Map<String, Object>> photos = userPhotoRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
+                .map(this::toAdminUserPhotoView)
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "userId", userId,
+                "photos", photos,
+                "photosCount", photos.size()
+        );
     }
 
     @PutMapping("/users/{userId}/role")
@@ -356,7 +418,7 @@ public class AdminContentController {
         Map<String, Long> improvementCount = new HashMap<>();
         long total = feedbacks.size();
         for (UserFeedback feedback : feedbacks) {
-            String module = extractField(feedback.getContent(), "Q1-最关注模块：");
+            String module = normalizeStatOption(extractField(feedback.getContent(), "Q1-最关注模块："));
             if (module.isBlank()) {
                 module = "未填写";
             }
@@ -366,14 +428,21 @@ public class AdminContentController {
             if (goals.isBlank()) {
                 goalCount.put("未填写", goalCount.getOrDefault("未填写", 0L) + 1);
             } else {
-                for (String goal : splitMultiOptions(goals)) {
+                Set<String> uniqueGoals = splitMultiOptions(goals).stream()
+                        .map(this::normalizeStatOption)
+                        .filter(item -> !item.isBlank())
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+                if (uniqueGoals.isEmpty()) {
+                    uniqueGoals.add("未填写");
+                }
+                for (String goal : uniqueGoals) {
                     goalCount.put(goal, goalCount.getOrDefault(goal, 0L) + 1);
                 }
             }
 
-            String improvement = extractField(feedback.getContent(), "Q3-最需要改进：");
+            String improvement = normalizeStatOption(extractField(feedback.getContent(), "Q3-最需要改进："));
             if (improvement.isBlank()) {
-                improvement = extractField(feedback.getContent(), "Q3-当前最缺：");
+                improvement = normalizeStatOption(extractField(feedback.getContent(), "Q3-当前最缺："));
             }
             if (improvement.isBlank()) {
                 improvement = "未填写";
@@ -721,94 +790,13 @@ public class AdminContentController {
     }
 
     @GetMapping("/stats")
-    public Map<String, Object> getStats(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public Map<String, Object> getStats(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(name = "refresh", defaultValue = "false") boolean refresh
+    ) {
         User operator = adminAuthService.requireAdmin(authHeader);
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
-
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        LocalDateTime sevenDaysStart = LocalDate.now().minusDays(6).atStartOfDay();
-        long todayStartMillis = java.sql.Timestamp.valueOf(todayStart).getTime();
-
-        long totalUsers = hiddenSuperAdminOperator
-                ? userRepository.count()
-                : userRepository.countVisibleUsers(HIDDEN_SUPER_ADMIN_PHONE);
-        long todayNewUsers = hiddenSuperAdminOperator
-                ? userRepository.countByCreatedAtGreaterThanEqual(todayStart)
-                : userRepository.countVisibleUsersCreatedSince(todayStart, HIDDEN_SUPER_ADMIN_PHONE);
-        long sevenDayNewUsers = hiddenSuperAdminOperator
-                ? userRepository.countByCreatedAtGreaterThanEqual(sevenDaysStart)
-                : userRepository.countVisibleUsersCreatedSince(sevenDaysStart, HIDDEN_SUPER_ADMIN_PHONE);
-        long bannedUsers = hiddenSuperAdminOperator
-                ? userRepository.countByUserStatusIgnoreCase("DISABLED")
-                : userRepository.countVisibleUsersByStatus("DISABLED", HIDDEN_SUPER_ADMIN_PHONE);
-
-        long totalAnnouncements = announcementRepository.count();
-        long totalArticles = articleRepository.count();
-        long totalEvents = platformEventRepository.count();
-        long pinnedContent = announcementRepository.countByPinnedTrue()
-                + articleRepository.countByPinnedTrue()
-                + platformEventRepository.countByPinnedTrue();
-        long recommendedContent = announcementRepository.countByRecommendedTrue()
-                + articleRepository.countByRecommendedTrue()
-                + platformEventRepository.countByRecommendedTrue();
-
-        long todayLikes = userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqual(
-                UserInteraction.InteractionType.LIKE, todayStart)
-                + userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqual(
-                UserInteraction.InteractionType.SUPER_LIKE, todayStart);
-        long todayMessages = chatMessageRepository.countByTimestampGreaterThanEqual(todayStartMillis);
-        long pendingVerifications = verificationRequestRepository.countByStatusIgnoreCase("pending")
-                + userVerificationRepository.countByStatus("pending");
-        long pendingReports = reportRecordRepository.countByStatusIgnoreCase("pending");
-        long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");
-        long todayReports = reportRecordRepository.countByCreatedAtGreaterThanEqual(todayStart);
-        long handledReports = reportRecordRepository.countHandledReports();
-        long pendingTasks = pendingVerifications + pendingReports + pendingFeedbacks;
-
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalUsers", totalUsers);
-        stats.put("todayNewUsers", todayNewUsers);
-        stats.put("sevenDayNewUsers", sevenDayNewUsers);
-        stats.put("bannedUsers", bannedUsers);
-        stats.put("totalAnnouncements", totalAnnouncements);
-        stats.put("totalArticles", totalArticles);
-        stats.put("totalEvents", totalEvents);
-        stats.put("pinnedContent", pinnedContent);
-        stats.put("recommendedContent", recommendedContent);
-        stats.put("todayLikes", todayLikes);
-        stats.put("todayMessages", todayMessages);
-        stats.put("pendingVerifications", pendingVerifications);
-        stats.put("pendingReports", pendingReports);
-        stats.put("pendingFeedbacks", pendingFeedbacks);
-        stats.put("todayReports", todayReports);
-        stats.put("handledReports", handledReports);
-        stats.put("pendingTasks", pendingTasks);
-        stats.put("userData", Map.of(
-                "totalUsers", totalUsers,
-                "todayNewUsers", todayNewUsers,
-                "sevenDayNewUsers", sevenDayNewUsers,
-                "bannedUsers", bannedUsers
-        ));
-        stats.put("contentData", Map.of(
-                "totalAnnouncements", totalAnnouncements,
-                "totalArticles", totalArticles,
-                "totalEvents", totalEvents,
-                "pinnedContent", pinnedContent,
-                "recommendedContent", recommendedContent
-        ));
-        stats.put("fellowshipData", Map.of(
-                "todayLikes", todayLikes,
-                "todayMessages", todayMessages,
-                "pendingVerifications", pendingVerifications,
-                "pendingReports", pendingReports
-        ));
-        stats.put("governanceData", Map.of(
-                "todayReports", todayReports,
-                "handledReports", handledReports,
-                "bannedUsers", bannedUsers,
-                "pendingTasks", pendingTasks
-        ));
-        return stats;
+        return adminDashboardStatsService.getDashboardStats(hiddenSuperAdminOperator, refresh);
     }
 
     private LocalDateTime parseDateTime(String value, boolean toEndOfDay) {
@@ -849,6 +837,32 @@ public class AdminContentController {
                 .filter(item -> !item.isBlank())
                 .collect(Collectors.toList());
         return options.isEmpty() ? List.of("未填写") : options;
+    }
+
+    private String normalizeStatOption(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String normalized = value
+                .replace('\u3000', ' ')
+                .replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .replaceAll("[“”]", "\"")
+                .replaceAll("[‘’]", "'")
+                .replaceAll("[（]", "(")
+                .replaceAll("[）]", ")")
+                .replaceAll("[【]", "[")
+                .replaceAll("[】]", "]")
+                .replaceAll("[，]", ",")
+                .replaceAll("[。]", ".")
+                .replaceAll("[；]", ";")
+                .replaceAll("[：]", ":")
+                .trim();
+        // Ignore bracket variants to avoid "(找对象", "（找对象）", "找对象)" being split.
+        normalized = normalized.replaceAll("[\\(\\)\\[\\]\\{\\}（）【】]", "");
+        // Remove leading/trailing symbols that often come from manual input paste.
+        normalized = normalized.replaceAll("^[\\p{Punct}\\s]+", "").replaceAll("[\\p{Punct}\\s]+$", "").trim();
+        return normalized;
     }
 
     private List<Map<String, Object>> buildRanking(Map<String, Long> source, long total, String keyName) {
@@ -896,5 +910,30 @@ public class AdminContentController {
             }
         }
         return adminAuthService.isAdmin(user) ? "ADMIN" : "USER";
+    }
+
+    private Integer parseGenderCodeFromText(String rawGender) {
+        String value = rawGender == null ? "" : rawGender.trim().toLowerCase();
+        if (value.isEmpty()) {
+            return null;
+        }
+        if (Set.of("male", "man", "m", "1", "boy", "男").contains(value)) {
+            return 1;
+        }
+        if (Set.of("female", "woman", "f", "2", "girl", "女").contains(value)) {
+            return 2;
+        }
+        return null;
+    }
+
+    private Map<String, Object> toAdminUserPhotoView(UserPhoto photo) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", photo.getId());
+        item.put("photoUrl", photo.getPhotoUrl() == null ? "" : photo.getPhotoUrl());
+        item.put("status", photo.getStatus() == null ? "" : photo.getStatus());
+        item.put("primary", Boolean.TRUE.equals(photo.getPrimary()));
+        item.put("sortOrder", photo.getSortOrder() == null ? 0 : photo.getSortOrder());
+        item.put("createdAt", photo.getCreatedAt());
+        return item;
     }
 }

@@ -5,6 +5,7 @@
         <div>
           <h1 class="platform-title">我的团体</h1>
           <p class="platform-subtitle">管理你负责的团体，可见功能取决于你的团体角色。</p>
+          <p class="scope-hint">数据口径：此页仅展示你本人负责的团体。</p>
         </div>
       </div>
       <label class="search-box">
@@ -103,6 +104,7 @@ const error = ref('')
 const items = ref([])
 const keyword = ref('')
 const userStore = useUserStore()
+const currentUserId = computed(() => String(userStore.syncCurrentUser()?.userId || userStore.userId || ''))
 
 const hasManageAllPermission = computed(() =>
   userStore.hasPermission('group.manage.all')
@@ -110,14 +112,16 @@ const hasManageAllPermission = computed(() =>
 
 const emptyHintText = computed(() =>
   hasManageAllPermission.value
-    ? '你当前是全站团体管理员；若仍为空，通常表示当前暂无团体数据。'
+    ? '你当前拥有全站监管权限；这里仅展示你本人负责的团体。若为空，说明你还未被分配任何团体角色。'
     : '如需获得管理权限，请联系超级管理员。'
 )
 
+const mineItems = computed(() => items.value.filter(isMineGroup))
+
 const filteredItems = computed(() => {
   const kw = keyword.value.toLowerCase()
-  if (!kw) return items.value
-  return items.value.filter(item =>
+  if (!kw) return mineItems.value
+  return mineItems.value.filter(item =>
     item.name.toLowerCase().includes(kw) || (item.description || '').toLowerCase().includes(kw)
   )
 })
@@ -132,6 +136,16 @@ function isOwner(item) {
 
 function canManage(item) {
   return item.userPermissions?.includes('group.edit.info') ?? item.userRole !== 'REVIEWER'
+}
+
+function isMineGroup(item) {
+  if (!item) return false
+  // "我的团体" 只保留真实团体角色，不展示平台监管态的全量团体。
+  if (item.regulatingAsPlatformAdmin) return false
+  if (item.userRole) return true
+  const me = currentUserId.value
+  if (!me) return false
+  return String(item.ownerUserId || '') === me || String(item.createdBy || '') === me
 }
 
 async function load() {
@@ -160,6 +174,8 @@ function normalizeGroup(item) {
     joinType: item.joinType || 'approval',
     memberCount: Number(item.memberCount || 0),
     pendingRequestCount: Number(item.pendingRequestCount || 0),
+    ownerUserId: item.ownerUserId ?? '',
+    createdBy: item.createdBy ?? '',
     userRole: item.userRole ?? (regulating ? null : 'OWNER'),
     userRoleName: regulating ? '平台监管' : (item.userRoleName || '团长'),
     userPermissions: item.userPermissions || [],
@@ -186,6 +202,12 @@ onMounted(load)
   font-weight: 700;
   color: var(--lc-muted);
   max-width: 300px;
+}
+
+.scope-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--lc-subtle);
 }
 
 .groups-grid {

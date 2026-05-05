@@ -94,9 +94,11 @@ public class AuthController {
         String phone = body.get("phone");
         String password = body.get("password");
         String username = body.get("username");
+        String gender = body.get("gender");
         String inviteCodeRaw = body.get("inviteCode");
         String inviteCode = inviteCodeRaw == null ? "" : inviteCodeRaw.trim().toUpperCase();
         String normalizedUsername;
+        Integer genderCode;
 
         if (phone == null || phone.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "手机号不能为空"));
@@ -106,6 +108,7 @@ public class AuthController {
         }
         try {
             normalizedUsername = normalizeUsername(username);
+            genderCode = parseRegisterGender(gender);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         }
@@ -137,6 +140,7 @@ public class AuthController {
             user.setRegisterUserAgent(trim(request.getHeader("User-Agent"), 500));
             user.setUserStatus("NORMAL");
             user.setInviteCodeStatus("ENABLED");
+            user.setGender(genderCode);
             user.setFellowshipEnabled(false);
             user.setFellowshipMatchVisible(false);
 
@@ -247,5 +251,19 @@ public class AuthController {
             return text;
         }
         return text.substring(0, maxLength);
+    }
+
+    private Integer parseRegisterGender(String rawGender) {
+        String value = rawGender == null ? "" : rawGender.trim().toLowerCase();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("性别不能为空");
+        }
+        if (Set.of("male", "man", "m", "1", "男").contains(value)) {
+            return 1;
+        }
+        if (Set.of("female", "woman", "f", "2", "女").contains(value)) {
+            return 2;
+        }
+        throw new IllegalArgumentException("性别参数无效");
     }
 }

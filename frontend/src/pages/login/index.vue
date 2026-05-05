@@ -73,6 +73,21 @@
                   placeholder="请输入邀请码"
                   :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
+                <van-field
+                  v-model="regForm.gender"
+                  name="gender"
+                  label="性别"
+                  placeholder="请选择性别"
+                  :rules="[{ required: true, message: '请选择性别' }]"
+                >
+                  <template #input>
+                    <select v-model="regForm.gender" class="gender-select">
+                      <option value="" disabled>请选择性别</option>
+                      <option value="male">男</option>
+                      <option value="female">女</option>
+                    </select>
+                  </template>
+                </van-field>
               </van-cell-group>
               <p class="register-tip">注册后默认仅开通平台账号；找对象功能需本人手动点击开通</p>
               <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码</p>
@@ -106,7 +121,7 @@ const activeTab = ref(0)
 const loading = ref(false)
 const USERNAME_MAX_LENGTH = 20
 const loginForm = reactive({ phone: '', password: '' })
-const regForm = reactive({ username: '', phone: '', password: '', inviteCode: '' })
+const regForm = reactive({ username: '', phone: '', password: '', inviteCode: '', gender: '' })
 const isFellowshipRoute = computed(() => route.path.startsWith('/fellowship'))
 
 function resolveRedirect() {
@@ -142,7 +157,8 @@ async function handleRegister() {
       username,
       phone: regForm.phone,
       password: regForm.password,
-      inviteCode: regForm.inviteCode
+      inviteCode: regForm.inviteCode,
+      gender: regForm.gender
     })
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
@@ -257,6 +273,16 @@ async function handleRegister() {
   font-size: 12px;
   color: #94a3b8;
   line-height: 1.6;
+}
+
+.gender-select {
+  width: 100%;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #323233;
+  font-size: 14px;
+  outline: none;
 }
 
 .is-platform {

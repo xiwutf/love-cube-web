@@ -18,4 +18,10 @@ public interface FellowshipProfileRepository extends JpaRepository<FellowshipPro
 
     @Query("SELECT fp.userId FROM FellowshipProfile fp WHERE fp.identityRole IN :roles")
     List<Long> findUserIdsByIdentityRoleIn(@Param("roles") List<String> roles);
+
+    @Query("""
+            SELECT COUNT(f) FROM FellowshipProfile f
+            WHERE f.nickname IS NOT NULL AND TRIM(f.nickname) <> ''
+            AND f.avatarUrl IS NOT NULL AND TRIM(f.avatarUrl) <> ''""")
+    long countWithNicknameAndAvatar();
 }

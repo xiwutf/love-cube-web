@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +22,6 @@ public interface HelpReplyRepository extends JpaRepository<HelpReply, Long> {
     List<HelpReply> findByRequestIdAndStatus(Long requestId, String status);
 
     Optional<HelpReply> findByRequestIdAndUserIdAndStatus(Long requestId, Long userId, String status);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 }

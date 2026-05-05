@@ -64,7 +64,7 @@
     </section>
 
     <section v-else class="admin-table-wrap admin-desktop-only">
-      <table class="admin-table">
+      <table class="admin-table feedback-table">
         <thead>
           <tr>
             <th>用户</th>
@@ -78,8 +78,8 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td>{{ item.username || `用户${item.userId}` }}</td>
-            <td>{{ item.contact || '-' }}</td>
+            <td class="col-user">{{ item.username || `用户${item.userId}` }}</td>
+            <td class="col-contact">{{ item.contact || '-' }}</td>
             <td class="feedback-content">{{ item.content }}</td>
             <td>
               <select v-model="item.status" class="admin-select">
@@ -89,9 +89,11 @@
               </select>
             </td>
             <td><textarea v-model="item.adminNote" class="admin-textarea" placeholder="记录处理方案或回访说明" ></textarea></td>
-            <td><span class="admin-row-meta">{{ formatDate(item.createdAt) }}</span></td>
+            <td class="col-date"><span class="admin-row-meta">{{ formatDate(item.createdAt) }}</span></td>
             <td>
-              <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
+              <div class="admin-cell-actions">
+                <button class="admin-btn" type="button" :disabled="saving" @click="save(item)">保存</button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -192,12 +194,28 @@ onMounted(load)
 
 <style scoped>
 .feedback-content {
-  max-width: 320px;
+  min-width: 280px;
+  max-width: 360px;
   white-space: pre-wrap;
+  color: var(--lc-text);
+  line-height: 1.65;
+}
+
+.feedback-table .col-user {
+  min-width: 140px;
+  font-weight: 600;
+}
+
+.feedback-table .col-contact {
+  min-width: 160px;
+}
+
+.feedback-table .col-date {
+  min-width: 170px;
 }
 
 .summary-card {
-  margin-bottom: 12px;
+  margin: 14px 0;
 }
 
 .summary-grid {
@@ -207,10 +225,11 @@ onMounted(load)
 }
 
 .summary-panel {
-  border: 1px solid var(--lc-soft-alt);
+  border: 1px solid var(--lc-border);
   border-radius: 12px;
   background: var(--lc-surface);
-  padding: 12px;
+  padding: 14px;
+  box-shadow: var(--lc-shadow-sm);
 }
 
 .summary-panel h3 {
