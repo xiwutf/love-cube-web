@@ -1,8 +1,12 @@
 package com.lovecube.backend.services;
 
 import com.lovecube.backend.entity.InviteRecord;
+import com.lovecube.backend.entity.UserInviteCode;
+import com.lovecube.backend.entity.UserInviteRelation;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.InviteRecordRepository;
+import com.lovecube.backend.repository.UserInviteCodeRepository;
+import com.lovecube.backend.repository.UserInviteRelationRepository;
 import com.lovecube.backend.repository.UserRepository;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -19,66 +23,109 @@ public class FellowshipInviteService {
     private static final String RANDOM_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
     private final InviteRecordRepository inviteRecordRepository;
+    private final UserInviteCodeRepository userInviteCodeRepository;
+    private final UserInviteRelationRepository userInviteRelationRepository;
     private final UserRepository userRepository;
 
-    public FellowshipInviteService(InviteRecordRepository inviteRecordRepository, UserRepository userRepository) {
+    public FellowshipInviteService(
+            InviteRecordRepository inviteRecordRepository,
+            UserInviteCodeRepository userInviteCodeRepository,
+            UserInviteRelationRepository userInviteRelationRepository,
+            UserRepository userRepository
+    ) {
         this.inviteRecordRepository = inviteRecordRepository;
+        this.userInviteCodeRepository = userInviteCodeRepository;
+        this.userInviteRelationRepository = userInviteRelationRepository;
         this.userRepository = userRepository;
     }
 
     public User validateInviteCodeForRegistration(String inviteCode) {
-        if (inviteCode == null || inviteCode.isBlank()) {
-            throw new IllegalArgumentException("邀请码不能为空");
+        String normalizedCode = normalizeInviteCode(inviteCode);
+        if (normalizedCode.isBlank()) {
+            throw new IllegalArgumentException("Invite code cannot be empty");
         }
-        User inviter = userRepository.findByInviteCode(inviteCode.trim().toUpperCase());
+        UserInviteCode codeRecord = userInviteCodeRepository.findByInviteCode(normalizedCode)
+                .orElseGet(() -> migrateLegacyInviteCode(normalizedCode));
+        if (codeRecord == null || "DISABLED".equalsIgnoreCase(codeRecord.getStatus())) {
+            throw new IllegalArgumentException("Invalid invite code");
+        }
+        User inviter = userRepository.findById(codeRecord.getUserId()).orElse(null);
         if (inviter == null) {
-            throw new IllegalArgumentException("邀请码无效");
+            throw new IllegalArgumentException("Invalid invite code");
         }
-        if ("DISABLED".equalsIgnoreCase(inviter.getUserStatus())) {
-            throw new IllegalArgumentException("邀请码无效");
-        }
-        if ("DISABLED".equalsIgnoreCase(inviter.getInviteCodeStatus())) {
-            throw new IllegalArgumentException("邀请码无效");
+        if ("DISABLED".equalsIgnoreCase(inviter.getUserStatus())
+                || "DISABLED".equalsIgnoreCase(inviter.getInviteCodeStatus())) {
+            throw new IllegalArgumentException("Invalid invite code");
         }
         return inviter;
     }
 
     public String generateUniqueInviteCode(Long userId) {
         if (userId == null) {
-            throw new IllegalArgumentException("userId不能为空");
+            throw new IllegalArgumentException("userId cannot be empty");
         }
         String prefix = "LC" + userId;
         for (int i = 0; i < 20; i++) {
             String candidate = prefix + randomSuffix(4);
-            if (!userRepository.existsByInviteCode(candidate)) {
+            if (!userInviteCodeRepository.existsByInviteCode(candidate) && !userRepository.existsByInviteCode(candidate)) {
                 return candidate;
             }
         }
         String fallback = prefix + randomSuffix(6);
-        if (!userRepository.existsByInviteCode(fallback)) {
+        if (!userInviteCodeRepository.existsByInviteCode(fallback) && !userRepository.existsByInviteCode(fallback)) {
             return fallback;
         }
-        throw new IllegalStateException("邀请码生成失败，请稍后重试");
+        throw new IllegalStateException("Invite code generation failed");
     }
 
     @Transactional
     public String ensureUserInviteCode(User user) {
-        if (user.getInviteCode() != null && !user.getInviteCode().isBlank()) {
-            return user.getInviteCode();
+        Optional<UserInviteCode> existing = userInviteCodeRepository.findByUserId(user.getUserid());
+        if (existing.isPresent()) {
+            String code = existing.get().getInviteCode();
+            syncLegacyInviteCode(user, code, existing.get().getStatus());
+            return code;
         }
-        String code = generateUniqueInviteCode(user.getUserid());
-        user.setInviteCode(code);
-        if (user.getInviteCodeStatus() == null || user.getInviteCodeStatus().isBlank()) {
-            user.setInviteCodeStatus("ENABLED");
+
+        String code = user.getInviteCode() != null && !user.getInviteCode().isBlank()
+                ? normalizeInviteCode(user.getInviteCode())
+                : generateUniqueInviteCode(user.getUserid());
+        if (userInviteCodeRepository.existsByInviteCode(code)) {
+            code = generateUniqueInviteCode(user.getUserid());
         }
-        userRepository.save(user);
+
+        UserInviteCode record = new UserInviteCode();
+        record.setUserId(user.getUserid());
+        record.setInviteCode(code);
+        record.setStatus(user.getInviteCodeStatus() == null || user.getInviteCodeStatus().isBlank()
+                ? "ENABLED"
+                : user.getInviteCodeStatus().trim().toUpperCase());
+        userInviteCodeRepository.save(record);
+        syncLegacyInviteCode(user, code, record.getStatus());
         return code;
     }
 
     @Transactional
     public void createSuccessRecord(String inviteCode, User inviter, User invitee, String registerIp, String userAgent) {
+        if (inviter.getUserid().equals(invitee.getUserid())) {
+            throw new IllegalArgumentException("Cannot use your own invite code");
+        }
+        if (userInviteRelationRepository.existsByInvitedUserId(invitee.getUserid())) {
+            return;
+        }
+
+        String normalizedCode = normalizeInviteCode(inviteCode);
+        UserInviteRelation relation = new UserInviteRelation();
+        relation.setInviteCode(normalizedCode);
+        relation.setInviterUserId(inviter.getUserid());
+        relation.setInvitedUserId(invitee.getUserid());
+        relation.setRegisterIp(trim(registerIp, 64));
+        relation.setRegisterUserAgent(trim(userAgent, 500));
+        relation.setStatus("SUCCESS");
+        userInviteRelationRepository.save(relation);
+
         InviteRecord record = new InviteRecord();
-        record.setInviteCode(inviteCode);
+        record.setInviteCode(normalizedCode);
         record.setInviterUserId(inviter.getUserid());
         record.setInviteeUserId(invitee.getUserid());
         record.setInviteeUsername(resolveDisplayName(invitee));
@@ -90,19 +137,29 @@ public class FellowshipInviteService {
 
     public Map<String, Object> getMyCodeSummary(User user) {
         String code = ensureUserInviteCode(user);
-        long inviteCount = inviteRecordRepository.countByInviterUserIdAndStatus(user.getUserid(), "SUCCESS");
+        long inviteCount = userInviteRelationRepository.countByInviterUserIdAndStatus(user.getUserid(), "SUCCESS");
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("inviteCode", code);
         result.put("inviteCount", inviteCount);
         return result;
     }
 
+    public Map<String, Object> getInviteInfo(User user, String origin) {
+        Map<String, Object> result = getMyCodeSummary(user);
+        String normalizedOrigin = origin == null || origin.isBlank() ? "" : origin.trim().replaceAll("/+$", "");
+        String inviteLink = normalizedOrigin.isBlank()
+                ? "/#/register?inviteCode=" + result.get("inviteCode")
+                : normalizedOrigin + "/#/register?inviteCode=" + result.get("inviteCode");
+        result.put("inviteLink", inviteLink);
+        return result;
+    }
+
     public List<Map<String, Object>> getMyInvitees(User user) {
-        List<InviteRecord> records = inviteRecordRepository
+        List<UserInviteRelation> records = userInviteRelationRepository
                 .findByInviterUserIdAndStatusOrderByCreatedAtDesc(user.getUserid(), "SUCCESS");
 
         Set<Long> inviteeIds = records.stream()
-                .map(InviteRecord::getInviteeUserId)
+                .map(UserInviteRelation::getInvitedUserId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
@@ -110,12 +167,12 @@ public class FellowshipInviteService {
                 .collect(Collectors.toMap(User::getUserid, item -> item));
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (InviteRecord record : records) {
-            User invitee = userMap.get(record.getInviteeUserId());
+        for (UserInviteRelation record : records) {
+            User invitee = userMap.get(record.getInvitedUserId());
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("userId", record.getInviteeUserId());
-            item.put("nickname", invitee != null ? resolveDisplayName(invitee) : record.getInviteeUsername());
-            item.put("username", invitee != null ? safe(invitee.getUsername()) : safe(record.getInviteeUsername()));
+            item.put("userId", record.getInvitedUserId());
+            item.put("nickname", invitee != null ? resolveDisplayName(invitee) : "");
+            item.put("username", invitee != null ? safe(invitee.getUsername()) : "");
             item.put("registeredAt", record.getCreatedAt());
             item.put("status", invitee != null ? normalizeStatus(invitee.getUserStatus()) : "NORMAL");
             result.add(item);
@@ -140,7 +197,7 @@ public class FellowshipInviteService {
                 predicates.add(cb.equal(root.get("inviteeUserId"), inviteeUserId));
             }
             if (inviteCode != null && !inviteCode.isBlank()) {
-                predicates.add(cb.equal(root.get("inviteCode"), inviteCode.trim().toUpperCase()));
+                predicates.add(cb.equal(root.get("inviteCode"), normalizeInviteCode(inviteCode)));
             }
             if (status != null && !status.isBlank()) {
                 predicates.add(cb.equal(root.get("status"), status.trim().toUpperCase()));
@@ -196,6 +253,41 @@ public class FellowshipInviteService {
         return builder.toString();
     }
 
+    private String normalizeInviteCode(String inviteCode) {
+        return inviteCode == null ? "" : inviteCode.trim().toUpperCase();
+    }
+
+    private UserInviteCode migrateLegacyInviteCode(String inviteCode) {
+        User legacyUser = userRepository.findByInviteCode(inviteCode);
+        if (legacyUser == null) {
+            return null;
+        }
+        return userInviteCodeRepository.findByUserId(legacyUser.getUserid()).orElseGet(() -> {
+            UserInviteCode record = new UserInviteCode();
+            record.setUserId(legacyUser.getUserid());
+            record.setInviteCode(inviteCode);
+            record.setStatus(legacyUser.getInviteCodeStatus() == null || legacyUser.getInviteCodeStatus().isBlank()
+                    ? "ENABLED"
+                    : legacyUser.getInviteCodeStatus().trim().toUpperCase());
+            return userInviteCodeRepository.save(record);
+        });
+    }
+
+    private void syncLegacyInviteCode(User user, String code, String status) {
+        boolean changed = false;
+        if (!code.equals(user.getInviteCode())) {
+            user.setInviteCode(code);
+            changed = true;
+        }
+        if (user.getInviteCodeStatus() == null || user.getInviteCodeStatus().isBlank()) {
+            user.setInviteCodeStatus(status == null || status.isBlank() ? "ENABLED" : status);
+            changed = true;
+        }
+        if (changed) {
+            userRepository.save(user);
+        }
+    }
+
     private String resolveDisplayName(User user) {
         if (user == null) {
             return "";
@@ -206,7 +298,7 @@ public class FellowshipInviteService {
         if (user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank()) {
             return user.getPhoneNumber();
         }
-        return "用户" + user.getUserid();
+        return "User" + user.getUserid();
     }
 
     private String normalizeStatus(String status) {
@@ -231,4 +323,3 @@ public class FellowshipInviteService {
         return value == null ? "" : value;
     }
 }
-

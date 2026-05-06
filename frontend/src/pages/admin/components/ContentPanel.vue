@@ -3,10 +3,10 @@
     <header class="panel-head">
       <div>
         <p class="kicker">数据区</p>
-        <h3>官网内容体量</h3>
-        <p class="desc">公告、文章、活动数量概况。编辑请用功能地图中的「内容与运营」。</p>
+        <h3>官网官方内容体量</h3>
+        <p class="desc">平台公告、平台资讯、活动数量概况。编辑请用功能地图中的「内容与运营」。</p>
       </div>
-      <router-link to="/admin/announcements" class="entry-btn">去公告管理</router-link>
+      <router-link to="/admin/announcements" class="entry-btn">去平台公告管理</router-link>
     </header>
 
     <div class="panel-visual">

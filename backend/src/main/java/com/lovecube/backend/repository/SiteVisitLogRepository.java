@@ -66,19 +66,15 @@ public interface SiteVisitLogRepository extends JpaRepository<SiteVisitLog, Long
     List<Object[]> aggregateOs(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query(value = """
-            SELECT id, visitor_id, path, ip_address, device_type, browser, created_at
-            FROM site_visit_log
-            WHERE visitor_id IN (
-              SELECT t.visitor_id
-              FROM (
-                SELECT visitor_id, MAX(created_at) AS last_visit_at
-                FROM site_visit_log
-                GROUP BY visitor_id
-                ORDER BY last_visit_at DESC
-                LIMIT :limit OFFSET :offset
-              ) t
-            )
-            ORDER BY created_at DESC
+            SELECT l.id, l.visitor_id, l.path, l.ip_address, l.device_type, l.browser, l.created_at
+            FROM site_visit_log l
+            INNER JOIN (
+              SELECT visitor_id, MAX(created_at) AS last_at
+              FROM site_visit_log
+              GROUP BY visitor_id
+            ) u ON u.visitor_id = l.visitor_id AND u.last_at = l.created_at
+            ORDER BY l.created_at DESC
+            LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
     List<Object[]> findLatestVisitors(@Param("offset") int offset, @Param("limit") int limit);
 

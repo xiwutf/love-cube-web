@@ -63,4 +63,57 @@ public class LocalResourceController {
                 "message", "已标记感兴趣"
         );
     }
+
+    @PostMapping("/clues")
+    public Map<String, Object> submitClue(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> payload
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        String title = String.valueOf(payload.getOrDefault("title", "")).trim();
+        String type = String.valueOf(payload.getOrDefault("type", "")).trim();
+        String contact = String.valueOf(payload.getOrDefault("contact", "")).trim();
+        String location = String.valueOf(payload.getOrDefault("location", "")).trim();
+        String summary = String.valueOf(payload.getOrDefault("summary", "")).trim();
+
+        if (title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "资源标题不能为空");
+        }
+        if (type.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "资源分类不能为空");
+        }
+        if (contact.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "联系方式不能为空");
+        }
+
+        String summaryBody = summary.isBlank() ? "" : summary.trim();
+        String contactLine = "联系方式：" + contact.trim();
+        String combinedSummary;
+        if (summaryBody.isEmpty()) {
+            combinedSummary = "用户提交资源线索\n" + contactLine;
+        } else {
+            combinedSummary = summaryBody + "\n" + contactLine;
+        }
+        if (combinedSummary.length() > 500) {
+            combinedSummary = combinedSummary.substring(0, 500);
+        }
+
+        LocalResource item = new LocalResource();
+        item.setTitle(title);
+        item.setType(type);
+        item.setLocation(location.isBlank() ? null : location);
+        item.setSummary(combinedSummary);
+        item.setCoverUrl(null);
+        item.setHeat(0);
+        item.setInterestCount(0);
+        item.setStatus("pending");
+        item.setCreatedBy(user.getUserid());
+        item.setEventTime(null);
+        LocalResource saved = localResourceRepository.save(item);
+        return Map.of(
+                "id", saved.getId(),
+                "status", saved.getStatus(),
+                "message", "线索已提交，待运营处理"
+        );
+    }
 }

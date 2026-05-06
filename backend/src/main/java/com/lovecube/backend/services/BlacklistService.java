@@ -43,7 +43,7 @@ public class BlacklistService {
                 item.put("createdAt", b.getCreatedAt());
                 userRepository.findById(b.getBlockedUserId()).ifPresent(u -> {
                     item.put("nickname", u.getUsername());
-                    item.put("avatar", u.getProfilePhoto());
+                    item.put("avatarUrl", u.getProfilePhoto());
                 });
                 return item;
             })

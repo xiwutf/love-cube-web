@@ -16,7 +16,7 @@
 
         <div class="pc-account">
           <router-link to="/events" class="pc-nav-action">✓ 签到</router-link>
-          <router-link to="/messages" class="pc-nav-action">□ 平台消息</router-link>
+          <router-link to="/messages" class="pc-nav-action">□ 消息通知</router-link>
           <template v-if="userStore.isLoggedIn">
             <router-link to="/me" class="pc-login-entry">{{ userStore.userInfo?.username || '个人中心' }}</router-link>
             <router-link v-if="userStore.isAdmin" to="/admin" class="pc-admin-entry">后台</router-link>
@@ -43,7 +43,7 @@
           <section class="pc-footer-col">
             <h4>平台</h4>
             <router-link to="/modules">模块中心</router-link>
-            <router-link to="/announcements">平台动态</router-link>
+            <router-link to="/announcements">平台公告</router-link>
             <router-link to="/fellowship-intro">找对象</router-link>
           </section>
           <section class="pc-footer-col">
@@ -80,7 +80,7 @@ const navItems = [
   { to: '/pc/platform', label: '首页' },
   { to: '/platform/positive-share', label: '每日心声' },
   { to: '/modules', label: '模块中心' },
-  { to: '/announcements', label: '平台动态' },
+  { to: '/announcements', label: '平台公告' },
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动' },
   { to: '/platform/groups', label: '团队' },

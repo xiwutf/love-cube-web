@@ -8,6 +8,7 @@ import com.lovecube.backend.repository.EventSignupRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.UserService;
 import com.lovecube.backend.utils.JwtUtil;
@@ -29,6 +30,7 @@ public class UserController {
     private final EventSignupRepository eventSignupRepository;
     private final DynamicLikeRepository dynamicLikeRepository;
     private final UserInteractionRepository userInteractionRepository;
+    private final FellowshipInviteService fellowshipInviteService;
 
     public UserController(
             UserService userService,
@@ -38,7 +40,8 @@ public class UserController {
             DynamicRepository dynamicRepository,
             EventSignupRepository eventSignupRepository,
             DynamicLikeRepository dynamicLikeRepository,
-            UserInteractionRepository userInteractionRepository
+            UserInteractionRepository userInteractionRepository,
+            FellowshipInviteService fellowshipInviteService
     ) {
         this.userService = userService;
         this.userRepository = userRepository;
@@ -48,6 +51,7 @@ public class UserController {
         this.eventSignupRepository = eventSignupRepository;
         this.dynamicLikeRepository = dynamicLikeRepository;
         this.userInteractionRepository = userInteractionRepository;
+        this.fellowshipInviteService = fellowshipInviteService;
     }
 
     @GetMapping("/users/{userId}")
@@ -75,6 +79,21 @@ public class UserController {
     @GetMapping("/users/current")
     public ResponseEntity<User> getCurrentUser(@RequestHeader("Authorization") String token) {
         return ResponseEntity.ok(userService.getCurrentUser(token));
+    }
+
+    @GetMapping("/user/invite-info")
+    public ResponseEntity<?> getInviteInfo(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader(value = "Origin", required = false) String origin
+    ) {
+        try {
+            User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            return ResponseEntity.ok(fellowshipInviteService.getInviteInfo(currentUser, origin));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to load invite info"));
+        }
     }
 
     @PostMapping("/users/register")

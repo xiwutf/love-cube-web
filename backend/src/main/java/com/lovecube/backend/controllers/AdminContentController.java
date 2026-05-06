@@ -2,21 +2,25 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
+import com.lovecube.backend.entity.FellowshipProfile;
 import com.lovecube.backend.entity.FellowshipProfileMain;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
 import com.lovecube.backend.entity.UserFeedback;
 import com.lovecube.backend.entity.UserPhoto;
+import com.lovecube.backend.entity.UserProfile;
 import com.lovecube.backend.entity.UserVerification;
 import com.lovecube.backend.entity.VerificationRequest;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
 import com.lovecube.backend.repository.FellowshipProfileMainRepository;
+import com.lovecube.backend.repository.FellowshipProfileRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserFeedbackRepository;
 import com.lovecube.backend.repository.UserPhotoRepository;
+import com.lovecube.backend.repository.UserProfileRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
@@ -33,6 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +65,8 @@ public class AdminContentController {
     private final UserFeedbackRepository userFeedbackRepository;
     private final UserPhotoRepository userPhotoRepository;
     private final FellowshipProfileMainRepository fellowshipProfileMainRepository;
+    private final FellowshipProfileRepository fellowshipProfileRepository;
+    private final UserProfileRepository userProfileRepository;
     private final AdminDashboardStatsService adminDashboardStatsService;
     private final AdminAuthService adminAuthService;
     private final FellowshipInviteService fellowshipInviteService;
@@ -78,6 +85,8 @@ public class AdminContentController {
             UserFeedbackRepository userFeedbackRepository,
             UserPhotoRepository userPhotoRepository,
             FellowshipProfileMainRepository fellowshipProfileMainRepository,
+            FellowshipProfileRepository fellowshipProfileRepository,
+            UserProfileRepository userProfileRepository,
             AdminDashboardStatsService adminDashboardStatsService,
             AdminAuthService adminAuthService,
             FellowshipInviteService fellowshipInviteService,
@@ -95,6 +104,8 @@ public class AdminContentController {
         this.userFeedbackRepository = userFeedbackRepository;
         this.userPhotoRepository = userPhotoRepository;
         this.fellowshipProfileMainRepository = fellowshipProfileMainRepository;
+        this.fellowshipProfileRepository = fellowshipProfileRepository;
+        this.userProfileRepository = userProfileRepository;
         this.adminDashboardStatsService = adminDashboardStatsService;
         this.adminAuthService = adminAuthService;
         this.fellowshipInviteService = fellowshipInviteService;
@@ -252,20 +263,32 @@ public class AdminContentController {
                 ? Map.of()
                 : fellowshipProfileMainRepository.findByUserIdIn(userIds).stream()
                 .collect(Collectors.toMap(FellowshipProfileMain::getUserId, item -> item, (a, b) -> a));
+        Map<Long, FellowshipProfile> legacyProfileMap = userIds.isEmpty()
+                ? Map.of()
+                : fellowshipProfileRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(FellowshipProfile::getUserId, item -> item, (a, b) -> a));
+        Map<Long, UserProfile> userProfileMap = userIds.isEmpty()
+                ? Map.of()
+                : userProfileRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(UserProfile::getUserId, item -> item, (a, b) -> a));
 
         return visibleUsers.stream()
                 .map(user -> {
+                    FellowshipProfileMain mainProfile = mainProfileMap.get(user.getUserid());
+                    FellowshipProfile legacyProfile = legacyProfileMap.get(user.getUserid());
+                    UserProfile userProfile = userProfileMap.get(user.getUserid());
                     long uploadedPhotoCount = uploadedPhotoCountMap.getOrDefault(user.getUserid(), 0L);
                     Integer genderCode = user.getGender();
                     if (genderCode == null) {
-                        FellowshipProfileMain mainProfile = mainProfileMap.get(user.getUserid());
                         genderCode = parseGenderCodeFromText(mainProfile == null ? null : mainProfile.getGender());
                     }
                     Map<String, Object> item = new HashMap<>();
                     item.put("userId", user.getUserid());
                     item.put("username", user.getUsername() == null ? "" : user.getUsername());
                     item.put("phone", user.getPhoneNumber() == null ? "" : user.getPhoneNumber());
+                    item.put("avatarUrl", resolveAdminUserAvatar(user, legacyProfile, mainProfile, userProfile));
                     item.put("gender", genderCode);
+                    item.put("age", resolveAdminListAge(user, mainProfile));
                     item.put("role", normalizeRoleForView(user.getRole(), adminAuthService.isAdmin(user)));
                     item.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
                     item.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
@@ -912,6 +935,31 @@ public class AdminContentController {
         return adminAuthService.isAdmin(user) ? "ADMIN" : "USER";
     }
 
+    /**
+     * 与 {@link com.lovecube.backend.services.UnifiedProfileService#buildUnifiedProfile} 头像合并顺序一致：
+     * fellowship_profile.avatar_url → fellowship_profiles.avatar → user_profiles.avatar → users.profile_photo
+     */
+    private String resolveAdminUserAvatar(
+            User user,
+            FellowshipProfile legacyProfile,
+            FellowshipProfileMain mainProfile,
+            UserProfile userProfile
+    ) {
+        if (legacyProfile != null && legacyProfile.getAvatarUrl() != null && !legacyProfile.getAvatarUrl().isBlank()) {
+            return legacyProfile.getAvatarUrl().trim();
+        }
+        if (mainProfile != null && mainProfile.getAvatar() != null && !mainProfile.getAvatar().isBlank()) {
+            return mainProfile.getAvatar().trim();
+        }
+        if (userProfile != null && userProfile.getAvatar() != null && !userProfile.getAvatar().isBlank()) {
+            return userProfile.getAvatar().trim();
+        }
+        if (user.getProfilePhoto() != null && !user.getProfilePhoto().isBlank()) {
+            return user.getProfilePhoto().trim();
+        }
+        return "";
+    }
+
     private Integer parseGenderCodeFromText(String rawGender) {
         String value = rawGender == null ? "" : rawGender.trim().toLowerCase();
         if (value.isEmpty()) {
@@ -924,6 +972,52 @@ public class AdminContentController {
             return 2;
         }
         return null;
+    }
+
+    /**
+     * 管理端列表展示用年龄：优先按用户生日推算，其次联谊档案生日，最后用 users.age。
+     */
+    private Integer resolveAdminListAge(User user, FellowshipProfileMain mainProfile) {
+        Integer fromUserBirth = ageFromLocalDateTime(user.getBirthDate());
+        if (fromUserBirth != null) {
+            return fromUserBirth;
+        }
+        if (mainProfile != null) {
+            Integer fromMainBirth = ageFromLocalDate(mainProfile.getBirthday());
+            if (fromMainBirth != null) {
+                return fromMainBirth;
+            }
+        }
+        Integer stored = user.getAge();
+        if (stored != null && stored > 0 && stored < 150) {
+            return stored;
+        }
+        return null;
+    }
+
+    private Integer ageFromLocalDateTime(LocalDateTime birth) {
+        if (birth == null) {
+            return null;
+        }
+        return safeYearsOld(birth.toLocalDate(), LocalDate.now());
+    }
+
+    private Integer ageFromLocalDate(LocalDate birth) {
+        if (birth == null) {
+            return null;
+        }
+        return safeYearsOld(birth, LocalDate.now());
+    }
+
+    private Integer safeYearsOld(LocalDate birth, LocalDate today) {
+        if (birth.isAfter(today)) {
+            return null;
+        }
+        int years = Period.between(birth, today).getYears();
+        if (years < 0 || years >= 150) {
+            return null;
+        }
+        return years;
     }
 
     private Map<String, Object> toAdminUserPhotoView(UserPhoto photo) {

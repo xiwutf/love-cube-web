@@ -5,7 +5,7 @@
       <div class="mh-hero">
         <div class="mh-hero-inner">
           <div class="mh-avatar-wrap">
-            <img v-if="user?.avatar" :src="user.avatar" class="mh-avatar" alt="头像" />
+            <img v-if="showHeroAvatarImg" :src="heroAvatarSrc" class="mh-avatar" alt="头像" />
             <div v-else class="mh-avatar mh-avatar-fb">{{ avatarFallback }}</div>
             <span class="mh-lv-pill">Lv.{{ mobileGrowthLevel.level }}</span>
           </div>
@@ -67,6 +67,11 @@
         </div>
       </div>
 
+      <MyInvitePanel
+        :invite-code="inviteCodeDisplay"
+        :invite-count="inviteCount"
+      />
+
       <!-- 常用功能入口 -->
       <div class="mh-card mh-func-card">
         <div class="mh-func-grid">
@@ -111,6 +116,12 @@
           <span class="mh-setting-label">问题工单（提交可得经验）</span>
           <span class="mh-setting-arrow">›</span>
         </router-link>
+        <router-link v-if="userStore.isAdmin" class="mh-setting-row" to="/admin/dashboard">
+          <span class="mh-setting-icon">🛠️</span>
+          <span class="mh-setting-label">管理中心</span>
+          <span class="mh-setting-value">快速处理</span>
+          <span class="mh-setting-arrow">›</span>
+        </router-link>
         <button type="button" class="mh-setting-row mh-setting-danger" @click="handleLogout">
           <span class="mh-setting-icon">🚪</span>
           <span class="mh-setting-label">退出登录</span>
@@ -126,6 +137,7 @@
       :user-id-display="userIdDisplay"
       :location-display="locationDisplay"
       :invite-code-display="inviteCodeDisplay"
+      :invite-count="inviteCount"
       :copy-feedback="copyFeedback"
       :copy-feedback-error="copyFeedbackError"
       :profile-light-stats="profileLightStats"
@@ -218,17 +230,22 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
-import { getMyInviteCode } from '@/api/invite.js'
+import { getInviteInfo } from '@/api/invite.js'
 import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { fetchMyGroups, fetchHotGroups } from '@/api/groups.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
+import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
 import MhHeroBadgeLink from '@/components/platform/me/MhHeroBadgeLink.vue'
+import { getAvatar } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 const user = computed(() => userStore.userInfo)
+const showHeroAvatarImg = computed(() => Boolean(userAvatarUrlFromApi(user.value)))
+const heroAvatarSrc = computed(() => getAvatar(user.value))
 const unreadCount = ref(0)
 const editOpen = ref(false)
 const settingsOpen = ref(false)
@@ -237,6 +254,7 @@ const saveMessage = ref('')
 const saveError = ref(false)
 const { pickAndUpload, uploading } = useImageUpload()
 const inviteCode = ref('')
+const inviteCount = ref(0)
 const inviteCodeReady = ref(false)
 const copyFeedback = ref('')
 const copyFeedbackError = ref(false)
@@ -363,17 +381,23 @@ const mobileGrowthProgress = computed(() => {
 
 const mobileCompletedCount = computed(() => mobileDailyTasks.value.filter(t => t.done).length)
 
-const mobileGridItems = [
-  { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
-  { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
-  { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
-  { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
-  { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
-  { title: '邀请码', icon: '▭', tone: 'amber', to: '/fellowship/invite', tip: '邀请好友加入' },
-  { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
-  { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
-  { title: '问题工单', icon: '💡', tone: 'violet', to: '/me/feedback', tip: '提交得+5经验' }
-]
+const mobileGridItems = computed(() => {
+  const items = [
+    { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
+    { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
+    { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
+    { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
+    { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
+    { title: '邀请码', icon: '▭', tone: 'amber', to: '/fellowship/invite', tip: '邀请好友加入' },
+    { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
+    { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
+    { title: '问题工单', icon: '💡', tone: 'violet', to: '/me/feedback', tip: '提交得+5经验' }
+  ]
+  if (userStore.isAdmin) {
+    items.unshift({ title: '管理中心', icon: '🛠️', tone: 'green', to: '/admin/dashboard' })
+  }
+  return items
+})
 
 const growthLevel = computed(() => ({
   level: mobileGrowthLevel.value.level,
@@ -520,7 +544,7 @@ watch(
   () => user.value,
   (value) => {
     editForm.username = value?.username || ''
-    editForm.avatar = value?.avatar || ''
+    editForm.avatar = userAvatarUrlFromApi(value) || String(value?.avatar || '').trim()
     editForm.location = value?.location || ''
     editForm.bio = value?.bio || ''
   },
@@ -552,7 +576,7 @@ function closeSettingsPanel() {
 
 function resetEditForm() {
   editForm.username = user.value?.username || ''
-  editForm.avatar = user.value?.avatar || ''
+  editForm.avatar = userAvatarUrlFromApi(user.value) || String(user.value?.avatar || '').trim()
   editForm.location = user.value?.location || ''
   editForm.bio = user.value?.bio || ''
   saveMessage.value = ''
@@ -648,7 +672,7 @@ onMounted(async () => {
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
   const [statsRes, inviteRes, growthRes, myGroupsRes, hotGroupsRes] = await Promise.allSettled([
-    getUserStatsCached(), getMyInviteCode(), getMyGrowth(), fetchMyGroups(), fetchHotGroups()
+    getUserStatsCached(), getInviteInfo(), getMyGrowth(), fetchMyGroups(), fetchHotGroups()
   ])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
@@ -660,6 +684,7 @@ onMounted(async () => {
   }
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
+    inviteCount.value = Number(inviteRes.value?.inviteCount ?? 0)
   }
   inviteCodeReady.value = true
   if (growthRes.status === 'fulfilled') {

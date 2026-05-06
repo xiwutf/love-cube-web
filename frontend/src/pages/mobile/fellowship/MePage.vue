@@ -137,7 +137,7 @@
 
       <section v-show="!loadingPage" class="activity-card">
         <div class="block-header">
-          <h3>平台动态</h3>
+          <h3>平台公告</h3>
           <button class="block-link" @click="router.push('/fellowship/messages')">全部 ></button>
         </div>
         <ul class="activity-list">

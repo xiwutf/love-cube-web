@@ -116,7 +116,7 @@
                   <article v-for="comment in comments" :key="comment.id" class="comment-row">
                     <div class="comment-avatar">
                       <img
-                        v-if="comment.avatar && !isCommentAvatarError(comment.id)"
+                        v-if="comment._hasAvatar && !isCommentAvatarError(comment.id)"
                         :src="comment.avatar"
                         :alt="`${comment.username || '用户'}头像`"
                         class="comment-avatar-img"
@@ -270,6 +270,8 @@ import {
 } from '@/api/positiveShare.js'
 import PositiveShareEditor from '@/components/platform/positive/PositiveShareEditor.vue'
 import PositiveShareCard from '@/components/platform/positive/PositiveShareCard.vue'
+import { getAvatar } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const mainTabs = [
   { label: '最新', value: 'latest' },
@@ -465,7 +467,12 @@ async function loadComments(shareId) {
   commentsLoading.value = true
   try {
     const res = await fetchPositiveShareComments(shareId, { pageNum: 1, pageSize: 30 })
-    comments.value = Array.isArray(res?.list) ? res.list : []
+    const list = Array.isArray(res?.list) ? res.list : []
+    comments.value = list.map((c) => ({
+      ...c,
+      _hasAvatar: Boolean(userAvatarUrlFromApi(c)),
+      avatar: getAvatar(c)
+    }))
     commentAvatarErrorIds.value = new Set()
   } catch {
     comments.value = []

@@ -171,7 +171,7 @@ public class UserInteractionService {
             Map<String, Object> row = new HashMap<>();
             row.put("userId", fromUser.getUserid());
             row.put("nickname", fromUser.getUsername());
-            row.put("avatar", fromUser.getProfilePhoto());
+            row.put("avatarUrl", fromUser.getProfilePhoto());
             row.put("age", fromUser.getAge());
             row.put("location", fromUser.getLocation());
             row.put("occupation", fromUser.getOccupation());
@@ -275,8 +275,9 @@ public class UserInteractionService {
             Map<String, Object> row = new HashMap<>();
             row.put("userId", targetUser.getUserid());
             row.put("nickname", targetUser.getUsername());
-            row.put("profilePhoto", targetUser.getProfilePhoto());
-            row.put("avatar", targetUser.getProfilePhoto());
+            String tp = targetUser.getProfilePhoto();
+            row.put("profilePhoto", tp);
+            row.put("avatarUrl", tp);
             row.put("age", targetUser.getAge());
             row.put("location", targetUser.getLocation());
             row.put("occupation", targetUser.getOccupation());
@@ -329,7 +330,11 @@ public class UserInteractionService {
             if (nickname.isEmpty()) {
                 nickname = "用户";
             }
-            avatar = Objects.toString(summary.get("avatar"), "").trim();
+            String fromSummary = summary.get("avatarUrl");
+            if (fromSummary == null || fromSummary.isBlank()) {
+                fromSummary = summary.get("avatar");
+            }
+            avatar = Objects.toString(fromSummary, "").trim();
             if (avatar.isEmpty()) {
                 avatar = "/images/default-avatar.png";
             }
@@ -345,12 +350,12 @@ public class UserInteractionService {
         if (summary != null || fromUser != null) {
             dto.put("userId", uid);
             dto.put("nickname", nickname);
-            dto.put("avatar", avatar);
+            dto.put("avatarUrl", avatar);
 
             Map<String, Object> fromUserMap = new LinkedHashMap<>();
             fromUserMap.put("userId", uid);
             fromUserMap.put("nickname", nickname);
-            fromUserMap.put("avatar", avatar);
+            fromUserMap.put("avatarUrl", avatar);
             dto.put("fromUser", fromUserMap);
         }
 
@@ -404,7 +409,7 @@ public class UserInteractionService {
             Map<String, Object> row = new HashMap<>();
             row.put("userId", targetUser.getUserid());
             row.put("nickname", targetUser.getUsername());
-            row.put("avatar", targetUser.getProfilePhoto());
+            row.put("avatarUrl", targetUser.getProfilePhoto());
             row.put("age", targetUser.getAge());
             row.put("location", targetUser.getLocation());
             row.put("occupation", targetUser.getOccupation());

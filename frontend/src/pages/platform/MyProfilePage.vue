@@ -9,7 +9,7 @@
     <div class="sp-body">
       <div class="sp-card sp-profile-card">
         <div class="pf-avatar-wrap">
-          <img v-if="user?.avatar" :src="user.avatar" class="pf-avatar" alt="头像" />
+          <img v-if="showProfileAvatarImg" :src="profileAvatarSrc" class="pf-avatar" alt="头像" />
           <div v-else class="pf-avatar pf-avatar-fb">{{ avatarFallback }}</div>
           <button type="button" class="pf-avatar-edit" @click="openEdit">更换</button>
         </div>
@@ -64,6 +64,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
+import { getAvatar } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -75,6 +77,8 @@ const copyErr = ref(false)
 const displayName = computed(() => user.value?.username || user.value?.nickname || '用户')
 const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '--')
 const avatarFallback = computed(() => String(displayName.value || 'U').slice(0, 1).toUpperCase())
+const showProfileAvatarImg = computed(() => Boolean(userAvatarUrlFromApi(user.value)))
+const profileAvatarSrc = computed(() => getAvatar(user.value))
 
 const verifyLabel = computed(() => {
   const s = String(user.value?.verificationStatus || 'none')

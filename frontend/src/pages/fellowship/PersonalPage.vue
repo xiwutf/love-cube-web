@@ -12,7 +12,7 @@
       <div class="profile-card">
         <div class="profile-main">
           <div class="avatar-wrap">
-            <van-image v-if="avatarUrl" round width="88" height="88" :src="avatarUrl" fit="cover" />
+            <van-image v-if="showPersonalAvatar" round width="88" height="88" :src="personalAvatarSrc" fit="cover" />
             <div v-else class="avatar-fallback">{{ userInitial }}</div>
           </div>
           <div class="profile-info">
@@ -104,6 +104,8 @@ import AppTabBar from '@/components/AppTabBar.vue'
 import { useUserStore } from '@/stores/user.js'
 import { getVisitorList } from '@/api/message.js'
 import { getMyDynamicCount, getMyLikeUsers, getMutualLikeUsers } from '@/api/personal.js'
+import { getAvatar } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -111,7 +113,8 @@ const userStore = useUserStore()
 const user = computed(() => userStore.syncCurrentUser() || { userId: '', username: '未登录', role: 'user', verificationStatus: 'none' })
 
 const displayName = computed(() => user.value.username || user.value.nickname || user.value.userId || 'Love Cube 用户')
-const avatarUrl = computed(() => user.value.avatar || '')
+const showPersonalAvatar = computed(() => Boolean(userAvatarUrlFromApi(user.value)))
+const personalAvatarSrc = computed(() => getAvatar(user.value))
 const userInitial = computed(() => String(displayName.value || '我').trim().slice(0, 1).toUpperCase())
 
 const statusText = computed(() => {

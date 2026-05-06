@@ -1,6 +1,8 @@
 package com.lovecube.backend.repository;
 
 import com.lovecube.backend.entity.DynamicLike;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -28,6 +30,8 @@ public interface DynamicLikeRepository extends JpaRepository<DynamicLike, Long> 
      * 获取用户点赞的动态ID列表
      */
     List<DynamicLike> findByUserId(Long userId);
+
+    Page<DynamicLike> findByDynamicIdOrderByCreatedAtDesc(Long dynamicId, Pageable pageable);
 
     long countByUserId(Long userId);
 } 

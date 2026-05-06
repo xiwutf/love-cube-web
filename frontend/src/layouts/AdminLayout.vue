@@ -1,6 +1,32 @@
 <template>
   <div class="admin-layout">
-    <aside class="admin-sidebar">
+    <header class="admin-mobile-bar">
+      <router-link to="/admin" class="admin-mobile-brand" @click="closeNavDrawer">
+        <img :src="loveCubeIcon" alt="">
+        <span class="admin-mobile-brand-text">Love Cube</span>
+      </router-link>
+      <p class="admin-mobile-section u-truncate">{{ currentSection }}</p>
+      <button
+        id="admin-nav-drawer-trigger"
+        type="button"
+        class="admin-menu-toggle"
+        :aria-expanded="navDrawerOpen"
+        aria-controls="admin-nav-drawer"
+        aria-label="打开或关闭后台菜单"
+        @click="toggleNavDrawer"
+      >
+        <span class="admin-menu-burger" aria-hidden="true" />
+      </button>
+    </header>
+
+    <div
+      v-show="navDrawerOpen"
+      class="admin-drawer-backdrop"
+      aria-hidden="true"
+      @click="closeNavDrawer"
+    />
+
+    <aside id="admin-nav-drawer" class="admin-sidebar" :class="{ 'is-drawer-open': navDrawerOpen }">
       <router-link to="/admin" class="admin-brand">
         <img :src="loveCubeIcon" alt="">
         <span>Love Cube Console</span>
@@ -33,7 +59,12 @@
               :href="href"
               class="admin-nav-link"
               :class="{ 'is-active': entry.to === '/admin' ? isExactActive : isActive }"
-              @click="navigate"
+              @click="
+                (e) => {
+                  navigate(e)
+                  closeNavDrawer()
+                }
+              "
             >
               <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>
               <span>{{ entry.label }}</span>
@@ -42,21 +73,13 @@
         </div>
       </nav>
 
-      <router-link to="/" class="back-home">返回平台官网</router-link>
+      <router-link to="/" class="back-home" @click="closeNavDrawer">返回平台官网</router-link>
     </aside>
 
     <main class="admin-main">
-      <header class="admin-main-header">
-        <div class="admin-main-heading">
-          <p class="admin-main-kicker">管理后台</p>
-          <h1 class="admin-main-title">{{ currentSection }}</h1>
-          <p v-if="pageSubtitle" class="admin-main-subtitle">{{ pageSubtitle }}</p>
-        </div>
-        <div class="admin-main-actions">
-          <RouteBackButton v-if="showRouteBackButton" class="admin-route-back" />
-          <router-link to="/" class="admin-home-link">打开平台官网</router-link>
-        </div>
-      </header>
+      <div v-if="showRouteBackButton" class="admin-main-back-strip">
+        <RouteBackButton class="admin-route-back" />
+      </div>
 
       <section class="admin-main-content">
         <router-view />
@@ -66,20 +89,56 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import RouteBackButton from '@/components/RouteBackButton.vue'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 import { useUserStore } from '@/stores/user.js'
-import {
-  ADMIN_NAV_GROUPS,
-  filterAdminNavGroups,
-  getAdminPageSubtitle,
-  resolveAdminSectionTitle
-} from '@/constants/adminNavigation.js'
+import { ADMIN_NAV_GROUPS, filterAdminNavGroups, resolveAdminSectionTitle } from '@/constants/adminNavigation.js'
 
 const route = useRoute()
 const userStore = useUserStore()
+
+const navDrawerOpen = ref(false)
+
+function closeNavDrawer() {
+  navDrawerOpen.value = false
+}
+
+function toggleNavDrawer() {
+  navDrawerOpen.value = !navDrawerOpen.value
+}
+
+watch(navDrawerOpen, (open) => {
+  if (typeof document === 'undefined') return
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    closeNavDrawer()
+  }
+)
+
+function onGlobalKeydown(e) {
+  if (e.key === 'Escape') {
+    closeNavDrawer()
+  }
+}
+
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', onGlobalKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('keydown', onGlobalKeydown)
+    document.body.style.overflow = ''
+  }
+})
 
 const visibleNavGroups = computed(() =>
   filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission)
@@ -102,7 +161,6 @@ const visibleNavItems = computed(() => visibleNavGroups.value.flatMap(g => g.ite
 const navHomePaths = computed(() => new Set(visibleNavItems.value.map(item => item.to)))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const currentSection = computed(() => resolveAdminSectionTitle(route.path))
-const pageSubtitle = computed(() => getAdminPageSubtitle(route.path))
 const todayText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
 )
@@ -310,70 +368,14 @@ const todayText = computed(() =>
 .admin-main {
   min-height: 100vh;
   padding: 16px 18px 22px;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 14px;
-  min-width: 0;
-}
-
-.admin-main-header {
-  border: 1px solid var(--lc-border);
-  border-radius: 12px;
-  background: var(--lc-surface);
-  padding: 14px 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
-  box-shadow: var(--lc-shadow-sm);
-}
-
-.admin-main-kicker {
-  margin: 0;
-  color: var(--lc-subtle);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .12em;
-  font-weight: 700;
-}
-
-.admin-main-heading {
   min-width: 0;
 }
 
-.admin-main-title {
-  margin: 6px 0 0;
-  font-size: 24px;
-  line-height: 1.15;
-  color: var(--lc-text);
-  font-weight: 800;
-}
-
-.admin-main-subtitle {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--lc-muted);
-  font-weight: 500;
-  max-width: 40rem;
-}
-
-.admin-home-link {
-  text-decoration: none;
-  color: var(--lc-blue);
-  font-weight: 700;
-  font-size: 13px;
-  border: 1px solid var(--lc-blue-border);
-  background: var(--lc-blue-light);
-  border-radius: 8px;
-  padding: 8px 14px;
-  transition: background .18s ease, border-color .18s ease, color .18s ease;
-}
-
-.admin-main-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.admin-main-back-strip {
+  flex-shrink: 0;
 }
 
 .admin-route-back {
@@ -385,114 +387,174 @@ const todayText = computed(() =>
   color: var(--lc-blue);
 }
 
-.admin-home-link:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: var(--lc-blue-dark);
-}
-
 .admin-main-content {
+  flex: 1;
   min-height: 0;
   min-width: 0;
-  max-width: min(1440px, 100%);
+  max-width: 100%;
   width: 100%;
+}
+
+.admin-mobile-bar,
+.admin-drawer-backdrop {
+  display: none;
 }
 
 @media (max-width: 1023px) {
   .admin-layout {
-    grid-template-columns: 1fr;
+    display: block;
+    grid-template-columns: unset;
+  }
+
+  .admin-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top, 0px));
+    border-bottom: 1px solid var(--lc-border);
+    background: var(--lc-surface);
+    position: sticky;
+    top: 0;
+    z-index: 80;
+  }
+
+  .admin-mobile-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    text-decoration: none;
+    color: var(--lc-text);
+  }
+
+  .admin-mobile-brand img {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .admin-mobile-brand-text {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+
+  .admin-mobile-section {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--lc-text);
+  }
+
+  .admin-menu-toggle {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--lc-border);
+    border-radius: 10px;
+    background: var(--lc-bg);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+
+  .admin-menu-toggle:hover {
+    background: var(--lc-soft);
+    border-color: var(--lc-blue-border);
+  }
+
+  .admin-menu-burger {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--lc-text);
+    box-shadow:
+      0 -6px 0 var(--lc-text),
+      0 6px 0 var(--lc-text);
+  }
+
+  .admin-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: color-mix(in srgb, var(--lc-text) 38%, transparent);
+    border: 0;
+    padding: 0;
+    margin: 0;
   }
 
   .admin-sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 50;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--lc-border);
-    gap: 6px;
-    padding: 10px 12px;
-    overflow: visible;
+    left: 0;
+    bottom: 0;
+    width: min(304px, 88vw);
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    pointer-events: none;
+    border-right: 1px solid var(--lc-border);
+    border-bottom: none;
+    padding: 14px 10px 10px;
+    padding-top: max(14px, env(safe-area-inset-top, 0px));
+    gap: 8px;
+    overflow: hidden auto;
+    box-shadow: none;
   }
 
-  .admin-sidebar-card {
-    display: none;
+  .admin-sidebar.is-drawer-open {
+    transform: translateX(0);
+    pointer-events: auto;
+    box-shadow: 8px 0 24px color-mix(in srgb, var(--lc-text) 12%, transparent);
   }
 
+  .admin-sidebar-card,
   .admin-sidebar-guide {
     display: none;
   }
 
-  .admin-brand {
-    font-size: 15px;
-  }
-
-  .admin-sub {
-    display: none;
-  }
-
   .admin-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 4px;
-    overflow: visible;
-    padding-right: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    overflow-y: auto;
+    padding-right: 2px;
   }
 
   .admin-nav-section {
-    grid-column: 1 / -1;
-    padding: 10px 10px 4px;
+    grid-column: auto;
+    padding: 12px 10px 4px;
   }
 
   .admin-nav-link {
-    justify-content: center;
-    font-size: 12px;
-    padding: 7px 6px;
+    justify-content: flex-start;
+    font-size: 13px;
+    padding: 9px 10px;
   }
 
   .back-home {
-    justify-content: center;
-    font-size: 12px;
-    padding: 7px 6px;
-  }
-
-  .nav-icon {
-    display: none;
+    font-size: 13px;
+    padding: 8px 10px;
   }
 
   .admin-main {
-    padding: 12px 14px 20px;
+    min-height: 0;
+    padding: 12px 14px max(20px, env(safe-area-inset-bottom, 0px));
     gap: 12px;
   }
 
-  .admin-main-header {
-    padding: 12px 14px;
-    border-radius: 12px;
-  }
-
-  .admin-main-title {
-    font-size: 20px;
-  }
-
-  .admin-home-link {
-    font-size: 12px;
-    padding: 7px 10px;
-  }
-}
-
-@media (max-width: 767px) {
-  .admin-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .admin-main-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .admin-main-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
 }
 </style>

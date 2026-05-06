@@ -7,9 +7,9 @@
         </div>
         <div>
           <p class="platform-kicker">Platform Bulletin</p>
-          <h1 class="hero-title">平台动态公告</h1>
+          <h1 class="hero-title">平台公告</h1>
           <p class="hero-subtitle">
-            聚合发布平台更新、规则说明、功能上新和活动通知，帮助用户快速了解平台动态。
+            聚合发布平台更新、规则说明、功能上新和活动通知，帮助用户快速了解平台公告。
           </p>
           <div class="hero-stats" aria-label="公告概览">
             <article v-for="stat in heroStats" :key="stat.label" class="hero-stat">

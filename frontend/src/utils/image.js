@@ -20,10 +20,10 @@ export const DEFAULT_AVATAR = '/default-avatar.svg'
 /** 安全取头像 URL */
 export function getAvatar(user) {
   const raw =
+    user?.avatarUrl ||
     user?.profilePhoto ||
     user?.profile_photo ||
     user?.avatar ||
-    user?.avatarUrl ||
     resolveFirstPhoto(user) ||
     ''
   return toFullUrl(raw) || DEFAULT_AVATAR

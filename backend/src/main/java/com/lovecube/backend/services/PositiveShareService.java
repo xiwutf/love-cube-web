@@ -227,7 +227,7 @@ public class PositiveShareService {
                 "createdAt", saved.getCreatedAt(),
                 "userId", userId,
                 "username", user != null ? user.getUsername() : "用户",
-                "avatar", user != null ? user.getProfilePhoto() : null,
+                "avatarUrl", user != null ? user.getProfilePhoto() : null,
                 "commentCount", share.getCommentCount()
         );
     }
@@ -426,7 +426,7 @@ public class PositiveShareService {
                     "shareId", row.getShareId(),
                     "userId", row.getUserId(),
                     "username", user != null && user.getUsername() != null && !user.getUsername().isBlank() ? user.getUsername() : "平台用户",
-                    "avatar", user != null ? user.getProfilePhoto() : null,
+                    "avatarUrl", user != null ? user.getProfilePhoto() : null,
                     "content", row.getContent(),
                     "createdAt", row.getCreatedAt()
             ));
@@ -463,7 +463,7 @@ public class PositiveShareService {
         item.put("id", share.getId());
         item.put("userId", share.getUserId());
         item.put("nickname", displayName);
-        item.put("avatar", avatar);
+        item.put("avatarUrl", avatar);
         item.put("category", share.getCategory());
         item.put("content", share.getContent());
         item.put("anonymous", Boolean.TRUE.equals(share.getAnonymous()));

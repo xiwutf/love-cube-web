@@ -19,7 +19,7 @@
           round
           width="80"
           height="80"
-          :src="userInfo.profilePhoto"
+          :src="profileAvatarSrc"
           fit="cover"
           class="avatar"
         >
@@ -96,16 +96,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { getMe } from '@/api/user.js'
 import { useUserStore } from '@/stores/user.js'
+import { getAvatar } from '@/utils/image.js'
 
 const router    = useRouter()
 const userStore = useUserStore()
 const loading   = ref(true)
 const userInfo  = ref(null)
+
+const profileAvatarSrc = computed(() => getAvatar(userInfo.value))
 
 async function loadUserInfo() {
   loading.value = true

@@ -37,10 +37,15 @@ public class PlatformGroup {
 
     private Boolean pinned;
 
+    /**
+     * 创建者用户 ID（历史字段，与 {@link #ownerUserId} 在业务上常一致）。
+     * 对外「拥有者」语义请以 {@link #ownerUserId} 为准；若为空可兼容回退本字段。
+     */
+    @Deprecated
     @Column(name = "created_by")
     private Long createdBy;
 
-    /** 团体拥有者（通常与创建者一致） */
+    /** 团体拥有者（API 主字段 ownerUserId 的数据来源） */
     @Column(name = "owner_user_id")
     private Long ownerUserId;
 

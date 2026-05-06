@@ -80,6 +80,11 @@
       </section>
     </div>
 
+    <MyInvitePanel
+      :invite-code="inviteCodeDisplay"
+      :invite-count="inviteCount"
+    />
+
     <div class="dash-grid dash-overview-row">
       <StatsOverview class="overview-panel" :items="coreOverviewItems" />
       <AchievementPanel class="achievement-panel" :items="achievementItems" />
@@ -100,6 +105,7 @@ import AchievementPanel from './panels/AchievementPanel.vue'
 import GroupPanel from './panels/GroupPanel.vue'
 import GrowthPanel from './panels/GrowthPanel.vue'
 import HeroUserCard from './panels/HeroUserCard.vue'
+import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
 import QuickActions from './panels/QuickActions.vue'
 import StatsOverview from './panels/StatsOverview.vue'
 
@@ -109,6 +115,7 @@ const props = defineProps({
   userIdDisplay: { type: [String, Number], required: true },
   locationDisplay: { type: String, required: true },
   inviteCodeDisplay: { type: String, required: true },
+  inviteCount: { type: Number, default: 0 },
   copyFeedback: { type: String, default: '' },
   copyFeedbackError: { type: Boolean, default: false },
   profileLightStats: { type: Array, required: true },

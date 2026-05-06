@@ -26,7 +26,7 @@
       </div>
     </section>
 
-    <section class="admin-table-wrap admin-desktop-only">
+    <section class="admin-table-wrap admin-desktop-only invites-table-wrap">
       <table class="admin-table">
         <thead>
           <tr>
@@ -36,6 +36,7 @@
             <th>被邀请人</th>
             <th>状态</th>
             <th>注册 IP</th>
+            <th>友好摘要</th>
             <th>设备信息</th>
             <th>注册时间</th>
           </tr>
@@ -48,7 +49,25 @@
             <td>{{ item.inviteeUserId || '-' }} / {{ item.inviteeName || '-' }}</td>
             <td>{{ item.status || '-' }}</td>
             <td>{{ item.registerIp || '-' }}</td>
-            <td class="ua">{{ item.registerUserAgent || '-' }}</td>
+            <td class="ua-summary">{{ summarizeRegisterUserAgent(item.registerUserAgent) }}</td>
+            <td class="ua">
+              <div class="ua-inline">
+                <div
+                  class="ua-body"
+                  :title="item.registerUserAgent || undefined"
+                >
+                  {{ item.registerUserAgent || '-' }}
+                </div>
+                <button
+                  v-if="item.registerUserAgent"
+                  type="button"
+                  class="ua-copy admin-btn ghost"
+                  @click="copyUa(item.registerUserAgent)"
+                >
+                  复制
+                </button>
+              </div>
+            </td>
             <td>{{ formatDate(item.createdAt) }}</td>
           </tr>
         </tbody>
@@ -65,7 +84,25 @@
         <p class="admin-row-meta">邀请人：{{ item.inviterUserId }} / {{ item.inviterName || '-' }}</p>
         <p class="admin-row-meta">被邀请人：{{ item.inviteeUserId || '-' }} / {{ item.inviteeName || '-' }}</p>
         <p class="admin-row-meta">IP：{{ item.registerIp || '-' }}</p>
-        <p class="admin-row-meta">设备：{{ item.registerUserAgent || '-' }}</p>
+        <p class="admin-row-meta ua-friendly">
+          <span class="ua-friendly-label">友好摘要</span>
+          {{ summarizeRegisterUserAgent(item.registerUserAgent) }}
+        </p>
+        <p class="admin-row-meta ua-mobile-label">原始设备信息</p>
+        <div
+          class="ua-mobile"
+          :title="item.registerUserAgent || undefined"
+        >
+          {{ item.registerUserAgent || '-' }}
+        </div>
+        <button
+          v-if="item.registerUserAgent"
+          type="button"
+          class="admin-btn ghost ua-copy-mobile"
+          @click="copyUa(item.registerUserAgent)"
+        >
+          复制设备信息
+        </button>
         <p class="admin-row-meta">时间：{{ formatDate(item.createdAt) }}</p>
       </article>
       <van-empty v-if="!loading && !rows.length" description="暂无邀请记录" />
@@ -102,6 +139,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { showToast } from 'vant'
 import { getAdminInvites } from '@/api/invite.js'
+import { summarizeRegisterUserAgent } from '@/utils/userAgentSummary.js'
 
 const loading = ref(false)
 const rows = ref([])
@@ -181,6 +219,17 @@ function formatDate(value) {
   return date.toLocaleString('zh-CN', { hour12: false })
 }
 
+async function copyUa(text) {
+  const t = String(text || '').trim()
+  if (!t) return
+  try {
+    await navigator.clipboard.writeText(t)
+    showToast({ type: 'success', message: '设备信息已复制' })
+  } catch {
+    showToast({ type: 'fail', message: '复制失败，请手动选择文本' })
+  }
+}
+
 onMounted(loadInvites)
 
 watch(pageSize, () => {
@@ -219,11 +268,99 @@ watch(totalPages, (pages) => {
   gap: 8px;
 }
 
+.invites-table-wrap .admin-table {
+  min-width: 1240px;
+}
+
+.ua-summary {
+  min-width: 200px;
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--lc-text);
+}
+
+.ua-friendly {
+  padding: 8px 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid var(--lc-border);
+  color: var(--lc-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ua-friendly-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lc-muted);
+  margin-bottom: 4px;
+}
+
 .ua {
-  max-width: 260px;
+  min-width: 180px;
+  max-width: 340px;
+}
+
+.ua-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ua-body {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  color: var(--lc-text);
+}
+
+.ua-copy {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.admin-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--lc-border);
+  color: var(--lc-muted);
+}
+
+.ua-mobile-label {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--lc-muted);
+}
+
+.ua-mobile {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--lc-soft);
+  border: 1px solid var(--lc-border);
+  font-size: 11px;
+  line-height: 1.45;
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--lc-text);
+}
+
+.ua-copy-mobile {
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .invite-pagination-card {

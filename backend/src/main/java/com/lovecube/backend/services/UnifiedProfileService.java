@@ -109,8 +109,10 @@ public class UnifiedProfileService {
         result.put("height", merged.get("height"));
         result.put("signature", merged.getOrDefault("bio", ""));
         result.put("bio", merged.getOrDefault("bio", ""));
-        result.put("profilePhoto", merged.getOrDefault("avatar", ""));
-        result.put("avatar", merged.getOrDefault("avatar", ""));
+        String avatarUrl = merged.getOrDefault("avatarUrl", "").toString();
+        result.put("avatarUrl", avatarUrl);
+        // 过渡期别名：与 users.profile_photo 及旧客户端对齐，与 avatarUrl 同值
+        result.put("profilePhoto", avatarUrl);
         result.put("photos", merged.getOrDefault("photos", List.of()));
         result.put("role", normalizeRole(user.getRole()));
         result.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
@@ -175,7 +177,7 @@ public class UnifiedProfileService {
             );
             Map<String, String> row = new LinkedHashMap<>();
             row.put("nickname", defaultText(nickname, ""));
-            row.put("avatar", defaultText(avatar, ""));
+            row.put("avatarUrl", defaultText(avatar, ""));
             out.put(uid, row);
         }
         return out;
@@ -189,8 +191,8 @@ public class UnifiedProfileService {
                 user.setUsername(normalizeNickname(nickname));
             }
         }
-        if (payload.containsKey("avatar") || payload.containsKey("profilePhoto")) {
-            String avatar = firstText(payload.get("avatar"), payload.get("profilePhoto"));
+        if (payload.containsKey("avatarUrl") || payload.containsKey("avatar") || payload.containsKey("profilePhoto")) {
+            String avatar = firstText(payload.get("avatarUrl"), payload.get("avatar"), payload.get("profilePhoto"));
             if (avatar != null) {
                 user.setProfilePhoto(avatar);
             }
@@ -334,7 +336,7 @@ public class UnifiedProfileService {
         result.put("height", merged.get("height"));
         result.put("bio", merged.getOrDefault("bio", ""));
         result.put("intention", merged.getOrDefault("intention", ""));
-        result.put("avatarUrl", merged.getOrDefault("avatar", ""));
+        result.put("avatarUrl", merged.getOrDefault("avatarUrl", ""));
         result.put("tags", merged.getOrDefault("tags", ""));
         result.put("identityRole", merged.getOrDefault("identityRole", "self"));
         result.put("guardianRole", merged.getOrDefault("guardianRole", ""));
@@ -371,8 +373,9 @@ public class UnifiedProfileService {
         card.put("id",           user.getUserid());
         card.put("nickname",     defaultText(user.getUsername(), ""));
         card.put("username",     defaultText(user.getUsername(), ""));
-        card.put("avatar",       defaultText(user.getProfilePhoto(), ""));
-        card.put("profilePhoto", defaultText(user.getProfilePhoto(), ""));
+        String photo = defaultText(user.getProfilePhoto(), "");
+        card.put("avatarUrl",    photo);
+        card.put("profilePhoto", photo);
         card.put("age",          user.getAge());
         card.put("location",     defaultText(user.getLocation(), ""));
         card.put("occupation",   defaultText(user.getOccupation(), ""));
@@ -538,7 +541,7 @@ public class UnifiedProfileService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("userId", user.getUserid());
         out.put("nickname", defaultText(nickname, ""));
-        out.put("avatar", defaultText(avatar, ""));
+        out.put("avatarUrl", defaultText(avatar, ""));
         out.put("gender", defaultText(gender, ""));
         out.put("birthYear", birthYear);
         out.put("birthday", birthYear == null ? "" : birthYear + "-01-01");
@@ -758,10 +761,20 @@ public class UnifiedProfileService {
         return text == null ? fallback : text;
     }
 
-    private String firstText(Object a, Object b) {
-        String av = toTrimmed(a);
-        if (isNotBlank(av)) return av;
-        return toTrimmed(b);
+    /**
+     * 依次取第一个非空白的字符串；若全部空白则返回最后一项的 {@link #toTrimmed} 结果（可为 null）。
+     */
+    private String firstText(Object... parts) {
+        if (parts == null || parts.length == 0) {
+            return null;
+        }
+        for (int i = 0; i < parts.length - 1; i++) {
+            String av = toTrimmed(parts[i]);
+            if (isNotBlank(av)) {
+                return av;
+            }
+        }
+        return toTrimmed(parts[parts.length - 1]);
     }
 
     private String toTrimmed(Object raw) {

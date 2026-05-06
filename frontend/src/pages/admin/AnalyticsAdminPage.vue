@@ -107,12 +107,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in visitors.items" :key="item.id">
-            <td>{{ item.visitorId }}</td>
-            <td>{{ item.path || '/' }}</td>
-            <td>{{ item.ip || '-' }}</td>
-            <td>{{ item.deviceType || 'other' }} / {{ item.browser || 'other' }}</td>
-            <td>{{ formatTime(item.updatedAt) }}</td>
+          <template v-if="visitors.items.length">
+            <tr v-for="item in visitors.items" :key="item.id">
+              <td>{{ item.visitorId }}</td>
+              <td>{{ item.path || '/' }}</td>
+              <td>{{ item.ip || '-' }}</td>
+              <td>{{ item.deviceType || 'other' }} / {{ item.browser || 'other' }}</td>
+              <td>{{ formatTime(item.updatedAt) }}</td>
+            </tr>
+          </template>
+          <tr v-else-if="!loading">
+            <td colspan="5" class="empty-text">暂无访客明细（汇总数据来自访问日志；若长期为空请确认前端已启用访问采集）</td>
           </tr>
         </tbody>
       </table>
@@ -189,7 +194,11 @@ async function loadAll() {
     assign(topPages, topPageRes, { items: [] })
     assign(sources, sourceRes, { items: [] })
     assign(client, clientRes, { devices: [], browsers: [], os: [] })
-    assign(visitors, visitorRes, { items: [] })
+    const vr = visitorRes || {}
+    assign(visitors, {
+      total: Number(vr.total) || 0,
+      items: Array.isArray(vr.items) ? vr.items : (Array.isArray(vr.visitors) ? vr.visitors : [])
+    }, { items: [] })
   } catch (e) {
     error.value = e.message || '访客分析加载失败'
   } finally {

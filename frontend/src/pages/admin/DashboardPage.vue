@@ -1,5 +1,15 @@
 <template>
   <section class="admin-page dashboard-page">
+    <AdminMobileWorkbench
+      v-if="isMobileDashboard"
+      :stats="stats"
+      :loading="loading"
+      :error="error"
+      @refresh="load(true)"
+      @retry="load(false)"
+    />
+
+    <template v-else>
     <header class="dashboard-welcome platform-card">
       <p class="welcome-kicker">工作台</p>
       <h2 class="welcome-title">你好，{{ displayName }}</h2>
@@ -52,7 +62,9 @@
           />
           <AdminMetricsSection
             title="互动与匹配"
-            description="动态条数与累计评论/点赞；匹配记录（今日与近7日）。"
+            description="联谊动态条数与累计评论/点赞；匹配记录（今日与近7日）。"
+            link-to="/admin/fellowship-dynamics"
+            link-text="联谊动态明细"
             :loading="loading"
             :items="engagementMetrics"
           />
@@ -66,7 +78,7 @@
           />
           <AdminMetricsSection
             title="流量与消息"
-            description="近7日去重访客、多次访问访客；站内通知体量。"
+            description="近7日去重访客、多次访问访客；消息通知体量。"
             link-to="/admin/analytics"
             link-text="访客分析"
             :loading="loading"
@@ -94,11 +106,12 @@
       <p>{{ error }}</p>
       <button class="admin-btn" @click="load(false)">重新加载</button>
     </div>
+    </template>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getAdminStats } from '@/api/adminContent.js'
 import { useUserStore } from '@/stores/user.js'
 import TodayStats from './components/TodayStats.vue'
@@ -108,6 +121,7 @@ import GovernanceBar from './components/GovernanceBar.vue'
 import AdminModuleDirectory from './components/AdminModuleDirectory.vue'
 import AdminHowTo from './components/AdminHowTo.vue'
 import AdminMetricsSection from './components/AdminMetricsSection.vue'
+import AdminMobileWorkbench from './components/AdminMobileWorkbench.vue'
 
 const userStore = useUserStore()
 
@@ -117,6 +131,9 @@ const displayName = computed(
 
 const loading = ref(true)
 const error = ref('')
+const isMobileDashboard = ref(
+  typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
+)
 const stats = ref({
   totalUsers: 0,
   todayNewUsers: 0,
@@ -147,6 +164,14 @@ const stats = ref({
 
 function pick(groupKey, key) {
   return stats.value?.[groupKey]?.[key] ?? stats.value?.[key] ?? 0
+}
+
+function pickAny(groupKey, keys) {
+  for (const key of keys) {
+    const value = stats.value?.[groupKey]?.[key] ?? stats.value?.[key]
+    if (value != null) return value
+  }
+  return 0
 }
 
 const statsCacheTtlSeconds = computed(() => {
@@ -191,8 +216,8 @@ const todayStats = computed(() => [
 ])
 
 const contentMetrics = computed(() => [
-  { label: '公告数', value: pick('contentData', 'totalAnnouncements') },
-  { label: '文章数', value: pick('contentData', 'totalArticles') },
+  { label: '平台公告数', value: pick('contentData', 'totalAnnouncements') },
+  { label: '平台资讯数', value: pick('contentData', 'totalArticles') },
   { label: '活动数', value: pick('contentData', 'totalEvents') },
   { label: '推荐内容', value: pick('contentData', 'recommendedContent') },
   { label: '近30天新发布', value: pick('contentData', 'contentPublishedLast30d') }
@@ -243,11 +268,11 @@ const helpShareMetrics = computed(() => [
 ])
 
 const engagementMetrics = computed(() => [
-  { label: '动态总数', value: pick('engagementData', 'dynamicsTotal') },
-  { label: '今日动态', value: pick('engagementData', 'dynamicsToday') },
-  { label: '近7日动态', value: pick('engagementData', 'dynamicsSevenDays') },
-  { label: '动态评论累计', value: pick('engagementData', 'dynamicCommentsSum') },
-  { label: '动态点赞累计', value: pick('engagementData', 'dynamicLikesSum') },
+  { label: '联谊动态总数', value: pickAny('engagementData', ['fellowshipDynamicsTotal', 'dynamicsTotal']) },
+  { label: '今日联谊动态', value: pickAny('engagementData', ['fellowshipDynamicsToday', 'dynamicsToday']) },
+  { label: '近7日联谊动态', value: pickAny('engagementData', ['fellowshipDynamicsSevenDays', 'dynamicsSevenDays']) },
+  { label: '联谊动态评论累计', value: pickAny('engagementData', ['fellowshipDynamicCommentsSum', 'dynamicCommentsSum']) },
+  { label: '联谊动态点赞累计', value: pickAny('engagementData', ['fellowshipDynamicLikesSum', 'dynamicLikesSum']) },
   { label: '匹配记录总', value: pick('engagementData', 'matchRecordsTotal') },
   { label: '今日匹配', value: pick('engagementData', 'matchRecordsToday') },
   { label: '近7日匹配', value: pick('engagementData', 'matchRecordsSevenDays') }
@@ -269,9 +294,9 @@ const growthMetrics = computed(() => [
 const visitorAndNotifyMetrics = computed(() => [
   { label: '近7日UV', value: pick('visitorQualityData', 'visitorsUv7d') },
   { label: '7日回访访客', value: pick('visitorQualityData', 'repeatVisitors7d') },
-  { label: '通知总数', value: pick('notificationData', 'totalNotifications') },
-  { label: '未读通知', value: pick('notificationData', 'unreadNotifications') },
-  { label: '今日新通知', value: pick('notificationData', 'todayNotifications') }
+  { label: '消息通知总数', value: pick('notificationData', 'totalNotifications') },
+  { label: '未读消息通知', value: pick('notificationData', 'unreadNotifications') },
+  { label: '今日新消息通知', value: pick('notificationData', 'todayNotifications') }
 ])
 
 const reportReasons = computed(() => {
@@ -291,7 +316,27 @@ async function load(forceRefresh = false) {
   }
 }
 
-onMounted(() => load(false))
+let mediaQuery = null
+
+function updateMobileDashboard(e) {
+  isMobileDashboard.value = Boolean(e.matches)
+}
+
+onMounted(() => {
+  load(false)
+
+  if (typeof window !== 'undefined') {
+    mediaQuery = window.matchMedia('(max-width: 767px)')
+    updateMobileDashboard(mediaQuery)
+    mediaQuery.addEventListener('change', updateMobileDashboard)
+  }
+})
+
+onUnmounted(() => {
+  if (mediaQuery) {
+    mediaQuery.removeEventListener('change', updateMobileDashboard)
+  }
+})
 </script>
 
 <style scoped>

@@ -4,7 +4,7 @@
       <div class="hero-copy">
         <p class="hero-kicker">Featured Content</p>
         <h1>精选内容</h1>
-        <p>精选攻略、平台动态与活动资讯，一站式浏览。</p>
+        <p>精选攻略、平台公告与活动资讯，一站式浏览。</p>
         <button type="button" class="publish-entry-btn" @click="openPublishDialog">发布内容</button>
       </div>
       <div class="hero-visual" aria-hidden="true">

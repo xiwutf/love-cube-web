@@ -76,7 +76,7 @@
                 round
                 width="60"
                 height="60"
-                :src="user.profilePhoto || user.profile_photo"
+                :src="getAvatar(user)"
                 fit="cover"
                 class="rec-avatar"
               >
@@ -109,7 +109,7 @@
             class="nc-item"
             @click="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)"
           >
-            <van-image round width="48" height="48" :src="user.profilePhoto || user.profile_photo" fit="cover">
+            <van-image round width="48" height="48" :src="getAvatar(user)" fit="cover">
               <template #error>
                 <div class="avatar-fb size48">{{ (user.nickname || user.username || '?')[0] }}</div>
               </template>
@@ -153,6 +153,7 @@ import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.w
 import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.webp'
 import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.webp'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
+import { getAvatar } from '@/utils/image.js'
 
 const router = useRouter()
 const profileStore = useFellowshipProfileStore()

@@ -10,6 +10,6 @@ export function toFullUrl(url) {
 export const DEFAULT_AVATAR = '/default-avatar.svg'
 
 export function getAvatar(user) {
-  const raw = user?.profilePhoto || user?.profile_photo || user?.avatar || user?.avatarUrl || ''
+  const raw = user?.avatarUrl || user?.profilePhoto || user?.profile_photo || user?.avatar || ''
   return toFullUrl(raw) || DEFAULT_AVATAR
 }

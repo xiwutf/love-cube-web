@@ -221,7 +221,7 @@ public class PlatformGroupController {
             item.put("id", p.getId());
             item.put("groupId", p.getGroupId());
             item.put("groupName", g != null ? g.getName() : "");
-            item.put("avatarUrl", g != null ? g.getCoverUrl() : "");
+            item.put("coverUrl", g != null ? g.getCoverUrl() : "");
             item.put("text", text);
             item.put("time", formatRelativeTime(p.getCreatedAt()));
             item.put("authorName", u != null ? u.getUsername() : "");
@@ -306,7 +306,7 @@ public class PlatformGroupController {
             a.put("userId", m.getUserId());
             a.put("role", m.getRole());
             a.put("name", u != null ? u.getUsername() : "");
-            a.put("avatar", u != null ? u.getProfilePhoto() : "");
+            a.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
             return a;
         }).collect(Collectors.toList()));
 
@@ -802,7 +802,7 @@ public class PlatformGroupController {
             item.put("likedByMe", likedSet.contains(p.getId()));
             item.put("createdAt", p.getCreatedAt());
             item.put("authorName", u != null ? u.getUsername() : "");
-            item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
+            item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
 
@@ -1004,7 +1004,7 @@ public class PlatformGroupController {
             item.put("content", c.getContent());
             item.put("createdAt", c.getCreatedAt());
             item.put("authorName", u != null ? u.getUsername() : "");
-            item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
+            item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
 
@@ -1071,7 +1071,7 @@ public class PlatformGroupController {
         result.put("content", comment.getContent());
         result.put("createdAt", comment.getCreatedAt());
         result.put("authorName", u.getUsername() != null ? u.getUsername() : "");
-        result.put("authorAvatar", u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
+        result.put("authorAvatarUrl", u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
         return result;
     }
 
@@ -1293,7 +1293,7 @@ public class PlatformGroupController {
             item.put("id", c.getId());
             item.put("userId", c.getUserId());
             item.put("username", u != null ? u.getUsername() : "");
-            item.put("avatar", u != null ? u.getProfilePhoto() : "");
+            item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
             item.put("checkinType", c.getCheckinType());
             item.put("content", c.getContent() != null ? c.getContent() : "");
             item.put("streakDays", c.getStreakDays());

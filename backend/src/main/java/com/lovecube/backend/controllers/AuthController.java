@@ -23,9 +23,6 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 public class AuthController {
     private static final int USERNAME_MAX_LENGTH = 20;
-    private static final Set<String> BOOTSTRAP_ADMIN_PHONES = Set.of(
-            "15030251407"
-    );
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -54,24 +51,24 @@ public class AuthController {
         String password = body.get("password");
 
         if (password == null || password.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "密码不能为空"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Password cannot be empty"));
         }
 
-        User user = null;
+        User user;
         if (phone != null && !phone.isEmpty()) {
             user = userRepository.findByPhoneNumber(phone);
         } else if (email != null && !email.isEmpty()) {
             user = userRepository.findByEmail(email);
         } else {
-            return ResponseEntity.badRequest().body(Map.of("message", "请填写手机号或邮箱"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone or email is required"));
         }
 
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在，请先注册"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "User does not exist"));
         }
 
         if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "密码错误"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Incorrect password"));
         }
 
         if (user.getOpenid() == null || user.getOpenid().isEmpty()) {
@@ -80,7 +77,6 @@ public class AuthController {
         }
 
         String token = JwtUtil.generateToken(user.getOpenid());
-        // 每日登录经验按日期去重，同一天只计一次。
         growthService.recordAction(user.getUserid(), "LOGIN", "LOGIN_" + java.time.LocalDate.now());
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getUserid());
@@ -101,10 +97,10 @@ public class AuthController {
         Integer genderCode;
 
         if (phone == null || phone.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "手机号不能为空"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone cannot be empty"));
         }
         if (password == null || password.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("message", "密码至少 6 位"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Password must be at least 6 characters"));
         }
         try {
             normalizedUsername = normalizeUsername(username);
@@ -113,19 +109,15 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
         }
         if (userRepository.findByPhoneNumber(phone) != null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "该手机号已注册"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Phone number is already registered"));
         }
 
-        boolean allowRegisterWithoutInvite = isBootstrapAdmin(phone) || userRepository.count() == 0;
         User inviter = null;
-        if (!allowRegisterWithoutInvite) {
-            if (inviteCode.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "邀请码不能为空"));
-            }
+        if (!inviteCode.isEmpty()) {
             try {
                 inviter = fellowshipInviteService.validateInviteCodeForRegistration(inviteCode);
             } catch (IllegalArgumentException ex) {
-                return ResponseEntity.badRequest().body(Map.of("message", "邀请码无效"));
+                return ResponseEntity.badRequest().body(Map.of("message", "Invalid invite code"));
             }
         }
 
@@ -133,7 +125,7 @@ public class AuthController {
             User user = new User();
             user.setPhoneNumber(phone);
             user.setPasswordHash(passwordEncoder.encode(password));
-            user.setUsername(normalizedUsername != null ? normalizedUsername : "用户" + phone.substring(phone.length() - 4));
+            user.setUsername(normalizedUsername != null ? normalizedUsername : "User" + phone.substring(phone.length() - 4));
             user.setOpenid("h5_tmp_" + UUID.randomUUID().toString().replace("-", ""));
             user.setInvitedByUserId(inviter == null ? null : inviter.getUserid());
             user.setRegisterIp(resolveClientIp(request));
@@ -146,7 +138,7 @@ public class AuthController {
 
             User saved = userRepository.save(user);
             saved.setOpenid("h5_" + saved.getUserid());
-            saved.setInviteCode(fellowshipInviteService.generateUniqueInviteCode(saved.getUserid()));
+            fellowshipInviteService.ensureUserInviteCode(saved);
             userRepository.save(saved);
 
             if (inviter != null) {
@@ -166,7 +158,7 @@ public class AuthController {
             return ResponseEntity.ok(result);
         } catch (Exception ex) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "注册失败，请稍后重试"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Registration failed, please try again"));
         }
     }
 
@@ -180,29 +172,29 @@ public class AuthController {
         String confirmPassword = body.get("confirmPassword");
 
         if (oldPassword == null || oldPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "旧密码不能为空"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Old password cannot be empty"));
         }
         if (newPassword == null || newPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "新密码不能为空"));
+            return ResponseEntity.badRequest().body(Map.of("message", "New password cannot be empty"));
         }
         if (newPassword.length() < 6) {
-            return ResponseEntity.badRequest().body(Map.of("message", "新密码至少 6 位"));
+            return ResponseEntity.badRequest().body(Map.of("message", "New password must be at least 6 characters"));
         }
         if (confirmPassword == null || !newPassword.equals(confirmPassword)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "两次输入的新密码不一致"));
+            return ResponseEntity.badRequest().body(Map.of("message", "Passwords do not match"));
         }
         if (newPassword.equals(oldPassword)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "新密码不能与旧密码相同"));
+            return ResponseEntity.badRequest().body(Map.of("message", "New password cannot match old password"));
         }
 
         User user = adminAuthService.requireUser(authHeader);
         if (user.getPasswordHash() == null || !passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "旧密码不正确"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Old password is incorrect"));
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "密码修改成功"));
+        return ResponseEntity.ok(Map.of("message", "Password updated"));
     }
 
     private String normalizeUsername(String rawUsername) {
@@ -214,13 +206,9 @@ public class AuthController {
             return null;
         }
         if (username.length() > USERNAME_MAX_LENGTH) {
-            throw new IllegalArgumentException("昵称最多 20 个字符");
+            throw new IllegalArgumentException("Username cannot exceed 20 characters");
         }
         return username;
-    }
-
-    private boolean isBootstrapAdmin(String phone) {
-        return BOOTSTRAP_ADMIN_PHONES.contains(phone);
     }
 
     private String resolveClientIp(HttpServletRequest request) {
@@ -256,14 +244,14 @@ public class AuthController {
     private Integer parseRegisterGender(String rawGender) {
         String value = rawGender == null ? "" : rawGender.trim().toLowerCase();
         if (value.isEmpty()) {
-            throw new IllegalArgumentException("性别不能为空");
+            throw new IllegalArgumentException("Gender cannot be empty");
         }
-        if (Set.of("male", "man", "m", "1", "男").contains(value)) {
+        if (Set.of("male", "man", "m", "1").contains(value)) {
             return 1;
         }
-        if (Set.of("female", "woman", "f", "2", "女").contains(value)) {
+        if (Set.of("female", "woman", "f", "2").contains(value)) {
             return 2;
         }
-        throw new IllegalArgumentException("性别参数无效");
+        throw new IllegalArgumentException("Invalid gender");
     }
 }

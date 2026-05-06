@@ -6,6 +6,7 @@
       :user-id-display="userIdDisplay"
       :location-display="locationDisplay"
       :invite-code-display="inviteCodeDisplay"
+      :invite-count="inviteCount"
       :copy-feedback="copyFeedback"
       :copy-feedback-error="copyFeedbackError"
       :profile-light-stats="profileLightStats"
@@ -107,7 +108,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
-import { getMyInviteCode } from '@/api/invite.js'
+import { getInviteInfo } from '@/api/invite.js'
 import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
@@ -124,6 +125,7 @@ const saveMessage = ref('')
 const saveError = ref(false)
 const { pickAndUpload, uploading } = useImageUpload()
 const inviteCode = ref('')
+const inviteCount = ref(0)
 const copyFeedback = ref('')
 const copyFeedbackError = ref(false)
 const editForm = reactive({
@@ -234,7 +236,7 @@ const displayName = computed(() => user.value?.username || user.value?.nickname 
 const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '1')
 const locationDisplay = computed(() => user.value?.location || '河北省 保定市')
 const avatarFallback = computed(() => String(displayName.value || 'L').slice(0, 1).toUpperCase())
-const inviteCodeDisplay = computed(() => inviteCode.value || 'LC69UWM')
+const inviteCodeDisplay = computed(() => inviteCode.value || '')
 const growthProgress = computed(() => {
   const nextExp = Math.max(1, Number(growthLevel.value.nextExp))
   const currentExp = Number(growthLevel.value.currentExp)
@@ -432,7 +434,7 @@ onMounted(async () => {
   if (route.query?.panel === 'edit') openEditPanel()
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   await refreshUnreadCount()
-  const [statsRes, inviteRes, growthRes] = await Promise.allSettled([getUserStatsCached(), getMyInviteCode(), getMyGrowth()])
+  const [statsRes, inviteRes, growthRes] = await Promise.allSettled([getUserStatsCached(), getInviteInfo(), getMyGrowth()])
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
@@ -440,6 +442,7 @@ onMounted(async () => {
   }
   if (inviteRes.status === 'fulfilled') {
     inviteCode.value = String(inviteRes.value?.inviteCode || inviteRes.value?.code || '').trim()
+    inviteCount.value = Number(inviteRes.value?.inviteCount ?? 0)
   }
   if (growthRes.status === 'fulfilled') {
     growthInfo.value = growthRes.value || null

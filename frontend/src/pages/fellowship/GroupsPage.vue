@@ -117,9 +117,9 @@
         <div v-for="feed in feeds" :key="feed.id" class="feed-item">
           <div
             class="feed-avatar"
-            :class="feed.avatarUrl ? 'feed-avatar--cover' : feed.avatarClass"
+            :class="feed.coverUrl ? 'feed-avatar--cover' : feed.avatarClass"
           >
-            <img v-if="feed.avatarUrl" :src="feed.avatarUrl" alt="">
+            <img v-if="feed.coverUrl" :src="feed.coverUrl" alt="">
           </div>
           <div>
             <p>
@@ -160,6 +160,7 @@ import {
   joinGroup,
   unwrapPlatformGroupList
 } from '@/api/groups.js'
+import { groupFeedCoverUrlFromApi } from '@/utils/displayFields.js'
 
 const keyword = ref('')
 const activeFilter = ref('all')
@@ -258,6 +259,7 @@ async function loadFeed() {
 function normalizeFeedItem(item, index) {
   const avatarClass = ['avatar-blue', 'avatar-purple', 'avatar-pink', 'avatar-green'][index % 4]
   const id = item.id != null ? String(item.id) : `feed-${index}-${item.createdAt ?? index}`
+  const coverUrl = groupFeedCoverUrlFromApi(item)
   return {
     id,
     title: item.groupName || '团体动态',
@@ -265,7 +267,7 @@ function normalizeFeedItem(item, index) {
     content: item.text || item.content || '',
     time: item.time || '',
     avatarClass,
-    avatarUrl: item.avatarUrl || ''
+    coverUrl
   }
 }
 

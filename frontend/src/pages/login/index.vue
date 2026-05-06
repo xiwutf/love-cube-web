@@ -6,12 +6,11 @@
           <img class="logo-mark" :src="loveCubeIcon" alt="Love Cube">
           <h1 class="logo-title">欢迎来到 Love Cube</h1>
           <p class="logo-sub">登录后即可继续你的平台体验</p>
-          <p class="faith-tip">仅限 注册和登录</p>
         </div>
 
         <van-tabs v-model:active="activeTab" class="login-tabs" color="#ff6b8a" title-active-color="#ff6b8a">
           <van-tab title="登录">
-            <van-form @submit="handleLogin" class="form-wrap">
+            <van-form class="form-wrap" @submit="handleLogin">
               <van-cell-group inset>
                 <van-field
                   v-model="loginForm.phone"
@@ -40,7 +39,7 @@
           </van-tab>
 
           <van-tab title="注册">
-            <van-form @submit="handleRegister" class="form-wrap">
+            <van-form class="form-wrap" @submit="handleRegister">
               <van-cell-group inset>
                 <van-field
                   v-model="regForm.username"
@@ -70,8 +69,7 @@
                   v-model="regForm.inviteCode"
                   name="inviteCode"
                   label="邀请码"
-                  placeholder="请输入邀请码"
-                  :rules="[{ required: true, message: '请填写邀请码' }]"
+                  placeholder="可选，扫码会自动带入"
                 />
                 <van-field
                   v-model="regForm.gender"
@@ -89,8 +87,8 @@
                   </template>
                 </van-field>
               </van-cell-group>
-              <p class="register-tip">注册后默认仅开通平台账号；找对象功能需本人手动点击开通</p>
-              <p class="invite-tip">Love Cube 当前采用邀请制注册，请填写邀请人提供的邀请码</p>
+              <p class="register-tip">注册后默认仅开通平台账号；找对象功能需本人手动开启。</p>
+              <p class="invite-tip">如果你通过邀请二维码进入，邀请码会自动填入，也可以手动修改。</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
                   注册
@@ -99,15 +97,13 @@
             </van-form>
           </van-tab>
         </van-tabs>
-
-        <p class="hint">演示账号：admin 13800000000 / 123456；普通用户：13900000000 / 123456</p>
       </section>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { useUserStore } from '@/stores/user.js'
@@ -124,6 +120,16 @@ const loginForm = reactive({ phone: '', password: '' })
 const regForm = reactive({ username: '', phone: '', password: '', inviteCode: '', gender: '' })
 const isFellowshipRoute = computed(() => route.path.startsWith('/fellowship'))
 
+function applyInviteCodeFromRoute() {
+  const code = typeof route.query.inviteCode === 'string' ? route.query.inviteCode.trim() : ''
+  if (code) {
+    regForm.inviteCode = code
+    activeTab.value = 1
+  } else if (route.path === '/register') {
+    activeTab.value = 1
+  }
+}
+
 function resolveRedirect() {
   const fromQuery = typeof route.query.redirect === 'string' ? route.query.redirect : ''
   const fromStore = userStore.consumePostLoginRedirect()
@@ -136,7 +142,7 @@ async function handleLogin() {
   loading.value = true
   try {
     await userStore.login({ phone: loginForm.phone, password: loginForm.password })
-    showToast({ message: '登录成功，欢迎回来', type: 'success' })
+    showToast({ message: '登录成功', type: 'success' })
     router.replace(resolveRedirect())
   } catch (err) {
     showToast({ message: err.message || '登录失败，请稍后重试', type: 'fail' })
@@ -157,7 +163,7 @@ async function handleRegister() {
       username,
       phone: regForm.phone,
       password: regForm.password,
-      inviteCode: regForm.inviteCode,
+      inviteCode: regForm.inviteCode.trim(),
       gender: regForm.gender
     })
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
@@ -178,6 +184,13 @@ async function handleRegister() {
     loading.value = false
   }
 }
+
+watch(
+  () => [route.path, route.query.inviteCode],
+  applyInviteCodeFromRoute
+)
+
+onMounted(applyInviteCodeFromRoute)
 </script>
 
 <style scoped>
@@ -223,14 +236,6 @@ async function handleRegister() {
   color: #64748b;
 }
 
-.faith-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #e11d48;
-  font-weight: 600;
-}
-
 .login-tabs {
   padding: 0 4px;
 }
@@ -243,7 +248,8 @@ async function handleRegister() {
   padding: 24px 16px 0;
 }
 
-.register-tip {
+.register-tip,
+.invite-tip {
   margin: 12px 18px 0;
   color: #475569;
   font-size: 12px;
@@ -251,10 +257,8 @@ async function handleRegister() {
 }
 
 .invite-tip {
-  margin: 8px 18px 0;
+  margin-top: 8px;
   color: #f43f5e;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 :deep(.van-button--primary) {
@@ -266,13 +270,6 @@ async function handleRegister() {
   border-radius: 16px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   border: 1px solid #ecf0f4;
-}
-
-.hint {
-  margin: 20px 18px 0;
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.6;
 }
 
 .gender-select {
@@ -336,8 +333,6 @@ async function handleRegister() {
   .logo-mark {
     width: 52px;
     height: 52px;
-    border-radius: 14px;
-    font-size: 17px;
   }
 
   .logo-title {
@@ -349,5 +344,3 @@ async function handleRegister() {
   }
 }
 </style>
-
-

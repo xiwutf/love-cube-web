@@ -224,7 +224,11 @@ public class UserVisitorService {
                 if (nickname.isEmpty()) {
                     nickname = "神秘访客";
                 }
-                avatar = Objects.toString(summary.get("avatar"), "").trim();
+                String av = summary.get("avatarUrl");
+                if (av == null || av.isBlank()) {
+                    av = summary.get("avatar");
+                }
+                avatar = Objects.toString(av, "").trim();
                 if (avatar.isEmpty()) {
                     avatar = visitorUser.getProfilePhoto() != null ? visitorUser.getProfilePhoto() : "/images/default-avatar.png";
                 }
@@ -237,14 +241,14 @@ public class UserVisitorService {
             dto.put("visitorId", uid);
             dto.put("userId", uid);
             dto.put("nickname", nickname);
-            dto.put("avatar", avatar);
+            dto.put("avatarUrl", avatar);
             dto.put("age", visitorUser.getAge());
             dto.put("location", visitorUser.getLocation());
 
             Map<String, Object> visitorMap = new LinkedHashMap<>();
             visitorMap.put("userId", uid);
             visitorMap.put("nickname", nickname);
-            visitorMap.put("avatar", avatar);
+            visitorMap.put("avatarUrl", avatar);
             dto.put("visitor", visitorMap);
 
             dto.put("tags", generateUserTags(visitorUser));

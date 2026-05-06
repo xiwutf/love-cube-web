@@ -99,7 +99,7 @@ public class HomeService {
         card.put("nickname", user.getUsername());
         card.put("username", user.getUsername());
         card.put("profilePhoto", user.getProfilePhoto());
-        card.put("avatar", user.getProfilePhoto());
+        card.put("avatarUrl", user.getProfilePhoto());
         card.put("age", user.getAge());
         card.put("location", user.getLocation());
         return card;

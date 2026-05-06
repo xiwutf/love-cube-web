@@ -370,6 +370,12 @@ public class AdminDashboardStatsService {
         stats.put("helpAndShareData", helpAndShareData);
 
         Map<String, Object> engagementData = new LinkedHashMap<>();
+        // 新口径：显式标注联谊动态；同时保留旧字段，避免前端存量页面受影响。
+        engagementData.put("fellowshipDynamicsTotal", dynamicsTotal);
+        engagementData.put("fellowshipDynamicsToday", dynamicsToday);
+        engagementData.put("fellowshipDynamicsSevenDays", dynamicsSevenDays);
+        engagementData.put("fellowshipDynamicCommentsSum", dynamicCommentsSum);
+        engagementData.put("fellowshipDynamicLikesSum", dynamicLikesSum);
         engagementData.put("dynamicsTotal", dynamicsTotal);
         engagementData.put("dynamicsToday", dynamicsToday);
         engagementData.put("dynamicsSevenDays", dynamicsSevenDays);

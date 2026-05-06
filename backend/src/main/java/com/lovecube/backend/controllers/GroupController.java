@@ -184,6 +184,7 @@ public class GroupController {
         Long currentUserId = resolveOptionalUserId(authHeader);
         Map<String, Object> result = buildGroupSummary(group, currentUserId);
         result.put("description", group.getDescription());
+        // 兼容：owner_user_id 未回填时回退 created_by（数据治理见 docs/field-governance.md）
         Long ou = group.getOwnerUserId() != null ? group.getOwnerUserId() : group.getCreatedBy();
         List<Map<String, Object>> adminList = new ArrayList<>();
         if (ou != null) {
@@ -192,7 +193,7 @@ public class GroupController {
                 a.put("userId", u.getUserid());
                 a.put("name", u.getUsername());
                 a.put("role", "owner");
-                a.put("avatar", u.getProfilePhoto());
+                a.put("avatarUrl", u.getProfilePhoto());
                 adminList.add(a);
             });
         }
@@ -239,7 +240,7 @@ public class GroupController {
             item.put("likeCount", p.getLikeCount());
             item.put("createdAt", p.getCreatedAt());
             item.put("authorName", u != null ? u.getUsername() : "");
-            item.put("authorAvatar", u != null ? u.getProfilePhoto() : "");
+            item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
     }
@@ -408,9 +409,12 @@ public class GroupController {
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
         item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
         item.put("createdAt", g.getCreatedAt());
+        // ownerUserId 为主字段；为空时回退 created_by（过渡期兼容，见 docs/field-governance.md）
         Long ownerUid = g.getOwnerUserId() != null ? g.getOwnerUserId() : g.getCreatedBy();
         String ownerName = ownerUid != null ? ownerNames.getOrDefault(ownerUid, "") : "";
+        item.put("ownerUserId", ownerUid);
         item.put("ownerName", ownerName);
+        item.put("createdBy", g.getCreatedBy());
         item.put("tags", "");
         if (currentUserId != null) {
             GroupMember gm = memberByGroupId.get(g.getId());
@@ -450,12 +454,15 @@ public class GroupController {
         item.put("memberCount", g.getMemberCount() == null ? 0 : g.getMemberCount());
         item.put("pinned", Boolean.TRUE.equals(g.getPinned()));
         item.put("createdAt", g.getCreatedAt());
+        // ownerUserId 为主字段；为空时回退 created_by（过渡期兼容，见 docs/field-governance.md）
         Long ownerUid = g.getOwnerUserId() != null ? g.getOwnerUserId() : g.getCreatedBy();
         String ownerName = "";
         if (ownerUid != null) {
             ownerName = userRepository.findById(ownerUid).map(User::getUsername).orElse("");
         }
+        item.put("ownerUserId", ownerUid);
         item.put("ownerName", ownerName);
+        item.put("createdBy", g.getCreatedBy());
         item.put("tags", "");
         if (currentUserId != null) {
             item.put("isMember", memberRepository.existsByGroupIdAndUserId(g.getId(), currentUserId));

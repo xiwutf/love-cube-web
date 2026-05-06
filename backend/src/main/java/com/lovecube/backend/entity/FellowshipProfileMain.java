@@ -20,6 +20,11 @@ public class FellowshipProfileMain {
     @Column(name = "nickname", length = 64)
     private String nickname;
 
+    /**
+     * fellowship_profiles.avatar 列；与 fellowship_profile.avatar_url 应对齐。
+     * 请通过 UnifiedProfileService 合并读写；对外 API 主字段名为 avatarUrl。
+     */
+    @Deprecated
     @Column(name = "avatar", length = 255)
     private String avatar;
 

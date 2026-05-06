@@ -1471,7 +1471,7 @@ function normalizeComment(item) {
     id: item.id,
     userId: item.userId,
     author: item.authorName || '成员',
-    avatar: item.authorAvatar || DEFAULT_AVATAR,
+    avatar: item.authorAvatarUrl || item.authorAvatar || DEFAULT_AVATAR,
     content: item.content || '',
     time: formatDateTime(item.createdAt)
   }
@@ -1690,7 +1690,7 @@ function normalizePost(item) {
     likes: Number(item.likeCount || 0),
     comments: Number(item.commentCount || 0),
     likedByMe: Boolean(item.likedByMe),
-    avatar: item.authorAvatar || DEFAULT_AVATAR,
+    avatar: item.authorAvatarUrl || item.authorAvatar || DEFAULT_AVATAR,
     images: parseImages(item.imageUrls)
   }
 }

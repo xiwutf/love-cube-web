@@ -97,12 +97,13 @@ import { showConfirmDialog, showToast, showLoadingToast, closeToast } from 'vant
 import NavBar from '@/components/NavBar.vue'
 import { buyVip } from '@/api/vip.js'
 import { useUserStore } from '@/stores/user.js'
+import { getAvatar } from '@/utils/image.js'
 
 const userStore = useUserStore()
 const paying    = ref(false)
 const selected  = ref('month')
 
-const userAvatar  = computed(() => userStore.userInfo?.avatar || '')
+const userAvatar  = computed(() => getAvatar(userStore.userInfo))
 const userName    = computed(() => userStore.userInfo?.nickname || '用户')
 const userInitial = computed(() => (userName.value || '?')[0])
 

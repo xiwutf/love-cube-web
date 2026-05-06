@@ -1,5 +1,5 @@
 ﻿<template>
-  <section class="admin-page">
+  <section class="admin-page admin-page-users">
     <section class="platform-card">
       <h1 class="platform-title">用户管理</h1>
       <p class="platform-subtitle">展示用户列表并支持角色与状态管理</p>
@@ -63,25 +63,50 @@
       <table class="admin-table users-table">
         <thead>
           <tr>
-            <th>用户</th>
+            <th class="col-avatar-head">头像</th>
+            <th class="col-user-head">用户</th>
+            <th class="col-actions-head">操作</th>
             <th>手机</th>
             <th>性别</th>
-            <th>角色</th>
+            <th>年龄</th>
+            <th class="col-role-head">角色</th>
             <th>认证</th>
             <th>状态</th>
             <th>联谊</th>
             <th>地区</th>
             <th>最近登录</th>
             <th>注册时间</th>
-            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in paginatedUsers" :key="item.userId">
-            <td class="col-user">{{ item.username || `用户${item.userId}` }}</td>
-            <td class="col-phone">{{ item.phone || '无手机号' }}</td>
+            <td class="col-avatar">
+              <img
+                v-if="rowAvatarUrl(item)"
+                class="users-table-avatar-img"
+                :src="rowAvatarUrl(item)"
+                alt=""
+                loading="lazy"
+              >
+              <span v-else class="users-table-avatar-empty" aria-hidden="true" />
+            </td>
+            <td class="col-user" :title="item.username || `用户${item.userId}`">
+              {{ item.username || `用户${item.userId}` }}
+            </td>
+            <td class="col-actions">
+              <button
+                class="admin-btn primary users-table-detail-btn"
+                type="button"
+                :title="`用户详情：${item.username || item.userId}`"
+                @click="openDetailDialog(item)"
+              >
+                详情
+              </button>
+            </td>
+            <td class="col-phone" :title="item.phone || '无手机号'">{{ item.phone || '无手机号' }}</td>
             <td><span class="admin-tag" :class="genderTagClass(item.gender)">{{ genderLabel(item.gender) }}</span></td>
-            <td>
+            <td class="col-age">{{ formatAdminAge(item.age) }}</td>
+            <td class="col-role">
               <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
@@ -93,12 +118,9 @@
                 {{ item.fellowshipEnabled ? '已开通' : '未开通' }}
               </span>
             </td>
-            <td class="col-location">{{ item.location || '-' }}</td>
-            <td class="col-login">{{ formatDate(item.lastLoginAt) }}</td>
-            <td class="col-date">{{ formatDate(item.createdAt) }}</td>
-            <td>
-              <button class="admin-btn primary" type="button" @click="openDetailDialog(item)">用户详情</button>
-            </td>
+            <td class="col-location" :title="item.location || '-'">{{ item.location || '-' }}</td>
+            <td class="col-login" :title="formatDate(item.lastLoginAt)">{{ formatDate(item.lastLoginAt) }}</td>
+            <td class="col-date" :title="formatDate(item.createdAt)">{{ formatDate(item.createdAt) }}</td>
           </tr>
         </tbody>
       </table>
@@ -108,11 +130,21 @@
     <div class="admin-list admin-mobile-only">
       <article v-for="item in paginatedUsers" :key="item.userId" class="admin-row">
         <div class="admin-row-head">
-          <strong>{{ item.username || `用户${item.userId}` }}</strong>
+          <div class="users-mobile-head-left">
+            <img
+              v-if="rowAvatarUrl(item)"
+              class="users-mobile-avatar"
+              :src="rowAvatarUrl(item)"
+              alt=""
+              loading="lazy"
+            >
+            <span v-else class="users-mobile-avatar users-mobile-avatar-empty" aria-hidden="true" />
+            <strong>{{ item.username || `用户${item.userId}` }}</strong>
+          </div>
           <span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span>
         </div>
         <p class="admin-row-meta">{{ item.phone || '无手机号' }}</p>
-        <p class="admin-row-meta">性别：{{ genderLabel(item.gender) }}</p>
+        <p class="admin-row-meta">性别：{{ genderLabel(item.gender) }} · 年龄：{{ formatAdminAge(item.age) }}</p>
         <p class="admin-row-meta">认证：{{ verificationLabel(item.verificationStatus) }} · 联谊：{{ item.fellowshipEnabled ? '已开通' : '未开通' }}</p>
         <p class="admin-row-meta">地区：{{ item.location || '-' }} · 登录：{{ formatDate(item.lastLoginAt) }}</p>
         <p class="admin-row-meta">注册：{{ formatDate(item.createdAt) }}</p>
@@ -132,12 +164,24 @@
     >
       <section class="user-detail-wrap">
         <div class="user-detail-meta">
-          <p><strong>用户ID：</strong>{{ detailDialog.user?.userId || '-' }}</p>
-          <p><strong>用户名：</strong>{{ detailDialog.user?.username || '-' }}</p>
-          <p><strong>手机号：</strong>{{ detailDialog.user?.phone || '-' }}</p>
-          <p><strong>角色：</strong>{{ detailDialog.user?.role || '-' }}</p>
-          <p><strong>状态：</strong>{{ detailDialog.user?.status || '-' }}</p>
-          <p><strong>联谊：</strong>{{ detailDialog.user?.fellowshipEnabled ? '已开通' : '未开通' }}</p>
+          <div class="user-detail-avatar-col">
+            <img
+              v-if="detailAvatarDisplayUrl"
+              class="user-detail-avatar-img"
+              :src="detailAvatarDisplayUrl"
+              :alt="`${detailDialog.user?.username || '用户'}的头像`"
+            >
+            <div v-else class="user-detail-avatar-placeholder">无头像</div>
+          </div>
+          <div class="user-detail-meta-fields">
+            <p><strong>用户ID：</strong>{{ detailDialog.user?.userId || '-' }}</p>
+            <p><strong>用户名：</strong>{{ detailDialog.user?.username || '-' }}</p>
+            <p><strong>手机号：</strong>{{ detailDialog.user?.phone || '-' }}</p>
+            <p><strong>年龄：</strong>{{ formatAdminAge(detailDialog.user?.age) }}</p>
+            <p><strong>角色：</strong>{{ detailDialog.user?.role || '-' }}</p>
+            <p><strong>状态：</strong>{{ detailDialog.user?.status || '-' }}</p>
+            <p><strong>联谊：</strong>{{ detailDialog.user?.fellowshipEnabled ? '已开通' : '未开通' }}</p>
+          </div>
         </div>
         <div v-if="detailDialog.user" class="user-detail-actions">
           <div class="user-detail-action-card">
@@ -237,10 +281,28 @@
           </select>
           条
         </label>
-        <div class="admin-page-actions">
-          <button class="admin-btn" type="button" :disabled="currentPage <= 1" @click="goPrevPage">上一页</button>
-          <span class="admin-page-indicator">{{ currentPage }} / {{ totalPages }}</span>
-          <button class="admin-btn" type="button" :disabled="currentPage >= totalPages" @click="goNextPage">下一页</button>
+        <div class="admin-page-controls">
+          <div class="admin-page-actions">
+            <button class="admin-btn" type="button" :disabled="currentPage <= 1" @click="goFirstPage">首页</button>
+            <button class="admin-btn" type="button" :disabled="currentPage <= 1" @click="goPrevPage">上一页</button>
+            <span class="admin-page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+            <button class="admin-btn" type="button" :disabled="currentPage >= totalPages" @click="goNextPage">下一页</button>
+            <button class="admin-btn" type="button" :disabled="currentPage >= totalPages" @click="goLastPage">末页</button>
+          </div>
+          <div class="admin-page-jump">
+            <span class="admin-page-jump-label">跳转至</span>
+            <input
+              v-model.number="jumpPageDraft"
+              class="admin-page-jump-input"
+              type="number"
+              :min="1"
+              :max="totalPages"
+              aria-label="页码"
+              @keyup.enter="goJumpPage"
+            >
+            <span class="admin-page-jump-suffix">页</span>
+            <button class="admin-btn primary" type="button" @click="goJumpPage">确定</button>
+          </div>
         </div>
       </div>
     </section>
@@ -267,6 +329,7 @@ const users = ref([])
 const savingRoleUserId = ref(null)
 const userStore = useUserStore()
 const currentPage = ref(1)
+const jumpPageDraft = ref(1)
 const pageSize = ref(10)
 const filters = reactive({
   keyword: '',
@@ -342,6 +405,10 @@ const paginatedUsers = computed(() => {
   return filteredUsers.value.slice(start, end)
 })
 
+watch(currentPage, (p) => {
+  jumpPageDraft.value = p
+}, { immediate: true })
+
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
     .map((item) => ({
@@ -349,12 +416,14 @@ function normalizeUsers(rows) {
       username: item.username || '',
       phone: item.phone || '',
       gender: normalizeGender(item.gender ?? item.sex ?? item.userGender),
+      age: normalizeAdminAge(item.age),
       role: normalizeRole(item.role || 'user'),
       verificationStatus: item.verificationStatus || 'none',
       status: item.status || 'active',
       fellowshipEnabled: Boolean(item.fellowshipEnabled),
       hasUploadedPhotos: Boolean(item.hasUploadedPhotos ?? Number(item.uploadedPhotoCount || 0) > 0),
       uploadedPhotoCount: Number(item.uploadedPhotoCount || 0),
+      avatarUrl: String(item.avatarUrl || item.avatar || item.profilePhoto || '').trim(),
       location: item.location || item.city || item.region || '',
       lastLoginAt: item.lastLoginAt || item.lastActiveAt || item.loginAt || null,
       createdAt: item.createdAt || null,
@@ -369,6 +438,19 @@ function normalizeGender(value) {
   if (['male', 'man', 'm', '1', 'boy', '男'].includes(raw)) return 'male'
   if (['female', 'woman', 'f', '2', 'girl', '女'].includes(raw)) return 'female'
   return 'unknown'
+}
+
+function normalizeAdminAge(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  const i = Math.trunc(n)
+  if (i <= 0 || i >= 150) return null
+  return i
+}
+
+function formatAdminAge(value) {
+  const n = normalizeAdminAge(value)
+  return n == null ? '-' : `${n}岁`
 }
 
 function genderLabel(value) {
@@ -436,12 +518,36 @@ function resetFilters() {
   currentPage.value = 1
 }
 
+function goFirstPage() {
+  currentPage.value = 1
+}
+
 function goPrevPage() {
   if (currentPage.value > 1) currentPage.value -= 1
 }
 
 function goNextPage() {
   if (currentPage.value < totalPages.value) currentPage.value += 1
+}
+
+function goLastPage() {
+  currentPage.value = totalPages.value
+}
+
+function goJumpPage() {
+  const nRaw = Number(jumpPageDraft.value)
+  if (!Number.isFinite(nRaw)) {
+    showToast({ type: 'fail', message: '请输入有效页码' })
+    jumpPageDraft.value = currentPage.value
+    return
+  }
+  let n = Math.trunc(nRaw)
+  const max = totalPages.value
+  if (max < 1) return
+  if (n < 1) n = 1
+  if (n > max) n = max
+  currentPage.value = n
+  jumpPageDraft.value = n
 }
 
 async function loadUsers() {
@@ -581,15 +687,73 @@ async function openDetailDialog(item) {
   }
 }
 
+/**
+ * 将头像/相册地址转为当前站点可加载的 URL。
+ * 库中常存完整 http(s) 指向 :8090 或 localhost；在 https 正式站会触发混合内容拦截，需改为同域 /admin/uploads/...（由 Nginx 反代到 Spring）。
+ */
 function resolvePhotoUrl(url) {
   const value = String(url || '').trim()
   if (!value) return ''
-  if (/^https?:\/\//i.test(value)) return value
-  if (value.startsWith('/admin/uploads/')) return value
-  if (value.startsWith('/uploads/')) return `/admin${value}`
-  if (value.startsWith('/')) return value
-  return `/admin/uploads/photos/${value}`
+  const normalized = value.replace(/\\/g, '/')
+
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      const u = new URL(normalized)
+      const p = u.pathname
+      const q = u.search || ''
+      const isLocalHost = ['localhost', '127.0.0.1'].includes((u.hostname || '').toLowerCase())
+      const isHttpOnHttpsPage =
+        typeof window !== 'undefined' &&
+        window.location.protocol === 'https:' &&
+        u.protocol === 'http:'
+      // 本地地址或 HTTPS 页面引用 HTTP 资源时，改为同域 /admin/uploads，避免混合内容与本地路径不一致
+      if (p.startsWith('/admin/uploads/')) {
+        if (isLocalHost || isHttpOnHttpsPage) return `${p}${q}`
+        return normalized
+      }
+      if (p.startsWith('/admin/api/uploads/')) {
+        const fixed = p.replace('/admin/api/uploads/', '/admin/uploads/')
+        if (isLocalHost || isHttpOnHttpsPage) return `${fixed}${q}`
+        return `${u.origin}${fixed}${q}`
+      }
+      if (p.startsWith('/uploads/')) {
+        if (isLocalHost || isHttpOnHttpsPage) return `/admin${p}${q}`
+        return normalized
+      }
+    } catch {
+      /* ignore */
+    }
+    return normalized
+  }
+
+  if (normalized.startsWith('/admin/uploads/')) return normalized
+  if (normalized.startsWith('/admin/api/uploads/')) return normalized.replace('/admin/api/uploads/', '/admin/uploads/')
+  if (normalized.startsWith('/uploads/')) return `/admin${normalized}`
+  // 库中常见存法：uploads/avatar/uuid.jpg（无前置斜杠），不能落到默认 photos 路径
+  if (normalized.startsWith('uploads/')) return `/admin/${normalized}`
+  if (normalized.startsWith('admin/uploads/')) return `/${normalized}`
+  if (normalized.startsWith('admin/api/uploads/')) return `/${normalized.replace('admin/api/uploads/', 'admin/uploads/')}`
+  if (normalized.startsWith('/')) return normalized
+  if (normalized.includes('/')) return `/admin/${normalized.replace(/^\//, '')}`
+  return `/admin/uploads/photos/${normalized}`
 }
+
+function rowAvatarUrl(item) {
+  return resolvePhotoUrl(item?.avatarUrl)
+}
+
+const detailAvatarDisplayUrl = computed(() => {
+  const u = detailDialog.user
+  if (!u) return ''
+  const fromProfile = String(u.avatarUrl || '').trim()
+  if (fromProfile) return resolvePhotoUrl(fromProfile)
+  const list = Array.isArray(detailDialog.photos) ? detailDialog.photos : []
+  const primary = list.find((p) => p.primary && String(p.photoUrl || '').trim())
+  if (primary?.photoUrl) return resolvePhotoUrl(primary.photoUrl)
+  const first = list.find((p) => String(p.photoUrl || '').trim())
+  if (first?.photoUrl) return resolvePhotoUrl(first.photoUrl)
+  return ''
+})
 
 function formatPhotoStatus(status) {
   const raw = String(status || '').toUpperCase()
@@ -616,13 +780,25 @@ watch(totalPages, (pages) => {
 </script>
 
 <style scoped>
+.admin-page-users {
+  max-width: none;
+  width: 100%;
+}
+
 .admin-select {
   min-width: 120px;
   height: 38px;
 }
 
-.users-table {
-  min-width: 1400px;
+/* 整表自适应容器宽度，避免操作列被挤到横向滚动条外 */
+.admin-table.users-table {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.users-table :is(th, td) {
+  padding: 10px 8px;
 }
 
 .users-table th {
@@ -631,6 +807,84 @@ watch(totalPages, (pages) => {
 
 .users-table td {
   vertical-align: middle;
+}
+
+.users-table .col-actions-head,
+.users-table .col-actions {
+  width: 76px;
+  min-width: 76px;
+  max-width: 76px;
+  text-align: center;
+}
+
+/* 极窄管理区仍横向滚动时，固定前三列便于点「详情」 */
+.users-table thead th.col-avatar-head,
+.users-table tbody td.col-avatar {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--lc-surface);
+}
+
+.users-table thead th.col-avatar-head {
+  z-index: 5;
+  background: var(--lc-soft);
+}
+
+.users-table thead th.col-user-head,
+.users-table tbody td.col-user {
+  position: sticky;
+  left: 72px;
+  z-index: 2;
+  background: var(--lc-surface);
+  box-shadow: 3px 0 8px rgba(15, 23, 42, 0.06);
+}
+
+.users-table thead th.col-user-head {
+  z-index: 5;
+  background: var(--lc-soft);
+}
+
+.users-table thead th.col-actions-head,
+.users-table tbody td.col-actions {
+  position: sticky;
+  left: calc(72px + 14%);
+  z-index: 2;
+  background: var(--lc-surface);
+  box-shadow: 3px 0 8px rgba(15, 23, 42, 0.06);
+}
+
+.users-table thead th.col-actions-head {
+  z-index: 5;
+  background: var(--lc-soft);
+}
+
+.users-table tbody tr:hover td.col-avatar,
+.users-table tbody tr:hover td.col-user,
+.users-table tbody tr:hover td.col-actions {
+  background: rgba(37, 99, 235, 0.03);
+}
+
+.users-table-detail-btn {
+  padding: 0 8px;
+  min-height: 32px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.users-table .col-user-head,
+.users-table .col-user {
+  width: 14%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.users-table .col-role-head,
+.users-table .col-role {
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
 }
 
 .admin-filter-card {
@@ -646,16 +900,35 @@ watch(totalPages, (pages) => {
 }
 
 .admin-filter-bar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(120px, 160px)) auto;
-  gap: 10px;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  padding: 2px;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.admin-filter-bar :deep(.admin-select),
 .admin-filter-bar .admin-filter-input {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 280px;
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.admin-filter-bar :deep(.admin-select) {
+  flex: 0 0 auto;
+  min-width: 104px;
+  width: 124px;
+  max-width: 140px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.admin-filter-bar .admin-btn {
+  flex-shrink: 0;
+  height: 38px;
+  white-space: nowrap;
+  border-radius: 8px;
 }
 
 .admin-filter-input {
@@ -668,25 +941,95 @@ watch(totalPages, (pages) => {
 }
 
 .users-table :deep(.admin-select) {
-  min-width: 92px;
+  min-width: 0;
   width: 100%;
+  max-width: 100%;
+  font-size: 12px;
+  padding: 0 6px;
 }
 
-.users-table .col-user,
-.users-table .col-phone,
-.users-table .col-location,
-.users-table .col-login,
-.users-table .col-date {
+.users-table .col-avatar-head,
+.users-table .col-avatar {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.users-table-avatar-img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+}
+
+.users-table-avatar-empty {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1px dashed var(--lc-border);
+  background: var(--lc-soft);
+}
+
+.users-mobile-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.users-mobile-head-left strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.users-mobile-avatar {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+}
+
+.users-mobile-avatar-empty {
+  display: inline-block;
+  box-sizing: border-box;
+  border-style: dashed;
+  background: var(--lc-soft);
+}
+
 .users-table .col-user {
-  min-width: 160px;
   font-weight: 600;
 }
 
+.users-table .col-phone,
+.users-table .col-location {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .users-table .col-phone {
-  min-width: 140px;
+  width: 10%;
+}
+
+.users-table .col-age {
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  text-align: center;
+  color: var(--lc-muted);
 }
 
 .users-overview {
@@ -709,18 +1052,28 @@ watch(totalPages, (pages) => {
 }
 
 .users-table .col-date {
-  min-width: 170px;
+  width: 15%;
+  min-width: 12.5rem;
   color: var(--lc-muted);
+  font-size: 12px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .users-table .col-location {
-  min-width: 120px;
+  width: 8%;
   color: var(--lc-muted);
 }
 
 .users-table .col-login {
-  min-width: 170px;
+  width: 12%;
+  min-width: 12rem;
   color: var(--lc-muted);
+  font-size: 12px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .user-action-group {
@@ -750,27 +1103,61 @@ watch(totalPages, (pages) => {
   border-radius: 8px;
 }
 
-.admin-filter-bar :deep(.admin-btn) {
-  height: 38px;
-  border-radius: 8px;
-}
-
 .user-detail-wrap {
   display: grid;
   gap: 12px;
 }
 
 .user-detail-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 16px;
   padding: 12px;
   border: 1px solid var(--lc-border);
   border-radius: 10px;
   background: var(--lc-soft);
 }
 
-.user-detail-meta p {
+.user-detail-avatar-col {
+  flex: 0 0 auto;
+}
+
+.user-detail-avatar-img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+}
+
+.user-detail-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1px dashed var(--lc-border);
+  background: var(--lc-surface);
+  font-size: 11px;
+  color: var(--lc-subtle);
+  text-align: center;
+  line-height: 1.3;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.user-detail-meta-fields {
+  flex: 1 1 280px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.user-detail-meta-fields p {
   margin: 0;
   font-size: 13px;
   color: var(--lc-muted);
@@ -934,10 +1321,56 @@ watch(totalPages, (pages) => {
   font-size: 13px;
 }
 
+.admin-page-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .admin-page-actions {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 13px;
+  color: var(--lc-muted-light);
+}
+
+.admin-page-jump-label,
+.admin-page-jump-suffix {
+  white-space: nowrap;
+}
+
+.admin-page-jump-input {
+  width: 4.5rem;
+  height: 38px;
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 0 10px;
+  color: var(--lc-text);
+  text-align: center;
+  font-size: 14px;
+}
+
+.admin-page-jump-input::-webkit-outer-spin-button,
+.admin-page-jump-input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.admin-page-jump-input[type='number'] {
+  appearance: textfield;
 }
 
 .admin-page-indicator {
@@ -949,15 +1382,7 @@ watch(totalPages, (pages) => {
 }
 
 @media (max-width: 1023px) {
-  .admin-filter-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .admin-filter-bar :deep(.admin-btn) {
-    grid-column: 1 / -1;
-  }
-
-  .user-detail-meta {
+  .user-detail-meta-fields {
     grid-template-columns: 1fr 1fr;
   }
 

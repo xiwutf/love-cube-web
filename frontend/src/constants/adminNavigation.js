@@ -21,18 +21,18 @@ export const ADMIN_NAV_GROUPS = [
   {
     id: 'content',
     label: '内容与运营',
-    hint: '维护官网公告、资讯、活动，查看用户反馈。',
+    hint: '维护平台官网公告、资讯、活动，查看用户反馈。',
     items: [
       {
         to: '/admin/announcements',
-        label: '公告管理',
+        label: '平台公告管理',
         icon: '◎',
         permission: 'content.announcement.manage',
         blurb: '发布或下架公告，前台同步展示'
       },
       {
         to: '/admin/articles',
-        label: '资讯管理',
+        label: '平台资讯管理',
         icon: '◈',
         permission: 'content.article.manage',
         blurb: '编辑文章与推荐位'
@@ -92,6 +92,13 @@ export const ADMIN_NAV_GROUPS = [
         icon: '◒',
         permission: 'review.manage',
         blurb: '查看举报并处置违规'
+      },
+      {
+        to: '/admin/fellowship-dynamics',
+        label: '联谊动态',
+        icon: '✦',
+        permission: 'review.manage',
+        blurb: '联谊用户动态与点赞明细'
       }
     ]
   },
@@ -173,8 +180,8 @@ export function filterAdminNavGroups(groups, hasPermission) {
 
 const SECTION_TITLES = {
   '/admin': '总览面板',
-  '/admin/announcements': '公告管理',
-  '/admin/articles': '资讯管理',
+  '/admin/announcements': '平台公告管理',
+  '/admin/articles': '平台资讯管理',
   '/admin/positive-shares': '心声审核',
   '/admin/help-requests': '互助审核',
   '/admin/events': '活动管理',
@@ -182,6 +189,7 @@ const SECTION_TITLES = {
   '/admin/invites': '邀请记录',
   '/admin/verifications': '认证审核',
   '/admin/reports': '举报处理',
+  '/admin/fellowship-dynamics': '联谊动态',
   '/admin/feedbacks': '用户反馈',
   '/admin/local-resources': '本地资源管理',
   '/admin/modules': '模块管理',
@@ -196,8 +204,8 @@ const SECTION_TITLES = {
 const PAGE_SUBTITLES = {
   '/admin':
     '下方「功能地图」与左侧菜单一致；点卡片进入对应页面，数据区可了解运营概况。',
-  '/admin/announcements': '编辑公告标题与正文，控制是否在官网展示。',
-  '/admin/articles': '撰写或维护资讯正文、封面与推荐状态。',
+  '/admin/announcements': '编辑平台公告标题与正文，控制是否在官网展示。',
+  '/admin/articles': '撰写或维护平台资讯正文、封面与推荐状态。',
   '/admin/events': '创建活动、维护时间与名额，查看报名情况。',
   '/admin/feedbacks': '查看用户提交的反馈与建议并跟进处理。',
   '/admin/local-resources': '维护本地资源内容并控制发布、下架状态。',
@@ -205,6 +213,7 @@ const PAGE_SUBTITLES = {
   '/admin/help-requests': '审核用户提交的互助需求，通过后出现在互助广场。',
   '/admin/verifications': '处理实名与资料类认证申请。',
   '/admin/reports': '查看举报详情，记录处理结果。',
+  '/admin/fellowship-dynamics': '浏览联谊动态正文，展开查看点赞用户与时间。',
   '/admin/users': '搜索用户、查看状态，必要时限制账号行为。',
   '/admin/invites': '查看邀请发放与使用情况。',
   '/admin/platform/groups': '浏览全站团体，可新建或进入某一团体编辑页。',

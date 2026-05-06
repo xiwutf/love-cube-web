@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      host: '0.0.0.0',
       // 固定端口 + strictPort：避免占用时静默改 5174，换电脑/多项目时地址一致
       port: Number(env.VITE_DEV_PORT) || 5173,
       strictPort: true,

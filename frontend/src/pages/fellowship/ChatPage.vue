@@ -131,14 +131,16 @@ onMounted(async () => {
       }))
     }
     if (partner.status === 'fulfilled') {
-      const user = normalizeUser(partner.value)
+      const raw = partner.value
+      const user = normalizeUser(raw)
       partnerName.value = user.nickname
-      partnerAvatar.value = user.avatar
+      partnerAvatar.value = getAvatar(raw)
     }
     if (me.status === 'fulfilled') {
-      const self = normalizeUser(me.value)
+      const rawMe = me.value
+      const self = normalizeUser(rawMe)
       myName.value = self.nickname || myName.value
-      myAvatar.value = self.avatar || myAvatar.value
+      myAvatar.value = getAvatar(rawMe)
     }
     await markChatRead(myId, receiverId).catch(() => {})
   } finally {

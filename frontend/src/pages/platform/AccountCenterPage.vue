@@ -5,7 +5,7 @@
       <div class="mh-hero">
         <div class="mh-hero-inner">
           <div class="mh-avatar-wrap">
-            <img v-if="user?.avatar" :src="user.avatar" class="mh-avatar" alt="头像" />
+            <img v-if="showHeroAvatarImg" :src="heroAvatarSrc" class="mh-avatar" alt="头像" />
             <div v-else class="mh-avatar mh-avatar-fb">{{ avatarFallback }}</div>
             <span class="mh-lv-pill">Lv.{{ mobileGrowthLevel.level }}</span>
           </div>
@@ -213,11 +213,15 @@ import { getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 import MhHeroBadgeLink from '@/components/platform/me/MhHeroBadgeLink.vue'
+import { getAvatar } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
 const user = computed(() => userStore.userInfo)
+const showHeroAvatarImg = computed(() => Boolean(userAvatarUrlFromApi(user.value)))
+const heroAvatarSrc = computed(() => getAvatar(user.value))
 const unreadCount = ref(0)
 const editOpen = ref(false)
 const settingsOpen = ref(false)
@@ -421,7 +425,7 @@ watch(
   () => user.value,
   (value) => {
     editForm.username = value?.username || ''
-    editForm.avatar = value?.avatar || ''
+    editForm.avatar = userAvatarUrlFromApi(value) || String(value?.avatar || '').trim()
     editForm.location = value?.location || ''
     editForm.bio = value?.bio || ''
   },
@@ -453,7 +457,7 @@ function closeSettingsPanel() {
 
 function resetEditForm() {
   editForm.username = user.value?.username || ''
-  editForm.avatar = user.value?.avatar || ''
+  editForm.avatar = userAvatarUrlFromApi(user.value) || String(user.value?.avatar || '').trim()
   editForm.location = user.value?.location || ''
   editForm.bio = user.value?.bio || ''
   saveMessage.value = ''

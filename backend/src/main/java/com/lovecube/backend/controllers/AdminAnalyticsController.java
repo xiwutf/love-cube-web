@@ -160,7 +160,7 @@ public class AdminAnalyticsController {
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 5), 100);
         int offset = (safePage - 1) * safePageSize;
-        List<Map<String, Object>> visitors = siteVisitLogRepository.findLatestVisitors(offset, safePageSize)
+        List<Map<String, Object>> items = siteVisitLogRepository.findLatestVisitors(offset, safePageSize)
                 .stream()
                 .map(row -> Map.<String, Object>of(
                         "id", toLong(row[0]),
@@ -174,7 +174,7 @@ public class AdminAnalyticsController {
                 .toList();
         return Map.of(
                 "total", siteVisitLogRepository.countDistinctVisitors(),
-                "visitors", visitors
+                "items", items
         );
     }
 

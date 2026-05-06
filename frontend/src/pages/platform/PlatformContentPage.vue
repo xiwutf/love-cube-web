@@ -1,7 +1,7 @@
 ﻿<template>
   <main class="page">
     <header class="search"><input v-model.trim="keyword" placeholder="搜索内容、活动、攻略"></header>
-    <ContentTabs v-model="activeType" :tabs="PLATFORM_CONTENT_TYPES" />
+    <ContentTabs v-model="activeType" :tabs="contentTypes" />
     <ContentFilterBar v-model="activeSort" :sorts="PLATFORM_SORTS" />
     <ContentList v-if="filtered.length" :items="filtered" @like="handleLike" @comment="handleComment" />
     <ContentEmpty v-else @publish="goPublish" />
@@ -28,17 +28,20 @@ import {
   likePositiveShare,
   unlikePositiveShare
 } from '@/api/positiveShare.js'
+import { getLocalResources } from '@/api/localResources.js'
 import { PLATFORM_CONTENT_TYPES, PLATFORM_SORTS } from '@/mock/platformContent.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const route = useRoute()
 const router = useRouter()
 const keyword = ref('')
-const activeType = ref('all')
+const activeType = ref('local')
 const activeSort = ref('latest')
 const contentList = ref([])
+const contentTypes = [{ key: 'local', label: '本地资源' }, ...PLATFORM_CONTENT_TYPES]
 
 watch(() => route.query.type, (type) => {
-  if (typeof type === 'string' && PLATFORM_CONTENT_TYPES.some(item => item.key === type)) activeType.value = type
+  if (typeof type === 'string' && contentTypes.some(item => item.key === type)) activeType.value = type
 }, { immediate: true })
 
 const filtered = computed(() => {
@@ -89,17 +92,19 @@ function mergeNormalizedFromFeedBody(body) {
 }
 
 async function loadContentListLegacy() {
-  const [annRes, artRes, eventRes, moodRes] = await Promise.allSettled([
+  const [localRes, annRes, artRes, eventRes, moodRes] = await Promise.allSettled([
+    getLocalResources({ type: 'all' }),
     fetchAnnouncements({ status: 'published', limit: 30 }),
     fetchArticles({ status: 'published', limit: 30 }),
     fetchEvents({ status: 'published', limit: 30 }),
     fetchPositiveShares({ tab: 'latest', pageNum: 1, pageSize: 50 })
   ])
+  const locals = localRes.status === 'fulfilled' ? unwrapList(localRes.value).map(normalizeLocalResource) : []
   const announcements = annRes.status === 'fulfilled' ? unwrapList(annRes.value).map(normalizeAnnouncement) : []
   const articles = artRes.status === 'fulfilled' ? unwrapList(artRes.value).map(normalizeArticle) : []
   const events = eventRes.status === 'fulfilled' ? unwrapList(eventRes.value).map(normalizeEvent) : []
   const moods = moodRes.status === 'fulfilled' ? unwrapList(moodRes.value).map(normalizePositiveShare) : []
-  return [...announcements, ...articles, ...events, ...moods]
+  return [...locals, ...announcements, ...articles, ...events, ...moods]
 }
 
 function resolveTypeFromArticle(item) {
@@ -123,7 +128,7 @@ function normalizeArticle(item) {
     images: [],
     tags: item.tag ? [item.tag] : [],
     authorName: item.authorName || item.author || '平台编辑',
-    avatar: item.avatar || item.avatarUrl || item.profilePhoto || '',
+    avatar: userAvatarUrlFromApi(item),
     createdAt: String(item.publishedAt || item.createdAt || '').slice(0, 10),
     likeCount: Number(item.likeCount || item.likes || 0),
     commentCount: Number(item.commentCount || 0),
@@ -134,14 +139,14 @@ function normalizeArticle(item) {
 function normalizeAnnouncement(item) {
   return {
     id: item.id ?? `announcement-${Math.random()}`,
-    title: item.title || '平台动态',
+    title: item.title || '平台公告',
     summary: item.summary || item.content || '',
     type: 'dynamic',
     cover: item.coverUrl || item.cover || '',
     images: [],
-    tags: ['平台动态'],
+    tags: ['平台公告'],
     authorName: item.authorName || item.publisher || '平台运营',
-    avatar: item.avatar || item.avatarUrl || item.profilePhoto || '',
+    avatar: userAvatarUrlFromApi(item),
     createdAt: String(item.publishDate || item.createdAt || '').slice(0, 10),
     likeCount: Number(item.likeCount || 0),
     commentCount: Number(item.commentCount || 0),
@@ -159,7 +164,7 @@ function normalizeEvent(item) {
     images: [],
     tags: ['活动'],
     authorName: item.authorName || item.organizer || '活动中心',
-    avatar: item.avatar || item.avatarUrl || item.profilePhoto || '',
+    avatar: userAvatarUrlFromApi(item),
     createdAt: String(item.eventTime || item.startTime || item.createdAt || '').slice(0, 10),
     likeCount: Number(item.likeCount || 0),
     commentCount: Number(item.commentCount || 0),
@@ -188,13 +193,31 @@ function normalizePositiveShare(item) {
     images: Array.isArray(item.images) ? item.images : [],
     tags: item.category ? [item.category] : [],
     authorName: resolvedName,
-    avatar: item.avatar || item.avatarUrl || item.profilePhoto || '',
+    avatar: userAvatarUrlFromApi(item),
     createdAt: String(item.createdAt || '').slice(0, 10),
     likeCount: Number(item.encourageCount || item.likeCount || 0),
     commentCount: Number(item.commentCount || 0),
     pinned: Boolean(item.pinned),
     liked: Boolean(item.liked),
     source: 'mood'
+  }
+}
+
+function normalizeLocalResource(item) {
+  return {
+    id: item.id ?? `local-${Math.random()}`,
+    title: item.title || '本地资源',
+    summary: item.summary || '暂无简介',
+    type: 'local',
+    cover: item.coverUrl || '',
+    images: [],
+    tags: [item.type || '本地资源', item.location || '同城'],
+    authorName: '本地推荐',
+    avatar: '',
+    createdAt: String(item.updatedAt || item.createdAt || '').slice(0, 10),
+    likeCount: Number(item.heat || 0),
+    commentCount: Number(item.interestCount || 0),
+    pinned: Number(item.heat || 0) >= 20
   }
 }
 
@@ -224,10 +247,14 @@ async function handleComment(item) {
 
 onMounted(async () => {
   try {
-    const raw = await fetchPlatformContentFeed({ limit: 30 })
+    const [localRaw, raw] = await Promise.all([
+      getLocalResources({ type: 'all' }).catch(() => []),
+      fetchPlatformContentFeed({ limit: 30 })
+    ])
+    const localItems = unwrapList(localRaw).map(normalizeLocalResource)
     const body = unwrapContentFeedBody(raw)
     if (body) {
-      contentList.value = mergeNormalizedFromFeedBody(body)
+      contentList.value = [...localItems, ...mergeNormalizedFromFeedBody(body)]
       return
     }
   } catch {

@@ -26,7 +26,7 @@
 
           <div class="account-slot">
             <router-link to="/events" class="nav-action"><span aria-hidden="true">✓</span>签到</router-link>
-            <router-link to="/messages" class="nav-action nav-action-message"><span aria-hidden="true">□</span>平台消息<i v-if="messageBadge" class="message-badge">{{ messageBadge }}</i></router-link>
+            <router-link to="/messages" class="nav-action nav-action-message"><span aria-hidden="true">□</span>消息通知<i v-if="messageBadge" class="message-badge">{{ messageBadge }}</i></router-link>
             <template v-if="userStore.isLoggedIn">
               <router-link to="/me" class="login-entry">{{ userStore.userInfo?.username || '平台个人中心' }}</router-link>
               <router-link v-if="userStore.isAdmin" to="/admin" class="admin-entry">后台</router-link>
@@ -100,14 +100,14 @@
     </transition>
 
     <nav class="mobile-quick-nav">
-      <router-link to="/platform" :class="{ 'is-active': isActive('/platform') || route.path === '/' }">首页</router-link>
+      <router-link to="/platform" :class="{ 'is-active': isMobilePlatformHomeActive() }">首页</router-link>
       <router-link to="/platform/local" :class="{ 'is-active': isActive('/platform/local') }">本地</router-link>
       <router-link to="/platform/publish" class="mobile-publish-entry" :class="{ 'is-active': isActive('/platform/publish') }">发布</router-link>
       <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团体</router-link>
       <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
     </nav>
 
-    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台动态</router-link><router-link to="/fellowship-intro">联谊</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
+    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台公告</router-link><router-link to="/fellowship-intro">联谊</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
     <transition name="menu-fade"><div v-if="menuOpen" class="mobile-menu-mask" @click="menuOpen = false" /></transition>
     <transition name="menu-slide">
@@ -212,7 +212,7 @@ const coCreationForm = ref({
   contact: ''
 })
 
-const focusModuleOptions = ['联谊', '活动中心', '内容资讯', '平台动态', '本地服务', 'AI工具', '个人中心', '其他']
+const focusModuleOptions = ['联谊', '活动中心', '内容资讯', '平台公告', '本地服务', 'AI工具', '个人中心', '其他']
 const goalOptions = [
   { label: '认识新朋友', icon: '友', color: '#7c3aed', bg: '#f1e9ff' },
   { label: '联谊', icon: '心', color: '#ec4899', bg: '#fde7f3' },
@@ -234,7 +234,7 @@ const navItems = [
   { to: '/platform/positive-share', label: '每日心声' },
   { to: '/platform/help', label: '互助广场' },
   { to: '/modules', label: '模块中心' },
-  { to: '/announcements', label: '平台动态' },
+  { to: '/announcements', label: '平台公告' },
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动' },
   { to: '/platform/groups', label: '团队' },
@@ -246,13 +246,13 @@ const mobileModuleNavItems = [
   { to: '/platform/local', label: '本地推荐' },
   { to: '/platform/help', label: '互助' },
   { to: '/modules', label: '模块中心' },
-  { to: '/announcements', label: '平台动态' },
+  { to: '/announcements', label: '平台公告' },
   { to: '/articles', label: '精选内容' },
   { to: '/events', label: '活动中心' },
   { to: '/fellowship-intro', label: '联谊' }
 ]
 const mobileAccountNavItems = computed(() => {
-  const accountItems = [{ to: '/messages', label: '平台消息中心' }]
+  const accountItems = [{ to: '/messages', label: '消息通知中心' }]
   if (userStore.isLoggedIn) {
     accountItems.unshift({ to: '/me', label: '账号中心' })
     return accountItems
@@ -274,6 +274,17 @@ watch(() => route.fullPath, () => {
 function isActive(basePath) {
   if (basePath === '/') return route.path === '/'
   return route.path === basePath || route.path.startsWith(`${basePath}/`)
+}
+
+/** 底部「首页」仅高亮真正的平台首页，避免 /platform/local 等子路径误匹配 isActive('/platform') */
+function isMobilePlatformHomeActive() {
+  const p = route.path
+  return (
+    p === '/' ||
+    p === '/platform' ||
+    p === '/platform/changelog' ||
+    p === '/platform/pending-updates'
+  )
 }
 
 function handleLogout() {

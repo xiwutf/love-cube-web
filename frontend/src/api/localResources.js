@@ -11,3 +11,7 @@ export function getLocalResourceDetail(id) {
 export function markLocalResourceInterest(id) {
   return request.post(`/local-resources/${id}/interest`)
 }
+
+export function submitLocalResourceClue(payload) {
+  return request.post('/local-resources/clues', payload)
+}

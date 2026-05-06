@@ -2,7 +2,7 @@
   <section class="card profile-card" aria-label="账号资料">
     <div class="user">
       <div class="avatar-wrap">
-        <img v-if="user?.avatar" :src="user.avatar" class="avatar" alt="头像" />
+        <img v-if="avatarSrc" :src="avatarSrc" class="avatar" alt="头像" />
         <div v-else class="avatar avatar-fallback" aria-hidden="true">{{ avatarFallback }}</div>
       </div>
       <div class="meta">
@@ -39,6 +39,8 @@
 
 <script setup>
 import { computed } from 'vue'
+import { toFullUrl } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 defineEmits(['edit', 'copy-invite', 'open-fellowship'])
 
@@ -54,6 +56,11 @@ const props = defineProps({
 })
 
 const avatarFallback = computed(() => String(props.displayName || 'L').trim().slice(0, 1).toUpperCase())
+
+const avatarSrc = computed(() => {
+  const raw = userAvatarUrlFromApi(props.user)
+  return raw ? toFullUrl(raw) : ''
+})
 </script>
 
 <style scoped>

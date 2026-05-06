@@ -58,6 +58,11 @@ export default {
       component: () => import('@/pages/admin/ReportsAdminPage.vue'),
       meta: { module: 'admin', permission: 'review.manage' }
     },
+    {
+      path: 'fellowship-dynamics',
+      component: () => import('@/pages/admin/FellowshipDynamicsAdminPage.vue'),
+      meta: { module: 'admin', permission: 'review.manage' }
+    },
 
     // 用户管理（SUPER_ADMIN）
     {

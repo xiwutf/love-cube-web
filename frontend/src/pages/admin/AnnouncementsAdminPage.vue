@@ -1,7 +1,7 @@
 ﻿<template>
   <section class="admin-page">
     <section class="platform-card">
-      <h1 class="platform-title">公告管理</h1>
+      <h1 class="platform-title">平台公告管理</h1>
       <p class="platform-subtitle">PC 端支持完整编辑与发布流程；手机端提供查看能力</p>
 
       <div class="announcement-create admin-desktop-only">

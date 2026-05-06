@@ -5,7 +5,7 @@
         <div class="avatar" :style="avatarStyle">
           <img
             v-if="showAvatarImage"
-            :src="props.item.avatar"
+            :src="resolvedAvatarUrl"
             :alt="`${displayName}头像`"
             class="avatar-img"
             @error="handleAvatarError"
@@ -46,6 +46,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { toFullUrl } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const props = defineProps({
   item: {
@@ -93,6 +95,11 @@ const displayName = computed(() => {
   return props.item.nickname || props.item.username || '平台用户'
 })
 
+const resolvedAvatarUrl = computed(() => {
+  const raw = userAvatarUrlFromApi(props.item)
+  return raw ? toFullUrl(raw) : ''
+})
+
 const avatarText = computed(() => {
   const name = displayName.value
   if (name === '匿名用户') return '匿'
@@ -100,7 +107,7 @@ const avatarText = computed(() => {
 })
 
 const showAvatarImage = computed(() =>
-  !props.item.anonymous && Boolean(props.item.avatar) && !avatarLoadFailed.value
+  !props.item.anonymous && Boolean(resolvedAvatarUrl.value) && !avatarLoadFailed.value
 )
 
 const avatarStyle = computed(() => {
@@ -134,7 +141,7 @@ function handleAvatarError() {
 }
 
 watch(
-  () => props.item.avatar,
+  () => resolvedAvatarUrl.value,
   () => {
     avatarLoadFailed.value = false
   }

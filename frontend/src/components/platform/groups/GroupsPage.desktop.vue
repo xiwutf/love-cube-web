@@ -114,7 +114,7 @@
             <div v-else-if="errors.feed" class="side-error">{{ errors.feed }}</div>
             <div v-else class="activity-list">
               <router-link v-for="item in activities" :key="item.id" :to="`/platform/groups/${item.groupId}/posts`" class="activity-item">
-                <img :src="item.avatarUrl" :alt="item.groupName">
+                <img :src="item.coverUrl" :alt="item.groupName">
                 <div>
                   <strong>{{ item.groupName }}</strong>
                   <p>{{ item.text }}</p>
@@ -467,7 +467,7 @@ async function loadGroupFeed() {
       groupName: item.groupName || '团体',
       text: item.text || item.content || '',
       time: item.time || '',
-      avatarUrl: item.avatarUrl || DEFAULT_COVER
+      coverUrl: item.coverUrl || item.avatarUrl || DEFAULT_COVER
     }))
   } catch (error) {
     groupFeed.value = []

@@ -8,7 +8,7 @@
     @touchend="onTouchEnd"
   >
     <!-- 图片 -->
-    <van-image :src="user.avatar" width="100%" height="100%" fit="cover" class="card-img">
+    <van-image :src="cardAvatarSrc" width="100%" height="100%" fit="cover" class="card-img">
       <template #error>
         <div class="card-placeholder">
           <span class="placeholder-initial">{{ (user.nickname || '?')[0] }}</span>
@@ -32,12 +32,32 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { getAvatar, toFullUrl } from '@/utils/image.js'
 
 const props = defineProps({
   user: { type: Object, required: true }
 })
 
 const emit = defineEmits(['like', 'dislike', 'superlike', 'view-profile'])
+
+const cardAvatarSrc = computed(() => resolveMatchCardImage(props.user))
+
+function resolveMatchCardImage(user) {
+  const photo = resolvePrimaryPhoto(user)
+  if (photo) return toFullUrl(photo)
+  return getAvatar(user)
+}
+
+function resolvePrimaryPhoto(user) {
+  if (!user) return ''
+  const sources = [user.photos, user.photoUrls, user.photo_urls, user.images, user.imageUrls]
+  for (const list of sources) {
+    if (!Array.isArray(list) || list.length === 0) continue
+    const first = list.find((item) => typeof item === 'string' && item.trim())
+    if (first) return first
+  }
+  return ''
+}
 
 const THRESHOLD  = 80   // px - 触发 like/dislike 的阈值
 const THRESHOLD_Y = -80  // px - 触发 superlike 的阈值

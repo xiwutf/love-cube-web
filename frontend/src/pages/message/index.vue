@@ -198,12 +198,12 @@ async function loadChat() {
   try {
     const data = await getChatList()
     chatList.value = (Array.isArray(data) ? data : []).map((item) => ({
-      userId: item.partnerId ? item.userId,
-      nickname: item.nickname ? item.partnerName ? '用户',
+      userId: item.partnerId || item.userId || item.id,
+      nickname: item.nickname || item.partnerName || '用户',
       avatar: getAvatar(item),
-      lastMessage: item.lastMessage ? item.content ? '',
-      lastTime: item.lastTime ? item.timestamp,
-      unread: item.unreadCount ? 0
+      lastMessage: item.lastMessage || item.content || '',
+      lastTime: item.lastTime || item.timestamp || item.updatedAt || item.createdAt,
+      unread: Number(item.unreadCount || item.unread || 0)
     }))
   } finally {
     loadingChat.value = false

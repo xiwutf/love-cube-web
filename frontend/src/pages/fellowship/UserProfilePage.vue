@@ -12,7 +12,7 @@
 
     <template v-else-if="user">
       <div class="profile-header">
-        <van-image round width="80" height="80" :src="user.avatar" fit="cover">
+        <van-image round width="80" height="80" :src="profileAvatarDisplay" fit="cover">
           <template #error>
             <div class="avatar-fallback">{{ (user.nickname || '?')[0] }}</div>
           </template>
@@ -87,7 +87,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showConfirmDialog, showImagePreview, showToast } from 'vant'
 import { showActionSheet } from '@/utils/vantActionSheet.js'
@@ -95,7 +95,7 @@ import NavBar from '@/components/NavBar.vue'
 import { likeUser, getLikeStatus } from '@/api/match.js'
 import { fetchFellowshipUserDetail, blockUser, unblockUser, getBlockStatus } from '@/api/fellowship.js'
 import { getVerificationStatus } from '@/api/verification.js'
-import { toFullUrl } from '@/utils/image.js'
+import { toFullUrl, getAvatar } from '@/utils/image.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { storage } from '@/utils/storage.js'
 import { useReport } from '@/composables/useReport.js'
@@ -109,6 +109,8 @@ const blocking = ref(false)
 const blockStatus = ref({ blockedByMe: false, blockedMe: false, canMessage: true })
 const verifyBadges = ref({ photoVerified: false, realnameVerified: false })
 const { openReport } = useReport()
+
+const profileAvatarDisplay = computed(() => getAvatar(user.value))
 
 onMounted(async () => {
   try {

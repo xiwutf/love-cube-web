@@ -125,9 +125,10 @@ onMounted(async () => {
       }))
     }
     if (partner.status === 'fulfilled') {
-      const user = normalizeUser(partner.value)
+      const raw = partner.value
+      const user = normalizeUser(raw)
       partnerName.value = user.nickname
-      partnerAvatar.value = user.avatar
+      partnerAvatar.value = getAvatar(raw)
     }
     await markChatRead(myId, receiverId)
   } finally {

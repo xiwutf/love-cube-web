@@ -1,26 +1,26 @@
-﻿<template>
+<template>
   <div class="invite-page">
     <header class="header">
       <van-icon name="arrow-left" size="20" @click="router.back()" />
-      <h1>我的邀请码</h1>
+      <h1>我的邀请</h1>
       <span class="placeholder"></span>
     </header>
 
-    <section class="card code-card">
-      <p class="label">我的邀请码</p>
-      <p class="code">{{ summary.inviteCode || '-' }}</p>
-      <p class="count">已邀请 {{ summary.inviteCount || 0 }} 人</p>
-      <div class="actions">
-        <van-button type="primary" round size="small" @click="copyCode">一键复制邀请码</van-button>
-      </div>
-    </section>
+    <MyInvitePanel
+      :invite-code="summary.inviteCode"
+      :invite-count="summary.inviteCount"
+    >
+      <template #extra>
+        <button type="button" class="copy-code-btn" @click="copyCode">复制邀请码</button>
+      </template>
+    </MyInvitePanel>
 
     <section class="card">
       <h3>邀请说明</h3>
       <ul>
-        <li>Love Cube 采用邀请制注册</li>
-        <li>请将邀请码分享给你信任的朋友</li>
-        <li>注册时间与 IP 信息将用于安全风控</li>
+        <li>邀请链接会打开注册页并自动填入邀请码</li>
+        <li>注册时也可以手动修改邀请码</li>
+        <li>没有邀请码也可以正常注册</li>
       </ul>
     </section>
 
@@ -45,7 +45,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { getMyInviteCode, getMyInvitees } from '@/api/invite.js'
+import { getInviteInfo, getMyInvitees } from '@/api/invite.js'
+import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -55,11 +56,11 @@ const invitees = ref([])
 async function loadData() {
   loading.value = true
   try {
-    const [summaryRes, listRes] = await Promise.all([getMyInviteCode(), getMyInvitees()])
+    const [summaryRes, listRes] = await Promise.all([getInviteInfo(), getMyInvitees()])
     summary.value = summaryRes || summary.value
     invitees.value = Array.isArray(listRes) ? listRes : []
   } catch (err) {
-    showToast({ type: 'fail', message: err.message || '邀请码数据加载失败' })
+    showToast({ type: 'fail', message: err.message || '邀请数据加载失败' })
   } finally {
     loading.value = false
   }
@@ -116,34 +117,20 @@ onMounted(loadData)
 
 .card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 14px;
-  margin-bottom: 12px;
+  margin-top: 12px;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
 }
 
-.label {
-  margin: 0;
-  color: #6b7280;
+.copy-code-btn {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
   font-size: 13px;
-}
-
-.code {
-  margin: 8px 0 0;
-  font-size: 28px;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: #ef5d8e;
-}
-
-.count {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: #4b5563;
-}
-
-.actions {
-  margin-top: 12px;
+  font-weight: 800;
+  padding: 9px 13px;
 }
 
 h3 {
@@ -173,7 +160,7 @@ ul {
 
 .invitee-item {
   border: 1px solid #f1f5f9;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 10px;
   display: flex;
   justify-content: space-between;
@@ -193,6 +180,3 @@ ul {
   font-size: 12px;
 }
 </style>
-
-
-

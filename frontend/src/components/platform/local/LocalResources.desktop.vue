@@ -9,6 +9,11 @@
         <span class="insight-chip">进行中 {{ filteredItems.length }}</span>
         <span class="insight-chip">高热度 {{ hotItems.length }}</span>
       </div>
+      <p class="hero-contribute">
+        本地条目由运营审核后展示。你也可以
+        <router-link class="hero-contribute-link" to="/platform/publish?mode=clue">提交资源线索</router-link>
+        ，通过后会出现在这里。
+      </p>
     </header>
 
     <section class="local-filters platform-card">
@@ -52,9 +57,10 @@
 
     <section v-if="!loading && !filteredItems.length" class="local-empty platform-card">
       <h3>暂无本地资源</h3>
-      <p>可以先去发布动态，或加入团体，后续将获得更多本地推荐。</p>
+      <p>欢迎提交线索（需登录），审核通过后会公开显示；也可发布动态或加入团体，获得更多推荐。</p>
       <div class="local-empty-actions">
-        <router-link class="platform-btn platform-btn-primary" to="/platform/positive-share">去发布动态</router-link>
+        <router-link class="platform-btn platform-btn-primary" to="/platform/publish?mode=clue">提交资源线索</router-link>
+        <router-link class="platform-btn" to="/platform/positive-share">去发布动态</router-link>
         <router-link class="platform-btn" to="/platform/groups">去加入团体</router-link>
       </div>
     </section>
@@ -149,6 +155,9 @@ onMounted(load)
 .local-hero p { margin: 8px 0 0; color: var(--lc-muted); }
 .hero-insights { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
 .insight-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: color-mix(in srgb, var(--lc-text) 72%, var(--lc-blue) 28%); background: color-mix(in srgb, var(--lc-surface) 82%, var(--lc-blue-light) 18%); border: 1px solid color-mix(in srgb, var(--lc-blue-border) 78%, #fff 22%); }
+.hero-contribute { margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: var(--lc-muted); max-width: 42em; }
+.hero-contribute-link { color: var(--lc-blue); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.hero-contribute-link:hover { color: var(--lc-blue-mid); }
 .local-filters { display: flex; flex-wrap: wrap; gap: 8px; box-shadow: 0 10px 24px -24px color-mix(in srgb, var(--lc-text) 60%, transparent); }
 .local-filter-btn { border: 1px solid var(--lc-border); background: var(--lc-surface); color: var(--lc-text); border-radius: 999px; padding: 6px 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
 .local-filter-btn.active { border-color: var(--lc-blue-border); background: var(--lc-blue-light); color: var(--lc-blue); }
@@ -164,7 +173,7 @@ onMounted(load)
 .local-empty { text-align: center; }
 .local-empty h3 { margin: 0; }
 .local-empty p { margin: 8px 0 0; color: var(--lc-muted); }
-.local-empty-actions { margin-top: 12px; display: flex; justify-content: center; gap: 10px; }
+.local-empty-actions { margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 @media (min-width: 768px) and (max-width: 1199px) {
   .local-page { width: calc(100% - 32px); }
 }

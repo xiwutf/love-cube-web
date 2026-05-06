@@ -1,7 +1,7 @@
 ﻿<template>
   <section class="admin-page">
     <section class="platform-card">
-      <h1 class="platform-title">资讯管理</h1>
+      <h1 class="platform-title">平台资讯管理</h1>
       <p class="platform-subtitle">先看简介列表，点击进入详情进行完整编辑</p>
 
       <div class="admin-toolbar admin-desktop-only">

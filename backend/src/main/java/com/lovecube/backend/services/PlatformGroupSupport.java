@@ -89,7 +89,7 @@ public final class PlatformGroupSupport {
                 User ou = ownerUsers.get(g.getOwnerUserId());
                 if (ou != null) {
                     item.put("ownerName", ou.getUsername());
-                    item.put("ownerAvatar", ou.getProfilePhoto());
+                    item.put("ownerAvatarUrl", ou.getProfilePhoto());
                 }
             }
         }

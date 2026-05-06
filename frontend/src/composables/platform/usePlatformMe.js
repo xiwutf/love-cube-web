@@ -1,6 +1,6 @@
 ﻿import { computed, ref } from 'vue'
 import { getMyGrowth } from '@/api/growth.js'
-import { getMyInviteCode } from '@/api/invite.js'
+import { getInviteInfo } from '@/api/invite.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached } from '@/api/user.js'
 import { useUserStore } from '@/stores/user.js'
@@ -28,7 +28,7 @@ export function usePlatformMe() {
     }
 
     const [inviteRes, statsRes, growthRes, unreadRes] = await Promise.allSettled([
-      getMyInviteCode(),
+      getInviteInfo(),
       getUserStatsCached(),
       getMyGrowth(),
       getNotifUnreadCountCached()

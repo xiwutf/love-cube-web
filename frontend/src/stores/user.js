@@ -11,6 +11,7 @@ import {
 } from '@/api/user.js'
 import { getAdminAuthContext } from '@/api/adminContent.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const REDIRECT_KEY = 'postLoginRedirect'
 
@@ -27,7 +28,7 @@ function normalizeUser(raw) {
     status: raw.status ?? 'active',
     verificationStatus: raw.verificationStatus ?? 'none',
     verificationRejectReason: raw.verificationRejectReason ?? '',
-    avatar: raw.profilePhoto ?? '',
+    avatar: userAvatarUrlFromApi(raw) || '',
     bio: raw.bio ?? raw.signature ?? '',
     location: raw.location ?? '',
     gender: raw.gender ?? '',
@@ -59,7 +60,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = info
     id.value = String(info?.userId || info?.id || '')
     nickname.value = info?.nickname || info?.username || ''
-    avatar.value = info?.avatar || ''
+    avatar.value = userAvatarUrlFromApi(info) || String(info?.avatar || '').trim()
     storage.set('nickname', nickname.value)
     storage.set('avatar', avatar.value)
   }
