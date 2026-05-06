@@ -19,7 +19,10 @@
             <div class="name-line">
               <h2>{{ displayName }}</h2>
               <span class="role-tag">{{ user.role === 'admin' ? '管理员' : '用户' }}</span>
-              <span class="verify-tag" :class="`verify-${verifyLevel}`">{{ statusText }}</span>
+              <span class="verify-tag" :class="`verify-${verifyLevel}`">
+                <van-icon v-if="verifyLevel === 'approved'" name="passed" class="verify-tag-icon" />
+                {{ statusText }}
+              </span>
             </div>
             <button class="edit-btn" type="button" @click="router.push('/fellowship/profile/edit')">
               <van-icon name="edit" size="16" />
@@ -105,7 +108,7 @@ import { useUserStore } from '@/stores/user.js'
 import { getVisitorList } from '@/api/message.js'
 import { getMyDynamicCount, getMyLikeUsers, getMutualLikeUsers } from '@/api/personal.js'
 import { getAvatar } from '@/utils/image.js'
-import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
+import { userAvatarUrlFromApi, userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -118,16 +121,16 @@ const personalAvatarSrc = computed(() => getAvatar(user.value))
 const userInitial = computed(() => String(displayName.value || '我').trim().slice(0, 1).toUpperCase())
 
 const statusText = computed(() => {
+  if (userHasVerificationBadge(user.value)) return '已认证'
   const status = user.value.verificationStatus || 'none'
-  if (status === 'approved') return '已认证'
   if (status === 'pending') return '审核中'
   if (status === 'rejected') return '未通过'
   return '未认证'
 })
 
 const verifyLevel = computed(() => {
+  if (userHasVerificationBadge(user.value)) return 'approved'
   const status = user.value.verificationStatus || 'none'
-  if (status === 'approved') return 'approved'
   if (status === 'pending') return 'pending'
   if (status === 'rejected') return 'rejected'
   return 'none'
@@ -191,6 +194,7 @@ function handleLogout() {
 
 onMounted(() => {
   loadStats().catch(() => {})
+  userStore.refreshCurrentUser().catch(() => {})
 })
 </script>
 
@@ -291,9 +295,16 @@ onMounted(() => {
 }
 
 .verify-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: #666;
   border-color: #d8dbe3;
   background: #f6f7fa;
+}
+
+.verify-tag-icon {
+  flex-shrink: 0;
 }
 
 .verify-approved {

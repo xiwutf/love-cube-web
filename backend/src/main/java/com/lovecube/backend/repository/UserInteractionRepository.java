@@ -113,7 +113,7 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
      * 获取当前用户已操作过的目标用户 ID（like/superlike/skip），用于过滤推荐列表
      */
     @Query("SELECT DISTINCT ui.toUserId FROM UserInteraction ui WHERE ui.fromUserId = :userId " +
-           "AND ui.interactionType IN ('LIKE', 'SUPER_LIKE', 'SKIP')")
+           "AND ui.interactionType IN ('LIKE', 'SUPER_LIKE', 'FOLLOW', 'SKIP')")
     List<Long> findActedUserIdsByFromUserId(@Param("userId") Long userId);
 
     /**

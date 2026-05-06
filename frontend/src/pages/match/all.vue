@@ -53,6 +53,12 @@ async function loadMore() {
     finished.value = !res?.hasMore || list.length === 0
     pager.value.page += 1
   } catch (error) {
+    if (error?.status === 403 && error?.data?.code === 'FELLOWSHIP_REQUIRES_PHOTOS') {
+      showToast({ type: 'fail', message: error?.message || '请先上传生活照' })
+      router.push('/fellowship/profile/edit')
+      finished.value = true
+      return
+    }
     showToast({ type: 'fail', message: error?.message || '加载失败，请稍后重试' })
     finished.value = true
   } finally {

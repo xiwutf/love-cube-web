@@ -2,7 +2,6 @@
   <section class="events-page">
     <section class="events-hero" aria-labelledby="events-title">
       <div class="hero-copy">
-        <router-link to="/" class="back-link">← 返回</router-link>
         <h1 id="events-title">活动中心<span aria-hidden="true">✓</span></h1>
         <p class="hero-lead">发现精彩活动，结识志同道合的朋友，丰富你的生活体验</p>
 
@@ -117,7 +116,6 @@
               <div class="activity-cover">
                 <img :src="item.coverUrl" :alt="item.title" loading="lazy">
                 <span class="cover-badge" :class="item.tone">{{ item.category }}</span>
-                <span class="cover-source">[活动中心]</span>
               </div>
               <div class="activity-body">
                 <h3>{{ item.title }}</h3>
@@ -126,9 +124,6 @@
                 </div>
                 <p class="meta-row">● {{ formatEventTime(item.time) }} · 📍 {{ item.location }}</p>
                 <div class="card-foot">
-                  <div class="avatars" aria-hidden="true">
-                    <i v-for="avatar in item.avatars" :key="avatar" :style="{ backgroundImage: `url(${avatar})` }"></i>
-                  </div>
                   <strong>{{ item.signupCount }} 人已报名</strong>
                 </div>
               </div>
@@ -204,9 +199,8 @@ const eventsApiStats = ref({ totalEvents: 0, totalSignups: 0, citiesCount: 0, ac
 
 const stats = computed(() => [
   { icon: '总', value: eventsApiStats.value.totalEvents || allItems.value.length, label: '全部活动', note: `进行中 ${activeCount.value} 场`, tone: 'pink' },
-  { icon: '报', value: eventsApiStats.value.totalSignups || signupTotal.value, label: '已报名', note: '本月参与人数', tone: 'blue' },
-  { icon: '城', value: eventsApiStats.value.citiesCount || cityOptions.value.length, label: '城市覆盖', note: '活动举办城市', tone: 'green' },
-  { icon: '评', value: '96%', label: '用户满意度', note: '活动好评率', tone: 'amber' }
+  { icon: '报', value: eventsApiStats.value.totalSignups || signupTotal.value, label: '已报名', note: '累计报名人数', tone: 'blue' },
+  { icon: '城', value: eventsApiStats.value.citiesCount || cityOptions.value.length, label: '城市覆盖', note: '活动举办城市', tone: 'green' }
 ])
 
 const normalizedItems = computed(() => allItems.value.map((item, index) => ({
@@ -222,8 +216,7 @@ const normalizedItems = computed(() => allItems.value.map((item, index) => ({
   coverUrl: item.coverUrl || '',
   tags: item.tags || [],
   tone: EVENT_TONES[index % EVENT_TONES.length],
-  hotLabel: item.recommended ? '推荐' : '',
-  avatars: avatarSet(index)
+  hotLabel: item.recommended ? '推荐' : ''
 })))
 
 const cityOptions = computed(() => [...new Set(normalizedItems.value.map(item => item.city).filter(Boolean))])
@@ -270,10 +263,6 @@ function parseCity(location = '') {
   if (location.includes('上海')) return '上海'
   if (location.includes('线上')) return '线上'
   return ''
-}
-
-function avatarSet(seed) {
-  return [0, 1, 2, 3].map(i => `https://i.pravatar.cc/80?img=${(seed * 5 + i + 12) % 60}`)
 }
 
 function formatEventTime(value) {
@@ -335,16 +324,8 @@ onMounted(async () => {
   gap: var(--lc-space-12);
 }
 
-.back-link {
-  display: inline-flex;
-  color: var(--lc-muted);
-  font-size: var(--lc-text-sm);
-  font-weight: 700;
-  text-decoration: none;
-}
-
 .hero-copy h1 {
-  margin: var(--lc-space-6) 0 0;
+  margin: 0;
   color: var(--lc-text);
   font-size: clamp(40px, 4vw, 60px);
   line-height: 1.05;
@@ -368,7 +349,7 @@ onMounted(async () => {
 .stats-grid {
   margin-top: var(--lc-space-8);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--lc-space-4);
 }
 
@@ -770,18 +751,6 @@ onMounted(async () => {
   font-weight: 900;
 }
 
-.cover-source {
-  position: absolute;
-  right: var(--lc-space-3);
-  top: var(--lc-space-3);
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--lc-amber);
-  background: rgba(255, 247, 237, 0.92);
-}
-
 .activity-body {
   padding: var(--lc-space-4);
 }
@@ -820,26 +789,9 @@ onMounted(async () => {
 .card-foot {
   margin-top: var(--lc-space-4);
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--lc-space-3);
-}
-
-.avatars {
-  display: flex;
-}
-
-.avatars i {
-  width: 24px;
-  height: 24px;
-  margin-left: -7px;
-  border: 2px solid var(--lc-surface);
-  border-radius: 999px;
-  background-size: cover;
-}
-
-.avatars i:first-child {
-  margin-left: 0;
 }
 
 .card-foot strong {
@@ -1093,11 +1045,6 @@ onMounted(async () => {
   }
 
   .stat-note {
-    display: none;
-  }
-
-  /* 固定展示项占屏宽，弱化营销类指标 */
-  .stat-card:nth-child(4) {
     display: none;
   }
 

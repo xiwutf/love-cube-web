@@ -28,6 +28,8 @@ function normalizeUser(raw) {
     status: raw.status ?? 'active',
     verificationStatus: raw.verificationStatus ?? 'none',
     verificationRejectReason: raw.verificationRejectReason ?? '',
+    photoVerified: Boolean(raw.photoVerified),
+    realnameVerified: Boolean(raw.realnameVerified),
     avatar: userAvatarUrlFromApi(raw) || '',
     bio: raw.bio ?? raw.signature ?? '',
     location: raw.location ?? '',
@@ -35,7 +37,8 @@ function normalizeUser(raw) {
     birthday: raw.birthday ?? '',
     height: raw.height ?? '',
     fellowshipEnabled: Boolean(raw.fellowshipEnabled),
-    fellowshipMatchVisible: Boolean(raw.fellowshipMatchVisible)
+    fellowshipMatchVisible: Boolean(raw.fellowshipMatchVisible),
+    photos: Array.isArray(raw.photos) ? raw.photos.filter((u) => u && String(u).trim()) : []
   }
 }
 
@@ -65,12 +68,12 @@ export const useUserStore = defineStore('user', () => {
     storage.set('avatar', avatar.value)
   }
 
-  async function refreshCurrentUser() {
+  async function refreshCurrentUser(meRequestConfig = {}) {
     if (!token.value) {
       userInfo.value = null
       return null
     }
-    const me = await getMeCached()
+    const me = await getMeCached(15000, meRequestConfig)
     const normalized = normalizeUser(me)
     if (normalized?.userId) {
       userId.value = normalized.userId
@@ -79,6 +82,40 @@ export const useUserStore = defineStore('user', () => {
     }
     setUserInfo(normalized)
     return userInfo.value
+  }
+
+  /**
+   * 注册接口已成功、但紧随其后的 GET /users/me 可能因副本延迟、网关抖动等失败。
+   * 此时不应把「拉取资料失败」当成注册失败，否则会出现库里有用户、前端却提示注册失败。
+   */
+  async function refreshAfterAuthWithFallback(context) {
+    const attempts = 3
+    const gapMs = 400
+    let lastErr
+    for (let i = 0; i < attempts; i++) {
+      try {
+        clearMeCache()
+        await refreshCurrentUser({ skip401Redirect: true })
+        return
+      } catch (e) {
+        lastErr = e
+        if (i < attempts - 1) {
+          await new Promise((r) => setTimeout(r, gapMs))
+        }
+      }
+    }
+    const uid = storage.get('userId') || ''
+    if (uid) {
+      setUserInfo(
+        normalizeUser({
+          userId: uid,
+          id: uid,
+          username: '',
+          nickname: ''
+        })
+      )
+    }
+    console.warn(`[userStore] ${context}: refreshCurrentUser failed after ${attempts} tries, using minimal profile`, lastErr)
   }
 
   function syncCurrentUser() {
@@ -97,14 +134,14 @@ export const useUserStore = defineStore('user', () => {
   async function login(form) {
     const res = await loginApi(form)
     setAuth(res.token, res.userId)
-    await refreshCurrentUser()
+    await refreshAfterAuthWithFallback('login')
     return res
   }
 
   async function register(form) {
     const res = await registerApi(form)
     setAuth(res.token, res.userId)
-    await refreshCurrentUser()
+    await refreshAfterAuthWithFallback('register')
     return res
   }
 

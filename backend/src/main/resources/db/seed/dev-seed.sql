@@ -143,86 +143,9 @@ SELECT 'dev-seed-article-10', '关系沟通', '长期关系中“稳定回应”
        '关系建议', 'https://images.unsplash.com/photo-1485217988980-11786ced9454', 0, 0, 93, NOW() - INTERVAL 2 HOUR, NOW() - INTERVAL 2 HOUR
 WHERE NOT EXISTS (SELECT 1 FROM articles WHERE id = 'dev-seed-article-10');
 
--- 3) Platform events (8)
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-01', '保定周三轻社交夜聊', '工作日下班后的小型交流场，适合首次参与用户。', '活动设置 3 轮主题交流与自由配对，时长约 90 分钟。', '保定·竞秀区活动中心', NOW() + INTERVAL 3 DAY, 21, 'published',
-       '线下活动', 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac', 0, 1, 154, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-01');
+-- 3) Platform events — intentionally omitted (create real activities via admin; Flyway V56 removes legacy demo rows).
 
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-02', '石家庄兴趣分组见面会', '按阅读、运动、旅行三类兴趣分组交流。', '每组安排主持人引导，结束后开放组间互选和站内互关。', '石家庄·长安区文化空间', NOW() + INTERVAL 5 DAY, 28, 'published',
-       '线下活动', 'https://images.unsplash.com/photo-1511632765486-a01980e01a18', 0, 1, 186, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-02');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-03', '北京周末读书交流沙龙', '围绕“关系与成长”主题进行深度讨论。', '活动采用圆桌形式，每位参与者有 3 分钟观点陈述时间。', '北京·朝阳区共享书房', NOW() + INTERVAL 7 DAY, 35, 'published',
-       '线下活动', 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f', 1, 1, 264, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-03');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-04', '城市慢跑破冰计划（保定）', '晨跑 + 咖啡轻交流，偏轻松节奏。', '适合希望从共同运动习惯开启交流的用户，活动后提供匹配推荐。', '保定·东风公园', NOW() + INTERVAL 9 DAY, 17, 'published',
-       '户外活动', 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211', 0, 0, 112, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-04');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-05', '石家庄咖啡对话夜', '双人主题对话 + 组内复盘，增强真实表达。', '每轮交流 15 分钟，聚焦生活节奏、家庭观念与长期规划。', '石家庄·裕华区咖啡社', NOW() + INTERVAL 11 DAY, 24, 'published',
-       '线下活动', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085', 0, 1, 141, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-05');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-06', '北京职业青年联谊局', '聚焦城市生活与职业规划的同频交流。', '活动邀请职业发展教练做 20 分钟开场分享，后续分组交流。', '北京·海淀区城市客厅', NOW() + INTERVAL 13 DAY, 32, 'published',
-       '专题活动', 'https://images.unsplash.com/photo-1497366754035-f200968a6e72', 0, 1, 177, NOW() - INTERVAL 8 HOUR, NOW() - INTERVAL 8 HOUR
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-06');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-07', '线上语音夜话：高质量沟通', '跨城市用户可参与，适合首次接触平台活动。', '活动由主持人引导，支持匿名提问和会后推荐名单推送。', '线上语音房', NOW() + INTERVAL 2 DAY, 46, 'published',
-       '线上活动', 'https://images.unsplash.com/photo-1515165562835-c3b8c2a7f92d', 0, 0, 203, NOW() - INTERVAL 6 HOUR, NOW() - INTERVAL 6 HOUR
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-07');
-
-INSERT INTO events (id, title, summary, content, location, event_time, signup_count, status, category, cover_url, pinned, recommended, view_count, created_at, updated_at)
-SELECT 'dev-seed-event-08', '三城联动主题分享会', '保定、石家庄、北京三城同步连线互动。', '通过城市分会场连线，分享本地活动体验与关系经营心得。', '三城联动会场', NOW() + INTERVAL 16 DAY, 39, 'published',
-       '城市联动', 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2', 0, 1, 159, NOW() - INTERVAL 4 HOUR, NOW() - INTERVAL 4 HOUR
-WHERE NOT EXISTS (SELECT 1 FROM events WHERE id = 'dev-seed-event-08');
-
--- 4) Home configuration banners (3)
-INSERT INTO home_configs (config_key, config_value, config_group, sort_order, enabled, created_at, updated_at)
-SELECT
-    'dev_seed_home_banner_01',
-    '{"title":"保定周末见面计划","subtitle":"小规模线下场，报名截止周五18:00","imageUrl":"https://images.unsplash.com/photo-1529156069898-49953e39b3ac","linkUrl":"/fellowship/events/dev-seed-event-01?src=dev_seed"}',
-    'home_banner',
-    101,
-    1,
-    NOW() - INTERVAL 2 HOUR,
-    NOW() - INTERVAL 2 HOUR
-WHERE NOT EXISTS (
-    SELECT 1 FROM home_configs WHERE config_group = 'home_banner' AND config_key = 'dev_seed_home_banner_01'
-);
-
-INSERT INTO home_configs (config_key, config_value, config_group, sort_order, enabled, created_at, updated_at)
-SELECT
-    'dev_seed_home_banner_02',
-    '{"title":"石家庄兴趣分组交流","subtitle":"阅读/旅行/运动三组同场交流","imageUrl":"https://images.unsplash.com/photo-1511632765486-a01980e01a18","linkUrl":"/fellowship/events/dev-seed-event-02?src=dev_seed"}',
-    'home_banner',
-    102,
-    1,
-    NOW() - INTERVAL 90 MINUTE,
-    NOW() - INTERVAL 90 MINUTE
-WHERE NOT EXISTS (
-    SELECT 1 FROM home_configs WHERE config_group = 'home_banner' AND config_key = 'dev_seed_home_banner_02'
-);
-
-INSERT INTO home_configs (config_key, config_value, config_group, sort_order, enabled, created_at, updated_at)
-SELECT
-    'dev_seed_home_banner_03',
-    '{"title":"北京读书沙龙报名中","subtitle":"本周日深度对谈，限额40人","imageUrl":"https://images.unsplash.com/photo-1524995997946-a1c2e315a42f","linkUrl":"/fellowship/events/dev-seed-event-03?src=dev_seed"}',
-    'home_banner',
-    103,
-    1,
-    NOW() - INTERVAL 1 HOUR,
-    NOW() - INTERVAL 1 HOUR
-WHERE NOT EXISTS (
-    SELECT 1 FROM home_configs WHERE config_group = 'home_banner' AND config_key = 'dev_seed_home_banner_03'
-);
+-- 4) Home banners linking to seed events — omitted (same as above).
 
 -- 5) Fellowship users (15)
 INSERT INTO users (username, email, phone_number, password_hash, openid, profile_photo, bio, age, gender, location, occupation, height, photos, vip_status, user_status, role, invite_code, invite_code_status, created_at, updated_at)

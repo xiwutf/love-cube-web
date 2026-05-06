@@ -10,8 +10,9 @@ let userStatsCache = null
 let userStatsCacheAt = 0
 let userStatsPending = null
 
-export function getMe() {
-  return request.get('/users/me')
+/** @param {Record<string, unknown>} [axiosConfig] 可传 skip401Redirect: true，避免拉取资料瞬时失败时全局登出 */
+export function getMe(axiosConfig = {}) {
+  return request.get('/users/me', axiosConfig)
 }
 
 export function activateFellowship() {
@@ -26,12 +27,12 @@ export function updateFellowshipMatchVisibility(visible) {
   return request.post('/users/me/fellowship/match-visibility', { visible })
 }
 
-export async function getMeCached(maxAgeMs = 15000) {
+export async function getMeCached(maxAgeMs = 15000, axiosConfig = {}) {
   const now = Date.now()
   const currentToken = storage.get('token') || ''
   if (meCache && meCacheToken === currentToken && now - meCacheAt < maxAgeMs) return meCache
   if (mePending) return mePending
-  mePending = getMe()
+  mePending = getMe(axiosConfig)
     .then((res) => {
       meCache = res
       meCacheAt = Date.now()

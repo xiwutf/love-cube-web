@@ -189,6 +189,7 @@ import {
 } from '@/api/fellowshipProfile.js'
 import { getFellowshipMeStatsCached } from '@/api/fellowship.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
+import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -254,15 +255,27 @@ const completionHint = computed(() => {
   if (completionMissingCount.value && completionMissingCount.value > 0) return `再完善 ${completionMissingCount.value} 项，匹配率可继续提升`
   return '完善更多资料，可提升匹配率'
 })
-const verificationStatus = computed(() => userInfo.value?.verificationStatus || profile.value.reviewStatus || 'none')
+const effectiveVerificationRow = computed(() => ({
+  verificationStatus:
+    profile.value.verificationStatus ??
+    userInfo.value?.verificationStatus ??
+    profile.value.reviewStatus ??
+    'none',
+  photoVerified: profile.value.photoVerified ?? userInfo.value?.photoVerified,
+  realnameVerified: profile.value.realnameVerified ?? userInfo.value?.realnameVerified
+}))
+const isUserCertified = computed(() => userHasVerificationBadge(effectiveVerificationRow.value))
+const verificationStatus = computed(() => String(effectiveVerificationRow.value.verificationStatus || 'none'))
 const verificationLabel = computed(() => {
-  if (verificationStatus.value === 'approved') return '真人已核验'
+  if (isUserCertified.value) return '已认证'
   if (verificationStatus.value === 'pending') return '认证审核中'
+  if (verificationStatus.value === 'rejected') return '未通过'
   return '待认证'
 })
 const verificationLevel = computed(() => {
-  if (verificationStatus.value === 'approved') return 'is-approved'
+  if (isUserCertified.value) return 'is-approved'
   if (verificationStatus.value === 'pending') return 'is-pending'
+  if (verificationStatus.value === 'rejected') return 'is-rejected'
   return 'is-none'
 })
 const profileMeta = computed(() => [
@@ -327,7 +340,10 @@ async function loadPageData() {
       getFellowshipPhotos()
     ])
 
-    if (p.status === 'fulfilled') normalizeProfile(p.value)
+    if (p.status === 'fulfilled') {
+      normalizeProfile(p.value)
+      userStore.refreshCurrentUser().catch(() => null)
+    }
     if (c.status === 'fulfilled') completion.value = c.value || completion.value
     if (photosRes.status === 'fulfilled') {
       const photos = Array.isArray(photosRes.value?.photos)
@@ -673,6 +689,16 @@ onMounted(async () => {
 .verified-badge.is-none {
   background: linear-gradient(135deg, #9aa2b6 0%, #c2c8d6 100%);
   box-shadow: 0 5px 12px rgba(112, 123, 150, 0.16), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.verified-badge.is-approved {
+  background: linear-gradient(135deg, #0d9f6e 0%, #3ecf9a 48%, #7fe8c3 100%);
+  box-shadow: 0 5px 12px rgba(14, 142, 102, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+
+.verified-badge.is-rejected {
+  background: linear-gradient(135deg, #c24141 0%, #f08080 100%);
+  box-shadow: 0 5px 12px rgba(180, 60, 60, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.45);
 }
 
 .verified-mark {

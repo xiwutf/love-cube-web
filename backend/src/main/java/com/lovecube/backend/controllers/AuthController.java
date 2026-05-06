@@ -7,6 +7,9 @@ import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -22,6 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private static final int USERNAME_MAX_LENGTH = 20;
 
     private final UserRepository userRepository;
@@ -156,8 +160,24 @@ public class AuthController {
             result.put("userId", saved.getUserid());
             result.put("token", token);
             return ResponseEntity.ok(result);
+        } catch (DataIntegrityViolationException ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            Throwable root = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause() : ex;
+            log.warn("Register failed: data integrity — phone={}, cause={}", phone, root.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "message",
+                    "Registration failed: data conflict. If this phone is new, try again later or contact support."
+            ));
+        } catch (IllegalStateException ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            log.warn("Register failed: illegal state — phone={}, error={}", phone, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "message",
+                    "Invite code could not be allocated. Please try again in a moment."
+            ));
         } catch (Exception ex) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            log.error("Register failed: unexpected — phone={}", phone, ex);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Registration failed, please try again"));
         }
     }

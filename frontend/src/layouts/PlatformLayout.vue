@@ -261,7 +261,11 @@ const mobileAccountNavItems = computed(() => {
   return accountItems
 })
 const messageBadge = computed(() => '')
-const navHomePaths = computed(() => new Set([...navItems.map(item => item.to), '/about']))
+const navHomePaths = computed(() => new Set([
+  ...navItems.map(item => item.to),
+  '/about',
+  '/platform/events'
+]))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const WECHAT_GUIDE_KEY = 'platform-wechat-guide-dismissed-date'
 const ANNOUNCEMENT_DISMISS_PREFIX = 'platform-announcement-dismissed'

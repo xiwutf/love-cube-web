@@ -32,7 +32,7 @@
             :user="user"
             @like="onAction('like')"
             @dislike="onAction('dislike')"
-            @superlike="onAction('superlike')"
+            @collect="onAction('collect')"
           />
           <div v-else class="card-back" />
         </div>
@@ -53,7 +53,7 @@
       <button class="action-btn btn-dislike" @click="topCardRef?.triggerDislike()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-      <button class="action-btn btn-superlike" @click="topCardRef?.triggerSuperlike()">
+      <button class="action-btn btn-collect" type="button" @click="topCardRef?.triggerCollect()">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.26H21l-5.47 3.97 2.09 6.26L12 14.52l-5.62 3.97 2.09-6.26L3 8.26h6.91z"/></svg>
       </button>
       <button class="action-btn btn-like" @click="topCardRef?.triggerLike()">
@@ -111,7 +111,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import SwipeCard from '@/components/SwipeCard.vue'
-import { filterMatches, getMatchList, likeUser, dislikeUser, superlikeUser } from '@/api/match.js'
+import { filterMatches, getMatchList, likeUser, dislikeUser, matchFollowUser } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 
 const router = useRouter()
@@ -149,7 +149,7 @@ async function onAction(action) {
     let res
     if (action === 'like') res = await likeUser(top.userId)
     if (action === 'dislike') res = await dislikeUser(top.userId)
-    if (action === 'superlike') res = await superlikeUser(top.userId)
+    if (action === 'collect') res = await matchFollowUser(top.userId)
 
     if (res?.matched) {
       matchedUserId = top.userId
@@ -340,14 +340,14 @@ onMounted(loadCards)
   height: 26px;
 }
 
-.btn-superlike {
+.btn-collect {
   width: 48px;
   height: 48px;
   background: linear-gradient(135deg, #FF5F84, #FF3366);
   box-shadow: 0 6px 20px rgba(255, 95, 132, 0.4);
   color: #fff;
 }
-.btn-superlike svg {
+.btn-collect svg {
   width: 20px;
   height: 20px;
 }

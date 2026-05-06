@@ -54,13 +54,14 @@ const pageSize = 20
 const fetching = ref(false)
 
 function typeLabel(t) {
-  const m = { like: '喜欢', super_like: '超级喜欢', skip: '跳过' }
+  const m = { like: '喜欢', super_like: '超级喜欢', follow: '收藏', skip: '跳过' }
   return m[t] || t || ''
 }
 
 function tagType(t) {
   if (t === 'skip') return 'default'
   if (t === 'super_like') return 'danger'
+  if (t === 'follow') return 'warning'
   return 'primary'
 }
 

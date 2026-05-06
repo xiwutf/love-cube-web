@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -355,6 +356,10 @@ public class UnifiedProfileService {
         result.put("completionRate", merged.getOrDefault("completionRate", 0));
         result.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
         result.put("fellowshipMatchVisible", Boolean.TRUE.equals(user.getFellowshipMatchVisible()));
+        result.put("verificationStatus", merged.getOrDefault("verificationStatus", "none"));
+        result.put("verificationRejectReason", merged.getOrDefault("verificationRejectReason", ""));
+        result.put("photoVerified", merged.getOrDefault("photoVerified", false));
+        result.put("realnameVerified", merged.getOrDefault("realnameVerified", false));
         return result;
     }
 
@@ -425,6 +430,33 @@ public class UnifiedProfileService {
                 .map(UserPhoto::getPhotoUrl)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /** 联谊开通门槛：至少一张已落库 user_photos 的生活照（与资料页「生活照」一致） */
+    public boolean hasFellowshipLifePhotos(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return !getUserPhotos(userId).isEmpty();
+    }
+
+    /** 已开通联谊但无任何生活照：需引导上传，否则限制推荐/喜欢等能力 */
+    public boolean isFellowshipActiveButMissingLifePhotos(User user) {
+        if (user == null) {
+            return false;
+        }
+        if (!Boolean.TRUE.equals(user.getFellowshipEnabled())) {
+            return false;
+        }
+        return !hasFellowshipLifePhotos(user.getUserid());
+    }
+
+    public Map<String, Object> buildFellowshipPhotosRequiredErrorBody() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("message", "你已开通联谊，但尚未上传生活照。请尽快上传至少一张生活照，否则将无法继续使用推荐、喜欢等联谊功能");
+        body.put("code", "FELLOWSHIP_REQUIRES_PHOTOS");
+        return body;
     }
 
     @Transactional

@@ -8,8 +8,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 52px;
-  padding: 0 16px;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  min-height: calc(52px + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
   background: #fff;
   position: sticky;
   top: 0;
@@ -24,7 +25,7 @@
 .msg-tabs :deep(.van-tab) { font-size: 16px; font-weight: 700; color: #7e8ea4; }
 .msg-tabs :deep(.van-tab--active) { color: #ff5f84; font-weight: 800; }
 .msg-tabs :deep(.van-tabs__line) { height: 3px; border-radius: 2px; width: 24px !important; }
-.tab-content { background: #fff; min-height: calc(100dvh - 52px - 44px - 72px); }
+.tab-content { background: #fff; min-height: calc(100dvh - 52px - 44px - 72px - env(safe-area-inset-top, 0px)); }
 .chat-cell :deep(.van-swipe-cell__wrapper) { background: #fff; }
 .chat-item { display: flex; align-items: center; gap: 12px; padding: 13px 16px; background: #fff; border-bottom: 1px solid #f1f4f8; }
 .chat-avatar-wrap { position: relative; flex-shrink: 0; }

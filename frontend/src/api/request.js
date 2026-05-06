@@ -22,7 +22,9 @@ request.interceptors.response.use(
     const status = err.response?.status
     const message = err.response?.data?.message || err.message || '请求失败'
 
-    if (status === 401) {
+    // 注册/登录成功后立刻请求 /users/me 若遇 401（如库同步延迟），不应清掉刚写入的新 token
+    const cfg = err.config || {}
+    if (status === 401 && !cfg.skip401Redirect) {
       storage.remove('token')
       storage.remove('userId')
       const currentHash = window.location.hash?.replace(/^#/, '') || '/'

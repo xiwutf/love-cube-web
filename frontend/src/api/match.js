@@ -81,6 +81,11 @@ export async function superlikeUser(userId) {
   return request.post(`/interactions/superlike/${userId}`)
 }
 
+/** 认识页中间按钮：收藏（关注），落库 FOLLOW，非 SUPER_LIKE */
+export async function matchFollowUser(userId) {
+  return request.post(`/interactions/match-follow/${userId}`)
+}
+
 export async function dislikeUser(userId) {
   try {
     return await request.post(`/interactions/dislike/${userId}`)

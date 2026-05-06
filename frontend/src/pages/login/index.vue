@@ -169,17 +169,18 @@ async function handleRegister() {
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: '是否现在去开通找对象功能？',
+      message: '是否现在去上传生活照并开通找对象？（开通前至少需要一张生活照）',
       confirmButtonText: '去开通',
       cancelButtonText: '稍后再说'
     })
     router.replace('/fellowship')
   } catch (err) {
-    if (err?.name === 'Cancel') {
+    // Vant showConfirmDialog：点取消会 reject 字符串 'cancel'，不是 Error#name === 'Cancel'
+    if (err === 'cancel' || err?.name === 'Cancel') {
       router.replace('/')
       return
     }
-    showToast({ message: err.message || '注册失败，请稍后重试', type: 'fail' })
+    showToast({ message: (typeof err?.message === 'string' && err.message) || '注册失败，请稍后重试', type: 'fail' })
   } finally {
     loading.value = false
   }

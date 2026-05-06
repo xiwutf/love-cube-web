@@ -2,6 +2,17 @@
   <div class="fellowship-profile-edit-page">
     <NavBar title="编辑找对象资料" />
 
+    <button
+      v-if="verifyBannerVisible"
+      type="button"
+      class="verify-banner"
+      @click="router.push('/fellowship/verify')"
+    >
+      <van-icon name="passed" class="verify-banner-icon" />
+      <span class="verify-banner-text">您已通过认证 · 个人资料展示认证标识</span>
+      <van-icon name="arrow" class="verify-banner-arrow" />
+    </button>
+
     <van-form class="form-wrap" @submit="handleSubmit">
       <van-cell-group inset>
         <van-field v-model="form.nickname" label="昵称" placeholder="请输入昵称（最多20字）" maxlength="20" />
@@ -74,9 +85,12 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const store = useFellowshipProfileStore()
+
+const verifyBannerVisible = computed(() => userHasVerificationBadge(store.profile ?? {}))
 
 const form = reactive({
   nickname: '',
@@ -211,6 +225,42 @@ async function handleSubmit() {
 
 <style scoped>
 .fellowship-profile-edit-page { min-height: 100vh; background: #f8f8f8; }
+
+.verify-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 12px;
+  width: calc(100% - 24px);
+  box-sizing: border-box;
+  text-align: left;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 45%, #e0f2fe 100%);
+  color: #065f46;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(6, 95, 70, 0.12);
+}
+
+.verify-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.verify-banner-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.verify-banner-arrow {
+  font-size: 14px;
+  color: #047857;
+  flex-shrink: 0;
+}
+
 .form-wrap { padding: 12px 0 24px; }
 .btn-wrap { margin: 20px 16px 0; }
 </style>

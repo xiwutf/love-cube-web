@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserVerificationRepository extends JpaRepository<UserVerification, Long> {
+    List<UserVerification> findByUserIdIn(Collection<Long> userIds);
     Optional<UserVerification> findTopByUserIdOrderBySubmittedAtDesc(Long userId);
     List<UserVerification> findByUserIdOrderBySubmittedAtDesc(Long userId);
     Optional<UserVerification> findTopByUserIdAndVerifyTypeOrderBySubmittedAtDesc(Long userId, String verifyType);

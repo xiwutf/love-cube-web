@@ -192,6 +192,19 @@ public class UserInteractionService {
             UserInteraction.TargetType.USER, null, null);
     }
 
+    /**
+     * 认识页「收藏」：仅在没有关注记录时创建 FOLLOW，避免与互动接口里「再点一次就取消关注」的开关行为混淆。
+     *
+     * @return true 表示本次新建了关注；false 表示此前已关注
+     */
+    public boolean followUserIfNotFollowing(Long fromUserId, Long toUserId) {
+        if (isFollowing(fromUserId, toUserId)) {
+            return false;
+        }
+        followUser(fromUserId, toUserId);
+        return true;
+    }
+
     public void unfollowUser(Long fromUserId, Long toUserId) {
         removeInteraction(fromUserId, toUserId, UserInteraction.InteractionType.FOLLOW, null);
     }
@@ -255,8 +268,12 @@ public class UserInteractionService {
             case "all" -> EnumSet.of(
                     UserInteraction.InteractionType.LIKE,
                     UserInteraction.InteractionType.SUPER_LIKE,
+                    UserInteraction.InteractionType.FOLLOW,
                     UserInteraction.InteractionType.SKIP);
-            default -> EnumSet.of(UserInteraction.InteractionType.LIKE, UserInteraction.InteractionType.SUPER_LIKE);
+            default -> EnumSet.of(
+                    UserInteraction.InteractionType.LIKE,
+                    UserInteraction.InteractionType.SUPER_LIKE,
+                    UserInteraction.InteractionType.FOLLOW);
         };
 
         int safePage = Math.max(pageOneBased, 1);

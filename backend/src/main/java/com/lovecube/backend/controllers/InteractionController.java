@@ -3,9 +3,10 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserRepository;
-import com.lovecube.backend.services.NotificationService;
-import com.lovecube.backend.services.UserInteractionService;
 import com.lovecube.backend.services.GrowthService;
+import com.lovecube.backend.services.NotificationService;
+import com.lovecube.backend.services.UnifiedProfileService;
+import com.lovecube.backend.services.UserInteractionService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,18 @@ public class InteractionController {
 
     @Autowired
     private GrowthService growthService;
-    
+
+    @Autowired
+    private UnifiedProfileService unifiedProfileService;
+
+    private ResponseEntity<?> forbiddenIfNeedsFellowshipPhotos(User u) {
+        if (u != null && unifiedProfileService.isFellowshipActiveButMissingLifePhotos(u)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(unifiedProfileService.buildFellowshipPhotosRequiredErrorBody());
+        }
+        return null;
+    }
+
     /**
      * 点赞用户
      */
@@ -55,6 +67,10 @@ public class InteractionController {
                     "isLiked", false
                 ));
             } else {
+                ResponseEntity<?> need = forbiddenIfNeedsFellowshipPhotos(currentUser);
+                if (need != null) {
+                    return need;
+                }
                 // 如果没有点赞，则点赞
                 interactionService.likeUser(currentUser.getUserid(), userId);
                 growthService.recordAction(currentUser.getUserid(), "LIKE_CONTENT", "LIKE_USER_" + userId);
@@ -109,6 +125,10 @@ public class InteractionController {
                     "isFollowing", false
                 ));
             } else {
+                ResponseEntity<?> need = forbiddenIfNeedsFellowshipPhotos(currentUser);
+                if (need != null) {
+                    return need;
+                }
                 // 如果没有关注，则关注
                 interactionService.followUser(currentUser.getUserid(), userId);
                 String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
@@ -132,6 +152,58 @@ public class InteractionController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "操作失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 认识页收藏（关注）：只增加关注、不切换取消；类型为 FOLLOW，与「超级喜欢」SUPER_LIKE 区分。
+     */
+    @PostMapping("/match-follow/{userId}")
+    public ResponseEntity<?> matchFollowUser(@PathVariable Long userId,
+                                             @RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "用户认证失败"));
+            }
+            if (!interactionService.isFollowing(currentUser.getUserid(), userId)) {
+                ResponseEntity<?> need = forbiddenIfNeedsFellowshipPhotos(currentUser);
+                if (need != null) {
+                    return need;
+                }
+            }
+            boolean created = interactionService.followUserIfNotFollowing(currentUser.getUserid(), userId);
+            boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
+            String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
+            if (created) {
+                try {
+                    notificationService.createNotification(
+                            userId,
+                            NotificationCatalog.TYPE_USER_FOLLOWED,
+                            senderName + " 关注了你",
+                            senderName + " 关注了你",
+                            "/fellowship/user-profile/" + currentUser.getUserid(),
+                            "USER",
+                            String.valueOf(currentUser.getUserid()));
+                    if (matched) {
+                        notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
+                                "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
+                                String.valueOf(currentUser.getUserid()));
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("message", created ? "收藏成功" : "已收藏");
+            result.put("isFollowing", true);
+            result.put("matched", matched);
+            result.put("matchedUserId", matched ? userId : null);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "操作失败: " + e.getMessage()));
         }
     }
 
@@ -167,6 +239,10 @@ public class InteractionController {
             if (currentUser == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "用户认证失败"));
+            }
+            ResponseEntity<?> need = forbiddenIfNeedsFellowshipPhotos(currentUser);
+            if (need != null) {
+                return need;
             }
             interactionService.superLikeUser(currentUser.getUserid(), userId);
             boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);

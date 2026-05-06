@@ -16,3 +16,18 @@ export function groupFeedCoverUrlFromApi(item) {
   const v = item.coverUrl ?? item.avatarUrl
   return typeof v === 'string' ? v.trim() : String(v ?? '').trim()
 }
+
+/** 与审核通过等状态对齐，用于展示「已认证」徽章（含大小写与历史别名） */
+export function isVerifiedStatusString(v) {
+  const raw = String(v ?? '').trim().toLowerCase()
+  return ['verified', 'approved', 'passed', 'success', 'done', 'active', 'completed', '1', 'true'].includes(raw)
+}
+
+/** 综合最新审核状态与真人/实名通过位 */
+export function userHasVerificationBadge(row) {
+  if (row == null || typeof row !== 'object') return false
+  if (isVerifiedStatusString(row.verificationStatus)) return true
+  if (row.photoVerified === true) return true
+  if (row.realnameVerified === true) return true
+  return false
+}

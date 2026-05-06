@@ -271,6 +271,12 @@ public class AdminContentController {
                 ? Map.of()
                 : userProfileRepository.findByUserIdIn(userIds).stream()
                 .collect(Collectors.toMap(UserProfile::getUserId, item -> item, (a, b) -> a));
+        Map<Long, UserVerification> latestUvByUser = userIds.isEmpty()
+                ? Map.of()
+                : buildLatestUserVerificationByUserId(userVerificationRepository.findByUserIdIn(userIds));
+        Map<Long, VerificationRequest> latestVrByUser = userIds.isEmpty()
+                ? Map.of()
+                : buildLatestVerificationRequestByUserId(verificationRequestRepository.findByUserIdIn(userIds));
 
         return visibleUsers.stream()
                 .map(user -> {
@@ -294,7 +300,8 @@ public class AdminContentController {
                     item.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
                     item.put("uploadedPhotoCount", uploadedPhotoCount);
                     item.put("hasUploadedPhotos", uploadedPhotoCount > 0);
-                    item.put("verificationStatus", "none");
+                    item.put("verificationStatus", resolveAdminListVerificationStatus(
+                            user.getUserid(), latestUvByUser, latestVrByUser));
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
                     item.put("createdAt", user.getCreatedAt());
@@ -1018,6 +1025,61 @@ public class AdminContentController {
             return null;
         }
         return years;
+    }
+
+    /** 与 UnifiedProfileService 一致：取该用户最新一条 user_verifications，否则取 verification_requests。 */
+    private static Map<Long, UserVerification> buildLatestUserVerificationByUserId(List<UserVerification> rows) {
+        Map<Long, UserVerification> map = new HashMap<>();
+        for (UserVerification v : rows) {
+            if (v.getUserId() == null) {
+                continue;
+            }
+            UserVerification cur = map.get(v.getUserId());
+            if (cur == null || isSubmittedAtNewer(v.getSubmittedAt(), cur.getSubmittedAt())) {
+                map.put(v.getUserId(), v);
+            }
+        }
+        return map;
+    }
+
+    private static Map<Long, VerificationRequest> buildLatestVerificationRequestByUserId(List<VerificationRequest> rows) {
+        Map<Long, VerificationRequest> map = new HashMap<>();
+        for (VerificationRequest r : rows) {
+            if (r.getUserId() == null) {
+                continue;
+            }
+            VerificationRequest cur = map.get(r.getUserId());
+            if (cur == null || isSubmittedAtNewer(r.getSubmittedAt(), cur.getSubmittedAt())) {
+                map.put(r.getUserId(), r);
+            }
+        }
+        return map;
+    }
+
+    private static boolean isSubmittedAtNewer(LocalDateTime candidate, LocalDateTime baseline) {
+        if (candidate == null) {
+            return false;
+        }
+        if (baseline == null) {
+            return true;
+        }
+        return candidate.isAfter(baseline);
+    }
+
+    private static String resolveAdminListVerificationStatus(
+            Long userId,
+            Map<Long, UserVerification> latestUv,
+            Map<Long, VerificationRequest> latestVr
+    ) {
+        UserVerification uv = latestUv.get(userId);
+        if (uv != null && uv.getStatus() != null && !uv.getStatus().isBlank()) {
+            return uv.getStatus();
+        }
+        VerificationRequest vr = latestVr.get(userId);
+        if (vr != null && vr.getStatus() != null && !vr.getStatus().isBlank()) {
+            return vr.getStatus();
+        }
+        return "none";
     }
 
     private Map<String, Object> toAdminUserPhotoView(UserPhoto photo) {

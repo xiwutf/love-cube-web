@@ -20,7 +20,7 @@
     <!-- LIKE / NOPE 标签 -->
     <div class="stamp like-stamp" :style="{ opacity: likeOpacity }">LIKE 💚</div>
     <div class="stamp nope-stamp" :style="{ opacity: nopeOpacity }">NOPE 💔</div>
-    <div class="stamp super-stamp" :style="{ opacity: superOpacity }">SUPER ⭐</div>
+    <div class="stamp super-stamp" :style="{ opacity: superOpacity }">收藏 ⭐</div>
 
     <!-- 用户信息 -->
     <div class="card-info">
@@ -38,7 +38,7 @@ const props = defineProps({
   user: { type: Object, required: true }
 })
 
-const emit = defineEmits(['like', 'dislike', 'superlike', 'view-profile'])
+const emit = defineEmits(['like', 'dislike', 'collect', 'view-profile'])
 
 const cardAvatarSrc = computed(() => resolveMatchCardImage(props.user))
 
@@ -60,7 +60,7 @@ function resolvePrimaryPhoto(user) {
 }
 
 const THRESHOLD  = 80   // px - 触发 like/dislike 的阈值
-const THRESHOLD_Y = -80  // px - 触发 superlike 的阈值
+const THRESHOLD_Y = -80  // px - 触发收藏（上滑）的阈值
 
 let startX = 0, startY = 0
 let tapStartAt = 0
@@ -113,7 +113,7 @@ function onTouchEnd() {
   }
 
   if (deltaY.value < THRESHOLD_Y && Math.abs(deltaX.value) < THRESHOLD) {
-    flyOut(0, -window.innerHeight, 'superlike')
+    flyOut(0, -window.innerHeight, 'collect')
   } else if (deltaX.value > THRESHOLD) {
     flyOut(window.innerWidth * 1.5, deltaX.value / 5, 'like')
   } else if (deltaX.value < -THRESHOLD) {
@@ -142,7 +142,7 @@ function flyOut(tx, ty, action) {
 defineExpose({
   triggerLike:      () => flyOut(window.innerWidth * 1.5, 50, 'like'),
   triggerDislike:   () => flyOut(-window.innerWidth * 1.5, 50, 'dislike'),
-  triggerSuperlike: () => flyOut(0, -window.innerHeight, 'superlike'),
+  triggerCollect: () => flyOut(0, -window.innerHeight, 'collect'),
 })
 </script>
 

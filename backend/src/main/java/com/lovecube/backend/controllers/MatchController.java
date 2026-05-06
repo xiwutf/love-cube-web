@@ -1,6 +1,7 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.MatchService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.VerificationService;
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +32,18 @@ public class MatchController {
     @Autowired
     private VerificationService verificationService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private ResponseEntity<?> gateFellowshipLifePhotos(Long userId) {
+        User u = userRepository.findById(userId).orElse(null);
+        if (unifiedProfileService.isFellowshipActiveButMissingLifePhotos(u)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(unifiedProfileService.buildFellowshipPhotosRequiredErrorBody());
+        }
+        return null;
+    }
+
     @GetMapping("/list")
     public ResponseEntity<?> getUserList(
             @RequestHeader("Authorization") String token,
@@ -45,6 +59,10 @@ public class MatchController {
             Long currentUserId = matchService.getCurrentUserId(token);
             if (currentUserId == null) {
                 return ResponseEntity.badRequest().body("无效的用户Token");
+            }
+            ResponseEntity<?> blocked = gateFellowshipLifePhotos(currentUserId);
+            if (blocked != null) {
+                return blocked;
             }
 
             int safePage = page == null || page < 1 ? 1 : page;
@@ -93,6 +111,10 @@ public class MatchController {
             Long currentUserId = matchService.getCurrentUserId(token);
             if (currentUserId == null) {
                 return ResponseEntity.badRequest().body("无效的用户Token");
+            }
+            ResponseEntity<?> blocked = gateFellowshipLifePhotos(currentUserId);
+            if (blocked != null) {
+                return blocked;
             }
 
             Integer minAge = null;

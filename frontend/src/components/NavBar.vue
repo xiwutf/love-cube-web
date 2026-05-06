@@ -31,8 +31,9 @@ function handleBack() {
 .navbar {
   display: flex;
   align-items: center;
-  height: 48px;
-  padding: 0 12px;
+  min-height: calc(48px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  box-sizing: border-box;
   background: #fff;
   position: sticky;
   top: 0;

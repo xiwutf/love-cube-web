@@ -43,7 +43,7 @@
             @view-profile="goUserProfile(user.userId)"
             @like="onAction('like')"
             @dislike="onAction('dislike')"
-            @superlike="onAction('superlike')"
+            @collect="onAction('collect')"
           />
           <div v-else class="card-back" />
         </div>
@@ -64,7 +64,7 @@
       <button class="action-btn btn-dislike" @click="topCardRef?.triggerDislike()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
-      <button class="action-btn btn-superlike" @click="topCardRef?.triggerSuperlike()">
+      <button class="action-btn btn-collect" type="button" @click="topCardRef?.triggerCollect()">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.26H21l-5.47 3.97 2.09 6.26L12 14.52l-5.62 3.97 2.09-6.26L3 8.26h6.91z"/></svg>
       </button>
       <button class="action-btn btn-like" @click="topCardRef?.triggerLike()">
@@ -137,7 +137,7 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import SwipeCard from '@/components/SwipeCard.vue'
-import { getMatchList, likeUser, dislikeUser, superlikeUser } from '@/api/match.js'
+import { getMatchList, likeUser, dislikeUser, matchFollowUser } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 
 const router = useRouter()
@@ -162,6 +162,10 @@ const filter = reactive({
 })
 const visibleStack = computed(() => cardStack.value.filter((user) => user && user.userId))
 
+function isFellowshipPhotosGateError(err) {
+  return err?.status === 403 && err?.data?.code === 'FELLOWSHIP_REQUIRES_PHOTOS'
+}
+
 async function loadCards() {
   pageLoading.value = true
   pager.page = 1
@@ -183,7 +187,12 @@ async function loadCards() {
     if (cardStack.value.length > 0 && pager.hasMore) {
       loadMore()
     }
-  } catch {
+  } catch (err) {
+    if (isFellowshipPhotosGateError(err)) {
+      showToast({ message: err?.message || '请先上传生活照后再使用匹配', type: 'fail' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
     showToast({ message: '加载失败', type: 'fail' })
   } finally {
     pageLoading.value = false
@@ -201,15 +210,20 @@ async function onAction(action) {
     let res
     if (action === 'like') res = await likeUser(top.userId)
     if (action === 'dislike') res = await dislikeUser(top.userId)
-    if (action === 'superlike') res = await superlikeUser(top.userId)
+    if (action === 'collect') res = await matchFollowUser(top.userId)
 
     if (res?.matched) {
       matchedUserId = top.userId
       showMatched.value = true
     }
-  } catch {
+  } catch (err) {
     // 请求失败时回滚卡片，避免用户无感丢卡
     cardStack.value.unshift(top)
+    if (isFellowshipPhotosGateError(err)) {
+      showToast({ message: err?.message || '请先上传生活照', type: 'fail' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
     showToast({ message: '操作失败，请稍后重试', type: 'fail' })
     return
   }
@@ -238,8 +252,11 @@ async function loadMore() {
     sanitizeStack()
     pager.page = nextPage
     pager.hasMore = Boolean(result?.hasMore)
-  } catch {
-    // ignore
+  } catch (err) {
+    if (isFellowshipPhotosGateError(err)) {
+      showToast({ message: err?.message || '请先上传生活照', type: 'fail' })
+      router.push('/fellowship/profile/edit')
+    }
   } finally {
     pager.loadingMore = false
   }
@@ -294,8 +311,9 @@ onMounted(loadCards)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
-  height: 52px;
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  min-height: calc(52px + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
   background: #fff;
   box-shadow: 0 1px 0 #f0f2f8;
   flex-shrink: 0;
@@ -430,14 +448,14 @@ onMounted(loadCards)
   height: 26px;
 }
 
-.btn-superlike {
+.btn-collect {
   width: 48px;
   height: 48px;
   background: linear-gradient(135deg, #FF5F84, #FF3366);
   box-shadow: 0 6px 20px rgba(255, 95, 132, 0.4);
   color: #fff;
 }
-.btn-superlike svg {
+.btn-collect svg {
   width: 20px;
   height: 20px;
 }

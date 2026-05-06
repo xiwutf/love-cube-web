@@ -174,6 +174,12 @@ public class UserController {
     public ResponseEntity<?> activateFellowship(@RequestHeader("Authorization") String authHeader) {
         try {
             User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            if (!unifiedProfileService.hasFellowshipLifePhotos(currentUser.getUserid())) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("message", "请先至少上传一张生活照后再开通联谊功能");
+                body.put("code", "FELLOWSHIP_ACTIVATION_REQUIRES_PHOTO");
+                return ResponseEntity.badRequest().body(body);
+            }
             currentUser.setFellowshipEnabled(true);
             currentUser.setFellowshipMatchVisible(true);
             userRepository.save(currentUser);

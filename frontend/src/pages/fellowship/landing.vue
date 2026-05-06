@@ -53,7 +53,7 @@ const sloganText = computed(() => {
 
 const hintText = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
-    return '你的平台账号不受影响，开通后才会启用找对象能力'
+    return '开通前需至少上传一张生活照；平台账号不受影响，开通后才会启用找对象能力'
   }
   return '新用户建议先完善资料并完成真人认证，推荐效果会更好'
 })
@@ -82,11 +82,23 @@ const quickItems = computed(() => {
 async function handleActivate() {
   activating.value = true
   try {
+    await userStore.refreshCurrentUser()
+    const photos = userStore.userInfo?.photos
+    if (!Array.isArray(photos) || photos.length === 0) {
+      showToast({ type: 'fail', message: '开通前请先上传至少一张生活照' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
     await userStore.activateFellowship()
     showToast({ type: 'success', message: '找对象功能已开通' })
     const target = typeof route.query.redirect === 'string' ? decodeURIComponent(route.query.redirect) : '/fellowship/discover'
     router.replace(target || '/fellowship/discover')
   } catch (error) {
+    if (error?.data?.code === 'FELLOWSHIP_ACTIVATION_REQUIRES_PHOTO') {
+      showToast({ type: 'fail', message: error?.message || '请先上传生活照后再开通' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
     showToast({ type: 'fail', message: error?.message || '开通失败，请稍后重试' })
   } finally {
     activating.value = false
