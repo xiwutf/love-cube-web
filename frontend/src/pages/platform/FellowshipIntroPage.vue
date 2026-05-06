@@ -10,7 +10,7 @@
           遇见更好的生活
         </h1>
         <p class="intro-subtitle">
-          为青年打造真实可靠的找对象平台，连接真实资料、互动体验与平台治理能力。
+          为青年打造真实可靠的联谊平台，连接真实资料、互动体验与平台治理能力。
         </p>
         <div class="intro-actions">
           <router-link to="/fellowship" class="intro-btn intro-btn-primary">去看看</router-link>

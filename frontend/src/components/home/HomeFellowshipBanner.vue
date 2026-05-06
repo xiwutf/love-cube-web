@@ -1,7 +1,7 @@
 <template>
   <section class="fellowship-banner">
     <div class="banner-copy">
-      <p>找对象</p>
+      <p>联谊</p>
       <h2>完善资料，看看有没有合适的人</h2>
       <ul>
         <li>实名认证</li>

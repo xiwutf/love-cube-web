@@ -53,13 +53,13 @@ public class NotificationService {
     }
 
     /**
-     * 找对象资料审核结果：管理端审核流接入后在此调用或直接使用 {@link #createNotification}。
+     * 联谊资料审核结果：管理端审核流接入后在此调用或直接使用 {@link #createNotification}。
      */
     @Transactional
     public void notifyMatchProfileReviewResult(Long userId, boolean approved, String reason) {
         if (approved) {
             createNotification(userId, NotificationCatalog.TYPE_MATCH_PROFILE_REVIEW_PASSED,
-                    "找对象资料审核通过",
+                    "联谊资料审核通过",
                     "你的资料已通过审核，可在匹配中正常展示。",
                     "/fellowship/profile",
                     "USER",
@@ -67,7 +67,7 @@ public class NotificationService {
         } else {
             String r = reason != null && !reason.isBlank() ? reason : "请根据提示修改后重新提交。";
             createNotification(userId, NotificationCatalog.TYPE_MATCH_PROFILE_REVIEW_REJECTED,
-                    "找对象资料审核未通过",
+                    "联谊资料审核未通过",
                     "审核未通过：" + r,
                     "/fellowship/profile/edit",
                     "USER",

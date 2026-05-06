@@ -2,7 +2,7 @@
   <section class="platform-page module-page">
     <div class="detail-nav-row">
       <router-link to="/events" class="platform-backlink">返回活动列表</router-link>
-      <router-link to="/fellowship-intro" class="platform-link">查看找对象</router-link>
+      <router-link to="/fellowship-intro" class="platform-link">了解联谊</router-link>
     </div>
 
     <article v-if="item" class="platform-card detail-article">

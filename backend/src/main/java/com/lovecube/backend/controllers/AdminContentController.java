@@ -888,7 +888,7 @@ public class AdminContentController {
                 .replaceAll("[；]", ";")
                 .replaceAll("[：]", ":")
                 .trim();
-        // Ignore bracket variants to avoid "(找对象", "（找对象）", "找对象)" being split.
+        // Ignore bracket variants to avoid "(联谊", "（联谊）", "联谊)" being split.
         normalized = normalized.replaceAll("[\\(\\)\\[\\]\\{\\}（）【】]", "");
         // Remove leading/trailing symbols that often come from manual input paste.
         normalized = normalized.replaceAll("^[\\p{Punct}\\s]+", "").replaceAll("[\\p{Punct}\\s]+$", "").trim();

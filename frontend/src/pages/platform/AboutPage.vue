@@ -4,7 +4,7 @@
       <p class="platform-kicker">About Platform</p>
       <h1 class="platform-title">关于 Love Cube 平台</h1>
       <p class="platform-subtitle">
-        Love Cube 是一个多元连接平台，找对象只是其中一个模块，平台整体围绕内容、活动、社交和服务构建。
+        Love Cube 是一个多元连接平台，联谊只是其中一个模块，平台整体围绕内容、活动、社交和服务构建。
       </p>
     </section>
 
@@ -15,7 +15,7 @@
       </article>
       <article class="platform-card module-card">
         <h3 class="module-card-title">模块体系</h3>
-        <p class="module-card-desc">包含平台动精选内容活动中心找对象功能平台个人中心和治理系统</p>
+        <p class="module-card-desc">包含平台动精选内容活动中心联谊功能平台个人中心和治理系统</p>
       </article>
       <article class="platform-card module-card">
         <h3 class="module-card-title">运营目标</h3>
@@ -29,7 +29,7 @@
         <router-link class="module-chip" to="/announcements">平台动</router-link>
         <router-link class="module-chip" to="/articles">精内</router-link>
         <router-link class="module-chip" to="/events">活动中心</router-link>
-        <router-link class="module-chip" to="/fellowship-intro">找对象</router-link>
+        <router-link class="module-chip" to="/fellowship-intro">联谊</router-link>
         <router-link class="module-chip" to="/me">平台个人中心</router-link>
       </div>
     </section>

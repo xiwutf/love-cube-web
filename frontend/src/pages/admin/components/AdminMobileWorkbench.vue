@@ -178,7 +178,7 @@ const moduleGroups = [
     items: [
       { label: '团体管理', hint: '全站团体', to: '/admin/platform/groups', icon: '团' },
       { label: '互助管理', hint: '求助审核', to: '/admin/help-requests', icon: '助' },
-      { label: '找对象管理', hint: '资料审核', to: '/admin/verifications', icon: '找' }
+      { label: '联谊管理', hint: '资料审核', to: '/admin/verifications', icon: '联' }
     ]
   },
   {

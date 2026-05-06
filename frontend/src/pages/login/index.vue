@@ -87,7 +87,7 @@
                   </template>
                 </van-field>
               </van-cell-group>
-              <p class="register-tip">注册后默认仅开通平台账号；找对象功能需本人手动开启。</p>
+              <p class="register-tip">注册后默认仅开通平台账号；联谊功能需本人手动开启。</p>
               <p class="invite-tip">如果你通过邀请二维码进入，邀请码会自动填入，也可以手动修改。</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
@@ -169,7 +169,7 @@ async function handleRegister() {
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })
     await showConfirmDialog({
       title: '注册完成',
-      message: '是否现在去上传生活照并开通找对象？（开通前至少需要一张生活照）',
+      message: '是否现在去上传生活照并开通联谊？（开通前至少需要一张生活照）',
       confirmButtonText: '去开通',
       cancelButtonText: '稍后再说'
     })

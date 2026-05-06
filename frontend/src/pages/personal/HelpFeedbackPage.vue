@@ -65,8 +65,8 @@ import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import { submitFeedback } from '@/api/feedback.js'
 
-const moduleOptions = ['找对象', '活动中心', '内容资讯', '平台公告', '本地服务', 'AI工具', '个人中心']
-const goalOptions = ['认识新朋友', '找对象', '获取信息内容', '参加活动', '使用实用工具', '本地资源', '随便看看']
+const moduleOptions = ['联谊', '活动中心', '内容资讯', '平台公告', '本地服务', 'AI工具', '个人中心']
+const goalOptions = ['认识新朋友', '参与联谊', '获取信息内容', '参加活动', '使用实用工具', '本地资源', '随便看看']
 const missingOptions = ['用户太少', '功能太少', '页面不够好看', '不知道怎么玩', '内容太少', '信任感不足', '其他']
 
 const focusModule = ref('')

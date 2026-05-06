@@ -2,7 +2,7 @@
   <div class="landing-page">
     <div class="content">
       <p class="eyebrow">Love Cube Fellowship</p>
-      <h1 class="title">更可靠的找对象体验</h1>
+      <h1 class="title">更可靠的联谊体验</h1>
       <p class="slogan">{{ sloganText }}</p>
       <div class="actions">
         <button
@@ -12,7 +12,7 @@
           :disabled="activating"
           @click="handleActivate"
         >
-          {{ activating ? '开通中...' : '立即开通找对象功能' }}
+          {{ activating ? '开通中...' : '立即开通联谊功能' }}
         </button>
         <router-link v-else to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
         <router-link v-if="isLoggedIn && isFellowshipEnabled" to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
@@ -46,14 +46,14 @@ const isFellowshipEnabled = computed(() => userStore.isFellowshipEnabled)
 
 const sloganText = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
-    return '找对象功能默认关闭，需你本人手动开通后才可进入'
+    return '联谊功能默认关闭，需你本人手动开通后才可进入'
   }
   return '从完善资料到开始匹配，3 分钟即可进入互动状态'
 })
 
 const hintText = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
-    return '开通前需至少上传一张生活照；平台账号不受影响，开通后才会启用找对象能力'
+    return '开通前需至少上传一张生活照；平台账号不受影响，开通后即可使用联谊相关功能'
   }
   return '新用户建议先完善资料并完成真人认证，推荐效果会更好'
 })
@@ -61,7 +61,7 @@ const hintText = computed(() => {
 const quickItems = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
     return [
-  { label: '找对象是什么', to: '/fellowship-intro' },
+      { label: '联谊是什么', to: '/fellowship-intro' },
       { label: '平台首页', to: '/' },
       { label: '内容广场', to: '/articles' },
       { label: '活动中心', to: '/events' }
@@ -90,7 +90,7 @@ async function handleActivate() {
       return
     }
     await userStore.activateFellowship()
-    showToast({ type: 'success', message: '找对象功能已开通' })
+    showToast({ type: 'success', message: '联谊功能已开通' })
     const target = typeof route.query.redirect === 'string' ? decodeURIComponent(route.query.redirect) : '/fellowship/discover'
     router.replace(target || '/fellowship/discover')
   } catch (error) {
