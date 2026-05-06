@@ -7,9 +7,9 @@
     placeholder
   >
     <van-tabbar-item icon="home-o" @click="go('/fellowship/discover')">首页</van-tabbar-item>
-    <van-tabbar-item icon="search" @click="go('/fellowship/search')">发现</van-tabbar-item>
-    <van-tabbar-item icon="friends-o" @click="go('/fellowship/groups')">团体</van-tabbar-item>
     <van-tabbar-item icon="like-o" @click="go('/fellowship/match')">认识</van-tabbar-item>
+    <van-tabbar-item icon="fire-o" @click="go('/fellowship/dynamic')">动态</van-tabbar-item>
+    <van-tabbar-item icon="plus" @click="go('/fellowship/dynamic/publish')">发布</van-tabbar-item>
     <van-tabbar-item icon="chat-o" :badge="msgStore.totalUnread || ''" @click="go('/fellowship/messages')">消息</van-tabbar-item>
     <van-tabbar-item icon="contact-o" @click="go('/fellowship/me')">我的</van-tabbar-item>
   </van-tabbar>
@@ -26,9 +26,9 @@ const msgStore = useMessageStore()
 
 const tabMap = [
   '/fellowship/discover',
-  '/fellowship/search',
-  '/fellowship/groups',
   '/fellowship/match',
+  '/fellowship/dynamic',
+  '/fellowship/dynamic/publish',
   '/fellowship/messages',
   '/fellowship/me'
 ]

@@ -18,6 +18,7 @@ export default {
     { path: 'match/all', component: () => import('@/pages/match/all.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'match/history', component: () => import('@/pages/match/history.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'dynamic', component: () => import('@/pages/dynamic/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'dynamic/publish', component: () => import('@/pages/fellowship/DynamicPublishPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile-edit', component: () => import('@/pages/fellowship/ProfileEditPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'profile/edit', component: () => import('@/pages/fellowship/profile/edit.vue'), meta: { module: 'fellowship', requiresAuth: true } },

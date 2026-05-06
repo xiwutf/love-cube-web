@@ -1,16 +1,16 @@
 ﻿<template>
   <div class="dynamic-page">
-    <div class="top-bar"><span class="top-title">鍔ㄦ€</span></div>
+    <div class="top-bar"><span class="top-title">动态</span></div>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-list v-model:loading="loading" :finished="noMore" finished-text="没有更多动了" @load="load">
+      <van-list v-model:loading="loading" :finished="noMore" finished-text="没有更多动态了" @load="load">
         <div v-for="item in list" :key="item.id" class="dynamic-item">
-          <div class="dynamic-header" @click="router.push(`/fellowship/user-profile/${item.userId}`)">
+          <div class="dynamic-header" @click="goUserProfile(item)">
             <van-image round width="40" height="40" :src="getAvatar(item)" fit="cover">
-              <template #error><div class="avatar-fallback">{{ (item.nickname || '?')[0] }}</div></template>
+              <template #error><div class="avatar-fallback">{{ getDisplayName(item).slice(0, 1) }}</div></template>
             </van-image>
             <div class="dynamic-user">
-              <p class="dynamic-name">{{ item.nickname || '用户' }}</p>
+              <p class="dynamic-name">{{ getDisplayName(item) }}</p>
               <p class="dynamic-time">{{ formatTime(item.createdAt) }}</p>
             </div>
             <van-icon name="ellipsis" size="18" color="#ccc" @click.stop="showMenu(item)" />
@@ -18,17 +18,29 @@
 
           <p class="dynamic-content">{{ item.content }}</p>
 
-          <div v-if="item.images?.length" class="dynamic-imgs" :class="`grid-${Math.min(item.images.length, 3)}`">
+          <div
+            v-if="getImages(item).length"
+            class="dynamic-imgs"
+            :class="`grid-${Math.min(getImages(item).length, 3)}`"
+          >
             <van-image
-              v-for="(img, i) in item.images.slice(0, 9)"
+              v-for="(img, i) in getImages(item).slice(0, 9)"
               :key="`${item.id}-${img}-${i}`"
-              :src="toFullUrl(img)"
+              :src="getImageSrc(item, img, i)"
               width="100%"
               height="100%"
               fit="cover"
               radius="6"
-              @click="previewImgs(item.images, i)"
-            />
+              @error="onImageError(item, img, i)"
+              @load="onImageLoad(item, img, i)"
+              @click="previewImgs(getImages(item), i)"
+            >
+              <template #error>
+                <div class="img-fallback" @click.stop="retryImage(item, img, i)">
+                  {{ isImageFailed(item, img, i) ? '图片加载失败，点此重试' : '图片加载失败' }}
+                </div>
+              </template>
+            </van-image>
           </div>
 
           <div class="dynamic-footer">
@@ -36,10 +48,14 @@
               <van-icon :name="item.isLiked ? 'like' : 'like-o'" />
               <span>{{ item.likeCount || 0 }}</span>
             </div>
+            <div class="comment-btn" @click="onComment(item)">
+              <van-icon name="chat-o" />
+              <span>{{ item.commentCount || 0 }}</span>
+            </div>
           </div>
         </div>
 
-        <van-empty v-if="!loading && !list.length" description="还没有动态，去发丢条吧" image-size="100" />
+        <van-empty v-if="!loading && !list.length" description="还没有动态，去发一条吧" image-size="100" />
       </van-list>
     </van-pull-refresh>
 
@@ -48,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showImagePreview, showConfirmDialog } from 'vant'
 import { showActionSheet } from '@/utils/vantActionSheet.js'
@@ -67,18 +83,23 @@ const loading = ref(false)
 const noMore = ref(false)
 const refreshing = ref(false)
 const likePending = ref(new Set())
+const imageRetrySeed = reactive({})
+const imageFailed = reactive({})
 let page = 1
 const PAGE_SIZE = 10
 
 async function load() {
-  if (loading.value || noMore.value) return
+  if (noMore.value) return
   loading.value = true
   try {
     const data = await getDynamics(page, PAGE_SIZE)
-    const items = Array.isArray(data) ? data : (data?.list || data?.content || [])
+    const items = Array.isArray(data) ? data : (data?.list || data?.items || data?.records || data?.content || [])
     list.value.push(...items)
-    if (items.length < PAGE_SIZE) noMore.value = true
+    if (items.length < PAGE_SIZE || data?.hasNext === false) noMore.value = true
     else page++
+  } catch (e) {
+    noMore.value = true
+    showToast({ message: e?.message || '动态加载失败', type: 'fail' })
   } finally {
     loading.value = false
   }
@@ -115,6 +136,78 @@ async function toggleLike(item) {
 
 function previewImgs(imgs, startIndex) {
   showImagePreview({ images: imgs.map(toFullUrl), startPosition: startIndex })
+}
+
+function getDisplayName(item) {
+  return item?.nickname || item?.username || item?.name || '用户'
+}
+
+function getImages(item) {
+  if (!item) return []
+  if (Array.isArray(item.images)) return item.images.filter(Boolean)
+  if (Array.isArray(item.imageUrls)) return item.imageUrls.filter(Boolean)
+  if (Array.isArray(item.image_urls)) return item.image_urls.filter(Boolean)
+  if (typeof item.imageUrls === 'string') {
+    try {
+      const parsed = JSON.parse(item.imageUrls)
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : []
+    } catch {
+      return item.imageUrls.split(',').map((s) => s.trim()).filter(Boolean)
+    }
+  }
+  if (typeof item.image_urls === 'string') {
+    try {
+      const parsed = JSON.parse(item.image_urls)
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : []
+    } catch {
+      return item.image_urls.split(',').map((s) => s.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
+function goUserProfile(item) {
+  const uid = item?.userId || item?.userid
+  if (!uid) return
+  router.push(`/fellowship/user-profile/${uid}`)
+}
+
+function onComment(item) {
+  const count = Number(item?.commentCount || 0)
+  showToast({
+    message: count > 0 ? '联谊动态暂不支持评论详情查看' : '联谊动态暂不支持发表评论',
+    type: 'text'
+  })
+}
+
+function imageKey(item, img, index) {
+  return `${item?.id || 'x'}-${index}-${String(img || '')}`
+}
+
+function getImageSrc(item, img, index) {
+  const key = imageKey(item, img, index)
+  const full = toFullUrl(img)
+  const seed = Number(imageRetrySeed[key] || 0)
+  if (!seed) return full
+  return `${full}${full.includes('?') ? '&' : '?'}_retry=${seed}`
+}
+
+function onImageError(item, img, index) {
+  imageFailed[imageKey(item, img, index)] = true
+}
+
+function onImageLoad(item, img, index) {
+  imageFailed[imageKey(item, img, index)] = false
+}
+
+function isImageFailed(item, img, index) {
+  return Boolean(imageFailed[imageKey(item, img, index)])
+}
+
+function retryImage(item, img, index) {
+  const key = imageKey(item, img, index)
+  imageRetrySeed[key] = Number(imageRetrySeed[key] || 0) + 1
+  imageFailed[key] = false
 }
 
 async function showMenu(item) {
@@ -170,18 +263,32 @@ async function showMenu(item) {
 .grid-2 { grid-template-columns: repeat(2, 1fr); aspect-ratio: 2/1; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); aspect-ratio: 3/1; }
 
-.dynamic-footer { display: flex; justify-content: flex-end; }
+.dynamic-footer { display: flex; justify-content: flex-end; gap: 14px; }
 .like-btn {
   display: flex; align-items: center; gap: 4px;
   font-size: 13px; color: #999; cursor: pointer; padding: 4px 8px;
 }
 .like-btn.liked { color: #ff6b8a; }
+.comment-btn {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; color: #999; padding: 4px 8px; cursor: pointer;
+}
 
 .avatar-fallback {
   width: 40px; height: 40px; border-radius: 50%;
   background: linear-gradient(135deg, #ff6b8a, #ffb3c1);
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; color: #fff; font-weight: 700;
+}
+.img-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #9ca3af;
+  font-size: 12px;
 }
 </style>
 

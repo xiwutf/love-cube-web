@@ -36,6 +36,69 @@
 
         <TodayStats :loading="loading" :items="todayStats" />
 
+        <section class="overview-visual platform-card">
+          <header class="overview-visual__header">
+            <div>
+              <h3 class="overview-visual__title">总览趋势</h3>
+              <p class="overview-visual__subtitle">通过图表快速查看核心模块在不同周期的体量变化</p>
+            </div>
+            <div class="range-switch" role="tablist" aria-label="统计周期">
+              <button
+                type="button"
+                class="range-switch__btn"
+                :class="{ 'range-switch__btn--active': dashboardRange === '7d' }"
+                :disabled="loading"
+                @click="dashboardRange = '7d'"
+              >
+                近7天
+              </button>
+              <button
+                type="button"
+                class="range-switch__btn"
+                :class="{ 'range-switch__btn--active': dashboardRange === '30d' }"
+                :disabled="loading"
+                @click="dashboardRange = '30d'"
+              >
+                近30天
+              </button>
+            </div>
+          </header>
+          <div class="visual-grid">
+            <article class="visual-card">
+              <h4 class="visual-card__title">模块体量对比</h4>
+              <div v-if="!volumeChartRows.length" class="visual-empty">暂无可展示数据</div>
+              <div v-else class="bar-chart">
+                <div v-for="row in volumeChartRows" :key="row.key" class="bar-chart__row">
+                  <div class="bar-chart__meta">
+                    <span>{{ row.label }}</span>
+                    <strong>{{ row.value }}</strong>
+                  </div>
+                  <div class="bar-chart__track">
+                    <span class="bar-chart__fill" :style="{ width: `${row.percent}%` }"></span>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="visual-card">
+              <h4 class="visual-card__title">核心指标雷达</h4>
+              <div v-if="!trendPolygonPoints" class="visual-empty">暂无可展示数据</div>
+              <div v-else class="radar-wrap">
+                <svg viewBox="0 0 220 220" class="radar-svg" aria-hidden="true">
+                  <polygon class="radar-grid" points="110,20 190,65 190,155 110,200 30,155 30,65"></polygon>
+                  <polygon class="radar-grid radar-grid--inner" points="110,50 166,82 166,138 110,170 54,138 54,82"></polygon>
+                  <polygon class="radar-shape" :points="trendPolygonPoints"></polygon>
+                </svg>
+                <ul class="radar-legend">
+                  <li v-for="item in radarLegendItems" :key="item.key">
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.value }}</strong>
+                  </li>
+                </ul>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="operation-zone">
           <ContentPanel :loading="loading" :items="contentMetrics" />
           <SocialPanel :loading="loading" :items="socialMetrics" />
@@ -131,6 +194,7 @@ const displayName = computed(
 
 const loading = ref(true)
 const error = ref('')
+const dashboardRange = ref('7d')
 const isMobileDashboard = ref(
   typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
 )
@@ -304,6 +368,87 @@ const reportReasons = computed(() => {
   return Array.isArray(rows) ? rows : []
 })
 
+const rangeLabel = computed(() => (dashboardRange.value === '30d' ? '近30天' : '近7天'))
+
+function rangeValue(item) {
+  return Number(dashboardRange.value === '30d' ? item.v30d : item.v7d) || 0
+}
+
+const chartSourceItems = computed(() => [
+  {
+    key: 'users',
+    label: '新增用户',
+    v7d: pick('userData', 'sevenDayNewUsers'),
+    v30d: (pick('userData', 'sevenDayNewUsers') || 0) * 4
+  },
+  {
+    key: 'content',
+    label: '内容发布',
+    v7d: pick('contentData', 'contentPublishedLast7d'),
+    v30d: pick('contentData', 'contentPublishedLast30d')
+  },
+  {
+    key: 'groupPosts',
+    label: '小组新帖',
+    v7d: pick('communityData', 'groupPostsLast7d'),
+    v30d: pick('communityData', 'groupPostsLast30d')
+  },
+  {
+    key: 'reports',
+    label: '举报总量',
+    v7d: pick('governanceData', 'reportsLast7d'),
+    v30d: pick('governanceData', 'reportsLast30d')
+  },
+  {
+    key: 'matches',
+    label: '匹配记录',
+    v7d: pick('engagementData', 'matchRecordsSevenDays'),
+    v30d: pick('engagementData', 'matchRecordsThirtyDays')
+  },
+  {
+    key: 'invites',
+    label: '邀请记录',
+    v7d: pick('growthData', 'inviteRecordsLast7d'),
+    v30d: pick('growthData', 'inviteRecordsLast30d')
+  }
+])
+
+const volumeChartRows = computed(() => {
+  const rows = chartSourceItems.value.map((item) => ({ ...item, value: rangeValue(item) }))
+  const maxValue = rows.reduce((max, row) => Math.max(max, row.value), 0) || 1
+  return rows.map((row) => ({
+    ...row,
+    percent: Math.max(6, Math.round((row.value / maxValue) * 100))
+  }))
+})
+
+const radarLegendItems = computed(() => [
+  { key: 'u', label: `${rangeLabel.value}新增用户`, value: rangeValue(chartSourceItems.value[0]) },
+  { key: 'c', label: `${rangeLabel.value}内容发布`, value: rangeValue(chartSourceItems.value[1]) },
+  { key: 'g', label: `${rangeLabel.value}小组新帖`, value: rangeValue(chartSourceItems.value[2]) },
+  { key: 'r', label: `${rangeLabel.value}举报总量`, value: rangeValue(chartSourceItems.value[3]) },
+  { key: 'm', label: `${rangeLabel.value}匹配记录`, value: rangeValue(chartSourceItems.value[4]) },
+  { key: 'i', label: `${rangeLabel.value}邀请记录`, value: rangeValue(chartSourceItems.value[5]) }
+])
+
+const trendPolygonPoints = computed(() => {
+  const values = radarLegendItems.value.map((item) => Number(item.value) || 0)
+  const maxValue = values.reduce((max, v) => Math.max(max, v), 0)
+  if (!maxValue) return ''
+  const centerX = 110
+  const centerY = 110
+  const radius = 86
+  return values
+    .map((value, idx) => {
+      const angle = (-Math.PI / 2) + (idx * (Math.PI * 2 / values.length))
+      const r = (value / maxValue) * radius
+      const x = centerX + Math.cos(angle) * r
+      const y = centerY + Math.sin(angle) * r
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+})
+
 async function load(forceRefresh = false) {
   loading.value = true
   error.value = ''
@@ -413,6 +558,173 @@ onUnmounted(() => {
   gap: var(--lc-space-6);
 }
 
+.overview-visual {
+  padding: var(--lc-space-5) var(--lc-space-6);
+  border: 1px solid var(--lc-border);
+}
+
+.overview-visual__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.overview-visual__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--lc-text);
+}
+
+.overview-visual__subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--lc-muted);
+}
+
+.range-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-bg-muted);
+}
+
+.range-switch__btn {
+  border: none;
+  background: transparent;
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.range-switch__btn--active {
+  background: var(--lc-surface);
+  color: var(--lc-text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+
+.visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.visual-card {
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--lc-surface);
+}
+
+.visual-card__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--lc-text);
+  font-weight: 700;
+}
+
+.bar-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-chart__row {
+  display: grid;
+  gap: 6px;
+}
+
+.bar-chart__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--lc-muted);
+  font-size: 13px;
+}
+
+.bar-chart__meta strong {
+  color: var(--lc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-chart__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--lc-bg-muted);
+  overflow: hidden;
+}
+
+.bar-chart__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lc-primary, #4f7cff), var(--lc-blue, #5b8bff));
+}
+
+.radar-wrap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.radar-svg {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 1;
+}
+
+.radar-grid {
+  fill: none;
+  stroke: var(--lc-border);
+  stroke-width: 1;
+}
+
+.radar-grid--inner {
+  opacity: 0.65;
+}
+
+.radar-shape {
+  fill: rgb(79 124 255 / 22%);
+  stroke: var(--lc-primary, #4f7cff);
+  stroke-width: 2;
+}
+
+.radar-legend {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.radar-legend li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--lc-muted);
+  border-bottom: 1px dashed var(--lc-border);
+  padding-bottom: 6px;
+}
+
+.radar-legend strong {
+  color: var(--lc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.visual-empty {
+  margin: 0;
+  color: var(--lc-subtle);
+  font-size: 13px;
+}
+
 .dashboard-side {
   position: sticky;
   top: var(--lc-space-6);
@@ -430,6 +742,19 @@ onUnmounted(() => {
 
 @media (max-width: 900px) {
   .operation-zone {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-visual__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .visual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-wrap {
     grid-template-columns: 1fr;
   }
 }
