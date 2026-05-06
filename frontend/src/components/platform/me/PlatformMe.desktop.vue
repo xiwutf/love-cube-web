@@ -350,7 +350,7 @@ const mobileGrowthLevel = computed(() => {
 
 const mobileDailyTasks = computed(() => {
   const codeToRoute = {
-    DAILY_LOGIN: '/me',
+    DAILY_LOGIN: '/platform/checkin',
     DAILY_POST: '/platform/publish',
     DAILY_COMMENT: '/platform/content?type=mood',
     DAILY_VIEW: '/platform/content',
@@ -366,7 +366,7 @@ const mobileDailyTasks = computed(() => {
     }))
   }
   return [
-    { title: '每日签到', exp: 2, done: false, to: '/me' },
+    { title: '每日签到', exp: 2, done: false, to: '/platform/checkin' },
     { title: '完善资料', exp: 5, done: false, to: { path: '/me', query: { panel: 'edit' } } },
     { title: '发布动态', exp: 10, done: false, to: '/platform/positive-share' },
     { title: '浏览内容', exp: 1, done: false, to: '/articles' }
@@ -415,7 +415,7 @@ const growthLevel = computed(() => ({
 const dailyTasks = computed(() => {
   const rows = growthInfo.value?.dailyTasks
   const codeToRoute = {
-    DAILY_LOGIN: '/me',
+    DAILY_LOGIN: '/platform/checkin',
     DAILY_POST: '/platform/publish',
     DAILY_COMMENT: '/platform/content?type=mood',
     DAILY_VIEW: '/platform/content',
@@ -436,7 +436,7 @@ const dailyTasks = computed(() => {
     })
   }
   return [
-    { title: '每日签到', exp: 2, current: 0, total: 1, done: false, to: '/me' },
+    { title: '每日签到', exp: 2, current: 0, total: 1, done: false, to: '/platform/checkin' },
     { title: '发布每日心声', exp: 5, current: 0, total: 1, done: false, to: '/platform/positive-share' },
     { title: '浏览精选内容', exp: 1, current: 0, total: 1, done: false, to: '/articles' }
   ]

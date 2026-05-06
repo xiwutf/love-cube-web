@@ -129,22 +129,7 @@ const fallbackArticles = [
   }
 ]
 
-const fallbackEvents = [
-  {
-    id: 'fallback-event-1',
-    title: '五月主题共创开放日',
-    summary: '围绕内容、活动、社交连接与 AI 工具，一起讨论平台下一步。',
-    eventTime: '2026-05-05',
-    status: '报名中'
-  },
-  {
-    id: 'fallback-event-2',
-    title: '线上轻分享：如何写下好建议',
-    summary: '把灵感变成可迭代的功能需求，让平台更贴近真实场景。',
-    eventTime: '2026-05-12',
-    status: '即将开始'
-  }
-]
+const fallbackEvents = []
 
 const fallbackChangelog = [
   { version: 'v1.4.0', title: '优化移动端体验，修复已知问题', date: '2026-04-29' },
@@ -292,9 +277,9 @@ const activityItems = computed(() => {
 })
 
 const activityStats = computed(() => [
-  { value: events.value.length || 3, label: '进行中' },
-  { value: platformStats.value.eventSignupCount || 5, label: '报名人次' },
-  { value: platformStats.value.citiesCount || 3, label: '覆盖城市' }
+  { value: events.value.length, label: '进行中' },
+  { value: Number(platformStats.value.eventSignupCount || 0), label: '报名人次' },
+  { value: Number(platformStats.value.citiesCount || 0), label: '覆盖城市' }
 ])
 
 function formatStat(value, fallback) {
@@ -333,7 +318,7 @@ onMounted(async () => {
   if (stats.status === 'fulfilled' && stats.value) platformStats.value = { ...platformStats.value, ...stats.value }
   announcements.value = ann.status === 'fulfilled' ? unwrapList(ann.value) : fallbackAnnouncements
   articles.value = art.status === 'fulfilled' ? unwrapList(art.value) : fallbackArticles
-  events.value = ev.status === 'fulfilled' ? unwrapList(ev.value) : fallbackEvents
+  events.value = ev.status === 'fulfilled' ? unwrapList(ev.value) : []
 })
 </script>
 

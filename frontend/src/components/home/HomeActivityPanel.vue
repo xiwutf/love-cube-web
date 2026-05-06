@@ -16,7 +16,7 @@
       </div>
     </dl>
 
-    <div class="event-list">
+    <div v-if="events.length" class="event-list">
       <router-link v-for="item in events" :key="item.id" :to="item.to" class="event-row">
         <span>{{ item.status }}</span>
         <div>
@@ -26,6 +26,7 @@
         <time>{{ item.date }}</time>
       </router-link>
     </div>
+    <p v-else class="event-empty">暂无活动数据</p>
   </section>
 </template>
 
@@ -129,6 +130,18 @@ defineProps({
   gap: var(--lc-space-3);
   width: min(100%, 520px);
   margin-top: var(--lc-space-5);
+}
+
+.event-empty {
+  width: min(100%, 520px);
+  margin-top: var(--lc-space-5);
+  padding: var(--lc-space-4);
+  border-radius: var(--lc-radius-sm);
+  border: 1px dashed rgba(191, 219, 254, 0.9);
+  color: var(--lc-subtle);
+  font-size: var(--lc-text-sm);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .event-row {

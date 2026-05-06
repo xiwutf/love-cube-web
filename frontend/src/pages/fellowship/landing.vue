@@ -53,7 +53,7 @@ const sloganText = computed(() => {
 
 const hintText = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
-    return '开通前需至少上传一张生活照；平台账号不受影响，开通后即可使用联谊相关功能'
+    return '开通前需完善年龄、婚姻状况、头像，并至少上传一张生活照'
   }
   return '新用户建议先完善资料并完成真人认证，推荐效果会更好'
 })
@@ -83,7 +83,25 @@ async function handleActivate() {
   activating.value = true
   try {
     await userStore.refreshCurrentUser()
+    const age = Number(userStore.userInfo?.age)
+    const maritalStatus = String(userStore.userInfo?.maritalStatus || '').trim()
+    const avatar = String(userStore.userInfo?.avatar || '').trim()
     const photos = userStore.userInfo?.photos
+    if (!Number.isInteger(age) || age <= 0) {
+      showToast({ type: 'fail', message: '请先完善年龄后再开通' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
+    if (!['单身', '已婚', '离异'].includes(maritalStatus)) {
+      showToast({ type: 'fail', message: '请先选择婚姻状况后再开通' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
+    if (!avatar) {
+      showToast({ type: 'fail', message: '请先上传头像后再开通' })
+      router.push('/fellowship/profile/edit')
+      return
+    }
     if (!Array.isArray(photos) || photos.length === 0) {
       showToast({ type: 'fail', message: '开通前请先上传至少一张生活照' })
       router.push('/fellowship/profile/edit')

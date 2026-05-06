@@ -46,6 +46,9 @@ public class FellowshipProfile {
     @Column(name = "intention", length = 500)
     private String intention;
 
+    @Column(name = "marital_status", length = 32)
+    private String maritalStatus;
+
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
 

@@ -24,7 +24,16 @@
           is-link
           @click="showGenderPicker = true"
         />
-        <van-field v-model="form.birthYear" label="出生年份" type="number" placeholder="例如 1998" />
+        <van-field v-model="form.age" label="年龄" type="number" placeholder="请输入年龄（必填）" />
+        <van-field v-model="form.birthYear" label="出生年份" type="number" placeholder="例如 1998（选填）" />
+        <van-field
+          :model-value="maritalStatusLabel"
+          label="婚姻状况"
+          placeholder="请选择婚姻状况"
+          readonly
+          is-link
+          @click="showMaritalPicker = true"
+        />
         <van-field
           :model-value="cityLabel"
           label="城市"
@@ -46,7 +55,31 @@
         <van-field v-model="form.bio" label="自我介绍" type="textarea" rows="2" autosize />
         <van-field v-model="form.intention" label="交友意向" type="textarea" rows="2" autosize />
         <van-field v-model="form.tags" label="标签" placeholder="多个标签用逗号分隔" />
-        <van-field v-model="form.avatarUrl" label="头像 URL" placeholder="请输入头像地址" />
+        <van-field label="头像" readonly>
+          <template #input>
+            <div class="avatar-upload">
+              <img v-if="form.avatarUrl" :src="form.avatarUrl" alt="头像预览" class="avatar-preview" />
+              <div v-else class="avatar-placeholder">未上传</div>
+              <van-button
+                type="primary"
+                size="small"
+                plain
+                :loading="avatarUploading"
+                :disabled="avatarUploading || store.saving"
+                @click="triggerAvatarUpload"
+              >
+                {{ avatarUploading ? '上传中...' : '上传头像' }}
+              </van-button>
+              <input
+                ref="avatarInputRef"
+                class="avatar-file-input"
+                type="file"
+                accept="image/*"
+                @change="handleAvatarSelected"
+              />
+            </div>
+          </template>
+        </van-field>
       </van-cell-group>
 
       <div class="btn-wrap">
@@ -62,6 +95,10 @@
 
     <van-popup v-model:show="showEducationPicker" position="bottom" round>
       <van-picker :columns="educationOptions" @confirm="onEducationConfirm" @cancel="showEducationPicker = false" />
+    </van-popup>
+
+    <van-popup v-model:show="showMaritalPicker" position="bottom" round>
+      <van-picker :columns="maritalOptions" @confirm="onMaritalConfirm" @cancel="showMaritalPicker = false" />
     </van-popup>
 
     <van-popup v-model:show="showCityPicker" position="bottom" round>
@@ -84,6 +121,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
+import { uploadFellowshipAvatar } from '@/api/fellowshipProfile.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
@@ -95,7 +133,9 @@ const verifyBannerVisible = computed(() => userHasVerificationBadge(store.profil
 const form = reactive({
   nickname: '',
   gender: '',
+  age: '',
   birthYear: '',
+  maritalStatus: '',
   city: '',
   occupation: '',
   education: '',
@@ -108,8 +148,11 @@ const form = reactive({
 
 const showGenderPicker = ref(false)
 const showEducationPicker = ref(false)
+const showMaritalPicker = ref(false)
 const showCityPicker = ref(false)
 const cityCode = ref('')
+const avatarUploading = ref(false)
+const avatarInputRef = ref(null)
 
 const genderOptions = [
   { text: '男', value: 'male' },
@@ -124,6 +167,13 @@ const educationOptions = [
   { text: '博士', value: '博士' }
 ]
 
+const maritalOptions = [
+  { text: '未填写', value: '' },
+  { text: '单身', value: '单身' },
+  { text: '已婚', value: '已婚' },
+  { text: '离异', value: '离异' }
+]
+
 const genderLabelMap = {
   male: '男',
   female: '女',
@@ -134,13 +184,16 @@ const genderLabelMap = {
 const genderLabel = computed(() => genderLabelMap[form.gender] || form.gender || '')
 const educationLabel = computed(() => form.education || '')
 const cityLabel = computed(() => form.city || '')
+const maritalStatusLabel = computed(() => form.maritalStatus || '未填写')
 
 onMounted(async () => {
   try {
     const data = await store.fetchProfile()
     form.nickname = data.nickname || ''
     form.gender = data.gender || ''
+    form.age = data.age || ''
     form.birthYear = data.birthYear || ''
+    form.maritalStatus = data.maritalStatus || ''
     form.city = data.city || ''
     form.occupation = data.occupation || ''
     form.education = data.education || ''
@@ -163,6 +216,11 @@ function onGenderConfirm({ selectedValues }) {
 function onEducationConfirm({ selectedValues }) {
   form.education = selectedValues[0]
   showEducationPicker.value = false
+}
+
+function onMaritalConfirm({ selectedValues }) {
+  form.maritalStatus = selectedValues[0]
+  showMaritalPicker.value = false
 }
 
 function onCityConfirm({ selectedOptions, selectedValues }) {
@@ -194,15 +252,26 @@ function findCityCodeByName(cityText) {
 
 async function handleSubmit() {
   const nickname = String(form.nickname || '').trim()
+  const age = Number(form.age)
   if (nickname.length > 20) {
     showToast({ message: '昵称最多 20 个字符', type: 'fail' })
+    return
+  }
+  if (!Number.isInteger(age) || age <= 0) {
+    showToast({ message: '请先填写有效年龄', type: 'fail' })
+    return
+  }
+  if (!String(form.avatarUrl || '').trim()) {
+    showToast({ message: '请先上传头像', type: 'fail' })
     return
   }
   try {
     await store.saveProfile({
       nickname,
       gender: form.gender,
+      age,
       birthYear: form.birthYear ? Number(form.birthYear) : null,
+      maritalStatus: form.maritalStatus,
       city: form.city,
       occupation: form.occupation,
       education: form.education,
@@ -219,6 +288,35 @@ async function handleSubmit() {
   } catch (e) {
     console.error('[profile/edit] save failed:', e)
     showToast({ message: e?.response?.data?.message || e?.message || '保存失败，请稍后重试', type: 'fail' })
+  }
+}
+
+function triggerAvatarUpload() {
+  if (avatarUploading.value || store.saving) return
+  avatarInputRef.value?.click()
+}
+
+function parseUploadUrl(res) {
+  return res?.url || res?.data?.url || ''
+}
+
+async function handleAvatarSelected(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file || avatarUploading.value) return
+  avatarUploading.value = true
+  try {
+    const uploadRes = await uploadFellowshipAvatar(file)
+    const avatarUrl = parseUploadUrl(uploadRes)
+    if (!avatarUrl) {
+      throw new Error('头像上传失败，请重试')
+    }
+    form.avatarUrl = avatarUrl
+    showToast({ message: '头像上传成功', type: 'success' })
+  } catch (e) {
+    showToast({ message: e?.message || '头像上传失败，请稍后重试', type: 'fail' })
+  } finally {
+    avatarUploading.value = false
   }
 }
 </script>
@@ -263,6 +361,35 @@ async function handleSubmit() {
 
 .form-wrap { padding: 12px 0 24px; }
 .btn-wrap { margin: 20px 16px 0; }
+
+.avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-preview,
+.avatar-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.avatar-preview {
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: #999;
+  background: #f2f3f5;
+}
+
+.avatar-file-input {
+  display: none;
+}
 </style>
 
 

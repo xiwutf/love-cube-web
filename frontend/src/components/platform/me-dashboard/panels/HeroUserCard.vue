@@ -9,6 +9,7 @@
         <div class="name-row">
           <h2 class="name">{{ displayName }}</h2>
           <span class="tag">平台创作者</span>
+          <span class="verify-tag" :class="verificationClass">{{ verificationLabel }}</span>
         </div>
         <div class="sub">
           <span>ID：{{ userIdDisplay }}</span>
@@ -60,6 +61,22 @@ const avatarFallback = computed(() => String(props.displayName || 'L').trim().sl
 const avatarSrc = computed(() => {
   const raw = userAvatarUrlFromApi(props.user)
   return raw ? toFullUrl(raw) : ''
+})
+
+const verificationStatus = computed(() => String(props.user?.verificationStatus || 'none').toLowerCase())
+
+const verificationLabel = computed(() => {
+  if (verificationStatus.value === 'approved') return '已认证'
+  if (verificationStatus.value === 'pending') return '认证审核中'
+  if (verificationStatus.value === 'rejected') return '认证未通过'
+  return '未认证'
+})
+
+const verificationClass = computed(() => {
+  if (verificationStatus.value === 'approved') return 'is-approved'
+  if (verificationStatus.value === 'pending') return 'is-pending'
+  if (verificationStatus.value === 'rejected') return 'is-rejected'
+  return ''
 })
 </script>
 
@@ -132,6 +149,31 @@ const avatarSrc = computed(() => {
   color: var(--lc-indigo);
   background: rgba(79, 70, 229, 0.10);
   flex: 0 0 auto;
+}
+
+.verify-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lc-muted-light);
+  background: var(--lc-soft);
+  flex: 0 0 auto;
+}
+
+.verify-tag.is-approved {
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
+}
+
+.verify-tag.is-pending {
+  color: var(--lc-amber);
+  background: var(--lc-amber-light);
+}
+
+.verify-tag.is-rejected {
+  color: var(--lc-red);
+  background: var(--lc-red-light);
 }
 
 .sub {

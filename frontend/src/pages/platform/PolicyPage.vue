@@ -1,7 +1,7 @@
 ﻿<template>
   <section class="platform-page module-page">
     <div class="detail-nav-row">
-      <router-link to="/about" class="platform-backlink">返回关于我们</router-link>
+      <router-link to="/feedback" class="platform-backlink">返回建议反馈</router-link>
       <router-link to="/me" class="platform-link">前往平台个人中心</router-link>
     </div>
 
@@ -18,7 +18,7 @@
 
     <article v-else class="platform-card module-empty">
       <h3 class="platform-heading">政策内容不存</h3>
-      <p class="platform-text">请从关于我们页重新进入，或联系平台管理员</p>
+      <p class="platform-text">请从建议反馈页重新进入，或联系平台管理员</p>
     </article>
   </section>
 </template>

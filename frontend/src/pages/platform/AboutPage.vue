@@ -1,4 +1,9 @@
 <template>
+  <!--
+    Deprecated page:
+    /about has been redirected to /feedback in router/modules/platform.routes.js.
+    Keep this file for compatibility/reference only, do not add new entry links here.
+  -->
   <section class="platform-page module-page">
     <section class="platform-card module-hero">
       <p class="platform-kicker">About Platform</p>

@@ -158,7 +158,7 @@ const settingItems = computed(() => [
   { title: '通用设置', icon: 'setting-o', onClick: () => router.push('/fellowship/settings') },
   { title: '隐私设置', icon: 'shield-o', onClick: () => router.push('/fellowship/privacy') },
   { title: '帮助与反馈', icon: 'question-o', onClick: () => router.push('/fellowship/help') },
-  { title: '关于我们', icon: 'info-o', value: 'Love Cube 1.0.0', onClick: () => router.push('/about') }
+  { title: '建议反馈', icon: 'info-o', value: 'Love Cube 1.0.0', onClick: () => router.push('/feedback') }
 ])
 
 async function loadStats() {

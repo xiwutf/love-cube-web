@@ -6,7 +6,7 @@
     </header>
 
     <div class="cobuild-actions">
-      <router-link to="/about">提交建议</router-link>
+      <router-link to="/feedback">提交建议</router-link>
       <router-link to="/modules">查看规划</router-link>
     </div>
 

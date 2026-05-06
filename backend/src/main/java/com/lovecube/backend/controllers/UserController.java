@@ -174,6 +174,29 @@ public class UserController {
     public ResponseEntity<?> activateFellowship(@RequestHeader("Authorization") String authHeader) {
         try {
             User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
+            Map<String, Object> profile = unifiedProfileService.buildFellowshipPayload(currentUser);
+            Integer age = profile.get("age") instanceof Number n ? n.intValue() : null;
+            String maritalStatus = profile.get("maritalStatus") == null ? "" : String.valueOf(profile.get("maritalStatus")).trim();
+            String avatarUrl = profile.get("avatarUrl") == null ? "" : String.valueOf(profile.get("avatarUrl")).trim();
+
+            if (age == null || age <= 0) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("message", "请先完善年龄后再开通联谊功能");
+                body.put("code", "FELLOWSHIP_ACTIVATION_REQUIRES_AGE");
+                return ResponseEntity.badRequest().body(body);
+            }
+            if (!"单身".equals(maritalStatus) && !"已婚".equals(maritalStatus) && !"离异".equals(maritalStatus)) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("message", "请先选择婚姻状况（单身/已婚/离异）后再开通联谊功能");
+                body.put("code", "FELLOWSHIP_ACTIVATION_REQUIRES_MARITAL_STATUS");
+                return ResponseEntity.badRequest().body(body);
+            }
+            if (avatarUrl.isBlank()) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("message", "请先上传头像后再开通联谊功能");
+                body.put("code", "FELLOWSHIP_ACTIVATION_REQUIRES_AVATAR");
+                return ResponseEntity.badRequest().body(body);
+            }
             if (!unifiedProfileService.hasFellowshipLifePhotos(currentUser.getUserid())) {
                 Map<String, Object> body = new HashMap<>();
                 body.put("message", "请先至少上传一张生活照后再开通联谊功能");

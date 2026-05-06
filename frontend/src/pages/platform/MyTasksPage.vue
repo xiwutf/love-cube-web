@@ -96,7 +96,7 @@ const claimingAccount = ref('')
 const accountHint = ref('')
 
 const codeToRoute = {
-  DAILY_LOGIN: '/me',
+  DAILY_LOGIN: '/platform/checkin',
   DAILY_POST: '/platform/publish',
   DAILY_COMMENT: '/platform/content?type=mood',
   DAILY_VIEW: '/platform/content',
@@ -169,7 +169,7 @@ const expSources = [
 ]
 
 const mockTasks = [
-  { title: '每日签到', exp: 2, current: 0, total: 1, done: false, to: '/me' },
+  { title: '每日签到', exp: 2, current: 0, total: 1, done: false, to: '/platform/checkin' },
   { title: '完善资料', exp: 5, current: 0, total: 1, done: false, to: { path: '/me', query: { panel: 'edit' } } },
   { title: '发布动态', exp: 10, current: 0, total: 1, done: false, to: '/platform/positive-share' },
   { title: '浏览内容', exp: 1, current: 0, total: 3, done: false, to: '/articles' }

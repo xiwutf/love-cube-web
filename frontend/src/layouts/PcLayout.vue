@@ -50,7 +50,7 @@
             <h4>内容</h4>
             <router-link to="/articles">精选内容</router-link>
             <router-link to="/events">活动中心</router-link>
-            <router-link to="/about">关于我们</router-link>
+            <router-link to="/feedback">建议反馈</router-link>
           </section>
           <section class="pc-footer-col">
             <h4>合规</h4>

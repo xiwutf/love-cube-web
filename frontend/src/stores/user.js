@@ -34,6 +34,8 @@ function normalizeUser(raw) {
     bio: raw.bio ?? raw.signature ?? '',
     location: raw.location ?? '',
     gender: raw.gender ?? '',
+    age: raw.age ?? null,
+    maritalStatus: raw.maritalStatus ?? '',
     birthday: raw.birthday ?? '',
     height: raw.height ?? '',
     fellowshipEnabled: Boolean(raw.fellowshipEnabled),

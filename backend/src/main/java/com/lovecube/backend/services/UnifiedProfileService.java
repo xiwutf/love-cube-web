@@ -125,6 +125,7 @@ public class UnifiedProfileService {
         result.put("realnameVerified", merged.getOrDefault("realnameVerified", false));
         result.put("completionRate", merged.getOrDefault("completionRate", 0));
         result.put("age", merged.get("age"));
+        result.put("maritalStatus", merged.getOrDefault("maritalStatus", ""));
         result.put("constellation", merged.getOrDefault("constellation", ""));
         result.put("birthday", merged.getOrDefault("birthday", ""));
         result.put("birthDate", merged.get("birthDate"));
@@ -252,13 +253,17 @@ public class UnifiedProfileService {
         String gender = normalizeGender(
                 getText(payload, "gender", fromGenderCode(user.getGender()), main.getGender()));
         Integer birthYear = getInteger(payload, "birthYear", legacy.getBirthYear(), user.getBirthDate() == null ? null : user.getBirthDate().getYear());
-        Integer age = birthYear == null ? user.getAge() : calcAge(birthYear);
+        Integer age = getInteger(payload, "age", legacy.getAge(), user.getAge());
+        if (age == null && birthYear != null) {
+            age = calcAge(birthYear);
+        }
         String city = getText(payload, "city", main.getCity(), user.getLocation());
         String occupation = getText(payload, "occupation", main.getOccupation(), user.getOccupation());
         String education = getText(payload, "education", legacy.getEducation(), null);
         Integer height = getInteger(payload, "height", main.getHeight(), user.getHeight());
         String bio = getText(payload, "bio", main.getBio(), user.getBio());
         String intention = getText(payload, "intention", legacy.getIntention(), null);
+        String maritalStatus = normalizeMaritalStatus(getText(payload, "maritalStatus", legacy.getMaritalStatus(), null));
         String avatarUrl = getText(payload, "avatarUrl", main.getAvatar(), user.getProfilePhoto());
         String tags = normalizeTags(payload.get("tags"), legacy.getTags());
 
@@ -286,6 +291,7 @@ public class UnifiedProfileService {
         legacy.setHeight(height);
         legacy.setBio(bio);
         legacy.setIntention(intention);
+        legacy.setMaritalStatus(maritalStatus);
         legacy.setAvatarUrl(avatarUrl);
         legacy.setTags(tags);
         legacy.setIdentityRole(getText(payload, "identityRole", legacy.getIdentityRole(), "self"));
@@ -337,6 +343,7 @@ public class UnifiedProfileService {
         result.put("height", merged.get("height"));
         result.put("bio", merged.getOrDefault("bio", ""));
         result.put("intention", merged.getOrDefault("intention", ""));
+        result.put("maritalStatus", merged.getOrDefault("maritalStatus", ""));
         result.put("avatarUrl", merged.getOrDefault("avatarUrl", ""));
         result.put("tags", merged.getOrDefault("tags", ""));
         result.put("identityRole", merged.getOrDefault("identityRole", "self"));
@@ -551,6 +558,7 @@ public class UnifiedProfileService {
         );
         String education = firstNonBlank(legacy == null ? null : legacy.getEducation(), userProfile == null ? null : userProfile.getEducation());
         String intention = firstNonBlank(legacy == null ? null : legacy.getIntention());
+        String maritalStatus = normalizeMaritalStatus(firstNonBlank(legacy == null ? null : legacy.getMaritalStatus()));
         String tags = firstNonBlank(legacy == null ? null : legacy.getTags());
 
         String verificationStatus = uv.map(UserVerification::getStatus).orElseGet(() ->
@@ -586,6 +594,7 @@ public class UnifiedProfileService {
         out.put("bio", defaultText(bio, ""));
         out.put("education", defaultText(education, ""));
         out.put("intention", defaultText(intention, ""));
+        out.put("maritalStatus", defaultText(maritalStatus, ""));
         out.put("tags", defaultText(tags, ""));
         out.put("photos", photos);
         out.put("completionRate", firstNonNull(main == null ? null : main.getCompletionRate(), 0));
@@ -694,6 +703,15 @@ public class UnifiedProfileService {
     private String normalizeGender(String value) {
         if (value == null || value.isBlank()) return "";
         return "female".equalsIgnoreCase(value) || "女".equals(value) || "2".equals(value) ? "female" : "male";
+    }
+
+    private String normalizeMaritalStatus(String value) {
+        if (value == null || value.isBlank()) return "";
+        String normalized = value.trim();
+        return switch (normalized) {
+            case "单身", "已婚", "离异" -> normalized;
+            default -> "";
+        };
     }
 
     private LocalDate parseDate(Object raw) {

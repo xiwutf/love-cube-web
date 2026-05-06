@@ -25,7 +25,7 @@
           </form>
 
           <div class="account-slot">
-            <router-link to="/events" class="nav-action"><span aria-hidden="true">✓</span>签到</router-link>
+            <router-link to="/platform/checkin" class="nav-action"><span aria-hidden="true">✓</span>签到</router-link>
             <router-link to="/messages" class="nav-action nav-action-message"><span aria-hidden="true">□</span>消息通知<i v-if="messageBadge" class="message-badge">{{ messageBadge }}</i></router-link>
             <template v-if="userStore.isLoggedIn">
               <router-link to="/me" class="login-entry">{{ userStore.userInfo?.username || '平台个人中心' }}</router-link>
@@ -107,7 +107,7 @@
       <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
     </nav>
 
-    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台公告</router-link><router-link to="/fellowship-intro">联谊</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/about">关于我们</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
+    <footer class="platform-footer"><div class="footer-inner"><div class="footer-brand"><p class="footer-title">Love Cube Platform</p><p class="footer-desc">连接真实的人、内容与服务，打造可持续增长的多模块平台。</p></div><div class="footer-cols"><section class="footer-col"><h4>平台</h4><router-link to="/modules">模块中心</router-link><router-link to="/announcements">平台公告</router-link><router-link to="/fellowship-intro">联谊</router-link></section><section class="footer-col"><h4>内容</h4><router-link to="/articles">精选内容</router-link><router-link to="/events">活动中心</router-link><router-link to="/feedback">建议反馈</router-link></section><section class="footer-col"><h4>合规</h4><router-link to="/policies/terms">用户协议</router-link><router-link to="/policies/privacy">隐私政策</router-link><router-link to="/policies/content-policy">内容规范</router-link></section></div></div><div class="footer-bottom">© {{ new Date().getFullYear() }} Love Cube. All rights reserved.</div></footer>
 
     <transition name="menu-fade"><div v-if="menuOpen" class="mobile-menu-mask" @click="menuOpen = false" /></transition>
     <transition name="menu-slide">
@@ -263,7 +263,7 @@ const mobileAccountNavItems = computed(() => {
 const messageBadge = computed(() => '')
 const navHomePaths = computed(() => new Set([
   ...navItems.map(item => item.to),
-  '/about',
+  '/feedback',
   '/platform/events'
 ]))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
