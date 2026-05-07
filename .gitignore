@@ -5,6 +5,9 @@
 *.log
 backend/logs/
 
+# Runtime uploads (local / generated)
+backend/uploads/
+
 # Build outputs
 backend/target/
 frontend/dist/

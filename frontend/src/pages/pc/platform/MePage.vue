@@ -57,12 +57,65 @@
             </div>
           </label>
           <label>
-            <span>所在地</span>
+            <span>所在地/城市</span>
             <input v-model.trim="editForm.location" type="text" maxlength="60" placeholder="例如：河北省 保定市" />
           </label>
           <label>
             <span>个人简介</span>
             <textarea v-model.trim="editForm.bio" rows="3" maxlength="200" placeholder="简单介绍一下你自己" />
+          </label>
+          <div class="me-edit-subtitle">联谊档案（可与联谊端同步编辑）</div>
+          <label>
+            <span>性别</span>
+            <select v-model="editForm.gender">
+              <option value="">未填写</option>
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </label>
+          <label>
+            <span>年龄</span>
+            <input v-model.trim="editForm.age" type="number" min="1" placeholder="例如：24（不填则保持）" />
+          </label>
+          <label>
+            <span>出生年份</span>
+            <input v-model.trim="editForm.birthYear" type="number" min="1" placeholder="例如：1998（不填则保持）" />
+          </label>
+          <label>
+            <span>婚姻状况</span>
+            <select v-model="editForm.maritalStatus">
+              <option value="">未填写</option>
+              <option value="单身">单身</option>
+              <option value="已婚">已婚</option>
+              <option value="离异">离异</option>
+            </select>
+          </label>
+          <label>
+            <span>职业</span>
+            <input v-model.trim="editForm.occupation" type="text" maxlength="64" placeholder="例如：工程师（不填则保持）" />
+          </label>
+          <label>
+            <span>学历</span>
+            <select v-model="editForm.education">
+              <option value="">未填写</option>
+              <option value="高中及以下">高中及以下</option>
+              <option value="大专">大专</option>
+              <option value="本科">本科</option>
+              <option value="硕士">硕士</option>
+              <option value="博士">博士</option>
+            </select>
+          </label>
+          <label>
+            <span>身高(cm)</span>
+            <input v-model.trim="editForm.height" type="number" min="1" placeholder="例如：170（不填则保持）" />
+          </label>
+          <label>
+            <span>交友意向</span>
+            <textarea v-model.trim="editForm.intention" rows="2" maxlength="500" placeholder="例如：希望共同成长、生活有趣..." />
+          </label>
+          <label>
+            <span>标签</span>
+            <input v-model.trim="editForm.tags" type="text" maxlength="500" placeholder="多个标签用逗号分隔（不填则保持）" />
           </label>
           <p v-if="saveMessage" class="save-message" :class="{ 'is-error': saveError }">{{ saveMessage }}</p>
           <div class="modal-actions">
@@ -108,6 +161,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { getUserStatsCached, updateProfile } from '@/api/user.js'
+import { getMyFellowshipProfile, updateMyFellowshipProfile } from '@/api/fellowshipProfile.js'
 import { getInviteInfo } from '@/api/invite.js'
 import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
@@ -132,8 +186,19 @@ const editForm = reactive({
   username: '',
   avatar: '',
   location: '',
-  bio: ''
+  bio: '',
+  // 联谊档案字段：用于联谊匹配展示，可与联谊端双向编辑
+  gender: '',
+  age: '',
+  birthYear: '',
+  maritalStatus: '',
+  occupation: '',
+  education: '',
+  height: '',
+  intention: '',
+  tags: ''
 })
+const editFormSnapshot = ref(null)
 
 const myContentCount = ref(0)
 const myEventCount = ref(0)
@@ -308,6 +373,8 @@ function handleNotifReadAll() {
 watch(
   () => user.value,
   (value) => {
+    // 编辑弹窗打开时，以联谊资料加载结果为准；避免用户刷新覆盖正在编辑的表单
+    if (editOpen.value) return
     editForm.username = value?.username || ''
     editForm.avatar = value?.avatar || ''
     editForm.location = value?.location || ''
@@ -316,11 +383,34 @@ watch(
   { immediate: true }
 )
 
-function openEditPanel() {
+async function openEditPanel() {
   editOpen.value = true
   settingsOpen.value = false
   saveMessage.value = ''
   saveError.value = false
+
+  await loadFellowshipProfileForEdit()
+  editFormSnapshot.value = JSON.parse(JSON.stringify(editForm))
+}
+
+async function loadFellowshipProfileForEdit() {
+  const d = await getMyFellowshipProfile().catch(() => null)
+  if (!d) return
+
+  editForm.username = d.nickname || editForm.username
+  editForm.avatar = d.avatarUrl || editForm.avatar
+  editForm.location = d.city || editForm.location
+  editForm.bio = d.bio || editForm.bio
+
+  editForm.gender = d.gender || ''
+  editForm.age = d.age ?? ''
+  editForm.birthYear = d.birthYear ?? ''
+  editForm.maritalStatus = d.maritalStatus || ''
+  editForm.occupation = d.occupation || ''
+  editForm.education = d.education || ''
+  editForm.height = d.height ?? ''
+  editForm.intention = d.intention || ''
+  editForm.tags = d.tags || ''
 }
 
 function closeEditPanel() {
@@ -340,10 +430,14 @@ function closeSettingsPanel() {
 }
 
 function resetEditForm() {
-  editForm.username = user.value?.username || ''
-  editForm.avatar = user.value?.avatar || ''
-  editForm.location = user.value?.location || ''
-  editForm.bio = user.value?.bio || ''
+  if (editFormSnapshot.value) {
+    Object.assign(editForm, JSON.parse(JSON.stringify(editFormSnapshot.value)))
+  } else {
+    editForm.username = user.value?.username || ''
+    editForm.avatar = user.value?.avatar || ''
+    editForm.location = user.value?.location || ''
+    editForm.bio = user.value?.bio || ''
+  }
   saveMessage.value = ''
   saveError.value = false
 }
@@ -375,6 +469,27 @@ async function handleSaveProfile() {
     saveMessage.value = '昵称最多 20 个字符'
     return
   }
+
+  const parsedAge = editForm.age === '' || editForm.age == null ? null : Number(editForm.age)
+  if (parsedAge !== null && (!Number.isInteger(parsedAge) || parsedAge <= 0)) {
+    saveError.value = true
+    saveMessage.value = '年龄必须是大于 0 的整数'
+    return
+  }
+
+  const parsedBirthYear = editForm.birthYear === '' || editForm.birthYear == null ? null : Number(editForm.birthYear)
+  if (parsedBirthYear !== null && (!Number.isInteger(parsedBirthYear) || parsedBirthYear <= 0)) {
+    saveError.value = true
+    saveMessage.value = '出生年份必须是大于 0 的整数'
+    return
+  }
+
+  const parsedHeight = editForm.height === '' || editForm.height == null ? null : Number(editForm.height)
+  if (parsedHeight !== null && (!Number.isInteger(parsedHeight) || parsedHeight <= 0)) {
+    saveError.value = true
+    saveMessage.value = '身高必须是大于 0 的整数'
+    return
+  }
   saving.value = true
   try {
     await updateProfile({
@@ -383,8 +498,27 @@ async function handleSaveProfile() {
       location: editForm.location,
       bio: editForm.bio
     })
+
+    const fellowshipPayload = {}
+    if (editForm.gender) fellowshipPayload.gender = editForm.gender
+    if (parsedAge !== null) fellowshipPayload.age = parsedAge
+    if (parsedBirthYear !== null) fellowshipPayload.birthYear = parsedBirthYear
+    if (editForm.maritalStatus) fellowshipPayload.maritalStatus = editForm.maritalStatus
+    if (editForm.occupation) fellowshipPayload.occupation = editForm.occupation
+    if (editForm.education) fellowshipPayload.education = editForm.education
+    if (parsedHeight !== null) fellowshipPayload.height = parsedHeight
+    if (editForm.intention) fellowshipPayload.intention = editForm.intention
+    if (editForm.tags) fellowshipPayload.tags = editForm.tags
+
+    try {
+      await updateMyFellowshipProfile(fellowshipPayload)
+    } catch (e) {
+      saveError.value = true
+      saveMessage.value = e?.response?.data?.message || e?.message || '联谊档案保存失败，请稍后重试'
+    }
+
     await userStore.refreshCurrentUser().catch(() => {})
-    saveMessage.value = '资料已更新'
+    if (!saveError.value) saveMessage.value = '资料已更新'
     window.setTimeout(() => {
       if (!saveError.value) closeEditPanel()
     }, 600)
@@ -575,6 +709,24 @@ onBeforeUnmount(() => {
   transition: border-color 0.15s;
   font-family: inherit;
   resize: vertical;
+}
+
+.me-edit-form select {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  background: #fff;
+}
+
+.me-edit-subtitle {
+  margin-top: -4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
 }
 
 .me-edit-form input:focus,

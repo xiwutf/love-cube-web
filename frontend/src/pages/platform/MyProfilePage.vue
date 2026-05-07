@@ -30,11 +30,43 @@
         </div>
         <div class="pf-row">
           <span class="pf-label">所在地</span>
-          <span class="pf-value">{{ user?.location || '未填写' }}</span>
+          <span class="pf-value">{{ fellowshipCityLabel }}</span>
         </div>
         <div class="pf-row">
           <span class="pf-label">个人简介</span>
-          <span class="pf-value pf-bio">{{ user?.bio || '暂无简介' }}</span>
+          <span class="pf-value pf-bio">{{ fellowshipBioLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">性别</span>
+          <span class="pf-value">{{ fellowshipGenderLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">年龄</span>
+          <span class="pf-value">{{ fellowshipAgeInfoLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">婚姻</span>
+          <span class="pf-value">{{ fellowshipMaritalStatusLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">职业</span>
+          <span class="pf-value">{{ fellowshipOccupationLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">学历</span>
+          <span class="pf-value">{{ fellowshipEducationLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">身高</span>
+          <span class="pf-value">{{ fellowshipHeightLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">交友意向</span>
+          <span class="pf-value pf-bio">{{ fellowshipIntentionLabel }}</span>
+        </div>
+        <div class="pf-row">
+          <span class="pf-label">标签</span>
+          <span class="pf-value pf-bio">{{ fellowshipTagsLabel }}</span>
         </div>
         <div class="pf-row">
           <span class="pf-label">认证状态</span>
@@ -64,21 +96,23 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import { getMyInviteCode } from '@/api/invite.js'
+import { getMyFellowshipProfile } from '@/api/fellowshipProfile.js'
 import { getAvatar } from '@/utils/image.js'
 import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 const user = computed(() => userStore.userInfo)
+const fellowshipProfile = ref(null)
 const inviteCode = ref('')
 const copyTip = ref('')
 const copyErr = ref(false)
 
-const displayName = computed(() => user.value?.username || user.value?.nickname || '用户')
+const displayName = computed(() => fellowshipProfile.value?.nickname || user.value?.username || user.value?.nickname || '用户')
 const userIdDisplay = computed(() => user.value?.id || user.value?.userId || '--')
 const avatarFallback = computed(() => String(displayName.value || 'U').slice(0, 1).toUpperCase())
-const showProfileAvatarImg = computed(() => Boolean(userAvatarUrlFromApi(user.value)))
-const profileAvatarSrc = computed(() => getAvatar(user.value))
+const showProfileAvatarImg = computed(() => Boolean(fellowshipProfile.value?.avatarUrl) || Boolean(userAvatarUrlFromApi(user.value)))
+const profileAvatarSrc = computed(() => getAvatar({ avatarUrl: fellowshipProfile.value?.avatarUrl || user.value?.avatar || '' }))
 
 const verifyLabel = computed(() => {
   const s = String(user.value?.verificationStatus || 'none')
@@ -93,6 +127,28 @@ const registerDate = computed(() => {
   if (!raw) return '--'
   return String(raw).replace('T', ' ').slice(0, 10)
 })
+
+const fellowshipCityLabel = computed(() => fellowshipProfile.value?.city || user.value?.location || '未填写')
+const fellowshipBioLabel = computed(() => fellowshipProfile.value?.bio || user.value?.bio || '暂无简介')
+const fellowshipGenderLabel = computed(() => {
+  const g = fellowshipProfile.value?.gender
+  if (g === 'male') return '男'
+  if (g === 'female') return '女'
+  return '未填写'
+})
+const fellowshipAgeInfoLabel = computed(() => {
+  const age = fellowshipProfile.value?.age
+  const birthYear = fellowshipProfile.value?.birthYear
+  if (age != null) return birthYear != null ? `${age}岁 / ${birthYear}` : `${age}岁`
+  if (birthYear != null) return `出生${birthYear}年`
+  return '未填写'
+})
+const fellowshipMaritalStatusLabel = computed(() => fellowshipProfile.value?.maritalStatus || '未填写')
+const fellowshipOccupationLabel = computed(() => fellowshipProfile.value?.occupation || '未填写')
+const fellowshipEducationLabel = computed(() => fellowshipProfile.value?.education || '未填写')
+const fellowshipHeightLabel = computed(() => fellowshipProfile.value?.height != null ? `${fellowshipProfile.value.height}cm` : '未填写')
+const fellowshipIntentionLabel = computed(() => fellowshipProfile.value?.intention || '未填写')
+const fellowshipTagsLabel = computed(() => fellowshipProfile.value?.tags || '未填写')
 
 function openEdit() {
   router.push({ path: '/me', query: { panel: 'edit' } })
@@ -115,6 +171,8 @@ onMounted(async () => {
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
   const res = await getMyInviteCode().catch(() => null)
   inviteCode.value = String(res?.inviteCode || res?.code || '').trim()
+  const fp = await getMyFellowshipProfile().catch(() => null)
+  fellowshipProfile.value = fp || null
 })
 </script>
 
@@ -178,7 +236,7 @@ onMounted(async () => {
 .pf-row.no-border { border-bottom: 0; }
 .pf-label { font-size: 13px; color: var(--lc-muted-light); flex: 0 0 72px; }
 .pf-value { font-size: 13px; color: var(--lc-text); text-align: right; flex: 1; }
-.pf-bio { text-align: left; color: var(--lc-muted); }
+.pf-bio { text-align: left; color: var(--lc-muted); overflow-wrap: anywhere; }
 .pf-verified { color: var(--lc-emerald); font-weight: 700; }
 .pf-invite { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .pf-copy-btn {

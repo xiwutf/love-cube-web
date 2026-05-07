@@ -66,16 +66,16 @@
             <th class="col-avatar-head">头像</th>
             <th class="col-user-head">用户</th>
             <th class="col-actions-head">操作</th>
-            <th>手机</th>
+            <th class="col-phone">手机</th>
             <th>性别</th>
-            <th>年龄</th>
+            <th class="col-age">年龄</th>
             <th class="col-role-head">角色</th>
             <th>认证</th>
             <th>状态</th>
             <th>联谊</th>
-            <th>地区</th>
-            <th>最近登录</th>
-            <th>注册时间</th>
+            <th class="col-location">地区</th>
+            <th class="col-login">最近登录</th>
+            <th class="col-date">注册时间</th>
           </tr>
         </thead>
         <tbody>
