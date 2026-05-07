@@ -85,6 +85,16 @@ public class PositiveShareController {
         return positiveShareService.listMyFavorites(user.getUserid(), pageNum, pageSize);
     }
 
+    @GetMapping("/my/likes")
+    public Map<String, Object> listMyLikes(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.listMyLikes(user.getUserid(), pageNum, pageSize);
+    }
+
     @GetMapping("/my/drafts")
     public Map<String, Object> listMyDrafts(
             @RequestParam(defaultValue = "1") int pageNum,
@@ -122,6 +132,24 @@ public class PositiveShareController {
     ) {
         User user = adminAuthService.requireUser(authHeader);
         return positiveShareService.unlikeShare(id, user.getUserid());
+    }
+
+    @PostMapping("/{id}/bookmark")
+    public Map<String, Object> bookmarkShare(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.bookmarkShare(id, user.getUserid());
+    }
+
+    @DeleteMapping("/{id}/bookmark")
+    public Map<String, Object> unbookmarkShare(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.unbookmarkShare(id, user.getUserid());
     }
 
     @PostMapping("/{id}/comments")

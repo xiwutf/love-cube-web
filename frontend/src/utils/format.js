@@ -18,7 +18,11 @@ export function formatTime(timestamp) {
   if (diffDays === 0) return `${hh}:${mm}`
   if (diffDays === 1) return `昨天 ${hh}:${mm}`
   if (diffDays < 7)  return `${diffDays}天前`
-  return formatDate(date, 'MM-DD')
+  // 超过一周：同年仍用月-日；跨年或往年必须带年份，避免误以为是「今年」
+  if (date.getFullYear() === now.getFullYear()) {
+    return formatDate(date, 'MM-DD')
+  }
+  return formatDate(date, 'YYYY-MM-DD')
 }
 
 /** 格式化日期 */

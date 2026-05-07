@@ -157,6 +157,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime createdAt);
 
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
+
     long countByUserStatusIgnoreCase(String userStatus);
 
     @Query("SELECT COUNT(u) FROM User u WHERE (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
@@ -165,9 +167,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :createdAt AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
     long countVisibleUsersCreatedSince(@Param("createdAt") LocalDateTime createdAt, @Param("hiddenPhone") String hiddenPhone);
 
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :start AND u.createdAt < :end AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
+    long countVisibleUsersCreatedBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("hiddenPhone") String hiddenPhone);
+
     @Query("SELECT COUNT(u) FROM User u WHERE LOWER(COALESCE(u.userStatus, '')) = LOWER(:userStatus) AND (u.phoneNumber IS NULL OR u.phoneNumber <> :hiddenPhone)")
     long countVisibleUsersByStatus(@Param("userStatus") String userStatus, @Param("hiddenPhone") String hiddenPhone);
 
     @Query("SELECT u.userid FROM User u WHERE LOWER(COALESCE(u.userStatus, 'normal')) <> 'disabled'")
     Page<Long> findActiveUserIds(Pageable pageable);
+
+    @Query(value = "SELECT * FROM users WHERE (:includeHidden = true OR phone_number IS NULL OR phone_number <> :hiddenPhone) ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
+    List<User> findRecentUsersForAdmin(
+            @Param("limit") int limit,
+            @Param("includeHidden") boolean includeHidden,
+            @Param("hiddenPhone") String hiddenPhone);
 }

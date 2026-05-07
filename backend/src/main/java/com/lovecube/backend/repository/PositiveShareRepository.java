@@ -47,4 +47,6 @@ public interface PositiveShareRepository extends JpaRepository<PositiveShare, Lo
     long countByStatus(String status);
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
 }

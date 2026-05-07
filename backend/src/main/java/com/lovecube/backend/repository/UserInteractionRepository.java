@@ -108,6 +108,14 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     Long countByInteractionTypeAndCreatedAtGreaterThanEqual(
         UserInteraction.InteractionType interactionType,
         LocalDateTime createdAt);
+
+    Long countByInteractionTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+        UserInteraction.InteractionType interactionType,
+        LocalDateTime start,
+        LocalDateTime end);
+
+    @Query("SELECT COUNT(DISTINCT ui.fromUserId) FROM UserInteraction ui WHERE ui.createdAt >= :start AND ui.createdAt < :end")
+    long countDistinctActiveUsersBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
     
     /**
      * 获取当前用户已操作过的目标用户 ID（like/superlike/skip），用于过滤推荐列表

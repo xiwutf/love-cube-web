@@ -2,11 +2,11 @@
   <section class="platform-page panel-page">
     <header class="panel-head">
       <div>
-        <h1>我的心声收藏</h1>
-        <p>仅展示你主动收藏的每日心声；点赞（为他加油）不会自动出现在这里。</p>
+        <h1>我点赞的心声</h1>
+        <p>这里展示你点击「为他加油」鼓励过的每日心声，与收藏分开保存。</p>
       </div>
       <div class="head-actions">
-        <router-link to="/me/likes" class="link-secondary">我点赞的心声</router-link>
+        <router-link to="/me/favorites" class="link-secondary">我的心声收藏</router-link>
         <router-link to="/me" class="back-btn">返回个人中心</router-link>
       </div>
     </header>
@@ -14,7 +14,7 @@
     <section class="panel-card">
       <p v-if="loading" class="status">加载中...</p>
       <template v-else>
-        <p v-if="!items.length" class="status">你还没有收藏心声。在每日心声卡片上点「收藏」即可加入这里。</p>
+        <p v-if="!items.length" class="status">你还没有点赞过心声，去每日心声逛逛吧。</p>
         <div v-else class="list">
           <article v-for="item in items" :key="item.id" class="item">
             <div class="item-head">
@@ -42,7 +42,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { fetchMyFavoritePositiveShares } from '@/api/positiveShare.js'
+import { fetchMyLikedPositiveShares } from '@/api/positiveShare.js'
 
 const items = ref([])
 const loading = ref(false)
@@ -53,7 +53,7 @@ const hasMore = ref(false)
 async function fetchList(append = false) {
   if (!append) loading.value = true
   try {
-    const res = await fetchMyFavoritePositiveShares({ pageNum: pageNum.value, pageSize: 10 })
+    const res = await fetchMyLikedPositiveShares({ pageNum: pageNum.value, pageSize: 10 })
     const list = Array.isArray(res?.list) ? res.list : []
     items.value = append ? items.value.concat(list) : list
     hasMore.value = Boolean(res?.hasMore)

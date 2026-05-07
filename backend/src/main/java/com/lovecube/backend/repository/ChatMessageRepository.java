@@ -16,6 +16,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long>
 {
     long countByTimestampGreaterThanEqual(Long timestamp);
 
+    long countByTimestampGreaterThanEqualAndTimestampLessThan(Long start, Long end);
+
+    @Query("SELECT COUNT(DISTINCT m.senderId) FROM ChatMessage m WHERE m.timestamp >= :start AND m.timestamp < :end")
+    long countDistinctActiveSendersBetween(@Param("start") Long start, @Param("end") Long end);
+
     @Query("SELECT m FROM ChatMessage m WHERE " +
            "(m.senderId = :userId1 AND m.receiverId = :userId2) OR " +
            "(m.senderId = :userId2 AND m.receiverId = :userId1) " +

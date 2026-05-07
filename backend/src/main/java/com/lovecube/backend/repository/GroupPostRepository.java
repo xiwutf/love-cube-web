@@ -11,4 +11,6 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, String> {
     List<GroupPost> findByGroupIdOrderByCreatedAtDesc(String groupId);
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
 }

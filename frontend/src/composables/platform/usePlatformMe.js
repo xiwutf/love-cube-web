@@ -9,7 +9,13 @@ export function usePlatformMe() {
   const userStore = useUserStore()
   const loading = ref(false)
   const inviteCode = ref('')
-  const stats = ref({ contentCount: 0, eventCount: 0, favoriteCount: 0 })
+  const stats = ref({
+    contentCount: 0,
+    eventCount: 0,
+    favoriteCount: 0,
+    positiveShareBookmarkCount: 0,
+    positiveShareLikeCount: 0
+  })
   const growth = ref(null)
   const unread = ref(0)
 

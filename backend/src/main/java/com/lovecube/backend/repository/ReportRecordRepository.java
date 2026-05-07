@@ -1,6 +1,7 @@
 package com.lovecube.backend.repository;
 
 import com.lovecube.backend.entity.ReportRecord;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,10 @@ public interface ReportRecordRepository extends JpaRepository<ReportRecord, Stri
     long countByStatusIgnoreCase(String status);
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime createdAt);
+
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
+
+    List<ReportRecord> findByOrderByCreatedAtDesc(Pageable pageable);
 
     @Query("SELECT COUNT(r) FROM ReportRecord r WHERE LOWER(COALESCE(r.status, '')) <> 'pending'")
     long countHandledReports();

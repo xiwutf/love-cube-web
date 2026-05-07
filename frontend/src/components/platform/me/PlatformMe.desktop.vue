@@ -268,6 +268,7 @@ const editForm = reactive({
 const myContentCount = ref(0)
 const myEventCount = ref(0)
 const myFavoriteCount = ref(0)
+const myPositiveShareLikeCount = ref(0)
 const myFollowingCount = ref(0)
 const myFansCount = ref(0)
 const myLikesReceived = ref(0)
@@ -386,7 +387,8 @@ const mobileGridItems = computed(() => {
     { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
     { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
     { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
-    { title: '我的收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
+    { title: '心声收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
+    { title: '点赞心声', icon: '❤', tone: 'rose', to: '/me/likes' },
     { title: '联谊中心', icon: '💞', tone: 'rose', to: '/fellowship' },
     { title: '邀请码', icon: '▭', tone: 'amber', to: '/fellowship/invite', tip: '邀请好友加入' },
     { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
@@ -517,7 +519,8 @@ const workspaceItems = computed(() => [
 const overviewItems = computed(() => [
   { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
   { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
-  { label: '收藏内容', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
+  { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
+  { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: '/me/likes' },
   { label: '互动热度', value: myLikesReceived.value, icon: '♨', tone: 'green', to: '/platform/positive-share' },
   { label: '当前等级', value: `Lv.${growthLevel.value.level}`, icon: '◇', tone: 'blue', to: '/modules' }
 ])
@@ -677,7 +680,8 @@ onMounted(async () => {
   if (statsRes.status === 'fulfilled' && statsRes.value) {
     myContentCount.value = Number(statsRes.value.contentCount ?? 0)
     myEventCount.value = Number(statsRes.value.eventCount ?? 0)
-    myFavoriteCount.value = Number(statsRes.value.favoriteCount ?? 0)
+    myFavoriteCount.value = Number(statsRes.value.positiveShareBookmarkCount ?? 0)
+    myPositiveShareLikeCount.value = Number(statsRes.value.positiveShareLikeCount ?? 0)
     myFollowingCount.value = Number(statsRes.value.followingCount ?? 0)
     myFansCount.value = Number(statsRes.value.fansCount ?? 0)
     myLikesReceived.value = Number(statsRes.value.likesReceived ?? 0)

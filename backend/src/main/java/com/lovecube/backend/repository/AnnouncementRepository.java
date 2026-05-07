@@ -20,4 +20,7 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Stri
 
     @Query("SELECT COUNT(a) FROM Announcement a WHERE a.status = 'published' AND a.publishDate >= :since")
     long countPublishedSince(@Param("since") LocalDateTime since);
+
+    @Query("SELECT COUNT(a) FROM Announcement a WHERE a.status = 'published' AND a.publishDate >= :start AND a.publishDate < :end")
+    long countPublishedBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

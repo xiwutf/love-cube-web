@@ -3,7 +3,7 @@
     <header class="admin-mobile-bar">
       <router-link to="/admin" class="admin-mobile-brand" @click="closeNavDrawer">
         <img :src="loveCubeIcon" alt="">
-        <span class="admin-mobile-brand-text">Love Cube</span>
+        <span class="admin-mobile-brand-text">LoveCube</span>
       </router-link>
       <p class="admin-mobile-section u-truncate">{{ currentSection }}</p>
       <button
@@ -27,38 +27,26 @@
     />
 
     <aside id="admin-nav-drawer" class="admin-sidebar" :class="{ 'is-drawer-open': navDrawerOpen }">
-      <router-link to="/admin" class="admin-brand">
+      <router-link to="/admin" class="admin-brand" @click="closeNavDrawer">
         <img :src="loveCubeIcon" alt="">
-        <span>Love Cube Console</span>
+        <span class="admin-brand-copy">
+          <strong>LoveCube</strong>
+          <small>后台管理系统</small>
+        </span>
       </router-link>
-      <p class="admin-sub">运营后台</p>
-
-      <section class="admin-sidebar-card">
-        <p class="admin-sidebar-card-label">当前页面</p>
-        <p class="admin-sidebar-card-value">{{ currentSection }}</p>
-        <p class="admin-sidebar-card-meta">{{ todayText }}</p>
-      </section>
-
-      <div class="admin-sidebar-guide">
-        <p class="admin-sidebar-guide-title">怎么用</p>
-        <p class="admin-sidebar-guide-text">
-          左侧菜单与总览里的「功能地图」一致。点进模块即可办事；子页用顶栏「返回」。
-        </p>
-      </div>
 
       <nav class="admin-nav" aria-label="后台功能导航">
-        <div v-for="entry in visibleNavEntries" :key="entry.key" class="admin-nav-row">
-          <p v-if="entry.kind === 'section'" class="admin-nav-section">{{ entry.label }}</p>
+        <template v-for="group in visibleNavGroups" :key="group.id">
           <router-link
-            v-else
+            v-if="group.items.length === 1"
             v-slot="{ isActive, isExactActive, href, navigate }"
-            :to="entry.to"
+            :to="group.items[0].to"
             custom
           >
             <a
               :href="href"
-              class="admin-nav-link"
-              :class="{ 'is-active': entry.to === '/admin' ? isExactActive : isActive }"
+              class="admin-nav-link admin-nav-link--top"
+              :class="{ 'is-active': group.items[0].to === '/admin' ? isExactActive : isActive }"
               @click="
                 (e) => {
                   navigate(e)
@@ -66,11 +54,57 @@
                 }
               "
             >
-              <span class="nav-icon" aria-hidden="true">{{ entry.icon }}</span>
-              <span>{{ entry.label }}</span>
+              <span class="nav-icon" aria-hidden="true">{{ group.icon }}</span>
+              <span class="nav-text">{{ group.label }}</span>
+              <span class="nav-chevron" aria-hidden="true">›</span>
             </a>
           </router-link>
-        </div>
+
+          <details
+            v-else-if="group.items.length > 1"
+            class="admin-nav-group"
+            :open="isGroupActive(group)"
+          >
+            <summary
+              class="admin-nav-link admin-nav-link--top"
+              :class="{ 'is-active': isGroupActive(group) }"
+            >
+              <span class="nav-icon" aria-hidden="true">{{ group.icon }}</span>
+              <span class="nav-text">{{ group.label }}</span>
+              <span class="nav-chevron" aria-hidden="true">›</span>
+            </summary>
+            <div class="admin-subnav">
+              <router-link
+                v-for="item in group.items"
+                :key="item.to"
+                v-slot="{ isActive, isExactActive, href, navigate }"
+                :to="item.to"
+                custom
+              >
+                <a
+                  :href="href"
+                  class="admin-subnav-link"
+                  :class="{ 'is-active': item.to === '/admin' ? isExactActive : isActive }"
+                  @click="
+                    (e) => {
+                      navigate(e)
+                      closeNavDrawer()
+                    }
+                  "
+                >
+                  <span class="subnav-dot" aria-hidden="true">{{ item.icon || group.icon }}</span>
+                  <span>{{ item.label }}</span>
+                </a>
+              </router-link>
+            </div>
+          </details>
+
+          <span v-else class="admin-nav-link admin-nav-link--top is-disabled">
+            <span class="nav-icon" aria-hidden="true">{{ group.icon }}</span>
+            <span class="nav-text">{{ group.label }}</span>
+            <span class="nav-chevron" aria-hidden="true">›</span>
+          </span>
+        </template>
       </nav>
 
       <router-link to="/" class="back-home" @click="closeNavDrawer">返回平台官网</router-link>
@@ -144,140 +178,84 @@ const visibleNavGroups = computed(() =>
   filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission)
 )
 
-/** 扁平列表：便于单 v-for + 合法 key，避免 template 片段与 key 规则冲突 */
-const visibleNavEntries = computed(() => {
-  const rows = []
-  for (const group of visibleNavGroups.value) {
-    rows.push({ kind: 'section', key: `s-${group.id}`, label: group.label })
-    for (const item of group.items) {
-      rows.push({ kind: 'link', key: item.to, ...item })
-    }
-  }
-  return rows
-})
-
-const visibleNavItems = computed(() => visibleNavGroups.value.flatMap(g => g.items))
-
+const visibleNavItems = computed(() => visibleNavGroups.value.flatMap(group => group.items))
 const navHomePaths = computed(() => new Set(visibleNavItems.value.map(item => item.to)))
 const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const currentSection = computed(() => resolveAdminSectionTitle(route.path))
-const todayText = computed(() =>
-  new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
-)
+
+function isGroupActive(group) {
+  return group.items.some((item) => {
+    if (item.to === '/admin') return route.path === '/admin'
+    return route.path === item.to || route.path.startsWith(`${item.to}/`)
+  })
+}
 </script>
 
 <style scoped>
 .admin-layout {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
   background: var(--lc-soft);
 }
 
 .admin-sidebar {
-  padding: 14px 10px 10px;
-  border-right: 1px solid var(--lc-border);
-  background: var(--lc-surface);
+  --sidebar-bg: color-mix(in srgb, var(--lc-text) 88%, var(--lc-blue) 12%);
+  --sidebar-bg-deep: color-mix(in srgb, var(--lc-text) 94%, var(--lc-blue) 6%);
+  --sidebar-line: color-mix(in srgb, var(--lc-surface) 14%, transparent);
+  --sidebar-text: color-mix(in srgb, var(--lc-surface) 88%, var(--lc-soft) 12%);
+  --sidebar-muted: color-mix(in srgb, var(--lc-surface) 60%, transparent);
+  --sidebar-hover: color-mix(in srgb, var(--lc-surface) 10%, transparent);
+  --sidebar-active: color-mix(in srgb, var(--lc-rose) 56%, transparent);
+  padding: 20px 12px 14px;
+  border-right: 1px solid var(--sidebar-line);
+  background:
+    linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-deep) 100%);
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 22px;
   overflow: hidden auto;
 }
 
 .admin-brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 800;
+  gap: 10px;
+  padding: 0 8px;
   text-decoration: none;
-  color: var(--lc-text);
-  letter-spacing: .01em;
+  color: var(--sidebar-text);
 }
 
 .admin-brand img {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
   display: block;
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--lc-rose) 28%, transparent);
 }
 
-.admin-sub {
-  font-size: 12px;
-  color: var(--lc-subtle);
-  font-weight: 600;
+.admin-brand-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
-.admin-sidebar-card {
-  margin-top: 2px;
-  border-radius: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--lc-border);
-  background: var(--lc-bg);
-}
-
-.admin-sidebar-card-label {
-  margin: 0;
-  font-size: 11px;
-  color: var(--lc-subtle);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  font-weight: 700;
-}
-
-.admin-sidebar-card-value {
-  margin: 8px 0 2px;
+.admin-brand-copy strong {
   font-size: 17px;
-  color: var(--lc-text);
-  font-weight: 700;
-}
-
-.admin-sidebar-card-meta {
-  margin: 0;
-  font-size: 11px;
-  color: var(--lc-subtle);
-}
-
-.admin-sidebar-guide {
-  border-radius: 10px;
-  padding: 10px 11px;
-  border: 1px dashed var(--lc-blue-border);
-  background: var(--lc-blue-light);
-  position: relative;
-  z-index: 1;
-  isolation: isolate;
-}
-
-.admin-sidebar-guide-title {
-  margin: 0 0 6px;
-  font-size: 11px;
+  line-height: 1.1;
   font-weight: 800;
-  color: var(--lc-blue-dark);
-  letter-spacing: 0.04em;
+  color: var(--lc-surface);
 }
 
-.admin-sidebar-guide-text {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--lc-muted);
-}
-
-.admin-nav-section {
-  margin: 0;
-  padding: 12px 10px 4px;
+.admin-brand-copy small {
   font-size: 11px;
-  font-weight: 700;
-  color: var(--lc-subtle);
-  letter-spacing: .06em;
-}
-
-.admin-nav-section:first-of-type {
-  padding-top: 4px;
+  line-height: 1.2;
+  color: var(--sidebar-muted);
+  font-weight: 600;
 }
 
 .admin-nav {
@@ -286,70 +264,153 @@ const todayText = computed(() =>
   overflow-y: auto;
   padding-right: 2px;
   display: grid;
-  gap: 2px;
+  gap: 7px;
   align-content: start;
 }
 
-.admin-nav-row {
-  display: contents;
-}
-
-.admin-nav::-webkit-scrollbar {
+.admin-nav::-webkit-scrollbar,
+.admin-sidebar::-webkit-scrollbar {
   width: 6px;
 }
 
-.admin-nav::-webkit-scrollbar-thumb {
-  background: var(--lc-border);
+.admin-nav::-webkit-scrollbar-thumb,
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--lc-surface) 22%, transparent);
   border-radius: 999px;
 }
 
-.admin-nav::-webkit-scrollbar-track {
+.admin-nav::-webkit-scrollbar-track,
+.admin-sidebar::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.admin-nav-group {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-nav-group[open] .nav-chevron {
+  transform: rotate(90deg);
+}
+
+.admin-nav-group summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.admin-nav-group summary::-webkit-details-marker {
+  display: none;
+}
+
 .admin-nav-link {
+  min-height: 46px;
   text-decoration: none;
-  color: var(--lc-muted);
-  padding: 9px 10px;
-  border-radius: 9px;
-  font-weight: 600;
-  font-size: 13px;
+  color: var(--sidebar-text);
+  padding: 0 12px;
+  border-radius: 7px;
+  font-weight: 700;
+  font-size: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+  gap: 10px;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease, opacity .18s ease;
 }
 
 .admin-nav-link:hover {
-  background: var(--lc-soft);
-  color: var(--lc-text);
-}
-
-.nav-icon {
-  color: var(--lc-subtle);
-  font-size: 12px;
-  flex-shrink: 0;
+  background: var(--sidebar-hover);
+  color: var(--lc-surface);
 }
 
 .admin-nav-link.is-active {
-  background: var(--lc-blue-light);
-  color: var(--lc-blue-mid);
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--lc-blue-border);
+  background: var(--sidebar-active);
+  color: var(--lc-surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc-surface) 18%, transparent);
+}
+
+.admin-nav-link.is-disabled {
+  color: color-mix(in srgb, var(--sidebar-muted) 72%, transparent);
+  cursor: not-allowed;
+  opacity: .62;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--sidebar-text);
+  border: 1px solid color-mix(in srgb, var(--lc-surface) 20%, transparent);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
 }
 
 .admin-nav-link.is-active .nav-icon {
-  color: var(--lc-blue);
+  background: color-mix(in srgb, var(--lc-surface) 18%, transparent);
+  border-color: color-mix(in srgb, var(--lc-surface) 28%, transparent);
+  color: var(--lc-surface);
+}
+
+.nav-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-chevron {
+  color: var(--sidebar-muted);
+  font-size: 18px;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+
+.admin-subnav {
+  display: grid;
+  gap: 3px;
+  padding: 0 0 3px 39px;
+}
+
+.admin-subnav-link {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 7px;
+  padding: 0 10px;
+  color: var(--sidebar-muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background .18s ease, color .18s ease;
+}
+
+.admin-subnav-link:hover,
+.admin-subnav-link.is-active {
+  background: var(--sidebar-hover);
+  color: var(--lc-surface);
+}
+
+.subnav-dot {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--lc-surface) 9%, transparent);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .back-home {
-  margin-top: 4px;
   text-decoration: none;
-  color: var(--lc-blue);
-  border: 1px solid var(--lc-blue-border);
-  background: var(--lc-blue-light);
-  border-radius: 10px;
-  min-height: 40px;
+  color: var(--sidebar-text);
+  border: 1px solid color-mix(in srgb, var(--lc-surface) 22%, transparent);
+  background: color-mix(in srgb, var(--lc-surface) 8%, transparent);
+  border-radius: 8px;
+  min-height: 38px;
   justify-content: center;
   font-weight: 700;
   padding: 8px 10px;
@@ -360,9 +421,9 @@ const todayText = computed(() =>
 }
 
 .back-home:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: var(--lc-blue-dark);
+  background: color-mix(in srgb, var(--lc-surface) 14%, transparent);
+  border-color: color-mix(in srgb, var(--lc-surface) 32%, transparent);
+  color: var(--lc-surface);
 }
 
 .admin-main {
@@ -438,7 +499,7 @@ const todayText = computed(() =>
   .admin-mobile-brand-text {
     font-size: 15px;
     font-weight: 800;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
   }
 
   .admin-mobile-section {
@@ -498,7 +559,7 @@ const todayText = computed(() =>
     top: 0;
     left: 0;
     bottom: 0;
-    width: min(304px, 88vw);
+    width: min(292px, 88vw);
     max-width: 100%;
     height: 100vh;
     height: 100dvh;
@@ -506,48 +567,15 @@ const todayText = computed(() =>
     transform: translateX(-100%);
     transition: transform 0.22s ease, box-shadow 0.22s ease;
     pointer-events: none;
-    border-right: 1px solid var(--lc-border);
-    border-bottom: none;
-    padding: 14px 10px 10px;
-    padding-top: max(14px, env(safe-area-inset-top, 0px));
-    gap: 8px;
-    overflow: hidden auto;
+    padding: 18px 12px 14px;
+    padding-top: max(18px, env(safe-area-inset-top, 0px));
     box-shadow: none;
   }
 
   .admin-sidebar.is-drawer-open {
     transform: translateX(0);
     pointer-events: auto;
-    box-shadow: 8px 0 24px color-mix(in srgb, var(--lc-text) 12%, transparent);
-  }
-
-  .admin-sidebar-card,
-  .admin-sidebar-guide {
-    display: none;
-  }
-
-  .admin-nav {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-
-  .admin-nav-section {
-    grid-column: auto;
-    padding: 12px 10px 4px;
-  }
-
-  .admin-nav-link {
-    justify-content: flex-start;
-    font-size: 13px;
-    padding: 9px 10px;
-  }
-
-  .back-home {
-    font-size: 13px;
-    padding: 8px 10px;
+    box-shadow: 8px 0 24px color-mix(in srgb, var(--lc-text) 18%, transparent);
   }
 
   .admin-main {
@@ -555,6 +583,5 @@ const todayText = computed(() =>
     padding: 12px 14px max(20px, env(safe-area-inset-bottom, 0px));
     gap: 12px;
   }
-
 }
 </style>

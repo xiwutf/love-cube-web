@@ -2,7 +2,12 @@ package com.lovecube.backend.services;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.lovecube.backend.entity.Dynamic;
+import com.lovecube.backend.entity.LocalResource;
+import com.lovecube.backend.entity.ReportRecord;
+import com.lovecube.backend.entity.UserFeedback;
 import com.lovecube.backend.entity.UserInteraction;
+import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
 import com.lovecube.backend.repository.ChatMessageRepository;
@@ -15,6 +20,7 @@ import com.lovecube.backend.repository.GroupPostRepository;
 import com.lovecube.backend.repository.HelpReplyRepository;
 import com.lovecube.backend.repository.HelpRequestRepository;
 import com.lovecube.backend.repository.InviteRecordRepository;
+import com.lovecube.backend.repository.LocalResourceRepository;
 import com.lovecube.backend.repository.MatchRecordRepository;
 import com.lovecube.backend.repository.PlatGroupActivitySignupRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
@@ -32,7 +38,9 @@ import com.lovecube.backend.repository.UserPhotoRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -46,7 +54,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 /**
  * 管理端工作台聚合统计。带短时内存缓存，减轻反复打开仪表盘时的数据库压力。
@@ -78,6 +91,7 @@ public class AdminDashboardStatsService {
     private final FellowshipProfileRepository fellowshipProfileRepository;
     private final MatchRecordRepository matchRecordRepository;
     private final DynamicRepository dynamicRepository;
+    private final LocalResourceRepository localResourceRepository;
     private final UserDailyTaskProgressRepository userDailyTaskProgressRepository;
     private final UserBadgeRepository userBadgeRepository;
     private final UserBlacklistRepository userBlacklistRepository;
@@ -89,6 +103,7 @@ public class AdminDashboardStatsService {
 
     private final long cacheTtlSeconds;
     private final Optional<LoadingCache<Boolean, Map<String, Object>>> cache;
+    private final Executor trendsExecutor;
 
     public AdminDashboardStatsService(
             AnnouncementRepository announcementRepository,
@@ -113,6 +128,7 @@ public class AdminDashboardStatsService {
             FellowshipProfileRepository fellowshipProfileRepository,
             MatchRecordRepository matchRecordRepository,
             DynamicRepository dynamicRepository,
+            LocalResourceRepository localResourceRepository,
             UserDailyTaskProgressRepository userDailyTaskProgressRepository,
             UserBadgeRepository userBadgeRepository,
             UserBlacklistRepository userBlacklistRepository,
@@ -121,6 +137,7 @@ public class AdminDashboardStatsService {
             UserPhotoRepository userPhotoRepository,
             SiteVisitLogRepository siteVisitLogRepository,
             NotificationService notificationService,
+            @Qualifier("adminDashboardTrendsExecutor") Executor trendsExecutor,
             @Value("${lovecube.admin.dashboard-stats-cache-seconds:45}") long dashboardStatsCacheSeconds
     ) {
         this.announcementRepository = announcementRepository;
@@ -145,6 +162,7 @@ public class AdminDashboardStatsService {
         this.fellowshipProfileRepository = fellowshipProfileRepository;
         this.matchRecordRepository = matchRecordRepository;
         this.dynamicRepository = dynamicRepository;
+        this.localResourceRepository = localResourceRepository;
         this.userDailyTaskProgressRepository = userDailyTaskProgressRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.userBlacklistRepository = userBlacklistRepository;
@@ -153,6 +171,7 @@ public class AdminDashboardStatsService {
         this.userPhotoRepository = userPhotoRepository;
         this.siteVisitLogRepository = siteVisitLogRepository;
         this.notificationService = notificationService;
+        this.trendsExecutor = trendsExecutor;
         this.cacheTtlSeconds = Math.max(0, dashboardStatsCacheSeconds);
         if (this.cacheTtlSeconds > 0) {
             this.cache = Optional.of(Caffeine.newBuilder()
@@ -226,7 +245,7 @@ public class AdminDashboardStatsService {
         long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");
         long todayReports = reportRecordRepository.countByCreatedAtGreaterThanEqual(todayStart);
         long handledReports = reportRecordRepository.countHandledReports();
-        long pendingTasks = pendingVerifications + pendingReports + pendingFeedbacks;
+        long pendingTasks = pendingVerifications + pendingReports;
 
         long activeGroups = platformGroupRepository.countByStatus("active");
         long totalGroups = platformGroupRepository.count();
@@ -250,6 +269,7 @@ public class AdminDashboardStatsService {
         long helpRequestsClosed = helpRequestRepository.countByStatus("closed");
         long helpRequestsToday = helpRequestRepository.countByCreatedAtGreaterThanEqual(todayStart);
         long helpRepliesToday = helpReplyRepository.countByCreatedAtGreaterThanEqual(todayStart);
+        long pendingLocalResources = localResourceRepository.countPendingForAdmin();
 
         long fellowshipProfilesTotal = fellowshipProfileRepository.count();
         long fellowshipProfilesBasicFilled = fellowshipProfileRepository.countWithNicknameAndAvatar();
@@ -281,6 +301,19 @@ public class AdminDashboardStatsService {
         long repeatVisitors7d = siteVisitLogRepository.countRepeatVisitorsSince(sevenDaysStart);
         long visitorsUv7d = siteVisitLogRepository.countDistinctVisitorIdSince(sevenDaysStart);
         long reportsLast7d = reportRecordRepository.countByCreatedAtGreaterThanEqual(sevenDaysStart);
+        long contentPublishedLast7d = announcementRepository.countPublishedSince(sevenDaysStart)
+                + articleRepository.countPublishedSince(sevenDaysStart)
+                + platformEventRepository.countByCreatedAtGreaterThanEqual(sevenDaysStart);
+        long pendingContent = dynamicsSevenDays + positiveSharesPending + helpRequestsPending + pendingLocalResources;
+
+        Map<String, Object> trends = buildSevenDayTrends(hiddenSuperAdminOperator, sevenDaysStart);
+        Map<String, Object> activityRatio = buildActivityRatio(
+                contentPublishedLast7d + positiveSharesToday + pendingLocalResources,
+                dynamicsSevenDays + matchRecordsSevenDays + todayLikes + todayMessages,
+                groupPostsToday + pendingGroupJoinRequests + groupJoinRequestsToday
+        );
+        Map<String, Object> recent = buildRecent(
+                hiddenSuperAdminOperator, pendingReports, pendingFeedbacks, pendingLocalResources);
 
         List<Object[]> reasonRows = new ArrayList<>(reportRecordRepository.countGroupedByReasonSince(sevenDaysStart));
         reasonRows.sort(Comparator.comparingLong(r -> -(((Number) r[1]).longValue())));
@@ -324,15 +357,20 @@ public class AdminDashboardStatsService {
                 "totalEvents", totalEvents,
                 "pinnedContent", pinnedContent,
                 "recommendedContent", recommendedContent,
+                "todayNewDynamics", dynamicsToday,
+                "pendingContent", pendingContent,
+                "contentPublishedLast7d", contentPublishedLast7d,
                 "contentPublishedLast30d", contentPublishedLast30d
         ));
         stats.put("fellowshipData", Map.of(
                 "todayLikes", todayLikes,
                 "todayMessages", todayMessages,
+                "pendingDynamics", dynamicsToday,
                 "pendingVerifications", pendingVerifications,
                 "pendingReports", pendingReports
         ));
         stats.put("governanceData", Map.of(
+                "pendingReports", pendingReports,
                 "todayReports", todayReports,
                 "handledReports", handledReports,
                 "bannedUsers", bannedUsers,
@@ -368,6 +406,14 @@ public class AdminDashboardStatsService {
         helpAndShareData.put("positiveShareCommentsTotal", positiveShareCommentsTotal);
         helpAndShareData.put("positiveShareCommentsToday", positiveShareCommentsToday);
         stats.put("helpAndShareData", helpAndShareData);
+
+        Map<String, Object> localResourceData = new LinkedHashMap<>();
+        localResourceData.put("pendingLocalResources", pendingLocalResources);
+        stats.put("localResourceData", localResourceData);
+
+        Map<String, Object> feedbackData = new LinkedHashMap<>();
+        feedbackData.put("pendingFeedbacks", pendingFeedbacks);
+        stats.put("feedbackData", feedbackData);
 
         Map<String, Object> engagementData = new LinkedHashMap<>();
         // 新口径：显式标注联谊动态；同时保留旧字段，避免前端存量页面受影响。
@@ -408,7 +454,234 @@ public class AdminDashboardStatsService {
         reportInsightData.put("reportReasonTop", reportReasonTop);
         stats.put("reportInsightData", reportInsightData);
 
-        stats.put("notificationData", notificationService.getAdminDashboardNotificationStats(todayStart));
+        Map<String, Long> notificationData = notificationService.getAdminDashboardNotificationStats(todayStart);
+        stats.put("notificationData", notificationData);
+        stats.put("trends", trends);
+        stats.put("activityRatio", activityRatio);
+        stats.put("recent", recent);
         return stats;
+    }
+
+    private Map<String, Object> buildSevenDayTrends(boolean hiddenSuperAdminOperator, LocalDateTime sevenDaysStart) {
+        List<CompletableFuture<TrendDayBucket>> futures = new ArrayList<>(7);
+        for (int i = 0; i < 7; i++) {
+            LocalDateTime start = sevenDaysStart.plusDays(i);
+            LocalDateTime end = start.plusDays(1);
+            futures.add(CompletableFuture.supplyAsync(
+                    () -> buildOneDayTrendBucket(hiddenSuperAdminOperator, start, end),
+                    trendsExecutor));
+        }
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+        List<String> labels = new ArrayList<>(7);
+        List<Long> newUsers = new ArrayList<>(7);
+        List<Long> activeUsers = new ArrayList<>(7);
+        List<Long> dynamics = new ArrayList<>(7);
+        List<Long> comments = new ArrayList<>(7);
+        List<Long> contentPublish = new ArrayList<>(7);
+        for (CompletableFuture<TrendDayBucket> f : futures) {
+            TrendDayBucket b = f.join();
+            labels.add(b.label());
+            newUsers.add(b.newUsers());
+            activeUsers.add(b.activeUsers());
+            dynamics.add(b.dynamics());
+            comments.add(b.comments());
+            contentPublish.add(b.contentPublish());
+        }
+
+        Map<String, Object> trends = new LinkedHashMap<>();
+        trends.put("labels", labels);
+        trends.put("newUsers", newUsers);
+        trends.put("activeUsers", activeUsers);
+        trends.put("dynamics", dynamics);
+        trends.put("comments", comments);
+        trends.put("contentPublish", contentPublish);
+        return trends;
+    }
+
+    private TrendDayBucket buildOneDayTrendBucket(
+            boolean hiddenSuperAdminOperator, LocalDateTime start, LocalDateTime end) {
+        long startMillis = java.sql.Timestamp.valueOf(start).getTime();
+        long endMillis = java.sql.Timestamp.valueOf(end).getTime();
+        String label = String.format("%02d-%02d", start.getMonthValue(), start.getDayOfMonth());
+        long newUsers = hiddenSuperAdminOperator
+                ? userRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end)
+                : userRepository.countVisibleUsersCreatedBetween(start, end, HIDDEN_SUPER_ADMIN_PHONE);
+        long activeFromDynamics = dynamicRepository.countDistinctActiveUsersBetween(start, end);
+        long activeFromInteractions = userInteractionRepository.countDistinctActiveUsersBetween(start, end);
+        long activeFromMessages = chatMessageRepository.countDistinctActiveSendersBetween(startMillis, endMillis);
+        long activeUsers = Math.max(activeFromDynamics, Math.max(activeFromInteractions, activeFromMessages));
+        long dynamics = dynamicRepository.countByIsDeletedFalseAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
+        long comments = dynamicRepository.sumCommentCountVisibleBetween(start, end)
+                + userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                UserInteraction.InteractionType.COMMENT, start, end);
+        long contentPublish = announcementRepository.countPublishedBetween(start, end)
+                + articleRepository.countPublishedBetween(start, end)
+                + platformEventRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end)
+                + positiveShareRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
+        return new TrendDayBucket(label, newUsers, activeUsers, dynamics, comments, contentPublish);
+    }
+
+    private record TrendDayBucket(
+            String label,
+            long newUsers,
+            long activeUsers,
+            long dynamics,
+            long comments,
+            long contentPublish
+    ) {}
+
+    private Map<String, Object> buildActivityRatio(long platformCount, long datingCount, long groupCount) {
+        long total = platformCount + datingCount + groupCount;
+        Map<String, Object> ratio = new LinkedHashMap<>();
+        ratio.put("platform", total <= 0 ? 0 : roundPercent(platformCount, total));
+        ratio.put("dating", total <= 0 ? 0 : roundPercent(datingCount, total));
+        ratio.put("group", total <= 0 ? 0 : roundPercent(groupCount, total));
+        return ratio;
+    }
+
+    private double roundPercent(long value, long total) {
+        return Math.round(value * 1000.0 / total) / 10.0;
+    }
+
+    private Map<String, Object> buildRecent(
+            boolean hiddenSuperAdminOperator,
+            long pendingReports,
+            long pendingFeedbacks,
+            long pendingLocalResources
+    ) {
+        Map<String, Object> recent = new LinkedHashMap<>();
+        recent.put("users", buildRecentUsers(hiddenSuperAdminOperator));
+        recent.put("contents", buildRecentContents());
+        recent.put("reports", buildRecentReports());
+        recent.put("feedbacks", buildRecentFeedbacks());
+        recent.put("notices", buildSystemNotices(pendingReports, pendingFeedbacks, pendingLocalResources));
+        return recent;
+    }
+
+    private List<Map<String, Object>> buildRecentUsers(boolean hiddenSuperAdminOperator) {
+        return userRepository.findRecentUsersForAdmin(3, hiddenSuperAdminOperator, HIDDEN_SUPER_ADMIN_PHONE).stream()
+                .map(user -> recentItem(
+                        initial(user.getUsername(), "用"),
+                        safeText(user.getUsername(), "用户" + user.getUserid()),
+                        "手机号：" + safeText(maskPhone(user.getPhoneNumber()), "未填写"),
+                        user.getCreatedAt()))
+                .toList();
+    }
+
+    private List<Map<String, Object>> buildRecentContents() {
+        List<Dynamic> dynamics = dynamicRepository
+                .findByIsDeletedFalseOrderByCreatedAtDesc(PageRequest.of(0, 3))
+                .getContent();
+        Set<Long> userIds = dynamics.stream()
+                .map(Dynamic::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> idToUsername = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            for (User u : userRepository.findAllById(userIds)) {
+                idToUsername.put(u.getUserid(), safeText(u.getUsername(), ""));
+            }
+        }
+        return dynamics.stream()
+                .map(dynamic -> recentItem(
+                        "动",
+                        truncate(safeText(dynamic.getContent(), "动态内容"), 18),
+                        "用户：" + safeText(
+                                idToUsername.getOrDefault(dynamic.getUserId(), ""),
+                                "用户" + dynamic.getUserId()),
+                        dynamic.getCreatedAt()))
+                .toList();
+    }
+
+    private List<Map<String, Object>> buildRecentReports() {
+        return reportRecordRepository.findByOrderByCreatedAtDesc(PageRequest.of(0, 3)).stream()
+                .map(report -> recentItem(
+                        "举",
+                        safeText(report.getReasonType(), "用户举报"),
+                        "被举报用户：" + safeText(String.valueOf(report.getTargetUserId()), "-"),
+                        report.getCreatedAt()))
+                .toList();
+    }
+
+    private List<Map<String, Object>> buildRecentFeedbacks() {
+        return userFeedbackRepository.findByOrderByCreatedAtDesc(PageRequest.of(0, 3)).stream()
+                .map(feedback -> recentItem(
+                        "反",
+                        truncate(safeText(feedback.getContent(), "用户体验问卷"), 18),
+                        "用户：" + safeText(feedback.getUsername(), "匿名用户"),
+                        feedback.getCreatedAt()))
+                .toList();
+    }
+
+    private List<Map<String, Object>> buildSystemNotices(
+            long pendingReports, long pendingFeedbacks, long pendingLocalResources) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        rows.add(systemNotice("服务器统计接口正常", "green"));
+        rows.add(systemNotice("待处理举报 " + pendingReports + " 条", "red"));
+        rows.add(systemNotice("用户体验问卷 " + pendingFeedbacks + " 份", "green"));
+        rows.add(systemNotice("待审核本地资源 " + pendingLocalResources + " 条", "amber"));
+        return rows;
+    }
+
+    private Map<String, Object> recentItem(String avatar, String title, String desc, LocalDateTime time) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("avatar", avatar);
+        item.put("title", title);
+        item.put("desc", desc);
+        item.put("time", relativeTime(time));
+        return item;
+    }
+
+    private Map<String, Object> systemNotice(String title, String level) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("avatar", "●");
+        item.put("title", title);
+        item.put("desc", "");
+        item.put("time", "刚刚");
+        item.put("level", level);
+        return item;
+    }
+
+    private String relativeTime(LocalDateTime time) {
+        if (time == null) {
+            return "-";
+        }
+        long minutes = Math.max(0, Duration.between(time, LocalDateTime.now()).toMinutes());
+        if (minutes < 1) {
+            return "刚刚";
+        }
+        if (minutes < 60) {
+            return minutes + "分钟前";
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + "小时前";
+        }
+        return (hours / 24) + "天前";
+    }
+
+    private String safeText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private String truncate(String value, int maxLength) {
+        String text = safeText(value, "");
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength) + "...";
+    }
+
+    private String initial(String value, String fallback) {
+        String text = safeText(value, fallback);
+        return text.substring(0, 1);
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone;
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 }

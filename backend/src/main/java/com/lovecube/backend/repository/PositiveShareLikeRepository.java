@@ -17,4 +17,6 @@ public interface PositiveShareLikeRepository extends JpaRepository<PositiveShare
     List<PositiveShareLike> findByShareIdInAndUserId(List<Long> shareIds, Long userId);
 
     Page<PositiveShareLike> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    long countByUserId(Long userId);
 }

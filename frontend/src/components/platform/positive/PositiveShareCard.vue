@@ -31,6 +31,14 @@
         为他加油
         <span class="action-count">{{ item.encourageCount || 0 }}</span>
       </button>
+      <button
+        type="button"
+        :class="['action-btn', 'bookmark-btn', { bookmarked: item.bookmarked }]"
+        @click="$emit('bookmark', item)"
+      >
+        <span class="action-icon">{{ item.bookmarked ? '★' : '☆' }}</span>
+        收藏
+      </button>
       <button type="button" class="action-btn comment-btn" @click="$emit('comment', item)">
         <span class="action-icon">💬</span>
         留言
@@ -56,7 +64,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['like', 'comment'])
+defineEmits(['like', 'bookmark', 'comment'])
 
 const avatarLoadFailed = ref(false)
 
@@ -309,5 +317,15 @@ watch(
 
 .like-btn.liked .action-count {
   color: #f87171;
+}
+
+.bookmark-btn.bookmarked {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.bookmark-btn.bookmarked .action-icon {
+  color: #d97706;
 }
 </style>

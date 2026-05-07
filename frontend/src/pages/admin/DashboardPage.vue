@@ -1,809 +1,1186 @@
 <template>
   <section class="admin-page dashboard-page">
-    <AdminMobileWorkbench
-      v-if="isMobileDashboard"
-      :stats="stats"
-      :loading="loading"
-      :error="error"
-      @refresh="load(true)"
-      @retry="load(false)"
-    />
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>今日概览</h2>
+        <div class="date-pill">
+          <span>{{ todayDateText }}</span>
+          <span>{{ todayWeekText }}</span>
+          <span class="date-icon">日</span>
+        </div>
+      </div>
 
-    <template v-else>
-    <header class="dashboard-welcome platform-card">
-      <p class="welcome-kicker">工作台</p>
-      <h2 class="welcome-title">你好，{{ displayName }}</h2>
-      <p class="welcome-text">
-        建议先浏览下方<strong>功能地图</strong>（与左侧菜单一致），再根据需要查看数据区。同页另有「第一次用后台」分步说明（宽屏在右侧，窄屏在数据区下方）。
-      </p>
-      <p v-if="statsCacheTtlSeconds > 0" class="cache-hint">
-        汇总数据在服务端缓存约 {{ statsCacheTtlSeconds }} 秒以降低数据库压力；需要立即看到最新数可点「强制刷新统计」。
-        <button type="button" class="admin-btn cache-refresh-btn" :disabled="loading" @click="load(true)">
-          {{ loading ? '加载中…' : '强制刷新统计' }}
-        </button>
-      </p>
-      <p v-else class="cache-hint cache-hint--live">
-        当前为实时汇总（服务端未启用统计缓存）。仍可通过「重新拉取」触发带 refresh 的请求。
-        <button type="button" class="admin-btn cache-refresh-btn" :disabled="loading" @click="load(true)">
-          {{ loading ? '加载中…' : '重新拉取' }}
-        </button>
-      </p>
-    </header>
-
-    <div class="dashboard-shell">
-      <main class="dashboard-main">
-        <AdminModuleDirectory />
-
-        <TodayStats :loading="loading" :items="todayStats" />
-
-        <section class="overview-visual platform-card">
-          <header class="overview-visual__header">
-            <div>
-              <h3 class="overview-visual__title">总览趋势</h3>
-              <p class="overview-visual__subtitle">通过图表快速查看核心模块在不同周期的体量变化</p>
-            </div>
-            <div class="range-switch" role="tablist" aria-label="统计周期">
-              <button
-                type="button"
-                class="range-switch__btn"
-                :class="{ 'range-switch__btn--active': dashboardRange === '7d' }"
-                :disabled="loading"
-                @click="dashboardRange = '7d'"
-              >
-                近7天
-              </button>
-              <button
-                type="button"
-                class="range-switch__btn"
-                :class="{ 'range-switch__btn--active': dashboardRange === '30d' }"
-                :disabled="loading"
-                @click="dashboardRange = '30d'"
-              >
-                近30天
-              </button>
-            </div>
-          </header>
-          <div class="visual-grid">
-            <article class="visual-card">
-              <h4 class="visual-card__title">模块体量对比</h4>
-              <div v-if="!volumeChartRows.length" class="visual-empty">暂无可展示数据</div>
-              <div v-else class="bar-chart">
-                <div v-for="row in volumeChartRows" :key="row.key" class="bar-chart__row">
-                  <div class="bar-chart__meta">
-                    <span>{{ row.label }}</span>
-                    <strong>{{ row.value }}</strong>
-                  </div>
-                  <div class="bar-chart__track">
-                    <span class="bar-chart__fill" :style="{ width: `${row.percent}%` }"></span>
-                  </div>
-                </div>
-              </div>
-            </article>
-            <article class="visual-card">
-              <h4 class="visual-card__title">核心指标雷达</h4>
-              <div v-if="!trendPolygonPoints" class="visual-empty">暂无可展示数据</div>
-              <div v-else class="radar-wrap">
-                <svg viewBox="0 0 220 220" class="radar-svg" aria-hidden="true">
-                  <polygon class="radar-grid" points="110,20 190,65 190,155 110,200 30,155 30,65"></polygon>
-                  <polygon class="radar-grid radar-grid--inner" points="110,50 166,82 166,138 110,170 54,138 54,82"></polygon>
-                  <polygon class="radar-shape" :points="trendPolygonPoints"></polygon>
-                </svg>
-                <ul class="radar-legend">
-                  <li v-for="item in radarLegendItems" :key="item.key">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.value }}</strong>
-                  </li>
-                </ul>
-              </div>
-            </article>
+      <div class="overview-grid">
+        <article v-for="item in overviewCards" :key="item.key" class="overview-card">
+          <div class="stat-icon" :class="`stat-${item.tone}`">{{ item.icon }}</div>
+          <div class="stat-content">
+            <p>{{ item.label }}</p>
+            <strong>{{ formatNumber(item.value) }}</strong>
+                <span>{{ item.meta || '较昨日' }} <em :class="item.delta >= 0 ? 'up' : 'down'">{{ formatDelta(item.delta) }}</em></span>
           </div>
-        </section>
+          <svg class="sparkline" viewBox="0 0 92 36" aria-hidden="true">
+            <polyline :class="`spark-${item.tone}`" :points="item.spark"></polyline>
+          </svg>
+        </article>
+      </div>
+    </section>
 
-        <section class="operation-zone">
-          <ContentPanel :loading="loading" :items="contentMetrics" />
-          <SocialPanel :loading="loading" :items="socialMetrics" />
-        </section>
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>待办工作台</h2>
+      </div>
 
-        <GovernanceBar :loading="loading" :items="governanceItems" />
+      <div class="todo-grid">
+        <article v-for="item in todoItems" :key="item.key" class="todo-card">
+          <router-link class="todo-more" :to="item.to" aria-label="进入处理">›</router-link>
+          <div class="todo-icon" :class="`todo-${item.tone}`">{{ item.icon }}</div>
+          <div>
+            <h3>{{ item.title }}</h3>
+            <strong>{{ formatNumber(item.count) }}</strong>
+            <p>{{ item.desc }}</p>
+          </div>
+          <router-link class="todo-action" :to="item.to">立即处理</router-link>
+        </article>
+      </div>
+    </section>
 
-        <section class="extended-grid">
-          <AdminMetricsSection
-            title="社群与小组"
-            description="官网团体、成员、帖子、入组申请；含小组活动与平台活动报名。"
-            link-to="/admin/platform/groups"
-            link-text="团体管理"
-            :loading="loading"
-            :items="communityMetrics"
-          />
-          <AdminMetricsSection
-            title="求助与正能量"
-            description="互助求助各状态与今日回复；正能量待审与评论。"
-            link-to="/admin/help-requests"
-            link-text="求助管理"
-            :loading="loading"
-            :items="helpShareMetrics"
-          />
-          <AdminMetricsSection
-            title="互动与匹配"
-            description="联谊动态条数与累计评论/点赞；匹配记录（今日与近7日）。"
-            link-to="/admin/fellowship-dynamics"
-            link-text="联谊动态明细"
-            :loading="loading"
-            :items="engagementMetrics"
-          />
-          <AdminMetricsSection
-            title="用户增长与资产"
-            description="联谊资料、日任务完成、徽章、黑名单、邀请与相册照片。"
-            link-to="/admin/invites"
-            link-text="邀请记录"
-            :loading="loading"
-            :items="growthMetrics"
-          />
-          <AdminMetricsSection
-            title="流量与消息"
-            description="近7日去重访客、多次访问访客；消息通知体量。"
-            link-to="/admin/analytics"
-            link-text="访客分析"
-            :loading="loading"
-            :items="visitorAndNotifyMetrics"
-          />
-        </section>
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>运营数据</h2>
+      </div>
 
-        <section v-if="reportReasons.length" class="report-reasons platform-card">
-          <h3 class="rr-title">举报原因 Top（近7日）</h3>
-          <ol class="rr-list">
-            <li v-for="(row, idx) in reportReasons" :key="idx">
-              <span class="rr-reason">{{ row.reason }}</span>
-              <span class="rr-count">{{ row.count }}</span>
+      <div class="ops-grid">
+        <article class="ops-card trend-card">
+          <h3>用户增长趋势（最近7天）</h3>
+          <div class="chart-legend">
+            <span><i class="blue-dot"></i>新增用户</span>
+            <span><i class="green-dot"></i>活跃用户</span>
+          </div>
+          <svg class="line-chart" viewBox="0 0 420 150" aria-label="用户增长趋势">
+            <g class="grid-lines">
+              <line x1="16" y1="24" x2="404" y2="24"></line>
+              <line x1="16" y1="64" x2="404" y2="64"></line>
+              <line x1="16" y1="104" x2="404" y2="104"></line>
+            </g>
+            <polyline class="line-blue" :points="userLinePoints"></polyline>
+            <polyline class="line-green" :points="activeLinePoints"></polyline>
+          </svg>
+          <div class="axis-labels">
+            <span v-for="item in sevenDayLabels" :key="item">{{ item }}</span>
+          </div>
+        </article>
+
+        <article class="ops-card trend-card">
+          <h3>内容发布趋势（最近7天）</h3>
+          <div class="chart-legend">
+            <span><i class="blue-dot"></i>动态数</span>
+            <span><i class="green-dot"></i>评论数</span>
+          </div>
+          <svg class="line-chart" viewBox="0 0 420 150" aria-label="内容发布趋势">
+            <g class="grid-lines">
+              <line x1="16" y1="24" x2="404" y2="24"></line>
+              <line x1="16" y1="64" x2="404" y2="64"></line>
+              <line x1="16" y1="104" x2="404" y2="104"></line>
+            </g>
+            <polyline class="line-blue" :points="contentLinePoints"></polyline>
+            <polyline class="line-green" :points="commentLinePoints"></polyline>
+          </svg>
+          <div class="axis-labels">
+            <span v-for="item in sevenDayLabels" :key="item">{{ item }}</span>
+          </div>
+        </article>
+
+        <article class="ops-card ratio-card">
+          <h3>模块活跃占比</h3>
+          <div class="donut-wrap">
+            <div class="donut" :style="donutStyle"></div>
+            <div class="ratio-list">
+              <div v-for="item in activityRatio" :key="item.key" class="ratio-row">
+                <span><i :class="`ratio-dot ${item.key}`"></i>{{ item.label }}</span>
+                <strong>{{ item.value }}%</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="ops-card completion-card">
+          <h3>找对象资料完善率</h3>
+          <div class="progress-ring" :style="profileRingStyle">
+          <div class="progress-ring__inner">{{ profileCompletionRate }}%</div>
+          </div>
+          <p>已完善 {{ formatNumber(profileCompletedCount) }} / {{ formatNumber(profileTotalCount) }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>快捷入口</h2>
+      </div>
+
+      <div class="shortcut-grid">
+        <article v-for="group in shortcutGroups" :key="group.title" class="shortcut-group">
+          <h3>{{ group.title }}</h3>
+          <div class="shortcut-items">
+            <template v-for="item in group.items" :key="item.label">
+              <router-link v-if="item.to" class="shortcut-item" :to="item.to">
+                <span :class="`shortcut-icon ${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.label }}</strong>
+              </router-link>
+              <span v-else class="shortcut-item shortcut-item--disabled">
+                <span :class="`shortcut-icon ${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.label }}</strong>
+              </span>
+            </template>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>最近动态</h2>
+      </div>
+
+      <div class="recent-grid">
+        <article v-for="column in recentColumns" :key="column.key" class="recent-card">
+          <header>
+            <h3>{{ column.title }}</h3>
+            <router-link v-if="column.to" :to="column.to">更多 ›</router-link>
+            <span v-else>更多 ›</span>
+          </header>
+          <ul>
+            <li v-for="item in column.items" :key="`${column.key}-${item.title}`">
+              <span class="recent-avatar" :class="column.key">{{ item.avatar }}</span>
+              <div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.desc }}</p>
+              </div>
+              <time>{{ item.time }}</time>
             </li>
-          </ol>
-        </section>
-      </main>
+          </ul>
+        </article>
+      </div>
+    </section>
 
-      <aside class="dashboard-side">
-        <AdminHowTo />
-      </aside>
-    </div>
-
-    <div v-if="error" class="admin-error">
-      <p>{{ error }}</p>
-      <button class="admin-btn" @click="load(false)">重新加载</button>
-    </div>
-    </template>
+    <p v-if="error" class="dashboard-error">{{ error }}</p>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { getAdminStats } from '@/api/adminContent.js'
-import { useUserStore } from '@/stores/user.js'
-import TodayStats from './components/TodayStats.vue'
-import ContentPanel from './components/ContentPanel.vue'
-import SocialPanel from './components/SocialPanel.vue'
-import GovernanceBar from './components/GovernanceBar.vue'
-import AdminModuleDirectory from './components/AdminModuleDirectory.vue'
-import AdminHowTo from './components/AdminHowTo.vue'
-import AdminMetricsSection from './components/AdminMetricsSection.vue'
-import AdminMobileWorkbench from './components/AdminMobileWorkbench.vue'
 
-const userStore = useUserStore()
+const emptyDashboardData = {
+  userData: {
+    todayNewUsers: 0,
+    sevenDayNewUsers: 0,
+    totalUsers: 0
+  },
+  contentData: {
+    todayNewDynamics: 0,
+    pendingContent: 0
+  },
+  fellowshipData: {
+    pendingDynamics: 0,
+    pendingReports: 0,
+    pendingVerifications: 0
+  },
+  governanceData: {
+    pendingReports: 0
+  },
+  feedbackData: {
+    pendingFeedbacks: 0
+  },
+  localResourceData: {
+    pendingLocalResources: 0
+  },
+  helpAndShareData: {
+    helpRequestsPending: 0
+  },
+  growthData: {
+    fellowshipProfilesTotal: 0,
+    fellowshipProfilesBasicFilled: 0
+  },
+  trends: {
+    labels: [],
+    newUsers: [],
+    activeUsers: [],
+    dynamics: [],
+    comments: [],
+    contentPublish: []
+  },
+  activityRatio: {
+    platform: 0,
+    dating: 0,
+    group: 0
+  },
+  recent: {
+    users: [],
+    contents: [],
+    reports: [],
+    feedbacks: [],
+    notices: []
+  }
+}
 
-const displayName = computed(
-  () => userStore.nickname || userStore.userInfo?.username || '管理员'
-)
-
-const loading = ref(true)
+const dashboardData = ref(emptyDashboardData)
 const error = ref('')
-const dashboardRange = ref('7d')
-const isMobileDashboard = ref(
-  typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)').matches : false
-)
-const stats = ref({
-  totalUsers: 0,
-  todayNewUsers: 0,
-  sevenDayNewUsers: 0,
-  bannedUsers: 0,
-  totalAnnouncements: 0,
-  totalArticles: 0,
-  totalEvents: 0,
-  pinnedContent: 0,
-  recommendedContent: 0,
-  todayLikes: 0,
-  todayMessages: 0,
-  pendingVerifications: 0,
-  pendingReports: 0,
-  pendingFeedbacks: 0,
-  todayReports: 0,
-  handledReports: 0,
-  pendingTasks: 0,
-  communityData: {},
-  helpAndShareData: {},
-  engagementData: {},
-  growthData: {},
-  visitorQualityData: {},
-  notificationData: {},
-  reportInsightData: {},
-  statsCacheTtlSeconds: 0
-})
+const loading = ref(false)
 
-function pick(groupKey, key) {
-  return stats.value?.[groupKey]?.[key] ?? stats.value?.[key] ?? 0
+function pick(groupKey, key, fallback = 0) {
+  return dashboardData.value?.[groupKey]?.[key] ?? dashboardData.value?.[key] ?? fallback
 }
 
-function pickAny(groupKey, keys) {
-  for (const key of keys) {
-    const value = stats.value?.[groupKey]?.[key] ?? stats.value?.[key]
-    if (value != null) return value
-  }
-  return 0
+function formatNumber(value) {
+  return (Number(value) || 0).toLocaleString('zh-CN')
 }
 
-const statsCacheTtlSeconds = computed(() => {
-  const v = stats.value?.statsCacheTtlSeconds
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-})
-
-const todayStats = computed(() => [
-  {
-    label: '新增用户',
-    value: pick('userData', 'todayNewUsers'),
-    trend: pick('userData', 'todayNewUsers') > 0 ? 'up' : 'flat',
-    trendText: pick('userData', 'todayNewUsers') > 0 ? '较昨日 +20%' : '较昨日 -',
-    tone: 'blue',
-    icon: '👥'
-  },
-  {
-    label: '活跃用户',
-    value: pick('userData', 'totalUsers'),
-    trend: pick('userData', 'sevenDayNewUsers') > 0 ? 'up' : 'flat',
-    trendText: pick('userData', 'sevenDayNewUsers') > 0 ? '近7日持续上升' : '近7日平稳',
-    tone: 'green',
-    icon: '📈'
-  },
-  {
-    label: '内容发布',
-    value: pick('contentData', 'totalAnnouncements') + pick('contentData', 'totalArticles') + pick('contentData', 'totalEvents'),
-    trend: 'up',
-    trendText: '较昨日 +25%',
-    tone: 'purple',
-    icon: '🗂'
-  },
-  {
-    label: '待处理举报',
-    value: pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports') || pick('pendingReports', 'pendingReports'),
-    trend: (pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports')) > 0 ? 'down' : 'flat',
-    trendText: (pick('governanceData', 'todayReports') || pick('fellowshipData', 'pendingReports')) > 0 ? '需尽快处理' : '较昨日 -',
-    tone: 'orange',
-    icon: '🛡'
-  }
-])
-
-const contentMetrics = computed(() => [
-  { label: '平台公告数', value: pick('contentData', 'totalAnnouncements') },
-  { label: '平台资讯数', value: pick('contentData', 'totalArticles') },
-  { label: '活动数', value: pick('contentData', 'totalEvents') },
-  { label: '推荐内容', value: pick('contentData', 'recommendedContent') },
-  { label: '近30天新发布', value: pick('contentData', 'contentPublishedLast30d') }
-])
-
-const socialMetrics = computed(() => [
-  { label: '点赞数', value: pick('fellowshipData', 'todayLikes') },
-  { label: '私信数', value: pick('fellowshipData', 'todayMessages') },
-  { label: '活跃用户', value: pick('userData', 'todayNewUsers') + pick('fellowshipData', 'todayMessages') },
-  { label: '浏览数', value: pick('fellowshipData', 'todayLikes') + pick('fellowshipData', 'todayMessages') * 2 }
-])
-
-const governanceItems = computed(() => [
-  { label: '待处理举报', value: pick('fellowshipData', 'pendingReports') || pick('governanceData', 'todayReports'), to: '/admin/reports', actionText: '去处理' },
-  { label: '已处理举报', value: pick('governanceData', 'handledReports'), to: '/admin/reports', actionText: '查看记录' },
-  { label: '近7日举报', value: pick('governanceData', 'reportsLast7d'), to: '/admin/reports', actionText: '查看' },
-  { label: '待审核内容', value: pick('fellowshipData', 'pendingVerifications'), to: '/admin/verifications', actionText: '去审核' },
-  { label: '封禁用户', value: pick('governanceData', 'bannedUsers') || pick('userData', 'bannedUsers'), to: '/admin/users', actionText: '查看列表' }
-])
-
-const communityMetrics = computed(() => [
-  { label: '活跃小组', value: pick('communityData', 'activeGroups') },
-  { label: '小组总数', value: pick('communityData', 'totalGroups') },
-  { label: '成员关系行', value: pick('communityData', 'groupMembersTotal') },
-  { label: '帖子总数', value: pick('communityData', 'groupPostsTotal') },
-  { label: '今日新帖', value: pick('communityData', 'groupPostsToday') },
-  { label: '待审入组', value: pick('communityData', 'pendingGroupJoinRequests') },
-  { label: '今日入组申请', value: pick('communityData', 'groupJoinRequestsToday') },
-  { label: '活动报名(总)', value: pick('communityData', 'platActivitySignupsTotal') },
-  { label: '活动报名(今)', value: pick('communityData', 'platActivitySignupsToday') },
-  { label: '平台活动报名', value: pick('communityData', 'eventSignupsTotal') },
-  { label: '今日平台报名', value: pick('communityData', 'eventSignupsToday') },
-  { label: '30天新建小组', value: pick('communityData', 'groupsCreatedLast30d') }
-])
-
-const helpShareMetrics = computed(() => [
-  { label: '求助待处理', value: pick('helpAndShareData', 'helpRequestsPending') },
-  { label: '求助进行中', value: pick('helpAndShareData', 'helpRequestsActive') },
-  { label: '求助已解决', value: pick('helpAndShareData', 'helpRequestsResolved') },
-  { label: '求助已关闭', value: pick('helpAndShareData', 'helpRequestsClosed') },
-  { label: '今日新求助', value: pick('helpAndShareData', 'helpRequestsToday') },
-  { label: '今日新回复', value: pick('helpAndShareData', 'helpRepliesToday') },
-  { label: '正能量已发布', value: pick('helpAndShareData', 'positiveSharesPublished') },
-  { label: '正能量待审', value: pick('helpAndShareData', 'positiveSharesPending') },
-  { label: '今日新投稿', value: pick('helpAndShareData', 'positiveSharesToday') },
-  { label: '评论总数', value: pick('helpAndShareData', 'positiveShareCommentsTotal') },
-  { label: '今日新评论', value: pick('helpAndShareData', 'positiveShareCommentsToday') }
-])
-
-const engagementMetrics = computed(() => [
-  { label: '联谊动态总数', value: pickAny('engagementData', ['fellowshipDynamicsTotal', 'dynamicsTotal']) },
-  { label: '今日联谊动态', value: pickAny('engagementData', ['fellowshipDynamicsToday', 'dynamicsToday']) },
-  { label: '近7日联谊动态', value: pickAny('engagementData', ['fellowshipDynamicsSevenDays', 'dynamicsSevenDays']) },
-  { label: '联谊动态评论累计', value: pickAny('engagementData', ['fellowshipDynamicCommentsSum', 'dynamicCommentsSum']) },
-  { label: '联谊动态点赞累计', value: pickAny('engagementData', ['fellowshipDynamicLikesSum', 'dynamicLikesSum']) },
-  { label: '匹配记录总', value: pick('engagementData', 'matchRecordsTotal') },
-  { label: '今日匹配', value: pick('engagementData', 'matchRecordsToday') },
-  { label: '近7日匹配', value: pick('engagementData', 'matchRecordsSevenDays') }
-])
-
-const growthMetrics = computed(() => [
-  { label: '联谊资料数', value: pick('growthData', 'fellowshipProfilesTotal') },
-  { label: '资料较完整', value: pick('growthData', 'fellowshipProfilesBasicFilled') },
-  { label: '今日完成任务', value: pick('growthData', 'dailyTasksCompletedToday') },
-  { label: '已发放徽章', value: pick('growthData', 'userBadgesGranted') },
-  { label: '黑名单记录', value: pick('growthData', 'blacklistEntries') },
-  { label: '邀请记录总', value: pick('growthData', 'inviteRecordsTotal') },
-  { label: '邀请成功', value: pick('growthData', 'inviteSuccessTotal') },
-  { label: '今日邀请', value: pick('growthData', 'inviteRecordsToday') },
-  { label: '用户相册图', value: pick('growthData', 'userPhotosTotal') },
-  { label: '今日新照片', value: pick('growthData', 'userPhotosToday') }
-])
-
-const visitorAndNotifyMetrics = computed(() => [
-  { label: '近7日UV', value: pick('visitorQualityData', 'visitorsUv7d') },
-  { label: '7日回访访客', value: pick('visitorQualityData', 'repeatVisitors7d') },
-  { label: '消息通知总数', value: pick('notificationData', 'totalNotifications') },
-  { label: '未读消息通知', value: pick('notificationData', 'unreadNotifications') },
-  { label: '今日新消息通知', value: pick('notificationData', 'todayNotifications') }
-])
-
-const reportReasons = computed(() => {
-  const rows = stats.value?.reportInsightData?.reportReasonTop
-  return Array.isArray(rows) ? rows : []
-})
-
-const rangeLabel = computed(() => (dashboardRange.value === '30d' ? '近30天' : '近7天'))
-
-function rangeValue(item) {
-  return Number(dashboardRange.value === '30d' ? item.v30d : item.v7d) || 0
+function formatDelta(value) {
+  const n = Number(value) || 0
+  return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`
 }
 
-const chartSourceItems = computed(() => [
-  {
-    key: 'users',
-    label: '新增用户',
-    v7d: pick('userData', 'sevenDayNewUsers'),
-    v30d: (pick('userData', 'sevenDayNewUsers') || 0) * 4
-  },
-  {
-    key: 'content',
-    label: '内容发布',
-    v7d: pick('contentData', 'contentPublishedLast7d'),
-    v30d: pick('contentData', 'contentPublishedLast30d')
-  },
-  {
-    key: 'groupPosts',
-    label: '小组新帖',
-    v7d: pick('communityData', 'groupPostsLast7d'),
-    v30d: pick('communityData', 'groupPostsLast30d')
-  },
-  {
-    key: 'reports',
-    label: '举报总量',
-    v7d: pick('governanceData', 'reportsLast7d'),
-    v30d: pick('governanceData', 'reportsLast30d')
-  },
-  {
-    key: 'matches',
-    label: '匹配记录',
-    v7d: pick('engagementData', 'matchRecordsSevenDays'),
-    v30d: pick('engagementData', 'matchRecordsThirtyDays')
-  },
-  {
-    key: 'invites',
-    label: '邀请记录',
-    v7d: pick('growthData', 'inviteRecordsLast7d'),
-    v30d: pick('growthData', 'inviteRecordsLast30d')
-  }
-])
+function toNumberArray(value) {
+  return Array.isArray(value) ? value.map(item => Number(item) || 0) : []
+}
 
-const volumeChartRows = computed(() => {
-  const rows = chartSourceItems.value.map((item) => ({ ...item, value: rangeValue(item) }))
-  const maxValue = rows.reduce((max, row) => Math.max(max, row.value), 0) || 1
-  return rows.map((row) => ({
-    ...row,
-    percent: Math.max(6, Math.round((row.value / maxValue) * 100))
-  }))
-})
+function trendDelta(values) {
+  const rows = toNumberArray(values)
+  if (rows.length < 2) return 0
+  const current = rows[rows.length - 1]
+  const previous = rows[rows.length - 2]
+  if (!previous) return current > 0 ? 100 : 0
+  return ((current - previous) / previous) * 100
+}
 
-const radarLegendItems = computed(() => [
-  { key: 'u', label: `${rangeLabel.value}新增用户`, value: rangeValue(chartSourceItems.value[0]) },
-  { key: 'c', label: `${rangeLabel.value}内容发布`, value: rangeValue(chartSourceItems.value[1]) },
-  { key: 'g', label: `${rangeLabel.value}小组新帖`, value: rangeValue(chartSourceItems.value[2]) },
-  { key: 'r', label: `${rangeLabel.value}举报总量`, value: rangeValue(chartSourceItems.value[3]) },
-  { key: 'm', label: `${rangeLabel.value}匹配记录`, value: rangeValue(chartSourceItems.value[4]) },
-  { key: 'i', label: `${rangeLabel.value}邀请记录`, value: rangeValue(chartSourceItems.value[5]) }
-])
-
-const trendPolygonPoints = computed(() => {
-  const values = radarLegendItems.value.map((item) => Number(item.value) || 0)
-  const maxValue = values.reduce((max, v) => Math.max(max, v), 0)
-  if (!maxValue) return ''
-  const centerX = 110
-  const centerY = 110
-  const radius = 86
-  return values
-    .map((value, idx) => {
-      const angle = (-Math.PI / 2) + (idx * (Math.PI * 2 / values.length))
-      const r = (value / maxValue) * radius
-      const x = centerX + Math.cos(angle) * r
-      const y = centerY + Math.sin(angle) * r
+function sparkPoints(values) {
+  const rows = toNumberArray(values)
+  if (!rows.length) return '4,30 90,30'
+  const max = Math.max(...rows, 1)
+  const min = Math.min(...rows, 0)
+  const range = Math.max(max - min, 1)
+  return rows
+    .map((value, index) => {
+      const x = 4 + (index * 86) / Math.max(rows.length - 1, 1)
+      const y = 32 - ((value - min) / range) * 26
       return `${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
+}
+
+function linePoints(values) {
+  const rows = toNumberArray(values)
+  if (!rows.length) return ''
+  const max = Math.max(...rows, 1)
+  const min = Math.min(...rows, 0)
+  const range = Math.max(max - min, 1)
+  return rows
+    .map((value, index) => {
+      const x = 26 + index * 60
+      const y = 126 - ((value - min) / range) * 96
+      return `${x},${y.toFixed(1)}`
+    })
+    .join(' ')
+}
+
+function mergeDashboardData(apiData = {}) {
+  return {
+    ...emptyDashboardData,
+    ...apiData,
+    userData: { ...emptyDashboardData.userData, ...(apiData.userData || {}) },
+    contentData: { ...emptyDashboardData.contentData, ...(apiData.contentData || {}) },
+    fellowshipData: { ...emptyDashboardData.fellowshipData, ...(apiData.fellowshipData || {}) },
+    governanceData: { ...emptyDashboardData.governanceData, ...(apiData.governanceData || {}) },
+    feedbackData: { ...emptyDashboardData.feedbackData, ...(apiData.feedbackData || {}) },
+    localResourceData: { ...emptyDashboardData.localResourceData, ...(apiData.localResourceData || {}) },
+    helpAndShareData: { ...emptyDashboardData.helpAndShareData, ...(apiData.helpAndShareData || {}) },
+    growthData: { ...emptyDashboardData.growthData, ...(apiData.growthData || {}) },
+    trends: { ...emptyDashboardData.trends, ...(apiData.trends || {}) },
+    activityRatio: { ...emptyDashboardData.activityRatio, ...(apiData.activityRatio || {}) },
+    recent: { ...emptyDashboardData.recent, ...(apiData.recent || {}) }
+  }
+}
+
+const todayDateText = computed(() =>
+  new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')
+)
+const todayWeekText = computed(() =>
+  new Date().toLocaleDateString('zh-CN', { weekday: 'long' })
+)
+const trends = computed(() => dashboardData.value.trends || emptyDashboardData.trends)
+const sevenDayLabels = computed(() => {
+  if (Array.isArray(trends.value.labels) && trends.value.labels.length) return trends.value.labels
+  return toNumberArray(trends.value.newUsers).map((_, index) => `D-${6 - index}`)
+})
+const profileCompletedCount = computed(() => pick('growthData', 'fellowshipProfilesBasicFilled'))
+const profileTotalCount = computed(() => pick('growthData', 'fellowshipProfilesTotal'))
+const profileCompletionRate = computed(() => {
+  if (!profileTotalCount.value) return 0
+  return Math.round((profileCompletedCount.value / profileTotalCount.value) * 1000) / 10
+})
+
+const overviewCards = computed(() => [
+  {
+    key: 'users',
+    label: '今日新增用户',
+    value: pick('userData', 'todayNewUsers'),
+    delta: trendDelta(trends.value.newUsers),
+    tone: 'blue',
+    icon: '人',
+    spark: sparkPoints(trends.value.newUsers)
+  },
+  {
+    key: 'dynamics',
+    label: '今日新增动态',
+    value: pick('contentData', 'todayNewDynamics'),
+    delta: trendDelta(trends.value.dynamics),
+    tone: 'green',
+    icon: '文',
+    spark: sparkPoints(trends.value.dynamics)
+  },
+  {
+    key: 'review',
+    label: '待审核内容',
+    value: pick('contentData', 'pendingContent'),
+    delta: trendDelta(trends.value.contentPublish),
+    tone: 'orange',
+    icon: '审',
+    spark: sparkPoints(trends.value.contentPublish)
+  },
+  {
+    key: 'risk',
+    label: '待处理举报',
+    value: pick('governanceData', 'pendingReports'),
+    delta: trendDelta(trends.value.comments) * -1,
+    tone: 'red',
+    icon: '盾',
+    spark: sparkPoints(trends.value.comments),
+    meta: '较昨日'
+  }
+])
+
+const todoItems = computed(() => [
+  {
+    key: 'dynamics',
+    title: '待审核动态',
+    count: pick('fellowshipData', 'pendingDynamics'),
+    desc: '待审核用户发布的动态',
+    tone: 'red',
+    icon: '动',
+    to: '/admin/fellowship-dynamics'
+  },
+  {
+    key: 'profiles',
+    title: '待审核用户资料',
+    count: pick('fellowshipData', 'pendingVerifications'),
+    desc: '待审核用户资料信息',
+    tone: 'blue',
+    icon: '资',
+    to: '/admin/verifications'
+  },
+  {
+    key: 'reports',
+    title: '待处理举报',
+    count: pick('governanceData', 'pendingReports'),
+    desc: '用户举报待处理',
+    tone: 'green',
+    icon: '举',
+    to: '/admin/reports'
+  },
+  {
+    key: 'resources',
+    title: '待审核本地资源',
+    count: pick('localResourceData', 'pendingLocalResources'),
+    desc: '本地资源待审核',
+    tone: 'orange',
+    icon: '源',
+    to: '/admin/local-resources'
+  },
+  {
+    key: 'helps',
+    title: '待处理互助内容',
+    count: pick('helpAndShareData', 'helpRequestsPending'),
+    desc: '互助内容待审核',
+    tone: 'red',
+    icon: '助',
+    to: '/admin/help-requests'
+  }
+])
+
+const userLinePoints = computed(() => linePoints(trends.value.newUsers))
+const activeLinePoints = computed(() => linePoints(trends.value.activeUsers))
+const contentLinePoints = computed(() => linePoints(trends.value.dynamics))
+const commentLinePoints = computed(() => linePoints(trends.value.comments))
+
+const activityRatio = computed(() => {
+  const source = dashboardData.value.activityRatio || emptyDashboardData.activityRatio
+  return [
+    { key: 'platform', label: '平台', value: Number(source.platform) || 0 },
+    { key: 'dating', label: '找对象', value: Number(source.dating) || 0 },
+    { key: 'group', label: '团体', value: Number(source.group) || 0 }
+  ]
+})
+const donutStyle = computed(() => {
+  const platform = activityRatio.value[0]?.value || 0
+  const dating = activityRatio.value[1]?.value || 0
+  const group = activityRatio.value[2]?.value || 0
+  const platformEnd = platform
+  const datingEnd = platform + dating
+  return {
+    background: `radial-gradient(circle, var(--lc-surface) 0 52%, transparent 53%),
+      conic-gradient(var(--lc-blue) 0 ${platformEnd}%, var(--lc-emerald) ${platformEnd}% ${datingEnd}%, var(--lc-orange) ${datingEnd}% ${Math.max(100, platform + dating + group)}%)`
+  }
+})
+const profileRingStyle = computed(() => ({
+  background: `radial-gradient(circle, var(--lc-surface) 0 56%, transparent 57%),
+    conic-gradient(var(--lc-blue) 0 ${profileCompletionRate.value}%, var(--lc-soft) ${profileCompletionRate.value}% 100%)`
+}))
+
+const shortcutGroups = [
+  {
+    title: '平台运营',
+    items: [
+      { label: '平台动态', icon: '动', tone: 'blue', to: '/admin/positive-shares' },
+      { label: '公告管理', icon: '告', tone: 'blue', to: '/admin/announcements' },
+      { label: '本地资源', icon: '源', tone: 'green', to: '/admin/local-resources' },
+      { label: '互助广场', icon: '助', tone: 'blue', to: '/admin/help-requests' }
+    ]
+  },
+  {
+    title: '找对象运营',
+    items: [
+      { label: '资料审核', icon: '资', tone: 'green', to: '/admin/verifications' },
+      { label: '动态审核', icon: '审', tone: 'green', to: '/admin/fellowship-dynamics' },
+      { label: '匹配数据', icon: '配', tone: 'purple', to: '/admin/analytics' },
+      { label: '举报处理', icon: '举', tone: 'red', to: '/admin/reports' }
+    ]
+  },
+  {
+    title: '团体运营',
+    items: [
+      { label: '团体管理', icon: '团', tone: 'orange', to: '/admin/platform/groups' },
+      { label: '打卡管理', icon: '卡', tone: 'green' },
+      { label: '排行榜', icon: '榜', tone: 'orange' },
+      { label: '内容审核', icon: '审', tone: 'orange', to: '/admin/my-groups' }
+    ]
+  },
+  {
+    title: '系统管理',
+    items: [
+      { label: '用户管理', icon: '用', tone: 'blue', to: '/admin/users' },
+      { label: '角色权限', icon: '权', tone: 'blue', to: '/admin/users' },
+      { label: '通知管理', icon: '通', tone: 'blue' },
+      { label: '系统配置', icon: '设', tone: 'blue', to: '/admin/modules' }
+    ]
+  }
+]
+
+const recentColumns = computed(() => {
+  const recent = dashboardData.value.recent || emptyDashboardData.recent
+  return [
+    { key: 'users', title: '最新注册用户', to: '/admin/users', items: recent.users || [] },
+    { key: 'contents', title: '最新发布内容', to: '/admin/fellowship-dynamics', items: recent.contents || [] },
+    { key: 'reports', title: '最新举报', to: '/admin/reports', items: recent.reports || [] },
+    { key: 'feedbacks', title: '最新问卷', to: '/admin/feedbacks', items: recent.feedbacks || [] },
+    { key: 'notices', title: '系统提醒', items: recent.notices || [] }
+  ]
 })
 
 async function load(forceRefresh = false) {
   loading.value = true
   error.value = ''
   try {
-    stats.value = await getAdminStats(forceRefresh)
+    const data = await getAdminStats(forceRefresh)
+    dashboardData.value = mergeDashboardData(data || {})
   } catch (e) {
-    error.value = e.message || '统计信息加载失败'
+    dashboardData.value = emptyDashboardData
+    error.value = `真实统计接口暂不可用：${e.message || '加载失败'}`
   } finally {
     loading.value = false
   }
 }
 
-let mediaQuery = null
-
-function updateMobileDashboard(e) {
-  isMobileDashboard.value = Boolean(e.matches)
-}
-
 onMounted(() => {
   load(false)
-
-  if (typeof window !== 'undefined') {
-    mediaQuery = window.matchMedia('(max-width: 767px)')
-    updateMobileDashboard(mediaQuery)
-    mediaQuery.addEventListener('change', updateMobileDashboard)
-  }
-})
-
-onUnmounted(() => {
-  if (mediaQuery) {
-    mediaQuery.removeEventListener('change', updateMobileDashboard)
-  }
 })
 </script>
 
 <style scoped>
-.dashboard-welcome {
-  margin-bottom: var(--lc-space-6);
-  padding: var(--lc-space-5) var(--lc-space-6);
-  border: 1px solid var(--lc-border);
-}
-
-.welcome-kicker {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--lc-subtle);
-  letter-spacing: 0.06em;
-}
-
-.welcome-title {
-  margin: 8px 0 0;
-  font-size: clamp(1.35rem, 2vw, 1.65rem);
-  font-weight: 800;
+.dashboard-page {
+  display: grid;
+  gap: 14px;
   color: var(--lc-text);
-  line-height: 1.2;
 }
 
-.welcome-text {
-  margin: 10px 0 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--lc-muted);
-  max-width: 40rem;
-}
-
-.welcome-text strong {
-  color: var(--lc-text-deep);
-  font-weight: 700;
-}
-
-.cache-hint {
-  margin: 12px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--lc-muted);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.cache-refresh-btn {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.cache-hint--live {
-  opacity: 0.95;
-}
-
-.dashboard-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: var(--lc-space-6);
-  align-items: start;
-}
-
-.dashboard-main {
-  display: grid;
-  gap: var(--lc-space-6);
-}
-
-.operation-zone {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--lc-space-6);
-}
-
-.overview-visual {
-  padding: var(--lc-space-5) var(--lc-space-6);
+.dash-section {
   border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 16px 18px;
+  box-shadow: var(--lc-shadow-sm);
 }
 
-.overview-visual__header {
+.section-title-row {
+  min-height: 30px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
 }
 
-.overview-visual__title {
+.section-title-row h2 {
   margin: 0;
-  font-size: 18px;
+  color: var(--lc-text);
+  font-size: 16px;
   font-weight: 800;
-  color: var(--lc-text);
 }
 
-.overview-visual__subtitle {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--lc-muted);
-}
-
-.range-switch {
+.date-pill {
+  min-height: 34px;
   display: inline-flex;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 10px;
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--lc-border);
-  background: var(--lc-bg-muted);
-}
-
-.range-switch__btn {
-  border: none;
-  background: transparent;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--lc-bg);
   color: var(--lc-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
 }
 
-.range-switch__btn--active {
-  background: var(--lc-surface);
+.date-icon {
   color: var(--lc-text);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  font-weight: 900;
 }
 
-.visual-grid {
+.overview-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-.visual-card {
+.overview-card {
+  min-height: 98px;
   border: 1px solid var(--lc-border);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: 8px;
   background: var(--lc-surface);
-}
-
-.visual-card__title {
-  margin: 0 0 10px;
-  font-size: 15px;
-  color: var(--lc-text);
-  font-weight: 700;
-}
-
-.bar-chart {
+  padding: 14px;
   display: grid;
-  gap: 10px;
-}
-
-.bar-chart__row {
-  display: grid;
-  gap: 6px;
-}
-
-.bar-chart__meta {
-  display: flex;
-  justify-content: space-between;
+  grid-template-columns: auto minmax(0, 1fr) 86px;
   align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 4%);
+}
+
+.stat-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.stat-blue {
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.stat-green {
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
+}
+
+.stat-orange {
+  color: var(--lc-orange);
+  background: var(--lc-orange-light);
+}
+
+.stat-red {
+  color: var(--lc-rose);
+  background: var(--lc-red-light);
+}
+
+.stat-content {
+  min-width: 0;
+}
+
+.stat-content p,
+.stat-content span {
+  margin: 0;
   color: var(--lc-muted);
   font-size: 13px;
 }
 
-.bar-chart__meta strong {
+.stat-content strong {
+  display: block;
+  margin: 6px 0 8px;
   color: var(--lc-text);
+  font-size: 28px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.bar-chart__track {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--lc-bg-muted);
-  overflow: hidden;
+.stat-content em,
+.completion-card em {
+  font-style: normal;
+  font-weight: 800;
 }
 
-.bar-chart__fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--lc-primary, #4f7cff), var(--lc-blue, #5b8bff));
+.up {
+  color: var(--lc-emerald);
 }
 
-.radar-wrap {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  align-items: center;
-  gap: 12px;
+.down {
+  color: var(--lc-rose);
 }
 
-.radar-svg {
-  width: 100%;
-  max-width: 220px;
-  aspect-ratio: 1;
+.sparkline {
+  width: 86px;
+  height: 36px;
 }
 
-.radar-grid {
+.sparkline polyline {
   fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spark-blue {
+  stroke: var(--lc-blue);
+}
+
+.spark-green {
+  stroke: var(--lc-emerald);
+}
+
+.spark-orange {
+  stroke: var(--lc-orange);
+}
+
+.spark-red {
+  stroke: var(--lc-rose);
+}
+
+.todo-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.todo-card {
+  position: relative;
+  min-height: 124px;
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 16px 14px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 10px 12px;
+}
+
+.todo-more {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--lc-subtle);
+  text-decoration: none;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.todo-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.todo-red {
+  color: var(--lc-rose);
+  background: var(--lc-red-light);
+}
+
+.todo-blue {
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.todo-green {
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
+}
+
+.todo-orange {
+  color: var(--lc-orange);
+  background: var(--lc-orange-light);
+}
+
+.todo-card h3 {
+  margin: 0 0 7px;
+  font-size: 13px;
+  color: var(--lc-text);
+}
+
+.todo-card strong {
+  display: block;
+  color: var(--lc-rose);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.todo-card p {
+  margin: 7px 0 0;
+  color: var(--lc-muted);
+  font-size: 12px;
+}
+
+.todo-action {
+  grid-column: 2;
+  width: fit-content;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--lc-pink-border);
+  border-radius: 5px;
+  padding: 0 14px;
+  background: var(--lc-red-light);
+  color: var(--lc-rose);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1.35fr 0.86fr 0.7fr;
+  gap: 14px;
+}
+
+.ops-card {
+  min-height: 156px;
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 12px 14px;
+}
+
+.ops-card h3 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 10px;
+  color: var(--lc-muted);
+  font-size: 11px;
+}
+
+.chart-legend span,
+.ratio-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.blue-dot,
+.green-dot,
+.ratio-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  display: inline-block;
+}
+
+.blue-dot,
+.ratio-dot.platform {
+  background: var(--lc-blue);
+}
+
+.green-dot,
+.ratio-dot.dating {
+  background: var(--lc-emerald);
+}
+
+.ratio-dot.group {
+  background: var(--lc-orange);
+}
+
+.line-chart {
+  width: 100%;
+  height: 116px;
+  margin-top: 2px;
+}
+
+.grid-lines line {
   stroke: var(--lc-border);
   stroke-width: 1;
 }
 
-.radar-grid--inner {
-  opacity: 0.65;
+.line-blue,
+.line-green {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.radar-shape {
-  fill: rgb(79 124 255 / 22%);
-  stroke: var(--lc-primary, #4f7cff);
-  stroke-width: 2;
+.line-blue {
+  stroke: var(--lc-blue);
 }
 
-.radar-legend {
+.line-green {
+  stroke: var(--lc-emerald);
+}
+
+.axis-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  color: var(--lc-subtle);
+  font-size: 10px;
+  text-align: center;
+}
+
+.donut-wrap {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 14px;
+  min-height: 126px;
+}
+
+.donut {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--lc-surface) 0 52%, transparent 53%),
+    conic-gradient(var(--lc-blue) 0 38.6%, var(--lc-emerald) 38.6% 72.8%, var(--lc-orange) 72.8% 100%);
+}
+
+.ratio-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ratio-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--lc-muted);
+  font-size: 13px;
+}
+
+.ratio-row strong {
+  color: var(--lc-slate);
+  font-variant-numeric: tabular-nums;
+}
+
+.completion-card {
+  text-align: center;
+}
+
+.progress-ring {
+  width: 108px;
+  height: 108px;
+  margin: 14px auto 8px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--lc-surface) 0 56%, transparent 57%),
+    conic-gradient(var(--lc-blue) 0 68.6%, var(--lc-soft) 68.6% 100%);
+  display: grid;
+  place-items: center;
+}
+
+.progress-ring__inner {
+  color: var(--lc-text);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.completion-card p {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+}
+
+.completion-card em {
+  color: var(--lc-emerald);
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.shortcut-group {
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  overflow: hidden;
+}
+
+.shortcut-group h3 {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--lc-bg);
+  color: var(--lc-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.shortcut-items {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 14px 10px 12px;
+}
+
+.shortcut-item {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--lc-text);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.shortcut-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.shortcut-icon.blue {
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+}
+
+.shortcut-icon.green {
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
+}
+
+.shortcut-icon.orange {
+  color: var(--lc-orange);
+  background: var(--lc-orange-light);
+}
+
+.shortcut-icon.red {
+  color: var(--lc-rose);
+  background: var(--lc-red-light);
+}
+
+.shortcut-icon.purple {
+  color: var(--lc-purple);
+  background: var(--lc-indigo-light);
+}
+
+.shortcut-item--disabled {
+  color: var(--lc-subtle);
+  cursor: not-allowed;
+}
+
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.recent-card {
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 10px 12px;
+}
+
+.recent-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.recent-card h3 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.recent-card header a,
+.recent-card header span {
+  color: var(--lc-subtle);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.recent-card ul {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
+  gap: 10px;
+}
+
+.recent-card li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 8px;
 }
 
-.radar-legend li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
+.recent-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--lc-soft);
   color: var(--lc-muted);
-  border-bottom: 1px dashed var(--lc-border);
-  padding-bottom: 6px;
+  font-size: 11px;
+  font-weight: 900;
 }
 
-.radar-legend strong {
-  color: var(--lc-text);
-  font-variant-numeric: tabular-nums;
+.recent-avatar.reports,
+.recent-avatar.feedbacks {
+  border-radius: 8px;
 }
 
-.visual-empty {
+.recent-avatar.reports {
+  color: var(--lc-rose);
+  background: var(--lc-red-light);
+}
+
+.recent-avatar.feedbacks {
+  color: var(--lc-emerald);
+  background: var(--lc-emerald-light);
+}
+
+.recent-avatar.notices {
+  width: 10px;
+  height: 10px;
+  color: var(--lc-emerald);
+  background: var(--lc-emerald);
+}
+
+.recent-card strong,
+.recent-card p {
+  display: block;
+  min-width: 0;
   margin: 0;
-  color: var(--lc-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-card strong {
+  color: var(--lc-text);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.recent-card p,
+.recent-card time {
+  color: var(--lc-muted);
+  font-size: 11px;
+}
+
+.recent-card time {
+  white-space: nowrap;
+}
+
+.dashboard-error {
+  margin: 0;
+  color: var(--lc-orange);
   font-size: 13px;
 }
 
-.dashboard-side {
-  position: sticky;
-  top: var(--lc-space-6);
-}
-
-@media (max-width: 1320px) {
-  .dashboard-shell {
-    grid-template-columns: 1fr;
+@media (max-width: 1500px) {
+  .overview-grid,
+  .shortcut-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-side {
-    position: static;
+  .todo-grid,
+  .recent-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ops-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .operation-zone {
-    grid-template-columns: 1fr;
-  }
-
-  .overview-visual__header {
-    flex-direction: column;
+  .section-title-row {
     align-items: flex-start;
+    flex-direction: column;
   }
 
-  .visual-grid {
+  .overview-grid,
+  .todo-grid,
+  .ops-grid,
+  .shortcut-grid,
+  .recent-grid {
     grid-template-columns: 1fr;
   }
 
-  .radar-wrap {
-    grid-template-columns: 1fr;
+  .overview-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .sparkline {
+    display: none;
+  }
+
+  .shortcut-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.extended-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--lc-space-5);
-}
-
-@media (max-width: 1100px) {
-  .extended-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 520px) {
+  .dash-section {
+    padding: 14px 12px;
   }
-}
 
-.report-reasons {
-  padding: var(--lc-space-5) var(--lc-space-6);
-  border: 1px solid var(--lc-border);
-}
+  .overview-card {
+    padding: 12px;
+  }
 
-.rr-title {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 800;
-}
+  .donut-wrap {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
 
-.rr-list {
-  margin: 0;
-  padding-left: 1.2rem;
-  display: grid;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--lc-text);
-}
+  .recent-card li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
 
-.rr-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: baseline;
-}
-
-.rr-reason {
-  color: var(--lc-muted);
-}
-
-.rr-count {
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+  .recent-card time {
+    grid-column: 2;
+  }
 }
 </style>

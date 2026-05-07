@@ -24,4 +24,6 @@ public interface PlatformEventRepository extends JpaRepository<PlatformEvent, St
     List<PlatformEvent> findByStatusPinnedFirst(@Param("status") String status);
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
 }

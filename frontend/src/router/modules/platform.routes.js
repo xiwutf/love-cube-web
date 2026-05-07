@@ -16,6 +16,7 @@ export default {
     { path: 'me/profile', component: () => import('@/pages/platform/MyProfilePage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/posts', component: () => import('@/pages/platform/MyPostsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/favorites', component: () => import('@/pages/platform/MyFavoritesPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'me/likes', component: () => import('@/pages/platform/MyLikedSharesPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/drafts', component: () => import('@/pages/platform/MyDraftsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/tasks', component: () => import('@/pages/platform/MyTasksPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/badges', component: () => import('@/pages/platform/MyBadgesPage.vue'), meta: { module: 'platform', requiresAuth: true } },

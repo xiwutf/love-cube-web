@@ -102,6 +102,7 @@
                 <PositiveShareCard
                   :item="item"
                   @like="handleLike"
+                  @bookmark="handleBookmark"
                   @comment="openComment"
                 />
                 <!-- Inline comments -->
@@ -172,7 +173,7 @@
             </li>
             <li class="my-data-item">
               <span class="my-data-icon" style="background:#fffbeb;color:#d97706">★</span>
-              <span class="my-data-label">我收藏的内容</span>
+              <span class="my-data-label">我的心声收藏</span>
               <span class="my-data-val">{{ myFavoriteCount }} <em>条</em></span>
             </li>
             <li class="my-data-item">
@@ -261,13 +262,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import {
+  bookmarkPositiveShare,
   commentPositiveShare,
   fetchPositiveShareComments,
   fetchMyPositiveShares,
   fetchPositiveShares,
   likePositiveShare,
+  unbookmarkPositiveShare,
   unlikePositiveShare
 } from '@/api/positiveShare.js'
+import { getUserStats } from '@/api/user.js'
 import PositiveShareEditor from '@/components/platform/positive/PositiveShareEditor.vue'
 import PositiveShareCard from '@/components/platform/positive/PositiveShareCard.vue'
 import { getAvatar } from '@/utils/image.js'
@@ -340,7 +344,7 @@ const myShareCount = computed(() => list.value.filter(item => item.mine).length)
 const myEncourageCount = computed(() =>
   list.value.filter(item => item.mine).reduce((sum, item) => sum + Number(item.encourageCount || 0), 0)
 )
-const myFavoriteCount = computed(() => 0)
+const myFavoriteCount = ref(0)
 const streakDays = computed(() => (myShareCount.value > 0 ? 1 : 0))
 
 const hotCategories = computed(() => {
@@ -430,6 +434,25 @@ async function handleLike(item) {
   }
 }
 
+async function handleBookmark(item) {
+  try {
+    const res = item.bookmarked ? await unbookmarkPositiveShare(item.id) : await bookmarkPositiveShare(item.id)
+    item.bookmarked = Boolean(res?.bookmarked)
+    await refreshBookmarkStat()
+  } catch {
+    // ignore
+  }
+}
+
+async function refreshBookmarkStat() {
+  try {
+    const s = await getUserStats()
+    myFavoriteCount.value = Number(s?.positiveShareBookmarkCount ?? 0)
+  } catch {
+    // ignore
+  }
+}
+
 function openComment(item) {
   commentTarget.value = item
   commentContent.value = ''
@@ -504,7 +527,10 @@ function scrollToEditor() {
   editorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-onMounted(() => fetchList(false))
+onMounted(() => {
+  fetchList(false)
+  refreshBookmarkStat()
+})
 </script>
 
 <style scoped>

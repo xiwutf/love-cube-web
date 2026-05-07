@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -44,6 +45,14 @@ public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
     Page<Dynamic> findHotDynamics(Pageable pageable);
 
     long countByIsDeletedFalseAndCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByIsDeletedFalseAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(d.commentCount), 0) FROM Dynamic d WHERE d.isDeleted = false AND d.createdAt >= :start AND d.createdAt < :end")
+    long sumCommentCountVisibleBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(DISTINCT d.userId) FROM Dynamic d WHERE d.isDeleted = false AND d.createdAt >= :start AND d.createdAt < :end")
+    long countDistinctActiveUsersBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("SELECT COALESCE(SUM(d.commentCount), 0) FROM Dynamic d WHERE d.isDeleted = false")
     long sumCommentCountVisible();

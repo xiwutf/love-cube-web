@@ -5,6 +5,8 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.DynamicLikeRepository;
 import com.lovecube.backend.repository.DynamicRepository;
 import com.lovecube.backend.repository.EventSignupRepository;
+import com.lovecube.backend.repository.PositiveShareBookmarkRepository;
+import com.lovecube.backend.repository.PositiveShareLikeRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
@@ -29,6 +31,8 @@ public class UserController {
     private final DynamicRepository dynamicRepository;
     private final EventSignupRepository eventSignupRepository;
     private final DynamicLikeRepository dynamicLikeRepository;
+    private final PositiveShareBookmarkRepository positiveShareBookmarkRepository;
+    private final PositiveShareLikeRepository positiveShareLikeRepository;
     private final UserInteractionRepository userInteractionRepository;
     private final FellowshipInviteService fellowshipInviteService;
 
@@ -40,6 +44,8 @@ public class UserController {
             DynamicRepository dynamicRepository,
             EventSignupRepository eventSignupRepository,
             DynamicLikeRepository dynamicLikeRepository,
+            PositiveShareBookmarkRepository positiveShareBookmarkRepository,
+            PositiveShareLikeRepository positiveShareLikeRepository,
             UserInteractionRepository userInteractionRepository,
             FellowshipInviteService fellowshipInviteService
     ) {
@@ -50,6 +56,8 @@ public class UserController {
         this.dynamicRepository = dynamicRepository;
         this.eventSignupRepository = eventSignupRepository;
         this.dynamicLikeRepository = dynamicLikeRepository;
+        this.positiveShareBookmarkRepository = positiveShareBookmarkRepository;
+        this.positiveShareLikeRepository = positiveShareLikeRepository;
         this.userInteractionRepository = userInteractionRepository;
         this.fellowshipInviteService = fellowshipInviteService;
     }
@@ -138,6 +146,8 @@ public class UserController {
             long contentCount = dynamicRepository.countByUserIdAndIsDeletedFalse(userId);
             long eventCount = eventSignupRepository.countByUserId(userId);
             long favoriteCount = dynamicLikeRepository.countByUserId(userId);
+            long positiveShareBookmarkCount = positiveShareBookmarkRepository.countByUserId(userId);
+            long positiveShareLikeCount = positiveShareLikeRepository.countByUserId(userId);
             long followingCount = userInteractionRepository.countByFromUserIdAndInteractionType(userId, UserInteraction.InteractionType.FOLLOW);
             long fansCount = userInteractionRepository.countByToUserIdAndInteractionType(userId, UserInteraction.InteractionType.FOLLOW);
             long likesReceived = userInteractionRepository.countByToUserIdAndInteractionType(userId, UserInteraction.InteractionType.LIKE);
@@ -145,6 +155,8 @@ public class UserController {
                     "contentCount", contentCount,
                     "eventCount", eventCount,
                     "favoriteCount", favoriteCount,
+                    "positiveShareBookmarkCount", positiveShareBookmarkCount,
+                    "positiveShareLikeCount", positiveShareLikeCount,
                     "followingCount", followingCount,
                     "fansCount", fansCount,
                     "likesReceived", likesReceived

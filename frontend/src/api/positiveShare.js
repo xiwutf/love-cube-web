@@ -16,6 +16,10 @@ export function fetchMyFavoritePositiveShares(params = {}) {
   return request.get('/positive-shares/my/favorites', { params })
 }
 
+export function fetchMyLikedPositiveShares(params = {}) {
+  return request.get('/positive-shares/my/likes', { params })
+}
+
 export function fetchMyPositiveShareDrafts(params = {}) {
   return request.get('/positive-shares/my/drafts', { params })
 }
@@ -26,6 +30,14 @@ export function likePositiveShare(id) {
 
 export function unlikePositiveShare(id) {
   return request.delete(`/positive-shares/${id}/like`)
+}
+
+export function bookmarkPositiveShare(id) {
+  return request.post(`/positive-shares/${id}/bookmark`)
+}
+
+export function unbookmarkPositiveShare(id) {
+  return request.delete(`/positive-shares/${id}/bookmark`)
 }
 
 export function commentPositiveShare(id, payload) {

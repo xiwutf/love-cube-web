@@ -1,10 +1,12 @@
 package com.lovecube.backend.services;
 
 import com.lovecube.backend.entity.PositiveShare;
+import com.lovecube.backend.entity.PositiveShareBookmark;
 import com.lovecube.backend.entity.PositiveShareComment;
 import com.lovecube.backend.entity.PositiveShareLike;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
+import com.lovecube.backend.repository.PositiveShareBookmarkRepository;
 import com.lovecube.backend.repository.PositiveShareCommentRepository;
 import com.lovecube.backend.repository.PositiveShareLikeRepository;
 import com.lovecube.backend.repository.PositiveShareRepository;
@@ -24,6 +26,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,7 @@ public class PositiveShareService {
 
     private final PositiveShareRepository positiveShareRepository;
     private final PositiveShareLikeRepository positiveShareLikeRepository;
+    private final PositiveShareBookmarkRepository positiveShareBookmarkRepository;
     private final PositiveShareCommentRepository positiveShareCommentRepository;
     private final UserRepository userRepository;
     private final HomeConfigService homeConfigService;
@@ -42,6 +46,7 @@ public class PositiveShareService {
     public PositiveShareService(
             PositiveShareRepository positiveShareRepository,
             PositiveShareLikeRepository positiveShareLikeRepository,
+            PositiveShareBookmarkRepository positiveShareBookmarkRepository,
             PositiveShareCommentRepository positiveShareCommentRepository,
             UserRepository userRepository,
             HomeConfigService homeConfigService,
@@ -49,6 +54,7 @@ public class PositiveShareService {
     ) {
         this.positiveShareRepository = positiveShareRepository;
         this.positiveShareLikeRepository = positiveShareLikeRepository;
+        this.positiveShareBookmarkRepository = positiveShareBookmarkRepository;
         this.positiveShareCommentRepository = positiveShareCommentRepository;
         this.userRepository = userRepository;
         this.homeConfigService = homeConfigService;
@@ -82,7 +88,7 @@ public class PositiveShareService {
         share.setEncourageCount(0);
         share.setCommentCount(0);
         PositiveShare saved = positiveShareRepository.save(share);
-        return buildShareItem(saved, user.getUserid(), false, Map.of(user.getUserid(), user));
+        return buildShareItem(saved, user.getUserid(), false, false, Map.of(user.getUserid(), user));
     }
 
     public Map<String, Object> listShares(String tab, int page, int pageSize, Long currentUserId) {
@@ -111,21 +117,36 @@ public class PositiveShareService {
         int safePage = Math.max(page, 1);
         int safeSize = Math.min(Math.max(pageSize, 1), 50);
         Pageable pageable = PageRequest.of(safePage - 1, safeSize);
+        Page<PositiveShareBookmark> bookmarkPage = positiveShareBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<Long> shareIds = bookmarkPage.getContent().stream()
+                .map(PositiveShareBookmark::getShareId)
+                .toList();
+        List<Map<String, Object>> items = buildShareDtosPreservingIdOrder(shareIds, userId);
+        return Map.of(
+                "list", items,
+                "pageNum", safePage,
+                "pageSize", safeSize,
+                "total", bookmarkPage.getTotalElements(),
+                "hasMore", bookmarkPage.hasNext()
+        );
+    }
+
+    public Map<String, Object> listMyLikes(Long userId, int page, int pageSize) {
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.min(Math.max(pageSize, 1), 50);
+        Pageable pageable = PageRequest.of(safePage - 1, safeSize);
         Page<PositiveShareLike> likesPage = positiveShareLikeRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
         List<Long> shareIds = likesPage.getContent().stream()
                 .map(PositiveShareLike::getShareId)
                 .toList();
-        if (shareIds.isEmpty()) {
-            return Map.of(
-                    "list", List.of(),
-                    "pageNum", safePage,
-                    "pageSize", safeSize,
-                    "total", likesPage.getTotalElements(),
-                    "hasMore", safePage * safeSize < likesPage.getTotalElements()
-            );
-        }
-        Page<PositiveShare> sharePage = positiveShareRepository.findByIdInAndNotDeleted(shareIds, pageable);
-        return buildSharePageResponse(sharePage, userId, safePage, safeSize);
+        List<Map<String, Object>> items = buildShareDtosPreservingIdOrder(shareIds, userId);
+        return Map.of(
+                "list", items,
+                "pageNum", safePage,
+                "pageSize", safeSize,
+                "total", likesPage.getTotalElements(),
+                "hasMore", likesPage.hasNext()
+        );
     }
 
     public Map<String, Object> listMyDrafts(Long userId, int page, int pageSize) {
@@ -186,6 +207,31 @@ public class PositiveShareService {
         return Map.of(
                 "liked", false,
                 "encourageCount", share.getEncourageCount() == null ? 0 : share.getEncourageCount()
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> bookmarkShare(Long shareId, Long userId) {
+        requirePublishedShare(shareId);
+        boolean exists = positiveShareBookmarkRepository.existsByShareIdAndUserId(shareId, userId);
+        if (!exists) {
+            PositiveShareBookmark row = new PositiveShareBookmark();
+            row.setShareId(shareId);
+            row.setUserId(userId);
+            positiveShareBookmarkRepository.save(row);
+        }
+        return Map.of(
+                "bookmarked", true,
+                "alreadyBookmarked", exists
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> unbookmarkShare(Long shareId, Long userId) {
+        long deleted = positiveShareBookmarkRepository.deleteByShareIdAndUserId(shareId, userId);
+        return Map.of(
+                "bookmarked", false,
+                "removed", deleted > 0
         );
     }
 
@@ -285,7 +331,7 @@ public class PositiveShareService {
                 .collect(Collectors.toMap(User::getUserid, u -> u));
         List<Map<String, Object>> list = new ArrayList<>();
         for (PositiveShare record : records) {
-            list.add(buildShareItem(record, record.getUserId(), false, userMap));
+            list.add(buildShareItem(record, record.getUserId(), false, false, userMap));
         }
 
         return Map.of(
@@ -383,6 +429,49 @@ public class PositiveShareService {
                 .toList());
     }
 
+    private Set<Long> resolveBookmarkedShareIds(List<PositiveShare> shares, Long currentUserId) {
+        if (currentUserId == null || shares.isEmpty()) {
+            return Set.of();
+        }
+        List<Long> shareIds = shares.stream().map(PositiveShare::getId).toList();
+        return new HashSet<>(positiveShareBookmarkRepository.findByShareIdInAndUserId(shareIds, currentUserId)
+                .stream()
+                .map(PositiveShareBookmark::getShareId)
+                .toList());
+    }
+
+    private List<Map<String, Object>> buildShareDtosPreservingIdOrder(List<Long> shareIdsInOrder, Long currentUserId) {
+        if (shareIdsInOrder.isEmpty()) {
+            return List.of();
+        }
+        List<PositiveShare> loaded = positiveShareRepository.findAllById(shareIdsInOrder);
+        Map<Long, PositiveShare> byId = loaded.stream().collect(Collectors.toMap(PositiveShare::getId, s -> s));
+        List<PositiveShare> ordered = shareIdsInOrder.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .filter(p -> !"DELETED".equals(p.getStatus()))
+                .toList();
+        if (ordered.isEmpty()) {
+            return List.of();
+        }
+        List<Long> userIds = ordered.stream().map(PositiveShare::getUserId).distinct().toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+        Set<Long> likedIds = resolveLikedShareIds(ordered, currentUserId);
+        Set<Long> bookmarkedIds = resolveBookmarkedShareIds(ordered, currentUserId);
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (PositiveShare record : ordered) {
+            items.add(buildShareItem(
+                    record,
+                    currentUserId,
+                    likedIds.contains(record.getId()),
+                    bookmarkedIds.contains(record.getId()),
+                    userMap
+            ));
+        }
+        return items;
+    }
+
     private Map<String, Object> buildSharePageResponse(
             Page<PositiveShare> sharePage,
             Long currentUserId,
@@ -394,9 +483,16 @@ public class PositiveShareService {
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
         Set<Long> likedShareIds = resolveLikedShareIds(records, currentUserId);
+        Set<Long> bookmarkedShareIds = resolveBookmarkedShareIds(records, currentUserId);
         List<Map<String, Object>> items = new ArrayList<>();
         for (PositiveShare record : records) {
-            items.add(buildShareItem(record, currentUserId, likedShareIds.contains(record.getId()), userMap));
+            items.add(buildShareItem(
+                    record,
+                    currentUserId,
+                    likedShareIds.contains(record.getId()),
+                    bookmarkedShareIds.contains(record.getId()),
+                    userMap
+            ));
         }
         return Map.of(
                 "list", items,
@@ -444,6 +540,7 @@ public class PositiveShareService {
             PositiveShare share,
             Long currentUserId,
             boolean liked,
+            boolean bookmarked,
             Map<Long, User> userMap
     ) {
         User author = userMap.get(share.getUserId());
@@ -473,6 +570,7 @@ public class PositiveShareService {
         item.put("commentCount", share.getCommentCount() == null ? 0 : share.getCommentCount());
         item.put("createdAt", share.getCreatedAt());
         item.put("liked", liked);
+        item.put("bookmarked", bookmarked);
         item.put("mine", currentUserId != null && currentUserId.equals(share.getUserId()));
         return item;
     }
