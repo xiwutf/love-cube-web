@@ -34,6 +34,9 @@ public class Dynamic {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
+    @Column(name = "scene_type", nullable = false, length = 20)
+    private String sceneType = "FELLOWSHIP";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -61,6 +64,7 @@ public class Dynamic {
         if (commentCount == null) commentCount = 0;
         if (shareCount == null) shareCount = 0;
         if (isDeleted == null) isDeleted = false;
+        if (sceneType == null || sceneType.isBlank()) sceneType = "FELLOWSHIP";
     }
 
     @PreUpdate

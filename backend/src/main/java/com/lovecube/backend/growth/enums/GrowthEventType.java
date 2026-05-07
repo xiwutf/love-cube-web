@@ -1,0 +1,14 @@
+package com.lovecube.backend.growth.enums;
+
+public enum GrowthEventType {
+    USER_REGISTERED,
+    USER_PROFILE_COMPLETED,
+    USER_DAILY_ACTIVE,
+    POST_CREATED,
+    POST_LIKED,
+    POST_COMMENTED,
+    GROUP_CREATED,
+    GROUP_JOINED,
+    USER_INVITED_REGISTERED,
+    USER_INVITED_EFFECTIVE
+}

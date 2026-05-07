@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class AdminFellowshipDynamicService {
+    private static final String SCENE_TYPE_FELLOWSHIP = "FELLOWSHIP";
 
     private final DynamicRepository dynamicRepository;
     private final DynamicLikeRepository dynamicLikeRepository;
@@ -49,7 +50,7 @@ public class AdminFellowshipDynamicService {
         int pn = Math.max(1, pageNum);
         int ps = Math.min(50, Math.max(1, pageSize));
         Pageable pageable = PageRequest.of(pn - 1, ps);
-        Page<Dynamic> page = dynamicRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable);
+        Page<Dynamic> page = dynamicRepository.findByIsDeletedFalseAndSceneTypeOrderByCreatedAtDesc(pageable, SCENE_TYPE_FELLOWSHIP);
 
         Set<Long> userIds = page.getContent().stream()
                 .map(Dynamic::getUserId)

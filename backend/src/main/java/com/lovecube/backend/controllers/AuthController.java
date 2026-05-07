@@ -1,6 +1,10 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.growth.dto.GrowthEventCreateRequest;
+import com.lovecube.backend.growth.enums.GrowthEventType;
+import com.lovecube.backend.growth.enums.SourcePlatform;
+import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
@@ -21,6 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -33,19 +39,22 @@ public class AuthController {
     private final FellowshipInviteService fellowshipInviteService;
     private final AdminAuthService adminAuthService;
     private final GrowthService growthService;
+    private final GrowthEventService growthEventService;
 
     public AuthController(
             UserRepository userRepository,
             BCryptPasswordEncoder passwordEncoder,
             FellowshipInviteService fellowshipInviteService,
             AdminAuthService adminAuthService,
-            GrowthService growthService
+            GrowthService growthService,
+            GrowthEventService growthEventService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.fellowshipInviteService = fellowshipInviteService;
         this.adminAuthService = adminAuthService;
         this.growthService = growthService;
+        this.growthEventService = growthEventService;
     }
 
     @PostMapping("/login")
@@ -82,6 +91,15 @@ public class AuthController {
 
         String token = JwtUtil.generateToken(user.getOpenid());
         growthService.recordAction(user.getUserid(), "LOGIN", "LOGIN_" + java.time.LocalDate.now());
+        publishGrowthEventSafely(
+                GrowthEventType.USER_DAILY_ACTIVE,
+                user.getUserid(),
+                user.getUserid(),
+                "auth_login",
+                String.valueOf(user.getUserid()),
+                "growth:user_daily_active:user:" + user.getUserid() + ":date:" + LocalDate.now(),
+                SourcePlatform.API
+        );
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getUserid());
         result.put("token", token);
@@ -156,6 +174,35 @@ public class AuthController {
             }
 
             String token = JwtUtil.generateToken(saved.getOpenid());
+            publishGrowthEventSafely(
+                    GrowthEventType.USER_REGISTERED,
+                    saved.getUserid(),
+                    saved.getUserid(),
+                    "auth_register",
+                    String.valueOf(saved.getUserid()),
+                    "growth:user_registered:user:" + saved.getUserid(),
+                    SourcePlatform.API
+            );
+            if (inviter != null) {
+                publishGrowthEventSafely(
+                        GrowthEventType.USER_INVITED_REGISTERED,
+                        inviter.getUserid(),
+                        saved.getUserid(),
+                        "invite_relation",
+                        String.valueOf(saved.getUserid()),
+                        "growth:user_invited_registered:inviter:" + inviter.getUserid() + ":invitee:" + saved.getUserid(),
+                        SourcePlatform.API
+                );
+                publishGrowthEventSafely(
+                        GrowthEventType.USER_INVITED_EFFECTIVE,
+                        inviter.getUserid(),
+                        saved.getUserid(),
+                        "invite_relation",
+                        String.valueOf(saved.getUserid()),
+                        "growth:user_invited_effective:inviter:" + inviter.getUserid() + ":invitee:" + saved.getUserid(),
+                        SourcePlatform.API
+                );
+            }
             Map<String, Object> result = new HashMap<>();
             result.put("userId", saved.getUserid());
             result.put("token", token);
@@ -273,5 +320,31 @@ public class AuthController {
             return 2;
         }
         throw new IllegalArgumentException("Invalid gender");
+    }
+
+    private void publishGrowthEventSafely(
+            GrowthEventType eventType,
+            Long actorUserId,
+            Long targetUserId,
+            String bizRefType,
+            String bizRefId,
+            String dedupeKey,
+            SourcePlatform sourcePlatform
+    ) {
+        try {
+            GrowthEventCreateRequest request = new GrowthEventCreateRequest();
+            request.setEventType(eventType);
+            request.setActorUserId(actorUserId);
+            request.setTargetUserId(targetUserId);
+            request.setBizRefType(bizRefType);
+            request.setBizRefId(bizRefId);
+            request.setDedupeKey(dedupeKey);
+            request.setRuleVersion("v1");
+            request.setSourcePlatform(sourcePlatform);
+            request.setOccurredAt(LocalDateTime.now());
+            growthEventService.publish(request);
+        } catch (Exception ex) {
+            log.warn("Skip growth event {} due to publish failure: {}", eventType, ex.getMessage());
+        }
     }
 }

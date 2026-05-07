@@ -1,5 +1,9 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.growth.dto.GrowthEventCreateRequest;
+import com.lovecube.backend.growth.enums.GrowthEventType;
+import com.lovecube.backend.growth.enums.SourcePlatform;
+import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -25,17 +30,20 @@ public class PositiveShareController {
     private final AdminAuthService adminAuthService;
     private final UserRepository userRepository;
     private final GrowthService growthService;
+    private final GrowthEventService growthEventService;
 
     public PositiveShareController(
             PositiveShareService positiveShareService,
             AdminAuthService adminAuthService,
             UserRepository userRepository,
-            GrowthService growthService
+            GrowthService growthService,
+            GrowthEventService growthEventService
     ) {
         this.positiveShareService = positiveShareService;
         this.adminAuthService = adminAuthService;
         this.userRepository = userRepository;
         this.growthService = growthService;
+        this.growthEventService = growthEventService;
     }
 
     @PostMapping
@@ -50,6 +58,15 @@ public class PositiveShareController {
             growthService.recordAction(user.getUserid(), "POST_CONTENT", "POSITIVE_SHARE_" + id);
             // 首次发布额外奖励（bizId 固定，GrowthLog 唯一约束保证只触发一次）
             growthService.recordAction(user.getUserid(), "FIRST_POST_BONUS", "FIRST_POST_ONCE");
+            publishGrowthEventSafely(
+                    GrowthEventType.POST_CREATED,
+                    user.getUserid(),
+                    user.getUserid(),
+                    "positive_share",
+                    String.valueOf(id),
+                    "growth:post_created:share:" + id,
+                    SourcePlatform.API
+            );
         }
         return result;
     }
@@ -121,6 +138,15 @@ public class PositiveShareController {
                 growthService.recordAction(authorId, "LIKED_BY_OTHERS",
                         "LIKED_SHARE_" + id + "_BY_" + user.getUserid());
             }
+            publishGrowthEventSafely(
+                    GrowthEventType.POST_LIKED,
+                    user.getUserid(),
+                    authorId,
+                    "positive_share_like",
+                    String.valueOf(id),
+                    "growth:post_liked:share:" + id + ":user:" + user.getUserid(),
+                    SourcePlatform.API
+            );
         }
         return result;
     }
@@ -163,6 +189,16 @@ public class PositiveShareController {
         Map<String, Object> result = positiveShareService.commentShare(id, user.getUserid(), content);
         // 评论成功后给评论者经验（同一用户对同一内容只奖励一次）
         growthService.recordAction(user.getUserid(), "COMMENT_CONTENT", "COMMENT_SHARE_" + id);
+        Long authorId = positiveShareService.getShareAuthorId(id);
+        publishGrowthEventSafely(
+                GrowthEventType.POST_COMMENTED,
+                user.getUserid(),
+                authorId,
+                "positive_share_comment",
+                String.valueOf(id),
+                "growth:post_commented:share:" + id + ":user:" + user.getUserid(),
+                SourcePlatform.API
+        );
         return result;
     }
 
@@ -191,6 +227,32 @@ public class PositiveShareController {
             return user != null ? user.getUserid() : null;
         } catch (Exception ignored) {
             return null;
+        }
+    }
+
+    private void publishGrowthEventSafely(
+            GrowthEventType eventType,
+            Long actorUserId,
+            Long targetUserId,
+            String bizRefType,
+            String bizRefId,
+            String dedupeKey,
+            SourcePlatform sourcePlatform
+    ) {
+        try {
+            GrowthEventCreateRequest request = new GrowthEventCreateRequest();
+            request.setEventType(eventType);
+            request.setActorUserId(actorUserId);
+            request.setTargetUserId(targetUserId);
+            request.setBizRefType(bizRefType);
+            request.setBizRefId(bizRefId);
+            request.setDedupeKey(dedupeKey);
+            request.setRuleVersion("v1");
+            request.setSourcePlatform(sourcePlatform);
+            request.setOccurredAt(LocalDateTime.now());
+            growthEventService.publish(request);
+        } catch (Exception ignored) {
+            // Growth event must not block business flow.
         }
     }
 }

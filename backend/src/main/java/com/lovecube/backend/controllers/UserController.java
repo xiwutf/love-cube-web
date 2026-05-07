@@ -24,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class UserController {
+    private static final String SCENE_TYPE_FELLOWSHIP = "FELLOWSHIP";
     private final UserService userService;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
@@ -143,7 +144,7 @@ public class UserController {
         try {
             User currentUser = unifiedProfileService.requireCurrentUser(authHeader);
             long userId = currentUser.getUserid();
-            long contentCount = dynamicRepository.countByUserIdAndIsDeletedFalse(userId);
+            long contentCount = dynamicRepository.countByUserIdAndIsDeletedFalseAndSceneType(userId, SCENE_TYPE_FELLOWSHIP);
             long eventCount = eventSignupRepository.countByUserId(userId);
             long favoriteCount = dynamicLikeRepository.countByUserId(userId);
             long positiveShareBookmarkCount = positiveShareBookmarkRepository.countByUserId(userId);

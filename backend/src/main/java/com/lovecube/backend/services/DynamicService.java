@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DynamicService {
+    private static final String SCENE_TYPE_FELLOWSHIP = "FELLOWSHIP";
 
     @Autowired
     private DynamicRepository dynamicRepository;
@@ -40,7 +41,7 @@ public class DynamicService {
 
     public Map<String, Object> getDynamicList(int pageNum, int pageSize, Long currentUserId) {
         Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-        Page<Dynamic> dynamicPage = dynamicRepository.findByIsDeletedFalseOrderByCreatedAtDesc(pageable);
+        Page<Dynamic> dynamicPage = dynamicRepository.findByIsDeletedFalseAndSceneTypeOrderByCreatedAtDesc(pageable, SCENE_TYPE_FELLOWSHIP);
 
         List<Dynamic> dynamics = dynamicPage.getContent().stream()
             .map(dynamic -> enrichDynamicInfo(dynamic, currentUserId))
@@ -75,7 +76,7 @@ public class DynamicService {
 
     @Transactional
     public Map<String, Object> toggleLike(Long dynamicId, Long userId) {
-        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalse(dynamicId);
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
         if (dynamic == null) {
             throw new RuntimeException("动态不存在");
         }
@@ -119,7 +120,7 @@ public class DynamicService {
 
     @Transactional
     public void deleteDynamic(Long dynamicId, Long userId) {
-        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalse(dynamicId);
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
         if (dynamic == null) {
             throw new RuntimeException("动态不存在");
         }
@@ -133,7 +134,7 @@ public class DynamicService {
     }
 
     public Dynamic getDynamicDetail(Long dynamicId, Long currentUserId) {
-        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalse(dynamicId);
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
         if (dynamic == null) {
             throw new RuntimeException("动态不存在");
         }
@@ -142,7 +143,7 @@ public class DynamicService {
     }
 
     public Long getMyDynamicCount(Long userId) {
-        return dynamicRepository.countByUserIdAndIsDeletedFalse(userId);
+        return dynamicRepository.countByUserIdAndIsDeletedFalseAndSceneType(userId, SCENE_TYPE_FELLOWSHIP);
     }
 
     private Dynamic enrichDynamicInfo(Dynamic dynamic, Long currentUserId) {

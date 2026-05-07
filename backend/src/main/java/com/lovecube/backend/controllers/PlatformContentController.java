@@ -288,7 +288,7 @@ public class PlatformContentController {
     public Map<String, Object> getPlatformStats() {
         long userCount = userRepository.count();
         long eventSignupCount = eventSignupRepository.count();
-        long dynamicsCount = dynamicRepository.countByIsDeletedFalse();
+        long dynamicsCount = dynamicRepository.countByIsDeletedFalseAndSceneType("FELLOWSHIP");
         long articleViewCount = articleRepository.sumPublishedViewCount();
         long citiesCount = platformEventRepository.countDistinctPublishedLocations();
         return Map.of(

@@ -11,7 +11,10 @@ import java.util.Base64;
 
 
 @SpringBootApplication
-@EnableJpaRepositories("com.lovecube.backend.repository")
+@EnableJpaRepositories({
+        "com.lovecube.backend.repository",
+        "com.lovecube.backend.growth.repository"
+})
 public class BackendApplication
 {
 

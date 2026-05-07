@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class AdminDashboardStatsService {
+    private static final String SCENE_TYPE_FELLOWSHIP = "FELLOWSHIP";
 
     private static final String HIDDEN_SUPER_ADMIN_PHONE = "15030251407";
 
@@ -278,11 +279,11 @@ public class AdminDashboardStatsService {
         long matchRecordsToday = matchRecordRepository.countByCreatedAtGreaterThanEqual(matchSince);
         long matchRecordsSevenDays = matchRecordRepository.countByCreatedAtGreaterThanEqual(matchSevenSince);
 
-        long dynamicsTotal = dynamicRepository.countByIsDeletedFalse();
-        long dynamicsToday = dynamicRepository.countByIsDeletedFalseAndCreatedAtGreaterThanEqual(todayStart);
-        long dynamicsSevenDays = dynamicRepository.countByIsDeletedFalseAndCreatedAtGreaterThanEqual(sevenDaysStart);
-        long dynamicCommentsSum = dynamicRepository.sumCommentCountVisible();
-        long dynamicLikesSum = dynamicRepository.sumLikeCountVisible();
+        long dynamicsTotal = dynamicRepository.countByIsDeletedFalseAndSceneType(SCENE_TYPE_FELLOWSHIP);
+        long dynamicsToday = dynamicRepository.countByIsDeletedFalseAndSceneTypeAndCreatedAtGreaterThanEqual(SCENE_TYPE_FELLOWSHIP, todayStart);
+        long dynamicsSevenDays = dynamicRepository.countByIsDeletedFalseAndSceneTypeAndCreatedAtGreaterThanEqual(SCENE_TYPE_FELLOWSHIP, sevenDaysStart);
+        long dynamicCommentsSum = dynamicRepository.sumCommentCountVisible(SCENE_TYPE_FELLOWSHIP);
+        long dynamicLikesSum = dynamicRepository.sumLikeCountVisible(SCENE_TYPE_FELLOWSHIP);
 
         long dailyTasksCompletedToday = userDailyTaskProgressRepository.countByTaskDateAndCompleted(today, 1);
         long userBadgesGranted = userBadgeRepository.count();
@@ -507,12 +508,12 @@ public class AdminDashboardStatsService {
         long newUsers = hiddenSuperAdminOperator
                 ? userRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end)
                 : userRepository.countVisibleUsersCreatedBetween(start, end, HIDDEN_SUPER_ADMIN_PHONE);
-        long activeFromDynamics = dynamicRepository.countDistinctActiveUsersBetween(start, end);
+        long activeFromDynamics = dynamicRepository.countDistinctActiveUsersBetween(SCENE_TYPE_FELLOWSHIP, start, end);
         long activeFromInteractions = userInteractionRepository.countDistinctActiveUsersBetween(start, end);
         long activeFromMessages = chatMessageRepository.countDistinctActiveSendersBetween(startMillis, endMillis);
         long activeUsers = Math.max(activeFromDynamics, Math.max(activeFromInteractions, activeFromMessages));
-        long dynamics = dynamicRepository.countByIsDeletedFalseAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
-        long comments = dynamicRepository.sumCommentCountVisibleBetween(start, end)
+        long dynamics = dynamicRepository.countByIsDeletedFalseAndSceneTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(SCENE_TYPE_FELLOWSHIP, start, end);
+        long comments = dynamicRepository.sumCommentCountVisibleBetween(SCENE_TYPE_FELLOWSHIP, start, end)
                 + userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                 UserInteraction.InteractionType.COMMENT, start, end);
         long contentPublish = announcementRepository.countPublishedBetween(start, end)
@@ -571,7 +572,7 @@ public class AdminDashboardStatsService {
 
     private List<Map<String, Object>> buildRecentContents() {
         List<Dynamic> dynamics = dynamicRepository
-                .findByIsDeletedFalseOrderByCreatedAtDesc(PageRequest.of(0, 3))
+                .findByIsDeletedFalseAndSceneTypeOrderByCreatedAtDesc(PageRequest.of(0, 3), SCENE_TYPE_FELLOWSHIP)
                 .getContent();
         Set<Long> userIds = dynamics.stream()
                 .map(Dynamic::getUserId)

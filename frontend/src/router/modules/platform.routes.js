@@ -20,6 +20,7 @@ export default {
     { path: 'me/drafts', component: () => import('@/pages/platform/MyDraftsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/tasks', component: () => import('@/pages/platform/MyTasksPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/badges', component: () => import('@/pages/platform/MyBadgesPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'platform/growth', component: () => import('@/pages/platform/GrowthCenterPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/security', component: () => import('@/pages/platform/MySecurityPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/feedback', component: () => import('@/pages/platform/MyFeedbackPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/verify', component: () => import('@/pages/platform/MyVerifyPage.vue'), meta: { module: 'platform', requiresAuth: true } },

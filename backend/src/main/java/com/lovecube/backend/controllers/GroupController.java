@@ -1,5 +1,9 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.growth.dto.GrowthEventCreateRequest;
+import com.lovecube.backend.growth.enums.GrowthEventType;
+import com.lovecube.backend.growth.enums.SourcePlatform;
+import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.entity.GroupJoinRequest;
 import com.lovecube.backend.entity.GroupMember;
 import com.lovecube.backend.entity.GroupPost;
@@ -34,6 +38,7 @@ public class GroupController {
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
     private final GrowthService growthService;
+    private final GrowthEventService growthEventService;
 
     public GroupController(
             PlatformGroupRepository groupRepository,
@@ -42,7 +47,8 @@ public class GroupController {
             GroupJoinRequestRepository joinRequestRepository,
             UserRepository userRepository,
             AdminAuthService adminAuthService,
-            GrowthService growthService
+            GrowthService growthService,
+            GrowthEventService growthEventService
     ) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
@@ -51,6 +57,7 @@ public class GroupController {
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
         this.growthService = growthService;
+        this.growthEventService = growthEventService;
     }
 
     @GetMapping
@@ -146,6 +153,22 @@ public class GroupController {
         member.setJoinedAt(LocalDateTime.now());
         memberRepository.save(member);
         growthService.recordAction(user.getUserid(), "JOIN_GROUP", "CREATE_GROUP_" + saved.getId());
+        publishGrowthEventSafely(
+                GrowthEventType.GROUP_CREATED,
+                user.getUserid(),
+                user.getUserid(),
+                "group",
+                saved.getId(),
+                "growth:group_created:group:" + saved.getId() + ":user:" + user.getUserid()
+        );
+        publishGrowthEventSafely(
+                GrowthEventType.GROUP_JOINED,
+                user.getUserid(),
+                user.getUserid(),
+                "group_member",
+                saved.getId(),
+                "growth:group_joined:group:" + saved.getId() + ":user:" + user.getUserid()
+        );
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", saved.getId());
@@ -303,6 +326,14 @@ public class GroupController {
             group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
             groupRepository.save(group);
             growthService.recordAction(user.getUserid(), "JOIN_GROUP", "JOIN_GROUP_" + id);
+            publishGrowthEventSafely(
+                    GrowthEventType.GROUP_JOINED,
+                    user.getUserid(),
+                    user.getUserid(),
+                    "group_member",
+                    id,
+                    "growth:group_joined:group:" + id + ":user:" + user.getUserid()
+            );
             return Map.of("joined", true, "message", "加入成功");
         }
 
@@ -493,6 +524,31 @@ public class GroupController {
             return adminAuthService.requireUser(authHeader).getUserid();
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private void publishGrowthEventSafely(
+            GrowthEventType eventType,
+            Long actorUserId,
+            Long targetUserId,
+            String bizRefType,
+            String bizRefId,
+            String dedupeKey
+    ) {
+        try {
+            GrowthEventCreateRequest request = new GrowthEventCreateRequest();
+            request.setEventType(eventType);
+            request.setActorUserId(actorUserId);
+            request.setTargetUserId(targetUserId);
+            request.setBizRefType(bizRefType);
+            request.setBizRefId(bizRefId);
+            request.setDedupeKey(dedupeKey);
+            request.setRuleVersion("v1");
+            request.setSourcePlatform(SourcePlatform.API);
+            request.setOccurredAt(LocalDateTime.now());
+            growthEventService.publish(request);
+        } catch (Exception ignored) {
+            // Growth event publish failures must not block main business flow.
         }
     }
 }
