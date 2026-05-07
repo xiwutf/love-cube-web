@@ -56,6 +56,15 @@
         <van-button round block type="primary" @click="router.push('/fellowship/profile/edit')">
           编辑资料
         </van-button>
+        <van-button
+          v-if="isProfileReady"
+          round
+          block
+          class="enter-fellowship-btn"
+          @click="router.push('/fellowship/discover')"
+        >
+          进入联谊模块
+        </van-button>
       </div>
     </template>
   </div>
@@ -95,6 +104,12 @@ const verificationSummaryTone = computed(() => {
   if (s === 'pending') return 'is-warn'
   if (s === 'rejected') return 'is-bad'
   return 'is-muted'
+})
+
+const isProfileReady = computed(() => {
+  const status = String(profile.value.profileStatus || '').toUpperCase()
+  if (status === 'COMPLETE') return true
+  return Number(completion.value?.percent || 0) >= 100
 })
 
 onMounted(async () => {
@@ -215,4 +230,5 @@ onMounted(async () => {
   color: #888;
 }
 .action-wrap { margin: 16px 12px; }
+.enter-fellowship-btn { margin-top: 10px; }
 </style>
