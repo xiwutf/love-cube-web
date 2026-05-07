@@ -3,8 +3,8 @@ export default {
   component: () => import('@/layouts/FellowshipLayout.vue'),
   children: [
     { path: '', component: () => import('@/pages/fellowship/landing.vue'), meta: { module: 'fellowship' } },
-    { path: 'login', component: () => import('@/pages/login/index.vue'), meta: { module: 'auth' } },
-    { path: 'welcome', component: () => import('@/pages/welcome/index.vue'), meta: { module: 'auth' } },
+    { path: 'login', component: () => import('@/pages/login/index.vue'), meta: { module: 'auth', allowBeforeFellowship: true } },
+    { path: 'welcome', component: () => import('@/pages/welcome/index.vue'), meta: { module: 'auth', allowBeforeFellowship: true } },
 
     { path: 'discover', component: () => import('@/pages/fellowship/DiscoverPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'groups', component: () => import('@/pages/fellowship/GroupsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
@@ -19,9 +19,9 @@ export default {
     { path: 'match/history', component: () => import('@/pages/match/history.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'dynamic', component: () => import('@/pages/dynamic/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'dynamic/publish', component: () => import('@/pages/fellowship/DynamicPublishPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
-    { path: 'profile-edit', component: () => import('@/pages/fellowship/ProfileEditPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
-    { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), meta: { module: 'fellowship', requiresAuth: true } },
-    { path: 'profile/edit', component: () => import('@/pages/fellowship/profile/edit.vue'), meta: { module: 'fellowship', requiresAuth: true } },
+    { path: 'profile-edit', component: () => import('@/pages/fellowship/ProfileEditPage.vue'), meta: { module: 'fellowship', requiresAuth: true, allowBeforeFellowship: true } },
+    { path: 'profile', component: () => import('@/pages/fellowship/profile/index.vue'), meta: { module: 'fellowship', requiresAuth: true, allowBeforeFellowship: true } },
+    { path: 'profile/edit', component: () => import('@/pages/fellowship/profile/edit.vue'), meta: { module: 'fellowship', requiresAuth: true, allowBeforeFellowship: true } },
     { path: 'settings', component: () => import('@/pages/fellowship/SettingsPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'change-password', component: () => import('@/pages/fellowship/ChangePasswordPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },
     { path: 'verify', component: () => import('@/pages/fellowship/VerifyPage.vue'), meta: { module: 'fellowship', requiresAuth: true } },

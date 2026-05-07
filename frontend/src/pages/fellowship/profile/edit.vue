@@ -80,6 +80,46 @@
             </div>
           </template>
         </van-field>
+        <van-field label="生活照" readonly label-align="top">
+          <template #input>
+            <div class="life-photos">
+              <p class="life-photos-tip">与头像不同，用于展示日常形象。开通联谊前须至少保存 1 张，最多 9 张。</p>
+              <div class="life-photos-grid">
+                <div v-for="(photo, index) in lifePhotoList" :key="photo.id || index" class="life-photo-item">
+                  <img :src="photo.url" alt="生活照" />
+                  <span v-if="index === 0" class="life-photo-main">主展示</span>
+                  <button
+                    type="button"
+                    class="life-photo-remove"
+                    :disabled="lifePhotoDeleting"
+                    @click.stop="removeLifePhoto(photo, index)"
+                  >
+                    删除
+                  </button>
+                </div>
+                <button
+                  v-if="lifePhotoList.length < 9"
+                  type="button"
+                  class="life-photo-add"
+                  :disabled="lifePhotoUploading || lifePhotoDeleting || store.saving"
+                  @click="triggerLifePhotoUpload"
+                >
+                  <van-icon name="plus" />
+                  <span>{{ lifePhotoUploading ? '上传中…' : '上传生活照' }}</span>
+                  <small>({{ lifePhotoList.length }}/9)</small>
+                </button>
+              </div>
+              <input
+                ref="lifePhotoInputRef"
+                class="avatar-file-input"
+                type="file"
+                accept="image/*"
+                multiple
+                @change="handleLifePhotosSelected"
+              />
+            </div>
+          </template>
+        </van-field>
       </van-cell-group>
 
       <div class="btn-wrap">
@@ -119,14 +159,22 @@
 import { areaList } from '@vant/area-data'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showConfirmDialog, showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
-import { uploadFellowshipAvatar } from '@/api/fellowshipProfile.js'
+import {
+  deleteFellowshipPhoto,
+  getFellowshipPhotos,
+  saveFellowshipPhotos,
+  uploadFellowshipAvatar,
+  uploadFellowshipPhoto
+} from '@/api/fellowshipProfile.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import { useUserStore } from '@/stores/user.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const store = useFellowshipProfileStore()
+const userStore = useUserStore()
 
 const verifyBannerVisible = computed(() => userHasVerificationBadge(store.profile ?? {}))
 
@@ -153,6 +201,10 @@ const showCityPicker = ref(false)
 const cityCode = ref('')
 const avatarUploading = ref(false)
 const avatarInputRef = ref(null)
+const lifePhotoList = ref([])
+const lifePhotoUploading = ref(false)
+const lifePhotoDeleting = ref(false)
+const lifePhotoInputRef = ref(null)
 
 const genderOptions = [
   { text: '男', value: 'male' },
@@ -186,23 +238,37 @@ const educationLabel = computed(() => form.education || '')
 const cityLabel = computed(() => form.city || '')
 const maritalStatusLabel = computed(() => form.maritalStatus || '未填写')
 
+function normalizePhotosResponse(res) {
+  const photos = Array.isArray(res?.photos) ? res.photos : Array.isArray(res) ? res : []
+  return photos.map((url, idx) => ({ id: `${idx}-${url}`, url }))
+}
+
 onMounted(async () => {
   try {
-    const data = await store.fetchProfile()
-    form.nickname = data.nickname || ''
-    form.gender = data.gender || ''
-    form.age = data.age || ''
-    form.birthYear = data.birthYear || ''
-    form.maritalStatus = data.maritalStatus || ''
-    form.city = data.city || ''
-    form.occupation = data.occupation || ''
-    form.education = data.education || ''
-    form.height = data.height || ''
-    form.bio = data.bio || ''
-    form.intention = data.intention || ''
-    form.tags = data.tags || ''
-    form.avatarUrl = data.avatarUrl || ''
-    cityCode.value = findCityCodeByName(form.city)
+    const [data, photosRes] = await Promise.allSettled([store.fetchProfile(), getFellowshipPhotos()])
+    if (data.status === 'fulfilled') {
+      const d = data.value
+      form.nickname = d.nickname || ''
+      form.gender = d.gender || ''
+      form.age = d.age || ''
+      form.birthYear = d.birthYear || ''
+      form.maritalStatus = d.maritalStatus || ''
+      form.city = d.city || ''
+      form.occupation = d.occupation || ''
+      form.education = d.education || ''
+      form.height = d.height || ''
+      form.bio = d.bio || ''
+      form.intention = d.intention || ''
+      form.tags = d.tags || ''
+      form.avatarUrl = d.avatarUrl || ''
+      cityCode.value = findCityCodeByName(form.city)
+    }
+    if (photosRes.status === 'fulfilled') {
+      lifePhotoList.value = normalizePhotosResponse(photosRes.value)
+    }
+    if (data.status === 'rejected') {
+      throw data.reason
+    }
   } catch (e) {
     showToast({ message: e?.message || '资料加载失败，请稍后重试', type: 'fail' })
   }
@@ -283,6 +349,7 @@ async function handleSubmit() {
     })
     await store.fetchProfile(true)
     await store.fetchCompletion(true)
+    await userStore.refreshCurrentUser().catch(() => null)
     showToast({ message: '保存成功', type: 'success' })
     router.replace('/fellowship/profile')
   } catch (e) {
@@ -297,7 +364,59 @@ function triggerAvatarUpload() {
 }
 
 function parseUploadUrl(res) {
-  return res?.url || res?.data?.url || ''
+  return res?.url || res?.data?.url || res?.photoUrl || ''
+}
+
+function triggerLifePhotoUpload() {
+  if (lifePhotoUploading.value || lifePhotoDeleting.value || store.saving) return
+  lifePhotoInputRef.value?.click()
+}
+
+async function handleLifePhotosSelected(event) {
+  const files = Array.from(event.target.files || [])
+  event.target.value = ''
+  if (!files.length || lifePhotoUploading.value) return
+  lifePhotoUploading.value = true
+  try {
+    const uploadResults = await Promise.all(files.map((file) => uploadFellowshipPhoto(file)))
+    const uploadedUrls = uploadResults.map(parseUploadUrl).filter(Boolean)
+    if (!uploadedUrls.length) throw new Error('照片上传返回为空')
+    const next = [...uploadedUrls, ...lifePhotoList.value.map((item) => item.url)].slice(0, 9)
+    await saveFellowshipPhotos(next)
+    lifePhotoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
+    await userStore.refreshCurrentUser().catch(() => null)
+    showToast({ type: 'success', message: `已保存 ${uploadedUrls.length} 张生活照` })
+  } catch (e) {
+    showToast({ type: 'fail', message: e?.message || '生活照上传失败，请稍后重试' })
+  } finally {
+    lifePhotoUploading.value = false
+  }
+}
+
+async function removeLifePhoto(photo, index) {
+  const targetUrl = photo?.url || ''
+  if (!targetUrl || lifePhotoDeleting.value) return
+  try {
+    await showConfirmDialog({
+      title: '删除生活照',
+      message: '删除后不可恢复，确定继续吗？',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+  } catch {
+    return
+  }
+  lifePhotoDeleting.value = true
+  try {
+    await deleteFellowshipPhoto(targetUrl)
+    lifePhotoList.value = lifePhotoList.value.filter((item, itemIndex) => !(item.url === targetUrl && itemIndex === index))
+    await userStore.refreshCurrentUser().catch(() => null)
+    showToast({ type: 'success', message: '已删除' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e?.message || '删除失败' })
+  } finally {
+    lifePhotoDeleting.value = false
+  }
 }
 
 async function handleAvatarSelected(event) {
@@ -389,6 +508,93 @@ async function handleAvatarSelected(event) {
 
 .avatar-file-input {
   display: none;
+}
+
+.life-photos {
+  width: 100%;
+  padding-bottom: 4px;
+}
+
+.life-photos-tip {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #969799;
+}
+
+.life-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.life-photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f2f3f5;
+}
+
+.life-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.life-photo-main {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 95, 132, 0.92);
+}
+
+.life-photo-remove {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  border: none;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.life-photo-add {
+  aspect-ratio: 1;
+  border: 1px dashed #dcdee0;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #646566;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.life-photo-add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.life-photo-add span {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.life-photo-add small {
+  font-size: 10px;
+  color: #969799;
 }
 </style>
 

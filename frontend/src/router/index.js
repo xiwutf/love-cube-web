@@ -38,7 +38,10 @@ router.beforeEach(async (to) => {
       await userStore.refreshCurrentUser().catch(() => null)
     }
     if (!userStore.isFellowshipEnabled) {
-      return { path: '/fellowship', query: { redirect: encodeURIComponent(to.fullPath) } }
+      const allowedBeforeFellowship = to.matched.some((record) => record.meta.allowBeforeFellowship)
+      if (!allowedBeforeFellowship) {
+        return { path: '/fellowship', query: { redirect: encodeURIComponent(to.fullPath) } }
+      }
     }
   }
 

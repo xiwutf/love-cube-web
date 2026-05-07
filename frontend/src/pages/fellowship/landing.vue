@@ -5,20 +5,27 @@
       <h1 class="title">更可靠的联谊体验</h1>
       <p class="slogan">{{ sloganText }}</p>
       <div class="actions">
-        <button
-          v-if="isLoggedIn && !isFellowshipEnabled"
-          type="button"
-          class="btn-primary"
-          :disabled="activating"
-          @click="handleActivate"
-        >
-          {{ activating ? '开通中...' : '立即开通联谊功能' }}
-        </button>
-        <router-link v-else to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
-        <router-link v-if="isLoggedIn && isFellowshipEnabled" to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
-        <router-link v-else to="/fellowship/login" class="btn-ghost">登录后开通</router-link>
+        <template v-if="!isLoggedIn">
+          <router-link to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
+          <router-link to="/fellowship/login" class="btn-ghost">登录后开通</router-link>
+        </template>
+        <template v-else-if="!isFellowshipEnabled">
+          <button type="button" class="btn-primary" :disabled="activating" @click="handleActivate">
+            {{ activating ? '开通中...' : '立即开通联谊功能' }}
+          </button>
+          <router-link to="/fellowship/profile/edit" class="btn-ghost">去完善资料</router-link>
+        </template>
+        <template v-else>
+          <router-link to="/fellowship/discover" class="btn-primary">立即开始匹配</router-link>
+          <router-link to="/fellowship/profile/edit" class="btn-ghost">完善我的资料</router-link>
+        </template>
       </div>
       <p class="hint">{{ hintText }}</p>
+      <p v-if="isLoggedIn && !isFellowshipEnabled" class="hint hint-links">
+        <router-link to="/fellowship/profile/edit" class="hint-link">填写年龄、婚姻与照片</router-link>
+        <span class="hint-sep">·</span>
+        <span>保存后返回本页再点「立即开通」</span>
+      </p>
 
       <div class="quick-grid">
         <router-link v-for="item in quickItems" :key="item.label" :to="item.to" class="quick-item">{{ item.label }}</router-link>
@@ -61,6 +68,7 @@ const hintText = computed(() => {
 const quickItems = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
     return [
+      { label: '完善联谊资料', to: '/fellowship/profile/edit' },
       { label: '联谊是什么', to: '/fellowship-intro' },
       { label: '平台首页', to: '/' },
       { label: '内容广场', to: '/articles' },
@@ -220,6 +228,24 @@ if (isLoggedIn.value && isFellowshipEnabled.value) {
   margin: 16px 0 0;
   font-size: 13px;
   color: #64748b;
+}
+
+.hint-links {
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+.hint-link {
+  color: #d94870;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hint-sep {
+  margin: 0 6px;
+  color: #cbd5e1;
+  font-weight: 400;
 }
 
 .quick-grid {
