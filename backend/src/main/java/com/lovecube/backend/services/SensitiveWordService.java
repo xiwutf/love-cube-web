@@ -1,8 +1,11 @@
 package com.lovecube.backend.services;
 
 import org.springframework.stereotype.Service;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class SensitiveWordService {
@@ -35,12 +38,18 @@ public class SensitiveWordService {
         return Collections.unmodifiableMap(WORD_MAP);
     }
 
-    /** 返回文本中命中的所有敏感词（去重）。 */
+    /** 返回文本中命中的所有敏感词（去重，长词优先，子词不重复计数）。 */
     public List<String> detectHits(String text) {
         if (text == null || text.isBlank()) return Collections.emptyList();
-        return WORD_MAP.keySet().stream()
-                .filter(text::contains)
-                .collect(Collectors.toList());
+        List<String> hits = new ArrayList<>();
+        String remaining = text;
+        for (String word : WORD_MAP.keySet()) {
+            if (remaining.contains(word)) {
+                hits.add(word);
+                remaining = remaining.replace(word, " ".repeat(word.length()));
+            }
+        }
+        return hits;
     }
 
     /** 0 → low，1-2 → medium，3+ → high */
