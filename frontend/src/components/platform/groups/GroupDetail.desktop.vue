@@ -44,6 +44,39 @@
         </router-link>
       </nav>
 
+      <section
+        v-if="userStore.isLoggedIn && group.isMember"
+        class="member-display-name-panel"
+        aria-label="本团展示姓名"
+      >
+        <template v-if="!group.myMemberRealName">
+          <p class="member-display-name-hint">
+            为方便成员互相认识，请补全你在本团的展示姓名（仅本团成员可见，不会出现在公开主页）。
+          </p>
+          <button
+            type="button"
+            class="member-display-name-btn"
+            :disabled="patchingMemberDisplayName"
+            @click="openMemberDisplayNamePrompt(false)"
+          >
+            {{ patchingMemberDisplayName ? '保存中…' : '补填姓名' }}
+          </button>
+        </template>
+        <div v-else class="member-display-name-row">
+          <span class="member-display-name-label">
+            本团展示姓名：<strong>{{ group.myMemberRealName }}</strong>
+          </span>
+          <button
+            type="button"
+            class="member-display-name-link"
+            :disabled="patchingMemberDisplayName"
+            @click="openMemberDisplayNamePrompt(true)"
+          >
+            {{ patchingMemberDisplayName ? '保存中…' : '修改' }}
+          </button>
+        </div>
+      </section>
+
       <p v-if="message" class="page-message" :class="{ error: messageType === 'error' }">{{ message }}</p>
 
       <section class="content-grid">
@@ -706,6 +739,14 @@
         </aside>
       </section>
     </template>
+
+    <ContentCheckDialog
+      v-if="contentCheck.state.show"
+      :suggestion="contentCheck.state.suggestion"
+      :hit-words="contentCheck.state.hitWords"
+      @use-suggestion="contentCheck.applySuggestion"
+      @continue="contentCheck.continueAnyway"
+    />
   </section>
 </template>
 
@@ -727,6 +768,7 @@ import {
   getAdminGroupJoinRequests,
   isLegacyPlatformGroupId,
   joinGroup,
+  patchMyGroupMemberRealName,
   unwrapGroupPostsList,
   rejectMember,
   rejectAdminGroupRequest,
@@ -750,6 +792,8 @@ import {
   updateGroupActivity
 } from '@/api/groups.js'
 import { useUserStore } from '@/stores/user.js'
+import { useContentCheck } from '@/composables/useContentCheck.js'
+import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
@@ -757,14 +801,14 @@ const defaultAvatar = DEFAULT_AVATAR
 
 const checkinTypes = [
   { value: 'thanks', label: '感谢' },
-  { value: 'prayer', label: '祷告' },
+  { value: 'prayer', label: '心愿' },
   { value: 'study', label: '学习' },
   { value: 'exercise', label: '运动' },
   { value: 'share', label: '分享' },
   { value: 'other', label: '其他' }
 ]
 const checkinTypeLabels = {
-  thanks: '感谢', prayer: '祷告', study: '学习',
+  thanks: '感谢', prayer: '心愿', study: '学习',
   exercise: '运动', share: '分享', other: '其他'
 }
 
@@ -773,6 +817,7 @@ const todayStr = new Date().toISOString().slice(0, 10)
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const contentCheck = useContentCheck()
 const currentUserIdNum = computed(() => Number(userStore.userInfo?.id || userStore.userId || 0))
 const group = ref(null)
 const rawMembers = ref([])
@@ -782,6 +827,7 @@ const memberKeyword = ref('')
 const roleFilter = ref('')
 const expandedNoticeId = ref(null)
 const joining = ref(false)
+const patchingMemberDisplayName = ref(false)
 const posting = ref(false)
 const moderatingMemberId = ref(null)
 const roleChangingMemberId = ref(null)
@@ -932,11 +978,12 @@ async function loadDetail() {
 }
 
 function mapJoinRequestToMemberRow(r) {
+  const real = r.memberRealName && String(r.memberRealName).trim()
   return {
     joinRequestId: r.id,
     id: `jr-${r.id}`,
     userId: r.userId,
-    name: r.username || '申请者',
+    name: real || r.username || '申请者',
     avatar: r.avatarUrl || DEFAULT_AVATAR,
     role: 'member',
     roleLabel: '待入团',
@@ -1328,6 +1375,16 @@ async function applyJoin() {
     return
   }
   if (joinModeKey.value === 'invite') return
+  const nameInput = window.prompt(
+    '请输入真实姓名（仅在你所在的团体内向其他成员展示，不会出现在公开主页）',
+    ''
+  )
+  if (nameInput === null) return
+  const memberRealName = String(nameInput).trim()
+  if (!memberRealName) {
+    flashMessage('请填写真实姓名后再加入团体', 'error')
+    return
+  }
   let applyMessage = ''
   if (joinModeKey.value === 'audit') {
     const input = window.prompt('请输入申请验证信息（必填）', '')
@@ -1340,7 +1397,7 @@ async function applyJoin() {
   }
   joining.value = true
   try {
-    const res = await joinGroup(group.value.id, applyMessage)
+    const res = await joinGroup(group.value.id, { message: applyMessage, memberRealName })
     group.value.isMember = Boolean(res?.joined)
     group.value.hasPendingRequest = Boolean(res?.pending)
     await loadDetail()
@@ -1353,6 +1410,32 @@ async function applyJoin() {
   }
 }
 
+async function openMemberDisplayNamePrompt(isUpdate) {
+  if (!group.value?.isMember || !userStore.isLoggedIn || patchingMemberDisplayName.value) return
+  const title = isUpdate
+    ? '修改你在本团的展示姓名（仅本团成员可见）'
+    : '补全你在本团的展示姓名（仅本团成员可见）'
+  const def = group.value.myMemberRealName || ''
+  const input = window.prompt(title, def)
+  if (input === null) return
+  const memberRealName = String(input).trim()
+  if (!memberRealName) {
+    flashMessage('请填写姓名', 'error')
+    return
+  }
+  patchingMemberDisplayName.value = true
+  try {
+    const res = await patchMyGroupMemberRealName(group.value.id, memberRealName)
+    await loadDetail()
+    await loadRelatedData()
+    flashMessage(res?.message || '已保存')
+  } catch (error) {
+    flashMessage(error.message || '保存失败', 'error')
+  } finally {
+    patchingMemberDisplayName.value = false
+  }
+}
+
 async function submitPost() {
   const text = postForm.content.trim()
   const imgs = postForm.imageUrls.trim()
@@ -1360,9 +1443,17 @@ async function submitPost() {
     flashMessage('请填写文字或图片链接', 'error')
     return
   }
+  if (text) {
+    const checkResult = await contentCheck.check(text, 'group-post')
+    if (!checkResult.ok) return
+    if (checkResult.suggestion) postForm.content = checkResult.suggestion
+  }
   posting.value = true
   try {
-    await createGroupPost(group.value.id, { content: text, imageUrls: imgs || undefined })
+    await createGroupPost(group.value.id, {
+      content: postForm.content.trim(),
+      imageUrls: postForm.imageUrls.trim() || undefined
+    })
     postForm.content = ''
     postForm.imageUrls = ''
     await loadPosts()
@@ -1378,9 +1469,12 @@ async function submitPost() {
 async function submitQuickPost() {
   const text = quickPostContent.value.trim()
   if (!text || quickPosting.value) return
+  const checkResult = await contentCheck.check(text, 'group-post')
+  if (!checkResult.ok) return
+  const finalText = checkResult.suggestion || text
   quickPosting.value = true
   try {
-    await createGroupPost(group.value.id, { content: text })
+    await createGroupPost(group.value.id, { content: finalText })
     quickPostContent.value = ''
     await loadPosts()
     await loadDetail()
@@ -1715,7 +1809,11 @@ function normalizeGroup(item) {
     createdDate: formatDate(item.createdAt),
     latestNotice: item.latestNotice ? normalizeNotice(item.latestNotice) : null,
     admins: item.admins || [],
-    postCount: item.postCount != null ? Number(item.postCount) : null
+    postCount: item.postCount != null ? Number(item.postCount) : null,
+    myMemberRealName:
+      item.myMemberRealName != null && String(item.myMemberRealName).trim() !== ''
+        ? String(item.myMemberRealName).trim()
+        : ''
   }
 }
 
@@ -1747,10 +1845,14 @@ function normalizeNotice(item) {
 function normalizeMember(item) {
   const role = item.role || 'member'
   const status = item.status || 'approved'
+  const displayName =
+    (item.memberRealName && String(item.memberRealName).trim()) ||
+    item.username ||
+    '未命名成员'
   return {
     id: item.id,
     userId: item.userId,
-    name: item.username || '未命名成员',
+    name: displayName,
     avatar: item.avatarUrl || DEFAULT_AVATAR,
     role,
     roleLabel: role === 'owner' ? '团长' : role === 'admin' ? '管理员' : '成员',
@@ -2098,6 +2200,61 @@ onMounted(async () => {
   height: 3px;
   border-radius: 999px;
   background: var(--lc-blue);
+}
+
+.member-display-name-panel {
+  margin: var(--lc-space-4) var(--lc-space-6) 0;
+  padding: var(--lc-space-4) var(--lc-space-5);
+  border-radius: var(--lc-radius);
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+}
+
+.member-display-name-hint {
+  margin: 0 0 var(--lc-space-3);
+  font-size: var(--lc-text-sm);
+  line-height: 1.5;
+  color: var(--lc-muted);
+}
+
+.member-display-name-btn {
+  padding: var(--lc-space-2) var(--lc-space-5);
+  border: none;
+  border-radius: var(--lc-radius-xs);
+  font-size: var(--lc-text-sm);
+  font-weight: 800;
+  color: var(--lc-surface);
+  background: var(--lc-blue);
+  cursor: pointer;
+}
+
+.member-display-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lc-space-3);
+  font-size: var(--lc-text-sm);
+}
+
+.member-display-name-label {
+  color: var(--lc-text);
+}
+
+.member-display-name-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--lc-blue);
+  font-weight: 800;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.member-display-name-link:disabled,
+.member-display-name-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .page-message {
@@ -3420,6 +3577,11 @@ onMounted(async () => {
 @media (max-width: 760px) {
   .group-detail-page {
     width: calc(100% - var(--lc-space-4));
+  }
+
+  .member-display-name-panel {
+    margin-left: var(--lc-space-4);
+    margin-right: var(--lc-space-4);
   }
 
   .hero-body {
