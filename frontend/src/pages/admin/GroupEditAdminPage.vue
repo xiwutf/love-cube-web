@@ -214,6 +214,14 @@
         </div>
       </section>
     </template>
+
+    <ContentCheckDialog
+      v-if="contentCheck.state.show"
+      :suggestion="contentCheck.state.suggestion"
+      :hit-words="contentCheck.state.hitWords"
+      @use-suggestion="contentCheck.applySuggestion"
+      @continue="contentCheck.continueAnyway"
+    />
   </section>
 </template>
 
@@ -234,9 +242,12 @@ import {
   updateAdminGroup
 } from '@/api/groups.js'
 import CoverUploadField from '@/components/admin/CoverUploadField.vue'
+import { useContentCheck } from '@/composables/useContentCheck.js'
+import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
+const contentCheck = useContentCheck()
 const groupId = String(route.params.id)
 const isMyGroupsContext = route.path.includes('/my-groups/')
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
@@ -536,6 +547,11 @@ async function saveInfo() {
   if (!form.name) {
     flash('团体名称不能为空', 'error')
     return
+  }
+  if (form.description) {
+    const checkResult = await contentCheck.check(form.description, 'group-info')
+    if (!checkResult.ok) return
+    if (checkResult.suggestion) form.description = checkResult.suggestion
   }
   saving.value = true
   try {
