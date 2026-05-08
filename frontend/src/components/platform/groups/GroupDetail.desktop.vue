@@ -50,9 +50,7 @@
         aria-label="本团展示姓名"
       >
         <template v-if="!group.myMemberRealName">
-          <p class="member-display-name-hint">
-            为方便成员互相认识，请补全你在本团的展示姓名（仅本团成员可见，不会出现在公开主页）。
-          </p>
+          <p class="member-display-name-hint">{{ MEMBER_DISPLAY_PANEL_HINT }}</p>
           <button
             type="button"
             class="member-display-name-btn"
@@ -154,7 +152,7 @@
                         <button
                           type="submit"
                           class="primary-btn small"
-                          :disabled="quickPosting || !quickPostContent.trim()"
+                          :disabled="quickPosting || contentCheck.state.checking || !quickPostContent.trim()"
                         >{{ quickPosting ? '发布中...' : '发布' }}</button>
                       </div>
                     </form>
@@ -272,7 +270,7 @@
                 <input v-model.trim="postForm.imageUrls" type="text" placeholder="图片 URL，可用英文逗号分隔（可选）">
                 <div class="post-form-foot">
                   <span>至少填写文字或图片链接之一</span>
-                  <button type="submit" class="primary-btn" :disabled="posting">{{ posting ? '发布中...' : '发布' }}</button>
+                  <button type="submit" class="primary-btn" :disabled="posting || contentCheck.state.checking">{{ posting ? '发布中...' : '发布' }}</button>
                 </div>
               </form>
             </template>
@@ -791,6 +789,15 @@ import {
   cancelGroupActivitySignup,
   updateGroupActivity
 } from '@/api/groups.js'
+import {
+  AUDIT_JOIN_MESSAGE_PROMPT,
+  ERR_EMPTY_AUDIT_JOIN_MESSAGE,
+  ERR_EMPTY_DISPLAY_NAME_PATCH,
+  ERR_EMPTY_MEMBER_REAL_NAME,
+  JOIN_MEMBER_REAL_NAME_PROMPT,
+  MEMBER_DISPLAY_PANEL_HINT,
+  supplementMemberDisplayTitle
+} from '@/utils/groupMemberDisplayName.js'
 import { useUserStore } from '@/stores/user.js'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
@@ -1375,23 +1382,20 @@ async function applyJoin() {
     return
   }
   if (joinModeKey.value === 'invite') return
-  const nameInput = window.prompt(
-    '请输入真实姓名（仅在你所在的团体内向其他成员展示，不会出现在公开主页）',
-    ''
-  )
+  const nameInput = window.prompt(JOIN_MEMBER_REAL_NAME_PROMPT, '')
   if (nameInput === null) return
   const memberRealName = String(nameInput).trim()
   if (!memberRealName) {
-    flashMessage('请填写真实姓名后再加入团体', 'error')
+    flashMessage(ERR_EMPTY_MEMBER_REAL_NAME, 'error')
     return
   }
   let applyMessage = ''
   if (joinModeKey.value === 'audit') {
-    const input = window.prompt('请输入申请验证信息（必填）', '')
+    const input = window.prompt(AUDIT_JOIN_MESSAGE_PROMPT, '')
     if (input === null) return
     applyMessage = input.trim()
     if (!applyMessage) {
-      flashMessage('请填写申请验证信息', 'error')
+      flashMessage(ERR_EMPTY_AUDIT_JOIN_MESSAGE, 'error')
       return
     }
   }
@@ -1412,15 +1416,13 @@ async function applyJoin() {
 
 async function openMemberDisplayNamePrompt(isUpdate) {
   if (!group.value?.isMember || !userStore.isLoggedIn || patchingMemberDisplayName.value) return
-  const title = isUpdate
-    ? '修改你在本团的展示姓名（仅本团成员可见）'
-    : '补全你在本团的展示姓名（仅本团成员可见）'
+  const title = supplementMemberDisplayTitle(isUpdate)
   const def = group.value.myMemberRealName || ''
   const input = window.prompt(title, def)
   if (input === null) return
   const memberRealName = String(input).trim()
   if (!memberRealName) {
-    flashMessage('请填写姓名', 'error')
+    flashMessage(ERR_EMPTY_DISPLAY_NAME_PATCH, 'error')
     return
   }
   patchingMemberDisplayName.value = true
