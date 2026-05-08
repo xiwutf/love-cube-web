@@ -333,7 +333,7 @@
                   </ul>
                   <form v-if="userStore.isLoggedIn" class="comment-form" @submit.prevent="submitComment(post)">
                     <input v-model.trim="commentDraft[post.id]" type="text" maxlength="500" placeholder="写一条评论…">
-                    <button type="submit" class="primary-btn small" :disabled="commentPosting[post.id]">
+                    <button type="submit" class="primary-btn small" :disabled="commentPosting[post.id] || contentCheck.state.checking">
                       {{ commentPosting[post.id] ? '发送中' : '发送' }}
                     </button>
                   </form>
@@ -1577,9 +1577,12 @@ async function submitComment(post) {
   const key = post.id
   const text = (commentDraft[key] || '').trim()
   if (!text) return
+  const checkResult = await contentCheck.check(text, 'comment')
+  if (!checkResult.ok) return
+  const finalText = checkResult.suggestion || text
   commentPosting[key] = true
   try {
-    await createGroupPostComment(group.value.id, post.id, { content: text })
+    await createGroupPostComment(group.value.id, post.id, { content: finalText })
     commentDraft[key] = ''
     await loadCommentsForPost(post.id)
     await loadPosts()
