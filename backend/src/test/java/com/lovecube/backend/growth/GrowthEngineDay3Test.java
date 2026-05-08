@@ -11,6 +11,7 @@ import com.lovecube.backend.growth.repository.GrowthUserGrowthRepository;
 import com.lovecube.backend.growth.service.ContributionService;
 import com.lovecube.backend.growth.service.GrowthEngine;
 import com.lovecube.backend.growth.service.GrowthBroadcastService;
+import com.lovecube.backend.growth.service.GrowthRewardService;
 import com.lovecube.backend.growth.service.GrowthRuleCatalog;
 import com.lovecube.backend.growth.service.UserGrowthService;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,9 @@ class GrowthEngineDay3Test {
         GrowthUserGrowthRepository growthUserGrowthRepository = Mockito.mock(GrowthUserGrowthRepository.class);
         DynamicRepository dynamicRepository = Mockito.mock(DynamicRepository.class);
         Mockito.when(dynamicRepository.existsByUserIdAndContentAndSceneTypeAndIsDeletedFalse(
+                Mockito.anyLong(), Mockito.anyString(), Mockito.anyString()
+        )).thenReturn(false);
+        Mockito.when(dynamicRepository.existsByUserIdAndMarkerAndSceneTypeAndIsDeletedFalse(
                 Mockito.anyLong(), Mockito.anyString(), Mockito.anyString()
         )).thenReturn(false);
 
@@ -83,7 +87,8 @@ class GrowthEngineDay3Test {
         ContributionService contributionService = new ContributionService(contributionLogRepository);
         UserGrowthService userGrowthService = new UserGrowthService(growthUserGrowthRepository);
         GrowthBroadcastService growthBroadcastService = new GrowthBroadcastService(dynamicRepository);
-        growthEngine = new GrowthEngine(catalog, contributionService, userGrowthService, growthBroadcastService);
+        GrowthRewardService growthRewardService = Mockito.mock(GrowthRewardService.class);
+        growthEngine = new GrowthEngine(catalog, contributionService, userGrowthService, growthBroadcastService, growthRewardService);
     }
 
     @Test
