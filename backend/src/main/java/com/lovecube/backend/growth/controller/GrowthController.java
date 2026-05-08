@@ -14,6 +14,7 @@ import com.lovecube.backend.growth.repository.GrowthEventRepository;
 import com.lovecube.backend.growth.repository.GrowthUserGrowthRepository;
 import com.lovecube.backend.growth.repository.UserAchievementRepository;
 import com.lovecube.backend.growth.service.GrowthEventService;
+import com.lovecube.backend.growth.service.GrowthRewardCatalog;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.services.AdminAuthService;
 import jakarta.validation.Valid;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController("growthEventController")
 @RequestMapping("/api/growth")
@@ -35,6 +38,8 @@ public class GrowthController {
     private final ContributionLogRepository contributionLogRepository;
     private final UserAchievementRepository userAchievementRepository;
     private final GrowthEventRepository growthEventRepository;
+    private final GrowthRewardCatalog growthRewardCatalog;
+    private final com.lovecube.backend.services.FellowshipInviteService fellowshipInviteService;
 
     public GrowthController(
             GrowthEventService growthEventService,
@@ -42,7 +47,9 @@ public class GrowthController {
             GrowthUserGrowthRepository growthUserGrowthRepository,
             ContributionLogRepository contributionLogRepository,
             UserAchievementRepository userAchievementRepository,
-            GrowthEventRepository growthEventRepository
+            GrowthEventRepository growthEventRepository,
+            GrowthRewardCatalog growthRewardCatalog,
+            com.lovecube.backend.services.FellowshipInviteService fellowshipInviteService
     ) {
         this.growthEventService = growthEventService;
         this.adminAuthService = adminAuthService;
@@ -50,6 +57,8 @@ public class GrowthController {
         this.contributionLogRepository = contributionLogRepository;
         this.userAchievementRepository = userAchievementRepository;
         this.growthEventRepository = growthEventRepository;
+        this.growthRewardCatalog = growthRewardCatalog;
+        this.fellowshipInviteService = fellowshipInviteService;
     }
 
     @PostMapping("/events")
@@ -135,36 +144,50 @@ public class GrowthController {
     private GrowthCenterDTO toGrowthCenterDto(Long userId, UserGrowth growth) {
         GrowthCenterDTO dto = new GrowthCenterDTO();
         dto.setUserId(userId);
-        if (growth == null) {
-            dto.setLevel(1);
-            dto.setStage("normal");
-            dto.setTotalContribution(0);
-            dto.setContribContent(0);
-            dto.setContribOrg(0);
-            dto.setContribSpread(0);
-            dto.setContribCity(0);
-            dto.setNextLevel(2);
-            dto.setNextLevelThreshold(50);
-            dto.setContributionToNextLevel(50);
-            return dto;
-        }
 
-        int total = safe(growth.getTotalContribution());
-        int level = safe(growth.getLevel()) == 0 ? resolveLevel(total) : safe(growth.getLevel());
-        int nextLevel = Math.min(5, level + 1);
+        int total = growth == null ? 0 : safe(growth.getTotalContribution());
+        int level = growth == null ? 1
+                : (safe(growth.getLevel()) == 0 ? resolveLevel(total) : safe(growth.getLevel()));
+        int nextLevel = Math.min(10, level + 1);
         int nextThreshold = resolveLevelThreshold(nextLevel);
         int toNext = Math.max(0, nextThreshold - total);
 
         dto.setLevel(level);
-        dto.setStage(growth.getStage() == null ? "normal" : growth.getStage());
+        dto.setStage(growth == null || growth.getStage() == null ? "normal" : growth.getStage());
         dto.setTotalContribution(total);
-        dto.setContribContent(safe(growth.getContribContent()));
-        dto.setContribOrg(safe(growth.getContribOrg()));
-        dto.setContribSpread(safe(growth.getContribSpread()));
-        dto.setContribCity(safe(growth.getContribCity()));
+        dto.setContribContent(growth == null ? 0 : safe(growth.getContribContent()));
+        dto.setContribOrg(growth == null ? 0 : safe(growth.getContribOrg()));
+        dto.setContribSpread(growth == null ? 0 : safe(growth.getContribSpread()));
+        dto.setContribCity(growth == null ? 0 : safe(growth.getContribCity()));
         dto.setNextLevel(nextLevel);
         dto.setNextLevelThreshold(nextThreshold);
         dto.setContributionToNextLevel(toNext);
+
+        // Resolve current title and badge from earned achievements
+        List<UserAchievement> earned = userAchievementRepository.findByUserId(userId);
+        Set<String> earnedCodes = earned.stream()
+                .map(UserAchievement::getAchievementCode)
+                .collect(Collectors.toSet());
+        dto.setCurrentTitle(growthRewardCatalog.resolveCurrentTitle(earnedCodes).orElse(null));
+        dto.setCurrentBadge(growthRewardCatalog.resolveCurrentBadge(earnedCodes).orElse(null));
+
+        // Next level reward preview
+        growthRewardCatalog.getRewardForLevel(nextLevel).ifPresent(r -> {
+            dto.setNextLevelRewardName(r.rewardName());
+            dto.setNextLevelRewardType(r.rewardType().name());
+            dto.setNextLevelRewardDisplayText(r.displayText());
+        });
+
+        // Invite milestone progress
+        int inviteCount = (int) fellowshipInviteService.countEffectiveInvites(userId);
+        dto.setInviteMilestoneProgress(inviteCount);
+        growthRewardCatalog.getNextInviteReward(inviteCount).ifPresent(r -> {
+            dto.setNextInviteRewardName(r.rewardName());
+            dto.setNextInviteRewardType(r.rewardType().name());
+            dto.setNextInviteRewardDisplayText(r.displayText());
+            dto.setNextInviteRequiredCount(r.requiredCount());
+        });
+
         return dto;
     }
 
@@ -186,6 +209,12 @@ public class GrowthController {
         dto.setLevel(entity.getLevel());
         dto.setStatus(entity.getStatus());
         dto.setGrantedAt(entity.getGrantedAt());
+        growthRewardCatalog.getByCode(entity.getAchievementCode()).ifPresent(info -> {
+            dto.setAchievementName(info.rewardName());
+            dto.setAchievementType(info.rewardType());
+            dto.setDescription(info.description());
+            dto.setDisplayText(info.displayText());
+        });
         return dto;
     }
 
@@ -208,6 +237,11 @@ public class GrowthController {
     }
 
     private int resolveLevel(int totalContribution) {
+        if (totalContribution >= 3000) return 10;
+        if (totalContribution >= 2000) return 9;
+        if (totalContribution >= 1500) return 8;
+        if (totalContribution >= 1000) return 7;
+        if (totalContribution >= 750) return 6;
         if (totalContribution >= 500) return 5;
         if (totalContribution >= 300) return 4;
         if (totalContribution >= 150) return 3;
@@ -221,7 +255,12 @@ public class GrowthController {
             case 3 -> 150;
             case 4 -> 300;
             case 5 -> 500;
-            default -> 500;
+            case 6 -> 750;
+            case 7 -> 1000;
+            case 8 -> 1500;
+            case 9 -> 2000;
+            case 10 -> 3000;
+            default -> 3000;
         };
     }
 }

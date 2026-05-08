@@ -57,18 +57,15 @@ public class UserGrowthService {
     }
 
     private int resolveLevel(int totalContribution) {
-        if (totalContribution >= 500) {
-            return 5;
-        }
-        if (totalContribution >= 300) {
-            return 4;
-        }
-        if (totalContribution >= 150) {
-            return 3;
-        }
-        if (totalContribution >= 50) {
-            return 2;
-        }
+        if (totalContribution >= 3000) return 10;
+        if (totalContribution >= 2000) return 9;
+        if (totalContribution >= 1500) return 8;
+        if (totalContribution >= 1000) return 7;
+        if (totalContribution >= 750) return 6;
+        if (totalContribution >= 500) return 5;
+        if (totalContribution >= 300) return 4;
+        if (totalContribution >= 150) return 3;
+        if (totalContribution >= 50) return 2;
         return 1;
     }
 

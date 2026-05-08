@@ -40,6 +40,7 @@ public class AuthController {
     private final AdminAuthService adminAuthService;
     private final GrowthService growthService;
     private final GrowthEventService growthEventService;
+    private final com.lovecube.backend.growth.service.GrowthRewardService growthRewardService;
 
     public AuthController(
             UserRepository userRepository,
@@ -47,7 +48,8 @@ public class AuthController {
             FellowshipInviteService fellowshipInviteService,
             AdminAuthService adminAuthService,
             GrowthService growthService,
-            GrowthEventService growthEventService
+            GrowthEventService growthEventService,
+            com.lovecube.backend.growth.service.GrowthRewardService growthRewardService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -55,6 +57,7 @@ public class AuthController {
         this.adminAuthService = adminAuthService;
         this.growthService = growthService;
         this.growthEventService = growthEventService;
+        this.growthRewardService = growthRewardService;
     }
 
     @PostMapping("/login")
@@ -171,6 +174,12 @@ public class AuthController {
                         saved.getRegisterIp(),
                         saved.getRegisterUserAgent()
                 );
+                try {
+                    long effectiveCount = fellowshipInviteService.countEffectiveInvites(inviter.getUserid());
+                    growthRewardService.checkAndGrantInviteMilestoneRewards(inviter.getUserid(), (int) effectiveCount);
+                } catch (Exception ignored) {
+                    // milestone reward must not break registration
+                }
             }
 
             String token = JwtUtil.generateToken(saved.getOpenid());

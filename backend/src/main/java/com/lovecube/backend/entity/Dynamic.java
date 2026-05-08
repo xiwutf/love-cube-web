@@ -37,6 +37,9 @@ public class Dynamic {
     @Column(name = "scene_type", nullable = false, length = 20)
     private String sceneType = "FELLOWSHIP";
 
+    @Column(name = "marker", length = 255)
+    private String marker;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

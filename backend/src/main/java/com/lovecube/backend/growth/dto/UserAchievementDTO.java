@@ -11,4 +11,9 @@ public class UserAchievementDTO {
     private Integer level;
     private String status;
     private LocalDateTime grantedAt;
+    // P1-1 enriched fields (resolved from catalog)
+    private String achievementName;
+    private String achievementType;
+    private String description;
+    private String displayText;
 }

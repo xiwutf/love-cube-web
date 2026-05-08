@@ -13,17 +13,20 @@ public class GrowthEngine {
     private final ContributionService contributionService;
     private final UserGrowthService userGrowthService;
     private final GrowthBroadcastService growthBroadcastService;
+    private final GrowthRewardService growthRewardService;
 
     public GrowthEngine(
             GrowthRuleCatalog growthRuleCatalog,
             ContributionService contributionService,
             UserGrowthService userGrowthService,
-            GrowthBroadcastService growthBroadcastService
+            GrowthBroadcastService growthBroadcastService,
+            GrowthRewardService growthRewardService
     ) {
         this.growthRuleCatalog = growthRuleCatalog;
         this.contributionService = contributionService;
         this.userGrowthService = userGrowthService;
         this.growthBroadcastService = growthBroadcastService;
+        this.growthRewardService = growthRewardService;
     }
 
     @Transactional
@@ -31,10 +34,8 @@ public class GrowthEngine {
         if (!SettleStatus.SETTLED.name().equals(event.getSettleStatus())) {
             return;
         }
-
         GrowthRuleCatalog.GrowthRule rule = growthRuleCatalog.getRule(
-                com.lovecube.backend.growth.enums.GrowthEventType.valueOf(event.getEventType())
-        );
+                GrowthEventType.valueOf(event.getEventType()));
         GrowthEventType eventType = GrowthEventType.valueOf(event.getEventType());
         ContributionLog contributionLog = contributionService.createActorContribution(event, rule);
         if (contributionLog == null) {
@@ -60,9 +61,11 @@ public class GrowthEngine {
             }
             if (applyResult.leveledUp()) {
                 growthBroadcastService.broadcastLevelUp(event, applyResult.userGrowth());
+                growthRewardService.checkAndGrantLevelReward(
+                        event.getActorUserId(), applyResult.userGrowth().getLevel(), event);
             }
         } catch (Exception ignored) {
-            // Broadcast failure must not affect growth bookkeeping.
+            // Broadcast/reward failure must not affect growth bookkeeping.
         }
     }
 }

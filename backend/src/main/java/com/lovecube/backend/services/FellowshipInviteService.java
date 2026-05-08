@@ -135,6 +135,10 @@ public class FellowshipInviteService {
         inviteRecordRepository.save(record);
     }
 
+    public long countEffectiveInvites(Long userId) {
+        return userInviteRelationRepository.countByInviterUserIdAndStatus(userId, "SUCCESS");
+    }
+
     public Map<String, Object> getMyCodeSummary(User user) {
         String code = ensureUserInviteCode(user);
         long inviteCount = userInviteRelationRepository.countByInviterUserIdAndStatus(user.getUserid(), "SUCCESS");
