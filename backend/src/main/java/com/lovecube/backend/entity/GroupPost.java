@@ -30,6 +30,9 @@ public class GroupPost {
     @Column(name = "like_count")
     private Integer likeCount;
 
+    @Column(name = "comment_count")
+    private Integer commentCount;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

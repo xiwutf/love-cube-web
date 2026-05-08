@@ -2,6 +2,19 @@
   <div class="fellowship-profile-edit-page">
     <NavBar title="编辑联谊资料" />
 
+    <section v-if="gateActive" class="activation-panel">
+      <p class="activation-title">{{ activationPanelTitle }}</p>
+      <ul class="activation-list">
+        <li v-for="row in activationCheckRows" :key="row.key" :class="{ ok: row.ok, bad: !row.ok }">
+          <span class="activation-marker" aria-hidden="true">{{ row.ok ? '✓' : '·' }}</span>
+          <span>{{ row.label }}</span>
+        </li>
+      </ul>
+      <p v-if="gateActive && !activationReadiness.ok" class="activation-foot">
+        以上项需在<span class="em">同一页保存</span>后才会写入账号；头像与生活照可随时上传。
+      </p>
+    </section>
+
     <button
       v-if="verifyBannerVisible"
       type="button"
@@ -158,7 +171,7 @@
 <script setup>
 import { areaList } from '@vant/area-data'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import {
@@ -170,13 +183,45 @@ import {
 } from '@/api/fellowshipProfile.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
 import { useUserStore } from '@/stores/user.js'
+import { fellowshipActivationReadiness } from '@/utils/fellowshipActivationGate.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
+const route = useRoute()
 const store = useFellowshipProfileStore()
 const userStore = useUserStore()
 
 const verifyBannerVisible = computed(() => userHasVerificationBadge(store.profile ?? {}))
+const gateActive = computed(() => userStore.isLoggedIn && !userStore.isFellowshipEnabled)
+
+const activationPanelTitle = computed(() =>
+  gateActive.value ? '开通联谊前请确认以下内容（已全部在本页列出）' : ''
+)
+
+function localActivationSnapshot() {
+  return {
+    age: form.age,
+    maritalStatus: form.maritalStatus,
+    avatarUrl: form.avatarUrl,
+    photoCount: lifePhotoList.value.length
+  }
+}
+
+const activationReadiness = computed(() => fellowshipActivationReadiness(localActivationSnapshot()))
+
+const ACTIVATION_ROW_DEF = [
+  { key: 'age', label: '有效年龄' },
+  { key: 'maritalStatus', label: '婚姻状况（单身 / 已婚 / 离异）' },
+  { key: 'avatar', label: '头像' },
+  { key: 'lifePhotos', label: '至少 1 张生活照' }
+]
+
+const activationCheckRows = computed(() =>
+  ACTIVATION_ROW_DEF.map((row) => ({
+    ...row,
+    ok: !activationReadiness.value.missingKeys.includes(row.key)
+  }))
+)
 
 const form = reactive({
   nickname: '',
@@ -327,6 +372,17 @@ async function handleSubmit() {
     showToast({ message: '请先填写有效年龄', type: 'fail' })
     return
   }
+  if (gateActive.value) {
+    const m = String(form.maritalStatus || '').trim()
+    if (!['单身', '已婚', '离异'].includes(m)) {
+      showToast({ message: '请先选择婚姻状况后再保存（单身/已婚/离异）', type: 'fail' })
+      return
+    }
+    if (lifePhotoList.value.length < 1) {
+      showToast({ message: '请先上传至少一张生活照后再保存', type: 'fail' })
+      return
+    }
+  }
   if (!String(form.avatarUrl || '').trim()) {
     showToast({ message: '请先上传头像', type: 'fail' })
     return
@@ -350,7 +406,37 @@ async function handleSubmit() {
     await store.fetchProfile(true)
     await store.fetchCompletion(true)
     await userStore.refreshCurrentUser().catch(() => null)
-    showToast({ message: '保存成功', type: 'success' })
+
+    let activationFailedToast = ''
+    if (!userStore.isFellowshipEnabled) {
+      const serverSnap = fellowshipActivationReadiness({
+        age: userStore.userInfo?.age,
+        maritalStatus: userStore.userInfo?.maritalStatus,
+        avatarUrl: userStore.userInfo?.avatar,
+        photos: userStore.userInfo?.photos
+      })
+      if (serverSnap.ok) {
+        try {
+          await userStore.activateFellowship()
+          showToast({ message: '资料已保存，联谊功能已开通', type: 'success' })
+          const redirRaw = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+          const decoded = redirRaw ? decodeURIComponent(redirRaw) : ''
+          const redir =
+            decoded && /^\/[\w%\-.:~/?#\[\]@!$&'()*+,;=]*$/i.test(decoded) ? decoded : ''
+          router.replace(redir || '/fellowship/discover')
+          return
+        } catch (err) {
+          activationFailedToast =
+            err?.response?.data?.message || err?.message || '资料已保存，但开通失败，请稍后重试'
+        }
+      }
+    }
+
+    if (activationFailedToast) {
+      showToast({ message: activationFailedToast, type: 'fail' })
+    } else {
+      showToast({ message: '保存成功', type: 'success' })
+    }
     router.replace('/fellowship/profile')
   } catch (e) {
     console.error('[profile/edit] save failed:', e)
@@ -442,6 +528,67 @@ async function handleAvatarSelected(event) {
 
 <style scoped>
 .fellowship-profile-edit-page { min-height: 100vh; background: #f8f8f8; }
+
+.activation-panel {
+  margin: 10px 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff5f8 0%, #fff 50%, #f0f9ff 100%);
+  border: 1px solid rgba(255, 95, 132, 0.22);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.activation-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.activation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.activation-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.activation-list li.ok {
+  color: #0f766e;
+}
+
+.activation-list li.bad {
+  color: #be123c;
+}
+
+.activation-marker {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.activation-foot {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.activation-foot .em {
+  color: #d94870;
+  font-weight: 700;
+}
 
 .verify-banner {
   display: flex;

@@ -732,7 +732,7 @@ import {
   rejectAdminGroupRequest,
   removeGroupMember,
   patchPlatformGroupMemberRole,
-  togglePlatformGroupPostLike,
+  toggleGroupPostLike,
   fetchCheckinSummary,
   createCheckin,
   fetchCheckinRankings,
@@ -1429,7 +1429,7 @@ async function togglePostLike(post) {
   row.likeCount = prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1
   likingPostId.value = post.id
   try {
-    const res = await togglePlatformGroupPostLike(post.id)
+    const res = await toggleGroupPostLike(group.value.id, post.id)
     row.likedByMe = Boolean(res?.likedByMe)
     row.likeCount = Number(res?.likeCount ?? row.likeCount)
   } catch (error) {
@@ -1455,7 +1455,7 @@ async function toggleCommentPanel(post) {
 async function loadCommentsForPost(postId) {
   commentsLoading[postId] = true
   try {
-    const res = await fetchGroupPostComments(postId, { page: 1, size: 50 })
+    const res = await fetchGroupPostComments(group.value.id, postId, { page: 1, size: 50 })
     const items = unwrapCommentItems(res)
     feedComments[postId] = items.map(normalizeComment)
   } catch (error) {
@@ -1483,7 +1483,7 @@ async function submitComment(post) {
   if (!text) return
   commentPosting[key] = true
   try {
-    await createGroupPostComment(post.id, { content: text })
+    await createGroupPostComment(group.value.id, post.id, { content: text })
     commentDraft[key] = ''
     await loadCommentsForPost(post.id)
     await loadPosts()
@@ -1520,7 +1520,7 @@ async function deleteComment(post, c) {
   if (!window.confirm('删除这条评论？')) return
   deletingCommentKey.value = ck
   try {
-    await deletePlatformGroupPostComment(post.id, c.id)
+    await deletePlatformGroupPostComment(group.value.id, post.id, c.id)
     await loadCommentsForPost(post.id)
     await loadPosts()
   } catch (error) {
@@ -1544,12 +1544,50 @@ function canRemoveMember(member) {
   )
 }
 
+function memberRoleSlug(role) {
+  return String(role ?? '').trim().toLowerCase()
+}
+
+function memberStatusSlug(status) {
+  return String(status ?? '').trim().toLowerCase()
+}
+
+/** 仅「团体成员表中 role=owner」且与后端 owner_user_id（缺省则 created_by）一致时可调角色 PATCH，对齐接口权限。 */
+function isCurrentUserGroupOwnerAligned() {
+  if (!group.value || !userStore.isLoggedIn) return false
+  const uid = currentUserIdNum.value
+  if (!uid) return false
+  const myRow = rawMembers.value.find((m) => Number(m.userId) === uid)
+  if (!myRow || memberRoleSlug(myRow.role) !== 'owner') return false
+
+  const g = group.value
+  const declared =
+    g.ownerUserId !== null && g.ownerUserId !== undefined && `${g.ownerUserId}`.length > 0
+      ? Number(g.ownerUserId)
+      : null
+  const fallback =
+    g.createdBy !== null && g.createdBy !== undefined && `${g.createdBy}`.length > 0
+      ? Number(g.createdBy)
+      : null
+
+  if (declared != null && Number.isFinite(declared) && declared !== uid) return false
+  if (
+    declared == null &&
+    fallback != null &&
+    Number.isFinite(fallback) &&
+    fallback !== uid
+  ) {
+    return false
+  }
+  return true
+}
+
 function canOwnerToggleAdmin(member) {
-  return (
-    group.value?.isOwner &&
-    member.status === 'approved' &&
-    (member.role === 'member' || member.role === 'admin')
-  )
+  const mr = memberRoleSlug(member.role)
+  const ms = memberStatusSlug(member.status)
+  if (ms !== '' && ms !== 'approved') return false
+  if (mr !== 'member' && mr !== 'admin') return false
+  return isCurrentUserGroupOwnerAligned()
 }
 
 async function removeMember(member) {
@@ -1667,6 +1705,8 @@ function normalizeGroup(item) {
     joinMode: jm || (key === 'open' ? 'free' : 'audit'),
     joinModeKey: key,
     joinLabel,
+    ownerUserId: item.ownerUserId ?? null,
+    createdBy: item.createdBy ?? null,
     isMember: Boolean(item.isMember),
     managed: Boolean(item.managed),
     canReviewJoins: Boolean(item.canReviewJoins),

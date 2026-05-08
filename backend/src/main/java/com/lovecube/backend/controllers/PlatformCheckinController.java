@@ -10,6 +10,7 @@ import com.lovecube.backend.repository.PlatGroupCheckinRepository;
 import com.lovecube.backend.repository.PlatGroupMemberRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GroupExternalEngagementService;
 import com.lovecube.backend.util.CheckinCommentTextValidator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +33,7 @@ public class PlatformCheckinController {
     private final PlatGroupMemberRepository memberRepository;
     private final UserRepository userRepository;
     private final AdminAuthService adminAuthService;
+    private final GroupExternalEngagementService groupExternalEngagementService;
 
     public PlatformCheckinController(
             PlatGroupCheckinRepository checkinRepository,
@@ -39,18 +41,24 @@ public class PlatformCheckinController {
             PlatCheckinCommentRepository commentRepository,
             PlatGroupMemberRepository memberRepository,
             UserRepository userRepository,
-            AdminAuthService adminAuthService) {
+            AdminAuthService adminAuthService,
+            GroupExternalEngagementService groupExternalEngagementService) {
         this.checkinRepository = checkinRepository;
         this.likeRepository = likeRepository;
         this.commentRepository = commentRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
+        this.groupExternalEngagementService = groupExternalEngagementService;
     }
 
-    private PlatGroupCheckin requireCheckin(Long checkinId) {
-        return checkinRepository.findById(checkinId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "打卡记录不存在"));
+    private void requireCheckinMembership(Long checkinId, User user) {
+        PlatGroupCheckin plat = checkinRepository.findById(checkinId).orElse(null);
+        if (plat != null) {
+            requireApprovedMember(plat.getGroupId(), user);
+            return;
+        }
+        groupExternalEngagementService.assertCheckinAccessForUser(checkinId, user);
     }
 
     private void requireApprovedMember(Long groupId, User user) {
@@ -66,8 +74,7 @@ public class PlatformCheckinController {
             @RequestHeader("Authorization") String authHeader) {
 
         User user = adminAuthService.requireUser(authHeader);
-        PlatGroupCheckin checkin = requireCheckin(checkinId);
-        requireApprovedMember(checkin.getGroupId(), user);
+        requireCheckinMembership(checkinId, user);
 
         if (likeRepository.existsByCheckinIdAndUserId(checkinId, user.getUserid())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "已经点过赞了");
@@ -88,8 +95,7 @@ public class PlatformCheckinController {
             @RequestHeader("Authorization") String authHeader) {
 
         User user = adminAuthService.requireUser(authHeader);
-        PlatGroupCheckin checkin = requireCheckin(checkinId);
-        requireApprovedMember(checkin.getGroupId(), user);
+        requireCheckinMembership(checkinId, user);
 
         if (!likeRepository.existsByCheckinIdAndUserId(checkinId, user.getUserid())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "尚未点赞");
@@ -107,8 +113,7 @@ public class PlatformCheckinController {
             @RequestHeader("Authorization") String authHeader) {
 
         User user = adminAuthService.requireUser(authHeader);
-        PlatGroupCheckin checkin = requireCheckin(checkinId);
-        requireApprovedMember(checkin.getGroupId(), user);
+        requireCheckinMembership(checkinId, user);
 
         int safePage = Math.max(1, page);
         int safeSize = Math.min(100, Math.max(1, size));
@@ -143,8 +148,7 @@ public class PlatformCheckinController {
             @RequestBody Map<String, Object> body) {
 
         User user = adminAuthService.requireUser(authHeader);
-        PlatGroupCheckin checkin = requireCheckin(checkinId);
-        requireApprovedMember(checkin.getGroupId(), user);
+        requireCheckinMembership(checkinId, user);
 
         String raw = String.valueOf(body != null ? body.getOrDefault("content", "") : "");
         String err = CheckinCommentTextValidator.validate(raw);
@@ -183,8 +187,7 @@ public class PlatformCheckinController {
         if (c.getDeletedAt() != null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "评论不存在");
         }
-        PlatGroupCheckin checkin = requireCheckin(c.getCheckinId());
-        requireApprovedMember(checkin.getGroupId(), user);
+        requireCheckinMembership(c.getCheckinId(), user);
 
         if (!c.getUserId().equals(user.getUserid())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只能删除自己的评论");

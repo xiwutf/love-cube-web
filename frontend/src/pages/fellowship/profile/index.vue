@@ -29,6 +29,7 @@
         <div class="row"><span>昵称</span><span>{{ profile.nickname || '-' }}</span></div>
         <div class="row"><span>性别</span><span>{{ profile.gender || '-' }}</span></div>
         <div class="row"><span>年龄</span><span>{{ profile.age || '-' }}</span></div>
+        <div class="row"><span>婚姻状况</span><span>{{ profile.maritalStatus || '未填写' }}</span></div>
         <div class="row"><span>城市</span><span>{{ profile.city || '-' }}</span></div>
         <div class="row"><span>职业</span><span>{{ profile.occupation || '-' }}</span></div>
         <div class="row"><span>学历</span><span>{{ profile.education || '-' }}</span></div>
@@ -50,14 +51,18 @@
         <p v-if="completion.missingFields?.length" class="missing">
           缺少字段：{{ completion.missingFields.join('、') }}
         </p>
+        <p v-if="!userStore.isFellowshipEnabled" class="activation-note">
+          <template v-if="fellowshipActivation.ok">开通所需信息已齐备，可点下方一键开通。</template>
+          <template v-else>开通联谊还缺少：<strong>{{ fellowshipActivation.missingLabels.join('、') }}</strong></template>
+        </p>
       </div>
 
       <div class="action-wrap">
         <van-button round block type="primary" @click="router.push('/fellowship/profile/edit')">
-          编辑资料
+          {{ userStore.isFellowshipEnabled ? '编辑资料' : '编辑资料（含头像与生活照）' }}
         </van-button>
         <van-button
-          v-if="isProfileReady"
+          v-if="userStore.isFellowshipEnabled"
           round
           block
           class="enter-fellowship-btn"
@@ -65,20 +70,35 @@
         >
           进入联谊模块
         </van-button>
+        <van-button
+          v-else-if="fellowshipActivation.ok"
+          round
+          block
+          class="enter-fellowship-btn"
+          :loading="activatingOpen"
+          @click="activateAndEnter"
+        >
+          开通并进入联谊
+        </van-button>
       </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import { useUserStore } from '@/stores/user.js'
+import { fellowshipActivationReadiness } from '@/utils/fellowshipActivationGate.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
 const router = useRouter()
 const store = useFellowshipProfileStore()
+const userStore = useUserStore()
+const activatingOpen = ref(false)
 const profile = computed(() => store.profile || {})
 const completion = computed(() => store.completion || { percent: 0, missingFields: [] })
 
@@ -106,14 +126,38 @@ const verificationSummaryTone = computed(() => {
   return 'is-muted'
 })
 
-const isProfileReady = computed(() => {
-  const status = String(profile.value.profileStatus || '').toUpperCase()
-  if (status === 'COMPLETE') return true
-  return Number(completion.value?.percent || 0) >= 100
-})
+const fellowshipActivation = computed(() =>
+  fellowshipActivationReadiness({
+    age: userStore.userInfo?.age,
+    maritalStatus: userStore.userInfo?.maritalStatus,
+    avatarUrl: userStore.userInfo?.avatar,
+    photos: userStore.userInfo?.photos
+  })
+)
+
+async function activateAndEnter() {
+  if (activatingOpen.value) return
+  activatingOpen.value = true
+  try {
+    await userStore.refreshCurrentUser().catch(() => null)
+    const chk = fellowshipActivation.value
+    if (!chk.ok) {
+      showToast({ type: 'fail', message: `请先完善：${chk.missingLabels.join('、')}` })
+      return
+    }
+    await userStore.activateFellowship()
+    await store.fetchProfile(true)
+    showToast({ type: 'success', message: '联谊功能已开通' })
+    router.push('/fellowship/discover')
+  } catch (e) {
+    showToast({ type: 'fail', message: e?.data?.message || e?.message || '开通失败' })
+  } finally {
+    activatingOpen.value = false
+  }
+}
 
 onMounted(async () => {
-  await Promise.all([store.fetchProfile(true), store.fetchCompletion(true)])
+  await Promise.all([store.fetchProfile(true), store.fetchCompletion(true), userStore.refreshCurrentUser().catch(() => null)])
 })
 </script>
 
@@ -228,6 +272,15 @@ onMounted(async () => {
   margin-top: 10px;
   font-size: 12px;
   color: #888;
+}
+.activation-note {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #64748b;
+}
+.activation-note strong {
+  color: #b91c1c;
 }
 .action-wrap { margin: 16px 12px; }
 .enter-fellowship-btn { margin-top: 10px; }

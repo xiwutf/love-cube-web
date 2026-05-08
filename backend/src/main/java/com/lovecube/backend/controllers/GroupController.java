@@ -7,16 +7,24 @@ import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.entity.GroupJoinRequest;
 import com.lovecube.backend.entity.GroupMember;
 import com.lovecube.backend.entity.GroupPost;
+import com.lovecube.backend.entity.GroupPostComment;
+import com.lovecube.backend.entity.GroupPostLike;
 import com.lovecube.backend.entity.PlatformGroup;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.GroupJoinRequestRepository;
 import com.lovecube.backend.repository.GroupMemberRepository;
+import com.lovecube.backend.repository.GroupPostCommentRepository;
+import com.lovecube.backend.repository.GroupPostLikeRepository;
 import com.lovecube.backend.repository.GroupPostRepository;
 import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GroupAdminRoleConstants;
+import com.lovecube.backend.services.GroupExternalEngagementService;
 import com.lovecube.backend.services.GrowthService;
+import com.lovecube.backend.services.NotificationService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -39,25 +47,37 @@ public class GroupController {
     private final AdminAuthService adminAuthService;
     private final GrowthService growthService;
     private final GrowthEventService growthEventService;
+    private final GroupPostCommentRepository groupPostCommentRepository;
+    private final GroupPostLikeRepository groupPostLikeRepository;
+    private final NotificationService notificationService;
+    private final GroupExternalEngagementService groupExternalEngagementService;
 
     public GroupController(
             PlatformGroupRepository groupRepository,
             GroupMemberRepository memberRepository,
             GroupPostRepository postRepository,
+            GroupPostCommentRepository groupPostCommentRepository,
+            GroupPostLikeRepository groupPostLikeRepository,
             GroupJoinRequestRepository joinRequestRepository,
             UserRepository userRepository,
             AdminAuthService adminAuthService,
             GrowthService growthService,
-            GrowthEventService growthEventService
+            GrowthEventService growthEventService,
+            NotificationService notificationService,
+            GroupExternalEngagementService groupExternalEngagementService
     ) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
+        this.groupPostCommentRepository = groupPostCommentRepository;
+        this.groupPostLikeRepository = groupPostLikeRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.userRepository = userRepository;
         this.adminAuthService = adminAuthService;
         this.growthService = growthService;
         this.growthEventService = growthEventService;
+        this.notificationService = notificationService;
+        this.groupExternalEngagementService = groupExternalEngagementService;
     }
 
     @GetMapping
@@ -246,21 +266,119 @@ public class GroupController {
         }).collect(Collectors.toList());
     }
 
-    @GetMapping("/{id}/posts")
-    public List<Map<String, Object>> getPosts(@PathVariable String id) {
+    /** 团长调整成员角色（platform_groups / group_members）；与 PlatGroup(platform_group_member) 行为对齐。 */
+    private static final int MAX_LEGACY_GROUP_ADMINS = 5;
+
+    @PatchMapping("/{id}/members/{memberId}/role")
+    @Transactional
+    public Map<String, Object> patchMemberRole(
+            @PathVariable String id,
+            @PathVariable Long memberId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+
+        User user = adminAuthService.requireUser(authHeader);
         groupRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+
+        memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(m -> "owner".equalsIgnoreCase(m.getRole()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团长可设置管理员"));
+
+        GroupMember target = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member record not found"));
+        if (!id.equals(target.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid member");
+        }
+        if ("owner".equalsIgnoreCase(target.getRole())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不能修改团长角色");
+        }
+
+        String role = String.valueOf(body != null ? body.getOrDefault("role", "") : "").trim().toLowerCase();
+        if (!"admin".equals(role) && !"member".equals(role)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role 仅支持 admin 或 member");
+        }
+
+        if ("admin".equals(role) && !"admin".equalsIgnoreCase(target.getRole())) {
+            long adminCount = memberRepository.countByGroupIdAndRole(id, "admin");
+            if (adminCount >= MAX_LEGACY_GROUP_ADMINS) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "管理员最多 " + MAX_LEGACY_GROUP_ADMINS + " 人");
+            }
+        }
+
+        target.setRole(role);
+        memberRepository.save(target);
+        return Map.of("role", role, "message", "已更新角色");
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}")
+    @Transactional
+    public Map<String, Object> removeGroupMemberLegacy(
+            @PathVariable String id,
+            @PathVariable Long memberId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatformGroup group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+
+        if (!adminAuthService.isAdmin(user)) {
+            GroupMember self = memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission"));
+            String rr = self.getRole() != null ? self.getRole().trim().toLowerCase() : "";
+            if (!"owner".equals(rr) && !"admin".equals(rr)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
+            }
+        }
+
+        GroupMember target = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member record not found"));
+        if (!id.equals(target.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid member");
+        }
+        String tr = target.getRole() != null ? target.getRole().trim().toLowerCase() : "";
+        if ("owner".equals(tr)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot remove owner");
+        }
+
+        memberRepository.delete(target);
+        int mc = group.getMemberCount() == null ? 0 : group.getMemberCount();
+        group.setMemberCount(Math.max(0, mc - 1));
+        groupRepository.save(group);
+
+        return Map.of("removed", true, "message", "Member removed");
+    }
+
+    @GetMapping("/{id}/posts")
+    public List<Map<String, Object>> getPosts(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        PlatformGroup g = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        assertLegacyGroupPostsReadable(g, authHeader);
         List<GroupPost> posts = postRepository.findByGroupIdOrderByCreatedAtDesc(id);
         Set<Long> userIds = posts.stream().map(GroupPost::getUserId).collect(Collectors.toSet());
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        Long currentUserId = resolveOptionalUserId(authHeader);
+        Set<String> likedPostIds = Collections.emptySet();
+        if (currentUserId != null && !posts.isEmpty()) {
+            List<String> pids = posts.stream().map(GroupPost::getId).collect(Collectors.toList());
+            likedPostIds = new HashSet<>(groupPostLikeRepository.findPostIdsLikedByUser(currentUserId, pids));
+        }
+        final Set<String> likedFinal = likedPostIds;
+
         return posts.stream().map(p -> {
             User u = userMap.get(p.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", p.getId());
             item.put("type", p.getType());
+            item.put("userId", p.getUserId());
             item.put("content", p.getContent());
-            item.put("likeCount", p.getLikeCount());
+            item.put("likeCount", p.getLikeCount() != null ? p.getLikeCount() : 0);
+            item.put("commentCount", p.getCommentCount() != null ? p.getCommentCount() : 0);
+            item.put("likedByMe", likedFinal.contains(p.getId()));
             item.put("createdAt", p.getCreatedAt());
             item.put("authorName", u != null ? u.getUsername() : "");
             item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
@@ -292,9 +410,285 @@ public class GroupController {
         post.setType(String.valueOf(payload.getOrDefault("type", "post")));
         post.setContent(content);
         post.setLikeCount(0);
+        post.setCommentCount(0);
         post.setCreatedAt(LocalDateTime.now());
         post.setUpdatedAt(LocalDateTime.now());
-        return postRepository.save(post);
+        GroupPost saved = postRepository.save(post);
+        groupExternalEngagementService.completeDailyTask(id, user.getUserid(), "POST");
+        return saved;
+    }
+
+    @PostMapping("/{id}/posts/{postId}/like")
+    @Transactional
+    public Map<String, Object> toggleGroupPostLike(
+            @PathVariable String id,
+            @PathVariable String postId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatformGroup grp = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        assertLegacyGroupPostsReadable(grp, authHeader);
+        if (!memberRepository.existsByGroupIdAndUserId(id, user.getUserid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可操作");
+        }
+        GroupPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!id.equals(post.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        Optional<GroupPostLike> existing = groupPostLikeRepository.findByPostIdAndUserId(postId, user.getUserid());
+        boolean nowLiked;
+        if (existing.isPresent()) {
+            groupPostLikeRepository.delete(existing.get());
+            post.setLikeCount(Math.max(0, (post.getLikeCount() == null ? 0 : post.getLikeCount()) - 1));
+            nowLiked = false;
+        } else {
+            GroupPostLike like = new GroupPostLike();
+            like.setPostId(postId);
+            like.setUserId(user.getUserid());
+            like.setCreatedAt(LocalDateTime.now());
+            groupPostLikeRepository.save(like);
+            post.setLikeCount((post.getLikeCount() == null ? 0 : post.getLikeCount()) + 1);
+            nowLiked = true;
+
+            groupExternalEngagementService.completeDailyTask(id, user.getUserid(), "LIKE");
+
+            if (!post.getUserId().equals(user.getUserid())) {
+                String actorName = user.getUsername() != null ? user.getUsername() : "有人";
+                notificationService.send(
+                        post.getUserId(),
+                        "GROUP_POST_LIKED",
+                        actorName + " 点赞了你的团体动态",
+                        actorName + " 点赞了你的团体动态",
+                        "platform_group",
+                        id);
+            }
+        }
+        post.setUpdatedAt(LocalDateTime.now());
+        postRepository.save(post);
+        return Map.of("likedByMe", nowLiked, "likeCount", post.getLikeCount());
+    }
+
+    @GetMapping("/{id}/posts/{postId}/comments")
+    public Map<String, Object> listGroupPostComments(
+            @PathVariable String id,
+            @PathVariable String postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        PlatformGroup grp = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        assertLegacyGroupPostsReadable(grp, authHeader);
+        GroupPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!id.equals(post.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        Page<GroupPostComment> pageResult =
+                groupPostCommentRepository.findByPostIdAndStatusOrderByCreatedAtAsc(
+                        postId, "published", PageRequest.of(safePage - 1, safeSize));
+        List<GroupPostComment> comments = pageResult.getContent();
+        Set<Long> userIds = comments.stream().map(GroupPostComment::getUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = comments.stream().map(c -> {
+            User u = userMap.get(c.getUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("userId", c.getUserId());
+            item.put("content", c.getContent());
+            item.put("createdAt", c.getCreatedAt());
+            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
+            return item;
+        }).collect(Collectors.toList());
+
+        return Map.of(
+                "items",
+                items,
+                "total",
+                pageResult.getTotalElements(),
+                "page",
+                safePage,
+                "pageSize",
+                safeSize);
+    }
+
+    @PostMapping("/{id}/posts/{postId}/comments")
+    @Transactional
+    public Map<String, Object> addGroupPostComment(
+            @PathVariable String id,
+            @PathVariable String postId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> payload) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatformGroup grp = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        assertLegacyGroupPostsReadable(grp, authHeader);
+        if (!memberRepository.existsByGroupIdAndUserId(id, user.getUserid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可操作");
+        }
+        GroupPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!id.equals(post.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        String content = String.valueOf(payload.getOrDefault("content", "")).trim();
+        if (content.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评论内容不能为空");
+        }
+        if (content.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "评论最多 500 字");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        GroupPostComment comment = new GroupPostComment();
+        comment.setPostId(postId);
+        comment.setGroupId(id);
+        comment.setUserId(user.getUserid());
+        comment.setContent(content);
+        comment.setStatus("published");
+        comment.setCreatedAt(now);
+        comment.setUpdatedAt(now);
+        groupPostCommentRepository.save(comment);
+
+        post.setCommentCount((post.getCommentCount() == null ? 0 : post.getCommentCount()) + 1);
+        post.setUpdatedAt(now);
+        postRepository.save(post);
+
+        groupExternalEngagementService.completeDailyTask(id, user.getUserid(), "COMMENT");
+
+        if (!post.getUserId().equals(user.getUserid())) {
+            String actorName = user.getUsername() != null ? user.getUsername() : "有人";
+            String preview = content.length() > 50 ? content.substring(0, 50) + "…" : content;
+            notificationService.send(
+                    post.getUserId(),
+                    "GROUP_POST_COMMENTED",
+                    actorName + " 评论了你的团体动态",
+                    actorName + "：" + preview,
+                    "platform_group",
+                    id);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", comment.getId());
+        result.put("userId", user.getUserid());
+        result.put("content", comment.getContent());
+        result.put("createdAt", comment.getCreatedAt());
+        result.put("authorName", user.getUsername() != null ? user.getUsername() : "");
+        result.put("authorAvatarUrl", user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
+        return result;
+    }
+
+    @DeleteMapping("/{id}/posts/{postId}/comments/{commentId}")
+    @Transactional
+    public Map<String, Object> deleteGroupPostComment(
+            @PathVariable String id,
+            @PathVariable String postId,
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        GroupPostComment comment =
+                groupPostCommentRepository.findById(commentId).orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+        if (!comment.getPostId().equals(postId) || !comment.getGroupId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found");
+        }
+
+        GroupPost post =
+                postRepository.findById(postId).orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        boolean isManager = memberRepository
+                .findByGroupIdAndUserId(id, user.getUserid())
+                .map(m -> {
+                    String r = m.getRole() != null ? m.getRole().trim().toLowerCase() : "";
+                    return "owner".equals(r) || "admin".equals(r);
+                })
+                .orElse(false);
+
+        if (!comment.getUserId().equals(user.getUserid()) && !isManager && !adminAuthService.isAdmin(user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
+        }
+
+        if (!"deleted".equals(comment.getStatus())) {
+            comment.setStatus("deleted");
+            comment.setUpdatedAt(LocalDateTime.now());
+            groupPostCommentRepository.save(comment);
+            post.setCommentCount(Math.max(0, (post.getCommentCount() == null ? 0 : post.getCommentCount()) - 1));
+            post.setUpdatedAt(LocalDateTime.now());
+            postRepository.save(post);
+        }
+
+        return Map.of("deleted", true, "message", "Comment deleted");
+    }
+
+    @DeleteMapping("/{id}/posts/{postId}")
+    @Transactional
+    public Map<String, Object> deleteMemberGroupPost(
+            @PathVariable String id,
+            @PathVariable String postId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        PlatformGroup grp = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        assertLegacyGroupPostsReadable(grp, authHeader);
+
+        GroupPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!id.equals(post.getGroupId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+
+        boolean isManager = memberRepository
+                .findByGroupIdAndUserId(id, user.getUserid())
+                .map(m -> {
+                    String r = m.getRole() != null ? m.getRole().trim().toLowerCase() : "";
+                    return "owner".equals(r) || "admin".equals(r);
+                })
+                .orElse(false);
+
+        if (!post.getUserId().equals(user.getUserid()) && !isManager && !adminAuthService.isAdmin(user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission");
+        }
+
+        groupPostLikeRepository.deleteByPostId(postId);
+        groupPostCommentRepository.deleteByPostId(postId);
+        postRepository.delete(post);
+        return Map.of("deleted", true, "message", "已删除动态");
+    }
+
+    /** 审核加入 / 仅限邀请等非公开团体：与 plat 团体的动态可见策略对齐。 */
+    private void assertLegacyGroupPostsReadable(PlatformGroup group, String authHeader) {
+        if (!"active".equals(group.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在");
+        }
+        String jt = group.getJoinType();
+        if ("open".equals(jt)) {
+            return;
+        }
+        Long uid = resolveOptionalUserId(authHeader);
+        if (uid == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看动态");
+        }
+        User viewer = adminAuthService.requireUser(authHeader);
+        if (adminAuthService.isAdmin(viewer)) {
+            return;
+        }
+        if (!memberRepository.existsByGroupIdAndUserId(group.getId(), uid)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可查看动态");
+        }
     }
 
     @PostMapping("/{id}/join")

@@ -22,9 +22,9 @@
       </div>
       <p class="hint">{{ hintText }}</p>
       <p v-if="isLoggedIn && !isFellowshipEnabled" class="hint hint-links">
-        <router-link to="/fellowship/profile/edit" class="hint-link">填写年龄、婚姻与照片</router-link>
+        <router-link to="/fellowship/profile/edit" class="hint-link">去联谊资料编辑</router-link>
         <span class="hint-sep">·</span>
-        <span>保存后返回本页再点「立即开通」</span>
+        <span>保存后即可自动开通，也可回本页点「立即开通」</span>
       </p>
 
       <div class="quick-grid">
@@ -42,6 +42,7 @@ import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { useUserStore } from '@/stores/user.js'
+import { fellowshipActivationReadiness } from '@/utils/fellowshipActivationGate.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,7 +61,7 @@ const sloganText = computed(() => {
 
 const hintText = computed(() => {
   if (isLoggedIn.value && !isFellowshipEnabled.value) {
-    return '开通前需完善年龄、婚姻状况、头像，并至少上传一张生活照'
+    return '以上信息均在「联谊资料编辑」一页完成；保存资料后会自动尝试开通，亦可返回此处手动开通'
   }
   return '新用户建议先完善资料并完成真人认证，推荐效果会更好'
 })
@@ -91,27 +92,14 @@ async function handleActivate() {
   activating.value = true
   try {
     await userStore.refreshCurrentUser()
-    const age = Number(userStore.userInfo?.age)
-    const maritalStatus = String(userStore.userInfo?.maritalStatus || '').trim()
-    const avatar = String(userStore.userInfo?.avatar || '').trim()
-    const photos = userStore.userInfo?.photos
-    if (!Number.isInteger(age) || age <= 0) {
-      showToast({ type: 'fail', message: '请先完善年龄后再开通' })
-      router.push('/fellowship/profile/edit')
-      return
-    }
-    if (!['单身', '已婚', '离异'].includes(maritalStatus)) {
-      showToast({ type: 'fail', message: '请先选择婚姻状况后再开通' })
-      router.push('/fellowship/profile/edit')
-      return
-    }
-    if (!avatar) {
-      showToast({ type: 'fail', message: '请先上传头像后再开通' })
-      router.push('/fellowship/profile/edit')
-      return
-    }
-    if (!Array.isArray(photos) || photos.length === 0) {
-      showToast({ type: 'fail', message: '开通前请先上传至少一张生活照' })
+    const chk = fellowshipActivationReadiness({
+      age: userStore.userInfo?.age,
+      maritalStatus: userStore.userInfo?.maritalStatus,
+      avatarUrl: userStore.userInfo?.avatar,
+      photos: userStore.userInfo?.photos
+    })
+    if (!chk.ok) {
+      showToast({ type: 'fail', message: `请先完善：${chk.missingLabels.join('、')}` })
       router.push('/fellowship/profile/edit')
       return
     }

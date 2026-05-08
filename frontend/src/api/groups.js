@@ -69,25 +69,40 @@ export function fetchGroupPosts(id, params = {}) {
   return request.get(`/groups/${id}/posts`, { params })
 }
 
-/** 点赞/取消点赞（仅 platform 团体动态） */
-export function togglePlatformGroupPostLike(postId) {
-  return request.post(`/platform/groups/posts/${postId}/like`)
+/** 切换团体动态点赞（plat：Long postId；platform_groups：需带 groupId） */
+export function toggleGroupPostLike(groupId, postId) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/posts/${postId}/like`)
+  }
+  return request.post(`/groups/${groupId}/posts/${postId}/like`)
 }
 
-export function fetchGroupPostComments(postId, params = {}) {
-  return request.get(`/platform/groups/posts/${postId}/comments`, { params })
+export function fetchGroupPostComments(groupId, postId, params = {}) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/posts/${postId}/comments`, { params })
+  }
+  return request.get(`/groups/${groupId}/posts/${postId}/comments`, { params })
 }
 
-export function createGroupPostComment(postId, payload) {
-  return request.post(`/platform/groups/posts/${postId}/comments`, payload)
+export function createGroupPostComment(groupId, postId, payload) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/posts/${postId}/comments`, payload)
+  }
+  return request.post(`/groups/${groupId}/posts/${postId}/comments`, payload)
 }
 
 export function deletePlatformGroupPost(groupId, postId) {
-  return request.delete(`/platform/groups/${groupId}/posts/${postId}`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.delete(`/platform/groups/${groupId}/posts/${postId}`)
+  }
+  return request.delete(`/groups/${groupId}/posts/${postId}`)
 }
 
-export function deletePlatformGroupPostComment(postId, commentId) {
-  return request.delete(`/platform/groups/posts/${postId}/comments/${commentId}`)
+export function deletePlatformGroupPostComment(groupId, postId, commentId) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.delete(`/platform/groups/posts/${postId}/comments/${commentId}`)
+  }
+  return request.delete(`/groups/${groupId}/posts/${postId}/comments/${commentId}`)
 }
 
 /** 从 group_posts 中筛公告类 type */
@@ -159,27 +174,42 @@ export function auditMember(groupId, memberId, action = 'approve') {
 }
 
 export function removeGroupMember(groupId, memberId) {
-  return request.delete(`/platform/groups/${groupId}/members/${memberId}`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.delete(`/platform/groups/${groupId}/members/${memberId}`)
+  }
+  return request.delete(`/groups/${groupId}/members/${memberId}`)
 }
 
-/** 团长调整成员角色：admin | member（仅 platform 数字 ID 团体） */
+/** 团长调整成员角色：admin | member（数字 ID→plat_groups；字符串 ID→platform_groups/group_members） */
 export function patchPlatformGroupMemberRole(groupId, memberId, payload) {
-  return request.patch(`/platform/groups/${groupId}/members/${memberId}/role`, payload)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.patch(`/platform/groups/${groupId}/members/${memberId}/role`, payload)
+  }
+  return request.patch(`/groups/${groupId}/members/${memberId}/role`, payload)
 }
 
 // ── 打卡 ─────────────────────────────────────────────────────────────────────
 
 export function fetchCheckinSummary(groupId) {
-  return request.get(`/platform/groups/${groupId}/checkins/summary`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/${groupId}/checkins/summary`)
+  }
+  return request.get(`/groups/${groupId}/checkins/summary`)
 }
 
 export function createCheckin(groupId, payload) {
-  return request.post(`/platform/groups/${groupId}/checkins`, payload)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/${groupId}/checkins`, payload)
+  }
+  return request.post(`/groups/${groupId}/checkins`, payload)
 }
 
 /** 团体打卡排行榜 type: daily | streak（需登录且为团体成员） */
 export function fetchCheckinRankings(groupId, type = 'daily') {
-  return request.get(`/platform/groups/${groupId}/checkins/rankings`, { params: { type } })
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/${groupId}/checkins/rankings`, { params: { type } })
+  }
+  return request.get(`/groups/${groupId}/checkins/rankings`, { params: { type } })
 }
 
 export function likePlatformCheckin(checkinId) {
@@ -205,37 +235,61 @@ export function deletePlatformCheckinComment(commentId) {
 // ── 团体任务 ──────────────────────────────────────────────────────────────────
 
 export function fetchTodayTasks(groupId) {
-  return request.get(`/platform/groups/${groupId}/tasks/today`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/${groupId}/tasks/today`)
+  }
+  return request.get(`/groups/${groupId}/tasks/today`)
 }
 
 export function claimGroupTask(groupId, taskCode) {
-  return request.post(`/platform/groups/${groupId}/tasks/${taskCode}/claim`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/${groupId}/tasks/${taskCode}/claim`)
+  }
+  return request.post(`/groups/${groupId}/tasks/${taskCode}/claim`)
 }
 
 // ── 团体活动 ──────────────────────────────────────────────────────────────────
 
 export function fetchGroupActivities(groupId, params = {}) {
-  return request.get(`/platform/groups/${groupId}/activities`, { params })
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/${groupId}/activities`, { params })
+  }
+  return request.get(`/groups/${groupId}/activities`, { params })
 }
 
 export function createGroupActivity(groupId, payload) {
-  return request.post(`/platform/groups/${groupId}/activities`, payload)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/${groupId}/activities`, payload)
+  }
+  return request.post(`/groups/${groupId}/activities`, payload)
 }
 
 export function fetchGroupActivity(groupId, activityId) {
-  return request.get(`/platform/groups/${groupId}/activities/${activityId}`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.get(`/platform/groups/${groupId}/activities/${activityId}`)
+  }
+  return request.get(`/groups/${groupId}/activities/${activityId}`)
 }
 
 export function signUpGroupActivity(groupId, activityId) {
-  return request.post(`/platform/groups/${groupId}/activities/${activityId}/signup`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/${groupId}/activities/${activityId}/signup`)
+  }
+  return request.post(`/groups/${groupId}/activities/${activityId}/signup`)
 }
 
 export function cancelGroupActivitySignup(groupId, activityId) {
-  return request.post(`/platform/groups/${groupId}/activities/${activityId}/cancel-signup`)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.post(`/platform/groups/${groupId}/activities/${activityId}/cancel-signup`)
+  }
+  return request.post(`/groups/${groupId}/activities/${activityId}/cancel-signup`)
 }
 
 export function updateGroupActivity(groupId, activityId, payload) {
-  return request.patch(`/platform/groups/${groupId}/activities/${activityId}`, payload)
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.patch(`/platform/groups/${groupId}/activities/${activityId}`, payload)
+  }
+  return request.patch(`/groups/${groupId}/activities/${activityId}`, payload)
 }
 
 // ── Admin groups (back-office) ────────────────────────────────────────────────
