@@ -18,6 +18,18 @@
       </label>
 
       <label class="field">
+        <span class="label-text">团体内称呼 / 真实姓名 <em>*</em></span>
+        <input
+          v-model.trim="form.memberRealName"
+          type="text"
+          required
+          maxlength="64"
+          placeholder="如：李四（仅在成员名册与团体互动中展示，非全站昵称）"
+        >
+        <p class="hint">创建后只有你加入的各个团体名册及相关互动中会使用此称呼，不会在平台公开主页外泄露。</p>
+      </label>
+
+      <label class="field">
         <span class="label-text">分类 <em>*</em></span>
         <select v-model="form.type" required>
           <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
@@ -75,6 +87,7 @@ const userStore = useUserStore()
 const form = reactive({
   name: '',
   description: '',
+  memberRealName: '',
   type: 'region',
   joinMode: 'audit',
   region: '',
@@ -84,10 +97,10 @@ const form = reactive({
 
 const categories = [
   { label: '地区团体', value: 'region' },
-  { label: '教会团体', value: 'church' },
+  { label: '社群团体', value: 'church' },
   { label: '学习小组', value: 'study' },
   { label: '兴趣团体', value: 'interest' },
-  { label: '生活团契', value: 'family' },
+  { label: '生活小组', value: 'family' },
   { label: '事工团队', value: 'service' }
 ]
 
@@ -134,6 +147,7 @@ async function submit() {
     const payload = {
       name: form.name,
       description: form.description,
+      memberRealName: form.memberRealName,
       type: form.type,
       joinMode: form.joinMode,
       region: form.region || undefined,

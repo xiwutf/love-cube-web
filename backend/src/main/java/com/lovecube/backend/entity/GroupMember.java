@@ -24,4 +24,8 @@ public class GroupMember {
 
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
+
+    /** 仅在本团体内向其他成员展示，非全站昵称 / 用户名 */
+    @Column(name = "member_real_name", length = 64)
+    private String memberRealName;
 }

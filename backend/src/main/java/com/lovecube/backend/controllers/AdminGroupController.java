@@ -17,6 +17,7 @@ import com.lovecube.backend.repository.PlatformGroupRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GroupAdminRoleConstants;
+import com.lovecube.backend.services.GroupMemberRealNameSupport;
 import com.lovecube.backend.services.PermissionConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
@@ -210,6 +211,7 @@ public class AdminGroupController {
         creatorMember.setUserId(admin.getUserid());
         creatorMember.setRole("owner");
         creatorMember.setJoinedAt(LocalDateTime.now());
+        GroupMemberRealNameSupport.optionalMemberRealName(payload).ifPresent(creatorMember::setMemberRealName);
         memberRepository.save(creatorMember);
 
         return saved;
@@ -296,6 +298,7 @@ public class AdminGroupController {
             item.put("handledAt", r.getHandledAt());
             item.put("username", u != null ? u.getUsername() : "");
             item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
+            item.put("memberRealName", r.getMemberRealName());
             return item;
         }).collect(Collectors.toList());
     }
@@ -323,6 +326,7 @@ public class AdminGroupController {
             member.setUserId(req.getUserId());
             member.setRole("member");
             member.setJoinedAt(LocalDateTime.now());
+            member.setMemberRealName(req.getMemberRealName());
             memberRepository.save(member);
             group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
             groupRepository.save(group);
@@ -376,6 +380,7 @@ public class AdminGroupController {
             item.put("joinedAt", m.getJoinedAt());
             item.put("username", u != null ? u.getUsername() : "");
             item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
+            item.put("memberRealName", m.getMemberRealName());
             return item;
         }).collect(Collectors.toList());
     }

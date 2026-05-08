@@ -29,6 +29,7 @@ import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GrowthService;
+import com.lovecube.backend.services.GroupMemberRealNameSupport;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PlatformGroupSupport;
 import org.springframework.data.domain.Page;
@@ -277,6 +278,8 @@ public class PlatformGroupController {
         Map<Long, PlatGroupMember> memberMap = loadUserMemberMap(currentUserId);
         Map<Long, User> ownerUsers = loadOwnersForGroups(Collections.singletonList(group));
         Map<String, Object> result = PlatformGroupSupport.buildGroupSummary(group, memberMap, ownerUsers);
+        User viewerUser = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+        boolean revealInnerAdmins = platViewerSeesInnerMemberNames(group.getId(), currentUserId, viewerUser);
 
         // Include latest notice
         List<PlatGroupNotice> notices = noticeRepository
@@ -305,12 +308,43 @@ public class PlatformGroupController {
             Map<String, Object> a = new LinkedHashMap<>();
             a.put("userId", m.getUserId());
             a.put("role", m.getRole());
-            a.put("name", u != null ? u.getUsername() : "");
+            a.put("name", GroupMemberRealNameSupport.authorDisplay(revealInnerAdmins, u, m.getMemberRealName()));
             a.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
             return a;
         }).collect(Collectors.toList()));
 
+        if (currentUserId != null) {
+            memberRepository.findByGroupIdAndUserId(group.getId(), currentUserId)
+                    .filter(m -> "approved".equals(m.getStatus()))
+                    .ifPresent(m -> result.put("myMemberRealName", m.getMemberRealName()));
+        }
+
         return result;
+    }
+
+    /** 已通过成员自助补全或修改在本团的展示姓名 */
+    @PatchMapping("/{id}/me/member-real-name")
+    @Transactional
+    public Map<String, Object> patchMyPlatMemberRealName(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        PlatGroupMember m = memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .filter(mm -> "approved".equals(mm.getStatus()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "仅已通过审核的成员可设置本团展示姓名"));
+        String name = GroupMemberRealNameSupport.requireMemberRealName(body);
+        m.setMemberRealName(name);
+        m.setUpdatedAt(LocalDateTime.now());
+        memberRepository.save(m);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("myMemberRealName", name);
+        out.put("message", "已更新你在本团的展示姓名");
+        return out;
     }
 
 
@@ -350,12 +384,14 @@ public class PlatformGroupController {
 
         PlatGroup saved = groupRepository.save(group);
 
+        String creatorRealName = GroupMemberRealNameSupport.requireMemberRealName(payload);
         PlatGroupMember owner = new PlatGroupMember();
         owner.setGroupId(saved.getId());
         owner.setUserId(user.getUserid());
         owner.setRole("owner");
         owner.setStatus("approved");
         owner.setJoinedAt(LocalDateTime.now());
+        owner.setMemberRealName(creatorRealName);
         owner.setCreatedAt(LocalDateTime.now());
         owner.setUpdatedAt(LocalDateTime.now());
         memberRepository.save(owner);
@@ -458,6 +494,8 @@ public class PlatformGroupController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "申请验证信息不能超过255个字符");
         }
 
+        String memberRealName = GroupMemberRealNameSupport.requireMemberRealName(payload);
+
         Optional<PlatGroupMember> existing = memberRepository.findByGroupIdAndUserId(id, user.getUserid());
         if (existing.isPresent()) {
             PlatGroupMember m = existing.get();
@@ -471,6 +509,7 @@ public class PlatformGroupController {
                 m.setStatus("approved");
                 m.setJoinedAt(LocalDateTime.now());
                 m.setUpdatedAt(LocalDateTime.now());
+                m.setMemberRealName(memberRealName);
                 memberRepository.save(m);
                 group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
                 groupRepository.save(group);
@@ -478,6 +517,7 @@ public class PlatformGroupController {
             }
             m.setStatus("pending");
             m.setApplyReason(reason);
+            m.setMemberRealName(memberRealName);
             m.setUpdatedAt(LocalDateTime.now());
             memberRepository.save(m);
             notifyGroupManagersJoinRequest(id, group, user);
@@ -488,6 +528,7 @@ public class PlatformGroupController {
         member.setGroupId(id);
         member.setUserId(user.getUserid());
         member.setRole("member");
+        member.setMemberRealName(memberRealName);
         member.setCreatedAt(LocalDateTime.now());
         member.setUpdatedAt(LocalDateTime.now());
 
@@ -579,6 +620,10 @@ public class PlatformGroupController {
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
 
+        Long viewerId = resolveOptionalUserId(authHeader);
+        User viewerUser = viewerId != null ? userRepository.findById(viewerId).orElse(null) : null;
+        boolean revealInner = platViewerSeesInnerMemberNames(id, viewerId, viewerUser);
+
         return members.stream().map(m -> {
             User u = userMap.get(m.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -591,6 +636,9 @@ public class PlatformGroupController {
             item.put("requestedAt", m.getCreatedAt());
             item.put("username", u != null ? u.getUsername() : "");
             item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
+            if (revealInner && m.getMemberRealName() != null && !m.getMemberRealName().isBlank()) {
+                item.put("memberRealName", m.getMemberRealName());
+            }
             return item;
         }).collect(Collectors.toList());
     }
@@ -787,6 +835,10 @@ public class PlatformGroupController {
         }
         final Set<Long> likedSet = likedPostIds;
 
+        User viewerUser = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+        boolean revealAuthors = platViewerSeesInnerMemberNames(id, currentUserId, viewerUser);
+        Map<Long, String> realNames = revealAuthors ? platMemberRealNamesByUserIds(id, userIds) : Collections.emptyMap();
+
         List<Map<String, Object>> items = posts.stream().map(p -> {
             User u = userMap.get(p.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -801,7 +853,7 @@ public class PlatformGroupController {
             item.put("commentCount", p.getCommentCount() == null ? 0 : p.getCommentCount());
             item.put("likedByMe", likedSet.contains(p.getId()));
             item.put("createdAt", p.getCreatedAt());
-            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorName", GroupMemberRealNameSupport.authorDisplay(revealAuthors, u, realNames.get(p.getUserId())));
             item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
@@ -996,6 +1048,11 @@ public class PlatformGroupController {
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
 
+        Long viewerId = resolveOptionalUserId(authHeader);
+        User viewerUser = viewerId != null ? userRepository.findById(viewerId).orElse(null) : null;
+        boolean revealAuthors = platViewerSeesInnerMemberNames(group.getId(), viewerId, viewerUser);
+        Map<Long, String> realNames = revealAuthors ? platMemberRealNamesByUserIds(group.getId(), userIds) : Collections.emptyMap();
+
         List<Map<String, Object>> items = comments.stream().map(c -> {
             User u = userMap.get(c.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -1003,7 +1060,7 @@ public class PlatformGroupController {
             item.put("userId", c.getUserId());
             item.put("content", c.getContent());
             item.put("createdAt", c.getCreatedAt());
-            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorName", GroupMemberRealNameSupport.authorDisplay(revealAuthors, u, realNames.get(c.getUserId())));
             item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
@@ -1065,12 +1122,16 @@ public class PlatformGroupController {
         }
 
         User u = user;
+        String myReal = memberRepository.findByGroupIdAndUserId(post.getGroupId(), user.getUserid())
+                .filter(m -> "approved".equals(m.getStatus()))
+                .map(PlatGroupMember::getMemberRealName)
+                .orElse(null);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", comment.getId());
         result.put("userId", u.getUserid());
         result.put("content", comment.getContent());
         result.put("createdAt", comment.getCreatedAt());
-        result.put("authorName", u.getUsername() != null ? u.getUsername() : "");
+        result.put("authorName", GroupMemberRealNameSupport.authorDisplay(true, u, myReal));
         result.put("authorAvatarUrl", u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
         return result;
     }
@@ -1201,6 +1262,32 @@ public class PlatformGroupController {
                 .filter(m -> "approved".equals(m.getStatus())
                         && ("owner".equals(m.getRole()) || "admin".equals(m.getRole())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission"));
+    }
+
+    private boolean platViewerSeesInnerMemberNames(Long groupId, Long viewerId, User viewerUser) {
+        if (viewerId == null) {
+            return false;
+        }
+        if (viewerUser != null && adminAuthService.isAdmin(viewerUser)) {
+            return true;
+        }
+        return memberRepository.findByGroupIdAndUserId(groupId, viewerId)
+                .filter(m -> "approved".equals(m.getStatus()))
+                .isPresent();
+    }
+
+    private Map<Long, String> platMemberRealNamesByUserIds(Long groupId, Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<PlatGroupMember> rows = memberRepository.findByGroupIdAndUserIdIn(groupId, userIds);
+        Map<Long, String> out = new HashMap<>();
+        for (PlatGroupMember m : rows) {
+            if (m.getMemberRealName() != null && !m.getMemberRealName().isBlank()) {
+                out.putIfAbsent(m.getUserId(), m.getMemberRealName());
+            }
+        }
+        return out;
     }
 
     /**

@@ -43,6 +43,28 @@
             </div>
             <p class="meta">{{ group.region }} · {{ group.memberCount }} 人 · {{ group.joinModeLabel }}</p>
             <p class="desc">{{ group.description }}</p>
+            <div v-if="memberDisplayRowVisible(group)" class="member-display-row" @click.stop>
+              <template v-if="!memberDisplayNameTrimmed(group)">
+                <p class="member-display-hint-text">{{ MEMBER_DISPLAY_PANEL_HINT }}</p>
+              </template>
+              <p v-else class="member-display-name-line">
+                本团展示姓名：<strong>{{ group.myMemberRealName }}</strong>
+              </p>
+              <button
+                type="button"
+                class="member-display-action"
+                :disabled="patchingDisplayGroupId === group.id"
+                @click="openMemberDisplayPrompt(group)"
+              >
+                {{
+                  patchingDisplayGroupId === group.id
+                    ? '保存中…'
+                    : memberDisplayNameTrimmed(group)
+                      ? '修改'
+                      : '补填姓名'
+                }}
+              </button>
+            </div>
             <div class="card-foot">
               <span class="status-tag">{{ group.statusLabel }}</span>
               <router-link class="enter-btn" :to="`/platform/groups/${group.id}`">{{ group.enterLabel }}</router-link>
@@ -62,9 +84,17 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchMeGroupsBuckets } from '@/api/groups.js'
+import { fetchMeGroupsBuckets, patchMyGroupMemberRealName } from '@/api/groups.js'
+import {
+  ERR_EMPTY_DISPLAY_NAME_PATCH,
+  MEMBER_DISPLAY_PANEL_HINT,
+  supplementMemberDisplayTitle
+} from '@/utils/groupMemberDisplayName.js'
+import { useUserStore } from '@/stores/user.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
+
+const userStore = useUserStore()
 
 const loading = ref(false)
 const error = ref('')
@@ -73,6 +103,7 @@ const tab = ref('created')
 const created = ref([])
 const managed = ref([])
 const joined = ref([])
+const patchingDisplayGroupId = ref(null)
 
 const currentList = computed(() => {
   if (tab.value === 'created') return created.value
@@ -117,7 +148,40 @@ function normalize(item, tabKey) {
     statusLabel,
     enterLabel,
     managed: Boolean(item.managed),
-    hasPendingRequest: Boolean(item.hasPendingRequest)
+    hasPendingRequest: Boolean(item.hasPendingRequest),
+    myMemberRealName: item.myMemberRealName != null ? String(item.myMemberRealName) : ''
+  }
+}
+
+function memberDisplayNameTrimmed(g) {
+  return String(g.myMemberRealName ?? '').trim()
+}
+
+/** 已通过且可展示补填：分桶内待审核不展示 */
+function memberDisplayRowVisible(group) {
+  return userStore.isLoggedIn && !group.hasPendingRequest
+}
+
+async function openMemberDisplayPrompt(group) {
+  if (!memberDisplayRowVisible(group) || patchingDisplayGroupId.value === group.id) return
+  const hasName = Boolean(memberDisplayNameTrimmed(group))
+  const title = supplementMemberDisplayTitle(hasName)
+  const def = memberDisplayNameTrimmed(group)
+  const input = window.prompt(title, def)
+  if (input === null) return
+  const memberRealName = String(input).trim()
+  if (!memberRealName) {
+    window.alert(ERR_EMPTY_DISPLAY_NAME_PATCH)
+    return
+  }
+  patchingDisplayGroupId.value = group.id
+  try {
+    await patchMyGroupMemberRealName(group.id, memberRealName)
+    await load()
+  } catch (err) {
+    window.alert(err?.message || '保存失败')
+  } finally {
+    patchingDisplayGroupId.value = null
   }
 }
 
@@ -323,6 +387,49 @@ onMounted(load)
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.member-display-row {
+  margin-top: var(--lc-space-2);
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px dashed var(--lc-blue-border);
+  background: var(--lc-blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lc-space-2);
+}
+
+.member-display-hint-text,
+.member-display-name-line {
+  margin: 0;
+  font-size: var(--lc-text-xs);
+  font-weight: 700;
+  color: var(--lc-muted);
+  line-height: 1.45;
+}
+
+.member-display-name-line {
+  font-weight: 600;
+}
+
+.member-display-action {
+  align-self: flex-start;
+  min-width: 96px;
+  height: 32px;
+  padding: 0 var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-blue-border);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-weight: 900;
+  font-size: var(--lc-text-xs);
+  cursor: pointer;
+}
+
+.member-display-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .card-foot {

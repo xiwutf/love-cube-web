@@ -73,7 +73,7 @@ import { createAdminGroup } from '@/api/groups.js'
 const router = useRouter()
 const saving = ref(false)
 
-const categories = ['祈祷小组', '青年团体', '家庭小组', '读经小组', '公益服务', '其他']
+const categories = ['心愿小组', '青年团体', '家庭小组', '共读小组', '公益服务', '其他']
 
 const form = reactive({
   name: '',

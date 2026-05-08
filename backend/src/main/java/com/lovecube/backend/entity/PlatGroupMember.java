@@ -37,4 +37,8 @@ public class PlatGroupMember {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    /** 仅在本团体内向其他成员展示 */
+    @Column(name = "member_real_name", length = 64)
+    private String memberRealName;
 }

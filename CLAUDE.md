@@ -158,6 +158,7 @@ GitHub Actions (`.github/workflows/deploy.yml`) deploys to `lovecube.xifg.com.cn
 - **Redis present but disabled** — `application.yml` has Redis config but caching/session is turned off; do not assume Redis is available.
 - **All source files** must be UTF-8 (no BOM). Database tables must use `utf8mb4`.
 - **Admin layout nav** — when adding a new admin page, register it in both `navItems` and `sectionMap` in `AdminLayout.vue`.
+- **平台语义防回流** — 新增页面、接口文案、公告、placeholder、toast、弹窗、SEO、种子数据时，**禁止**在用户可见位置使用以下词汇：`教会、祷告、祈祷、福音、灵修、团契、牧养、主内、见证、查经、敬拜、弟兄姊妹`。统一使用：`团体、社群、小组、心愿、祝福、成长记录、故事分享、共读、志愿服务、同伴、伙伴`。提交前必须通过 `bash scripts/semantic-guard.sh --git-hook` 扫描。详见 `docs/platform-language-governance-report.md`。
 
 ## Further Reference
 

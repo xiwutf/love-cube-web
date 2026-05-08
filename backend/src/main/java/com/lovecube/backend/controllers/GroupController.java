@@ -21,6 +21,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GroupAdminRoleConstants;
 import com.lovecube.backend.services.GroupExternalEngagementService;
+import com.lovecube.backend.services.GroupMemberRealNameSupport;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.NotificationService;
 import org.springframework.data.domain.Page;
@@ -166,11 +167,13 @@ public class GroupController {
 
         adminAuthService.upsertPlatformGroupAdmin(saved.getId(), user.getUserid(), GroupAdminRoleConstants.OWNER);
 
+        String creatorRealName = GroupMemberRealNameSupport.requireMemberRealName(payload);
         GroupMember member = new GroupMember();
         member.setGroupId(saved.getId());
         member.setUserId(user.getUserid());
         member.setRole("owner");
         member.setJoinedAt(LocalDateTime.now());
+        member.setMemberRealName(creatorRealName);
         memberRepository.save(member);
         growthService.recordAction(user.getUserid(), "JOIN_GROUP", "CREATE_GROUP_" + saved.getId());
         publishGrowthEventSafely(
@@ -227,31 +230,65 @@ public class GroupController {
         Long currentUserId = resolveOptionalUserId(authHeader);
         Map<String, Object> result = buildGroupSummary(group, currentUserId);
         result.put("description", group.getDescription());
+        boolean revealInnerMemberNames = legacyGroupViewerSeesInnerNames(id, currentUserId);
         // 兼容：owner_user_id 未回填时回退 created_by（数据治理见 docs/field-governance.md）
         Long ou = group.getOwnerUserId() != null ? group.getOwnerUserId() : group.getCreatedBy();
         List<Map<String, Object>> adminList = new ArrayList<>();
         if (ou != null) {
             userRepository.findById(ou).ifPresent(u -> {
+                String rn = memberRepository.findByGroupIdAndUserId(id, ou).map(GroupMember::getMemberRealName).orElse(null);
                 Map<String, Object> a = new LinkedHashMap<>();
                 a.put("userId", u.getUserid());
-                a.put("name", u.getUsername());
+                a.put("name", GroupMemberRealNameSupport.authorDisplay(revealInnerMemberNames, u, rn));
                 a.put("role", "owner");
                 a.put("avatarUrl", u.getProfilePhoto());
                 adminList.add(a);
             });
         }
         result.put("admins", adminList);
+        if (currentUserId != null) {
+            memberRepository.findByGroupIdAndUserId(id, currentUserId)
+                    .ifPresent(gm -> result.put("myMemberRealName", gm.getMemberRealName()));
+        }
         return result;
     }
 
+    /** 已通过成员自助补全或修改在本团的展示姓名 */
+    @PatchMapping("/{id}/me/member-real-name")
+    @Transactional
+    public Map<String, Object> patchMyLegacyGroupMemberRealName(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+        GroupMember gm = memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "你不是该团体成员"));
+        String name = GroupMemberRealNameSupport.requireMemberRealName(body);
+        gm.setMemberRealName(name);
+        memberRepository.save(gm);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("myMemberRealName", name);
+        out.put("message", "已更新你在本团的展示姓名");
+        return out;
+    }
+
     @GetMapping("/{id}/members")
-    public List<Map<String, Object>> getMembers(@PathVariable String id) {
+    public List<Map<String, Object>> getMembers(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         groupRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
         List<GroupMember> members = memberRepository.findByGroupIdOrderByJoinedAtAsc(id);
         Set<Long> userIds = members.stream().map(GroupMember::getUserId).collect(Collectors.toSet());
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        Long viewerId = resolveOptionalUserId(authHeader);
+        boolean revealInner = legacyGroupViewerSeesInnerNames(id, viewerId);
+
         return members.stream().map(m -> {
             User u = userMap.get(m.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -262,6 +299,9 @@ public class GroupController {
             item.put("joinedAt", m.getJoinedAt());
             item.put("username", u != null ? u.getUsername() : "");
             item.put("avatarUrl", u != null ? u.getProfilePhoto() : "");
+            if (revealInner && m.getMemberRealName() != null && !m.getMemberRealName().isBlank()) {
+                item.put("memberRealName", m.getMemberRealName());
+            }
             return item;
         }).collect(Collectors.toList());
     }
@@ -369,6 +409,9 @@ public class GroupController {
         }
         final Set<String> likedFinal = likedPostIds;
 
+        boolean revealAuthorNames = legacyGroupViewerSeesInnerNames(id, currentUserId);
+        Map<Long, String> realNameByUser = revealAuthorNames ? legacyMemberRealNamesByUserIds(id, userIds) : Collections.emptyMap();
+
         return posts.stream().map(p -> {
             User u = userMap.get(p.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -380,7 +423,8 @@ public class GroupController {
             item.put("commentCount", p.getCommentCount() != null ? p.getCommentCount() : 0);
             item.put("likedByMe", likedFinal.contains(p.getId()));
             item.put("createdAt", p.getCreatedAt());
-            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorName", GroupMemberRealNameSupport.authorDisplay(
+                    revealAuthorNames, u, realNameByUser.get(p.getUserId())));
             item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
@@ -498,6 +542,10 @@ public class GroupController {
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));
 
+        Long viewerId = resolveOptionalUserId(authHeader);
+        boolean revealAuthorNames = legacyGroupViewerSeesInnerNames(id, viewerId);
+        Map<Long, String> realNameByUser = revealAuthorNames ? legacyMemberRealNamesByUserIds(id, userIds) : Collections.emptyMap();
+
         List<Map<String, Object>> items = comments.stream().map(c -> {
             User u = userMap.get(c.getUserId());
             Map<String, Object> item = new LinkedHashMap<>();
@@ -505,7 +553,8 @@ public class GroupController {
             item.put("userId", c.getUserId());
             item.put("content", c.getContent());
             item.put("createdAt", c.getCreatedAt());
-            item.put("authorName", u != null ? u.getUsername() : "");
+            item.put("authorName", GroupMemberRealNameSupport.authorDisplay(
+                    revealAuthorNames, u, realNameByUser.get(c.getUserId())));
             item.put("authorAvatarUrl", u != null ? u.getProfilePhoto() : "");
             return item;
         }).collect(Collectors.toList());
@@ -567,6 +616,9 @@ public class GroupController {
 
         groupExternalEngagementService.completeDailyTask(id, user.getUserid(), "COMMENT");
 
+        String myReal = memberRepository.findByGroupIdAndUserId(id, user.getUserid())
+                .map(GroupMember::getMemberRealName).orElse(null);
+
         if (!post.getUserId().equals(user.getUserid())) {
             String actorName = user.getUsername() != null ? user.getUsername() : "有人";
             String preview = content.length() > 50 ? content.substring(0, 50) + "…" : content;
@@ -584,7 +636,7 @@ public class GroupController {
         result.put("userId", user.getUserid());
         result.put("content", comment.getContent());
         result.put("createdAt", comment.getCreatedAt());
-        result.put("authorName", user.getUsername() != null ? user.getUsername() : "");
+        result.put("authorName", GroupMemberRealNameSupport.authorDisplay(true, user, myReal));
         result.put("authorAvatarUrl", user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
         return result;
     }
@@ -709,6 +761,7 @@ public class GroupController {
         }
 
         String joinType = group.getJoinType() == null ? "approval" : group.getJoinType();
+        String memberRealName = GroupMemberRealNameSupport.requireMemberRealName(payload);
 
         if ("open".equals(joinType)) {
             GroupMember member = new GroupMember();
@@ -716,6 +769,7 @@ public class GroupController {
             member.setUserId(user.getUserid());
             member.setRole("member");
             member.setJoinedAt(LocalDateTime.now());
+            member.setMemberRealName(memberRealName);
             memberRepository.save(member);
             group.setMemberCount((group.getMemberCount() == null ? 0 : group.getMemberCount()) + 1);
             groupRepository.save(group);
@@ -741,6 +795,7 @@ public class GroupController {
         req.setUserId(user.getUserid());
         req.setStatus("pending");
         req.setMessage(payload != null ? String.valueOf(payload.getOrDefault("message", "")) : "");
+        req.setMemberRealName(memberRealName);
         req.setRequestedAt(LocalDateTime.now());
         joinRequestRepository.save(req);
         return Map.of("joined", false, "pending", true, "message", "申请已提交，等待管理员审核");
@@ -853,6 +908,9 @@ public class GroupController {
             boolean isOwnerMember = gm != null && "owner".equalsIgnoreCase(gm.getRole());
             boolean ownerUidMatch = ownerUid != null && ownerUid.equals(currentUserId);
             item.put("isOwner", isOwnerMember || ownerUidMatch || managed);
+            if (gm != null) {
+                item.put("myMemberRealName", gm.getMemberRealName());
+            }
         } else {
             item.put("isMember", false);
             item.put("hasPendingRequest", false);
@@ -902,6 +960,7 @@ public class GroupController {
             boolean isOwnerMember = gm.map(x -> "owner".equalsIgnoreCase(x.getRole())).orElse(false);
             boolean isOwnerUid = ownerUid != null && ownerUid.equals(currentUserId);
             item.put("isOwner", isOwnerMember || isOwnerUid || managed);
+            gm.ifPresent(x -> item.put("myMemberRealName", x.getMemberRealName()));
         } else {
             item.put("isMember", false);
             item.put("hasPendingRequest", false);
@@ -910,6 +969,32 @@ public class GroupController {
             item.put("isOwner", false);
         }
         return item;
+    }
+
+    /** 站务管理员或本团体已加入成员可见团体内真实姓名及相应展示名。 */
+    private boolean legacyGroupViewerSeesInnerNames(String groupId, Long viewerUserId) {
+        if (viewerUserId == null) {
+            return false;
+        }
+        User vu = userRepository.findById(viewerUserId).orElse(null);
+        if (vu != null && adminAuthService.isAdmin(vu)) {
+            return true;
+        }
+        return memberRepository.existsByGroupIdAndUserId(groupId, viewerUserId);
+    }
+
+    private Map<Long, String> legacyMemberRealNamesByUserIds(String groupId, Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<GroupMember> rows = memberRepository.findByGroupIdAndUserIdIn(groupId, userIds);
+        Map<Long, String> out = new HashMap<>();
+        for (GroupMember m : rows) {
+            if (m.getMemberRealName() != null && !m.getMemberRealName().isBlank()) {
+                out.putIfAbsent(m.getUserId(), m.getMemberRealName());
+            }
+        }
+        return out;
     }
 
     private Long resolveOptionalUserId(String authHeader) {

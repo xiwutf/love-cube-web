@@ -20,7 +20,7 @@
           rows="8"
           maxlength="500"
           show-word-limit
-          placeholder="可以写心情、见证、祷告代求或生活片段…真诚分享更容易遇见同路人。"
+          placeholder="可以写心情、故事、心愿或生活片段…真诚分享更容易遇见同路人。"
           :border="false"
         />
 

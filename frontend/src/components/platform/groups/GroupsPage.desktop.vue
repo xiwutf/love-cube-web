@@ -74,6 +74,22 @@
                       {{ actionLabel(group) }}
                     </button>
                   </div>
+                  <div v-if="memberDisplayRowVisible(group)" class="member-display-compact" @click.stop>
+                    <template v-if="!memberDisplayNameTrimmed(group)">
+                      <p class="member-display-compact-hint">{{ MEMBER_DISPLAY_PANEL_HINT }}</p>
+                    </template>
+                    <div v-else class="member-display-compact-name">
+                      <span>本团展示姓名：<strong>{{ group.myMemberRealName }}</strong></span>
+                    </div>
+                    <button
+                      type="button"
+                      class="member-display-compact-btn"
+                      :disabled="patchingDisplayGroupId === group.id"
+                      @click="openMemberDisplayPromptForList(group)"
+                    >
+                      {{ patchingDisplayGroupId === group.id ? '保存中…' : (memberDisplayNameTrimmed(group) ? '修改' : '补填姓名') }}
+                    </button>
+                  </div>
                 </div>
               </article>
             </div>
@@ -188,6 +204,23 @@
                   <span v-for="t in group.tagList.slice(0, 3)" :key="t" class="m-tag">{{ t }}</span>
                 </div>
 
+                <div v-if="memberDisplayRowVisible(group)" class="m-member-display" @click.stop>
+                  <template v-if="!memberDisplayNameTrimmed(group)">
+                    <p class="m-member-display-hint">{{ MEMBER_DISPLAY_PANEL_HINT }}</p>
+                  </template>
+                  <div v-else class="m-member-display-name">
+                    <span>本团：<strong>{{ group.myMemberRealName }}</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    class="m-member-display-btn"
+                    :disabled="patchingDisplayGroupId === group.id"
+                    @click="openMemberDisplayPromptForList(group)"
+                  >
+                    {{ patchingDisplayGroupId === group.id ? '保存中…' : (memberDisplayNameTrimmed(group) ? '修改' : '补填') }}
+                  </button>
+                </div>
+
                 <div class="m-actions">
                   <router-link class="m-btn ghost" :to="`/platform/groups/${group.id}`">查看团体</router-link>
                   <button type="button" class="m-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
@@ -222,8 +255,18 @@ import {
   fetchGroups,
   fetchHotGroups,
   joinGroup,
+  patchMyGroupMemberRealName,
   unwrapPlatformGroupList
 } from '@/api/groups.js'
+import {
+  AUDIT_JOIN_MESSAGE_PROMPT,
+  ERR_EMPTY_AUDIT_JOIN_MESSAGE,
+  ERR_EMPTY_DISPLAY_NAME_PATCH,
+  ERR_EMPTY_MEMBER_REAL_NAME,
+  JOIN_MEMBER_REAL_NAME_PROMPT,
+  MEMBER_DISPLAY_PANEL_HINT,
+  supplementMemberDisplayTitle
+} from '@/utils/groupMemberDisplayName.js'
 import { useUserStore } from '@/stores/user.js'
 
 const PAGE_SIZE = 8
@@ -248,13 +291,14 @@ const message = ref('')
 const messageType = ref('success')
 const errors = reactive({ list: '', hot: '', feed: '' })
 const sideLoading = reactive({ hot: false, feed: false })
+const patchingDisplayGroupId = ref(null)
 
 const categories = [
   { label: '地区团体', value: 'region' },
-  { label: '教会团体', value: 'church' },
+  { label: '社群团体', value: 'church' },
   { label: '学习小组', value: 'study' },
   { label: '兴趣团体', value: 'interest' },
-  { label: '生活团契', value: 'family' },
+  { label: '生活小组', value: 'family' },
   { label: '事工团队', value: 'service' }
 ]
 const categoryLabelMap = categories.reduce((acc, item) => {
@@ -316,7 +360,8 @@ function normalizeGroup(item) {
     isOwner: Boolean(item.isOwner),
     hasPendingRequest: Boolean(item.hasPendingRequest),
     postCount: Number(item.postCount || 0),
-    lastActiveLabel: formatLastActive(item.lastActiveAt)
+    lastActiveLabel: formatLastActive(item.lastActiveAt),
+    myMemberRealName: item.myMemberRealName != null ? String(item.myMemberRealName) : ''
   }
 }
 
@@ -350,6 +395,38 @@ function actionDisabled(g) {
   return false
 }
 
+function memberDisplayNameTrimmed(g) {
+  return String(g.myMemberRealName ?? '').trim()
+}
+
+function memberDisplayRowVisible(g) {
+  return userStore.isLoggedIn && g.isMember && !g.hasPendingRequest
+}
+
+async function openMemberDisplayPromptForList(group) {
+  if (!memberDisplayRowVisible(group) || patchingDisplayGroupId.value === group.id) return
+  const hasName = Boolean(memberDisplayNameTrimmed(group))
+  const title = supplementMemberDisplayTitle(hasName)
+  const def = memberDisplayNameTrimmed(group)
+  const input = window.prompt(title, def)
+  if (input === null) return
+  const memberRealName = String(input).trim()
+  if (!memberRealName) {
+    flashMessage(ERR_EMPTY_DISPLAY_NAME_PATCH, 'error')
+    return
+  }
+  patchingDisplayGroupId.value = group.id
+  try {
+    await patchMyGroupMemberRealName(group.id, memberRealName)
+    await Promise.all([loadGroups({ resetPage: false }), loadHotGroups()])
+    flashMessage('已保存', 'success')
+  } catch (error) {
+    flashMessage(error.message || '保存失败', 'error')
+  } finally {
+    patchingDisplayGroupId.value = null
+  }
+}
+
 function goCreate() {
   if (!userStore.isLoggedIn) {
     userStore.setPostLoginRedirect('/platform/groups/create')
@@ -375,18 +452,25 @@ function onAction(group) {
 
 async function applyJoin(group) {
   message.value = ''
+  const nameInput = window.prompt(JOIN_MEMBER_REAL_NAME_PROMPT, '')
+  if (nameInput === null) return
+  const memberRealName = String(nameInput).trim()
+  if (!memberRealName) {
+    flashMessage(ERR_EMPTY_MEMBER_REAL_NAME, 'error')
+    return
+  }
   let applyMessage = ''
   if (group.joinModeKey === 'audit') {
-    const input = window.prompt('请输入申请说明（必填）', '')
+    const input = window.prompt(AUDIT_JOIN_MESSAGE_PROMPT, '')
     if (input === null) return
     applyMessage = input.trim()
     if (!applyMessage) {
-      flashMessage('请填写申请说明', 'error')
+      flashMessage(ERR_EMPTY_AUDIT_JOIN_MESSAGE, 'error')
       return
     }
   }
   try {
-    const res = await joinGroup(group.id, applyMessage)
+    const res = await joinGroup(group.id, { message: applyMessage, memberRealName })
     const idx = remoteGroups.value.findIndex((x) => x.id === group.id)
     if (idx >= 0) {
       remoteGroups.value[idx].isMember = Boolean(res?.joined)
@@ -813,6 +897,49 @@ onMounted(() => {
   opacity: 0.65;
 }
 
+.member-display-compact {
+  margin-top: var(--lc-space-2);
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px dashed var(--lc-blue-border);
+  background: var(--lc-blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lc-space-2);
+}
+
+.member-display-compact-hint {
+  margin: 0;
+  font-size: var(--lc-text-xs);
+  font-weight: 700;
+  color: var(--lc-muted);
+  line-height: 1.45;
+}
+
+.member-display-compact-name {
+  font-size: var(--lc-text-xs);
+  color: var(--lc-muted);
+}
+
+.member-display-compact-btn {
+  align-self: flex-start;
+  min-width: 88px;
+  height: 30px;
+  padding: 0 var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-blue-border);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-weight: 900;
+  font-size: var(--lc-text-xs);
+  cursor: pointer;
+}
+
+.member-display-compact-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .pagination {
   display: flex;
   align-items: center;
@@ -1111,6 +1238,47 @@ onMounted(() => {
 
   .m-status.subtle {
     opacity: 0.78;
+  }
+
+  .m-member-display {
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px dashed rgba(79, 99, 246, 0.35);
+    background: rgba(79, 99, 246, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .m-member-display-hint {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--lc-muted);
+    line-height: 1.45;
+  }
+
+  .m-member-display-name {
+    font-size: 11px;
+    color: var(--lc-muted);
+  }
+
+  .m-member-display-btn {
+    align-self: flex-start;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--lc-blue-border);
+    background: var(--lc-surface);
+    color: var(--lc-blue);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .m-member-display-btn:disabled {
+    opacity: 0.65;
   }
 
   .m-actions {

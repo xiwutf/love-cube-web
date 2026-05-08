@@ -25,6 +25,10 @@ public class GroupJoinRequest {
     @Column(length = 255)
     private String message;
 
+    /** 提交申请时登记的团体内展示姓名（通过后写入 group_members.member_real_name） */
+    @Column(name = "member_real_name", length = 64)
+    private String memberRealName;
+
     @Column(name = "requested_at", nullable = false)
     private LocalDateTime requestedAt;
 

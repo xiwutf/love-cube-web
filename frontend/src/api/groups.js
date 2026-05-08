@@ -127,11 +127,19 @@ export function fetchGroupFeed() {
   return request.get('/platform/groups/feed')
 }
 
-export function joinGroup(id, message = '') {
-  if (isLegacyPlatformGroupId(id)) {
-    return request.post(`/platform/groups/${id}/join`, { message })
+export function joinGroup(id, opts = {}) {
+  let message = ''
+  let memberRealName = ''
+  if (typeof opts === 'string') {
+    message = opts
+  } else if (opts && typeof opts === 'object') {
+    message = String(opts.message ?? '')
+    memberRealName = String(opts.memberRealName ?? '').trim()
   }
-  return request.post(`/groups/${id}/join`, { message })
+  if (isLegacyPlatformGroupId(id)) {
+    return request.post(`/platform/groups/${id}/join`, { message, memberRealName })
+  }
+  return request.post(`/groups/${id}/join`, { message, memberRealName })
 }
 
 export function leaveGroup(id) {
@@ -139,6 +147,15 @@ export function leaveGroup(id) {
     return request.post(`/platform/groups/${id}/leave`)
   }
   return request.delete(`/groups/${id}/leave`)
+}
+
+/** 已加入成员自助补全或修改本团展示姓名 */
+export function patchMyGroupMemberRealName(groupId, memberRealName) {
+  const body = { memberRealName: String(memberRealName ?? '').trim() }
+  if (isLegacyPlatformGroupId(groupId)) {
+    return request.patch(`/platform/groups/${groupId}/me/member-real-name`, body)
+  }
+  return request.patch(`/groups/${groupId}/me/member-real-name`, body)
 }
 
 /** 登录用户创建 platform_groups，创建者写入 platform_group_admin(OWNER) */

@@ -74,9 +74,35 @@
           <p class="group-meta">{{ group.location }} · {{ group.members }} 人</p>
           <p class="group-desc">{{ group.description }}</p>
           <div class="group-actions">
-            <span v-if="group.joined" class="joined-label">已加入</span>
-            <span v-else-if="group.pending" class="joined-label joined-label--pending">申请中</span>
-            <button v-else type="button" @click="handleJoin(group)">申请加入</button>
+            <template v-if="memberDisplayStripVisible(group)">
+              <div class="member-display-strip">
+                <template v-if="!memberDisplayNameTrimmed(group)">
+                  <p class="member-display-strip-hint">{{ MEMBER_DISPLAY_PANEL_HINT }}</p>
+                </template>
+                <p v-else class="member-display-strip-name">
+                  本团展示：<strong>{{ group.myMemberRealName }}</strong>
+                </p>
+                <button
+                  type="button"
+                  class="member-display-strip-btn"
+                  :disabled="patchingDisplayGroupId === group.id"
+                  @click.stop="openMemberDisplayPrompt(group)"
+                >
+                  {{
+                    patchingDisplayGroupId === group.id
+                      ? '保存中…'
+                      : memberDisplayNameTrimmed(group)
+                        ? '修改'
+                        : '补填姓名'
+                  }}
+                </button>
+              </div>
+            </template>
+            <div class="group-actions-row">
+              <span v-if="group.joined" class="joined-label">已加入</span>
+              <span v-else-if="group.pending" class="joined-label joined-label--pending">申请中</span>
+              <button v-else type="button" @click="handleJoin(group)">申请加入</button>
+            </div>
           </div>
         </div>
       </article>
@@ -158,9 +184,20 @@ import {
   fetchGroupFeed,
   fetchHotGroups,
   joinGroup,
+  patchMyGroupMemberRealName,
   unwrapPlatformGroupList
 } from '@/api/groups.js'
 import { groupFeedCoverUrlFromApi } from '@/utils/displayFields.js'
+import {
+  AUDIT_JOIN_MESSAGE_PROMPT,
+  ERR_EMPTY_AUDIT_JOIN_MESSAGE,
+  ERR_EMPTY_DISPLAY_NAME_PATCH,
+  ERR_EMPTY_MEMBER_REAL_NAME,
+  JOIN_MEMBER_REAL_NAME_PROMPT,
+  MEMBER_DISPLAY_PANEL_HINT,
+  supplementMemberDisplayTitle
+} from '@/utils/groupMemberDisplayName.js'
+import { useUserStore } from '@/stores/user.js'
 
 const keyword = ref('')
 const activeFilter = ref('all')
@@ -171,6 +208,9 @@ const feedLoading = ref(false)
 const remoteGroups = ref([])
 const hotGroups = ref([])
 const feeds = ref([])
+const patchingDisplayGroupId = ref(null)
+
+const userStore = useUserStore()
 
 const filters = [
   { label: '全部地区', value: 'all' },
@@ -291,14 +331,49 @@ function normalizeGroup(item, index) {
     status: item.hasPendingRequest ? 'pending' : 'all',
     joined: Boolean(item.isMember),
     pending: Boolean(item.hasPendingRequest),
+    joinModeKey:
+      item.joinModeKey || (item.joinMode === 'free' ? 'open' : item.joinMode === 'invite' ? 'invite' : 'audit'),
     coverUrl: item.coverUrl || '',
     coverClass,
-    icon: 'friends-o'
+    icon: 'friends-o',
+    myMemberRealName: item.myMemberRealName != null ? String(item.myMemberRealName) : ''
   }
 }
 
 function showCreateTip() {
   showToast('创建团体功能即将开放')
+}
+
+function memberDisplayNameTrimmed(g) {
+  return String(g.myMemberRealName ?? '').trim()
+}
+
+function memberDisplayStripVisible(group) {
+  return userStore.isLoggedIn && group.joined && !group.pending
+}
+
+async function openMemberDisplayPrompt(group) {
+  if (!memberDisplayStripVisible(group) || patchingDisplayGroupId.value === group.id) return
+  const hasName = Boolean(memberDisplayNameTrimmed(group))
+  const title = supplementMemberDisplayTitle(hasName)
+  const def = memberDisplayNameTrimmed(group)
+  const input = window.prompt(title, def)
+  if (input === null) return
+  const memberRealName = String(input).trim()
+  if (!memberRealName) {
+    showToast({ message: ERR_EMPTY_DISPLAY_NAME_PATCH, type: 'fail' })
+    return
+  }
+  patchingDisplayGroupId.value = group.id
+  try {
+    await patchMyGroupMemberRealName(group.id, memberRealName)
+    await Promise.all([loadGroups(), loadHot()])
+    showToast('已保存')
+  } catch (error) {
+    showToast({ message: error?.message || '保存失败', type: 'fail' })
+  } finally {
+    patchingDisplayGroupId.value = null
+  }
 }
 
 async function handleJoin(group) {
@@ -308,8 +383,26 @@ async function handleJoin(group) {
     return
   }
 
+  const rawName = window.prompt(JOIN_MEMBER_REAL_NAME_PROMPT, '')
+  if (rawName === null) return
+  const memberRealName = String(rawName).trim()
+  if (!memberRealName) {
+    showToast({ message: ERR_EMPTY_MEMBER_REAL_NAME, type: 'fail' })
+    return
+  }
+  let applyMessage = ''
+  if (group.joinModeKey === 'audit') {
+    const rawMsg = window.prompt(AUDIT_JOIN_MESSAGE_PROMPT, '')
+    if (rawMsg === null) return
+    applyMessage = String(rawMsg).trim()
+    if (!applyMessage) {
+      showToast({ message: ERR_EMPTY_AUDIT_JOIN_MESSAGE, type: 'fail' })
+      return
+    }
+  }
+
   try {
-    const res = await joinGroup(group.id)
+    const res = await joinGroup(group.id, { message: applyMessage, memberRealName })
     showToast(res?.message || '申请已提交')
     await Promise.all([loadGroups(), loadHot()])
   } catch (error) {
@@ -356,7 +449,7 @@ async function handleJoin(group) {
 
 .create-btn,
 .hero-btn,
-.group-actions button,
+.group-actions-row button,
 .hot-item button {
   border: none;
   cursor: pointer;
@@ -615,11 +708,56 @@ async function handleJoin(group) {
 
 .group-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin-top: 9px;
 }
 
-.group-actions button,
+.member-display-strip {
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px dashed rgba(79, 99, 246, 0.35);
+  background: rgba(79, 99, 246, 0.06);
+}
+
+.member-display-strip-hint,
+.member-display-strip-name {
+  margin: 0 0 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.member-display-strip-name {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.member-display-strip-btn {
+  width: 100%;
+  height: 30px;
+  border-radius: 10px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4f63f6;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.member-display-strip-btn:disabled {
+  opacity: 0.65;
+}
+
+.group-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.group-actions-row button,
 .joined-label,
 .hot-item button {
   min-width: 64px;
@@ -628,7 +766,7 @@ async function handleJoin(group) {
   font-size: 12px;
 }
 
-.group-actions button,
+.group-actions-row button,
 .hot-item button {
   color: #4f63f6;
   background: #f2f4ff;

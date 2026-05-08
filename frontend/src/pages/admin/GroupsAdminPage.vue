@@ -136,10 +136,10 @@ const sort = ref('members')
 
 const typeOptions = [
   { label: '地区团体', value: 'region' },
-  { label: '教会团体', value: 'church' },
+  { label: '社群团体', value: 'church' },
   { label: '学习小组', value: 'study' },
   { label: '兴趣团体', value: 'interest' },
-  { label: '生活团契', value: 'family' },
+  { label: '生活小组', value: 'family' },
   { label: '事工团队', value: 'service' }
 ]
 

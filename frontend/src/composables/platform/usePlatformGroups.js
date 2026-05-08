@@ -53,8 +53,8 @@ export function usePlatformGroups(groupIdRef = null) {
     }
   }
 
-  async function applyJoin(id, message = '') {
-    await joinGroup(id, message)
+  async function applyJoin(id, { message = '', memberRealName = '' } = {}) {
+    await joinGroup(id, { message, memberRealName })
     await loadDetail(id)
   }
 

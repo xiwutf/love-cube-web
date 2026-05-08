@@ -11,10 +11,10 @@ public final class PlatformGroupSupport {
 
     private static final Map<String, String> TYPE_LABELS = Map.of(
             "region", "地区团体",
-            "church", "教会团体",
+            "church", "社群团体",
             "study", "学习小组",
             "interest", "兴趣团体",
-            "family", "生活团契",
+            "family", "生活小组",
             "service", "事工团队"
     );
 
@@ -106,6 +106,9 @@ public final class PlatformGroupSupport {
             item.put("myRole", m.getRole());
             item.put("hasPendingRequest", isPending);
             item.put("myStatus", isManager ? "managed" : isApproved ? "joined" : isPending ? "pending" : "none");
+            if (isApproved) {
+                item.put("myMemberRealName", m.getMemberRealName());
+            }
         } else {
             item.put("isMember", false);
             item.put("managed", false);
