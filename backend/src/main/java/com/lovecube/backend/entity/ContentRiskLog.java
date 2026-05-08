@@ -31,11 +31,11 @@ public class ContentRiskLog {
     @Column(name = "context", length = 100)
     private String context;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
-    void prePersist() {
+    protected void prePersist() {
         createdAt = LocalDateTime.now();
     }
 }
