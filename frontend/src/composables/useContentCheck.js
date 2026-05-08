@@ -24,7 +24,10 @@ export function useContentCheck() {
     state.checking = true
     try {
       const result = await checkContent(text, context)
-      if (result.riskLevel === 'low') return { ok: true }
+      if (result.riskLevel === 'low') {
+        state.checking = false
+        return { ok: true }
+      }
       state.suggestion = result.suggestion || ''
       state.hitWords = result.hitWords || []
       state.riskLevel = result.riskLevel
@@ -34,9 +37,8 @@ export function useContentCheck() {
       })
     } catch {
       // 检测失败不阻断发布
-      return { ok: true }
-    } finally {
       state.checking = false
+      return { ok: true }
     }
   }
 
@@ -55,6 +57,7 @@ export function useContentCheck() {
 
   function _close() {
     state.show = false
+    state.checking = false
     state.suggestion = ''
     state.hitWords = []
     state.riskLevel = ''

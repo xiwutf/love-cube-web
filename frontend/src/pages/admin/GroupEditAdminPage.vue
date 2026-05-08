@@ -96,7 +96,7 @@
           </label>
         </div>
         <div class="form-actions">
-          <button type="button" class="admin-btn primary" :disabled="saving" @click="saveInfo">{{ saving ? '保存中...' : '保存基础信息' }}</button>
+          <button type="button" class="admin-btn primary" :disabled="saving || contentCheck.state.checking" @click="saveInfo">{{ saving ? '保存中...' : '保存基础信息' }}</button>
         </div>
       </section>
 
