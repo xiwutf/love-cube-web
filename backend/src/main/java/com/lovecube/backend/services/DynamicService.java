@@ -3,9 +3,11 @@ package com.lovecube.backend.services;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lovecube.backend.entity.Dynamic;
+import com.lovecube.backend.entity.DynamicComment;
 import com.lovecube.backend.entity.DynamicLike;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
+import com.lovecube.backend.repository.DynamicCommentRepository;
 import com.lovecube.backend.repository.DynamicLikeRepository;
 import com.lovecube.backend.repository.DynamicRepository;
 import com.lovecube.backend.repository.UserRepository;
@@ -16,9 +18,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +35,9 @@ public class DynamicService {
 
     @Autowired
     private DynamicLikeRepository dynamicLikeRepository;
+
+    @Autowired
+    private DynamicCommentRepository dynamicCommentRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -144,6 +152,121 @@ public class DynamicService {
 
     public Long getMyDynamicCount(Long userId) {
         return dynamicRepository.countByUserIdAndIsDeletedFalseAndSceneType(userId, SCENE_TYPE_FELLOWSHIP);
+    }
+
+    public Map<String, Object> listDynamicComments(Long dynamicId, int pageNum, int pageSize) {
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
+        if (dynamic == null) {
+            throw new RuntimeException("动态不存在");
+        }
+        int safePage = Math.max(1, pageNum);
+        int safeSize = Math.min(100, Math.max(1, pageSize));
+        Page<DynamicComment> pageResult = dynamicCommentRepository.findByDynamicIdAndStatusOrderByCreatedAtAsc(
+                dynamicId, "published", PageRequest.of(safePage - 1, safeSize));
+        List<DynamicComment> comments = pageResult.getContent();
+        Set<Long> userIds = comments.stream().map(DynamicComment::getUserId).collect(Collectors.toSet());
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = comments.stream().map(c -> {
+            User u = userMap.get(c.getUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("userId", c.getUserId());
+            item.put("content", c.getContent());
+            item.put("createdAt", c.getCreatedAt());
+            item.put("authorName", u != null && u.getUsername() != null ? u.getUsername() : "用户");
+            item.put("authorAvatarUrl", u != null && u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
+            return item;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("total", pageResult.getTotalElements());
+        result.put("page", safePage);
+        result.put("pageSize", safeSize);
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> addDynamicComment(Long dynamicId, Long userId, String content) {
+        if (content == null || content.isBlank()) {
+            throw new RuntimeException("评论内容不能为空");
+        }
+        String text = content.trim();
+        if (text.length() > 500) {
+            throw new RuntimeException("评论最多 500 字");
+        }
+
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
+        if (dynamic == null) {
+            throw new RuntimeException("动态不存在");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        DynamicComment comment = new DynamicComment();
+        comment.setDynamicId(dynamicId);
+        comment.setUserId(userId);
+        comment.setContent(text);
+        comment.setStatus("published");
+        comment.setCreatedAt(now);
+        comment.setUpdatedAt(now);
+        dynamicCommentRepository.save(comment);
+
+        dynamic.setCommentCount((dynamic.getCommentCount() == null ? 0 : dynamic.getCommentCount()) + 1);
+        dynamicRepository.save(dynamic);
+
+        User self = userRepository.findById(userId).orElse(null);
+        if (!dynamic.getUserId().equals(userId)) {
+            String actorName = self != null && self.getUsername() != null ? self.getUsername() : "有人";
+            String preview = text.length() > 50 ? text.substring(0, 50) + "…" : text;
+            try {
+                notificationService.createNotification(
+                        dynamic.getUserId(),
+                        NotificationCatalog.TYPE_CONTENT_COMMENTED,
+                        actorName + " 评论了你的动态",
+                        actorName + "：" + preview,
+                        "/fellowship/dynamic",
+                        "DYNAMIC",
+                        String.valueOf(dynamicId));
+            } catch (Exception ignored) {
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", comment.getId());
+        result.put("userId", userId);
+        result.put("content", comment.getContent());
+        result.put("createdAt", comment.getCreatedAt());
+        result.put("authorName", self != null && self.getUsername() != null ? self.getUsername() : "用户");
+        result.put("authorAvatarUrl", self != null && self.getProfilePhoto() != null ? self.getProfilePhoto() : "");
+        result.put("commentCount", dynamic.getCommentCount());
+        return result;
+    }
+
+    @Transactional
+    public void deleteDynamicComment(Long dynamicId, Long commentId, Long userId) {
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
+        if (dynamic == null) {
+            throw new RuntimeException("动态不存在");
+        }
+        DynamicComment comment = dynamicCommentRepository.findById(commentId).orElse(null);
+        if (comment == null
+                || !comment.getDynamicId().equals(dynamicId)
+                || !"published".equals(comment.getStatus())) {
+            throw new RuntimeException("评论不存在");
+        }
+        boolean isCommentAuthor = comment.getUserId().equals(userId);
+        boolean isPostAuthor = dynamic.getUserId().equals(userId);
+        if (!isCommentAuthor && !isPostAuthor) {
+            throw new RuntimeException("无权限删除此评论");
+        }
+
+        comment.setStatus("deleted");
+        comment.setUpdatedAt(LocalDateTime.now());
+        dynamicCommentRepository.save(comment);
+        dynamic.setCommentCount(Math.max(0, (dynamic.getCommentCount() == null ? 0 : dynamic.getCommentCount()) - 1));
+        dynamicRepository.save(dynamic);
     }
 
     private Dynamic enrichDynamicInfo(Dynamic dynamic, Long currentUserId) {

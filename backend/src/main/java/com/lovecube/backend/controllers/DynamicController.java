@@ -185,6 +185,73 @@ public class DynamicController {
     }
 
     /**
+     * 动态评论列表
+     */
+    @GetMapping("/dynamics/{id}/comments")
+    public ResponseEntity<?> listDynamicComments(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (getCurrentUserId(authHeader) == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+            }
+            Map<String, Object> result = dynamicService.listDynamicComments(id, pageNum, pageSize);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "加载评论失败"));
+        }
+    }
+
+    /**
+     * 发表评论
+     */
+    @PostMapping("/dynamics/{id}/comments")
+    public ResponseEntity<?> addDynamicComment(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Long currentUserId = getCurrentUserId(authHeader);
+            if (currentUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+            }
+            String content = request.get("content") != null ? String.valueOf(request.get("content")) : "";
+            Map<String, Object> result = dynamicService.addDynamicComment(id, currentUserId, content);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "评论失败"));
+        }
+    }
+
+    /**
+     * 删除评论（评论者本人或动态发布者可删）
+     */
+    @DeleteMapping("/dynamics/{id}/comments/{commentId}")
+    public ResponseEntity<?> deleteDynamicComment(
+            @PathVariable Long id,
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            Long currentUserId = getCurrentUserId(authHeader);
+            if (currentUserId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+            }
+            dynamicService.deleteDynamicComment(id, commentId, currentUserId);
+            return ResponseEntity.ok(Map.of("message", "已删除"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "删除失败"));
+        }
+    }
+
+    /**
      * 从Authorization头中获取当前用户ID
      */
     private Long getCurrentUserId(String authHeader) {
