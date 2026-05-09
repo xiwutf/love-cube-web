@@ -96,10 +96,17 @@
     </section>
 
     <section class="admin-table-wrap">
+      <div class="visitor-filter-bar">
+        <label class="filter-check">
+          <input v-model="visitors.loggedInOnly" type="checkbox" @change="onLoggedInOnlyChange">
+          <span>仅看已登录访客</span>
+        </label>
+      </div>
       <table class="admin-table">
         <thead>
           <tr>
             <th>访客ID</th>
+            <th>账号</th>
             <th>访问路径</th>
             <th>IP</th>
             <th>设备 / 浏览器</th>
@@ -110,6 +117,7 @@
           <template v-if="visitors.items.length">
             <tr v-for="item in visitors.items" :key="item.id">
               <td>{{ item.visitorId }}</td>
+              <td>{{ formatAccount(item) }}</td>
               <td>{{ item.path || '/' }}</td>
               <td>{{ item.ip || '-' }}</td>
               <td>{{ item.deviceType || 'other' }} / {{ item.browser || 'other' }}</td>
@@ -117,7 +125,7 @@
             </tr>
           </template>
           <tr v-else-if="!loading">
-            <td colspan="5" class="empty-text">暂无访客明细（汇总数据来自访问日志；若长期为空请确认前端已启用访问采集）</td>
+            <td colspan="6" class="empty-text">暂无访客明细（汇总数据来自访问日志；若长期为空请确认前端已启用访问采集）</td>
           </tr>
         </tbody>
       </table>
@@ -162,7 +170,7 @@ const trend = reactive({ points: [] })
 const topPages = reactive({ items: [] })
 const sources = reactive({ items: [] })
 const client = reactive({ devices: [], browsers: [], os: [] })
-const visitors = reactive({ total: 0, page: 1, pageSize: 20, items: [] })
+const visitors = reactive({ total: 0, page: 1, pageSize: 20, loggedInOnly: false, items: [] })
 const topPagesPage = ref(1)
 const topPagesPageSize = 6
 
@@ -187,7 +195,7 @@ async function loadAll() {
       getAdminAnalyticsTopPages(range.value),
       getAdminAnalyticsSources(range.value),
       getAdminAnalyticsClientDistribution(range.value),
-      getAdminAnalyticsVisitors(visitors.page, visitors.pageSize)
+      getAdminAnalyticsVisitors(visitors.page, visitors.pageSize, visitors.loggedInOnly)
     ])
     assign(overview, overviewRes)
     assign(trend, trendRes, { points: [] })
@@ -211,6 +219,11 @@ function changePage(nextPage) {
   loadAll()
 }
 
+function onLoggedInOnlyChange() {
+  visitors.page = 1
+  loadAll()
+}
+
 function changeTopPagesPage(nextPage) {
   topPagesPage.value = Math.min(topPagesTotalPages.value, Math.max(1, nextPage))
 }
@@ -220,6 +233,15 @@ function formatTime(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+function formatAccount(item) {
+  if (!item) return '-'
+  const uid = item.userId ? `#${item.userId}` : ''
+  const username = item.username ? String(item.username) : ''
+  const phone = item.phone ? String(item.phone) : ''
+  if (!uid && !username && !phone) return '未登录访客'
+  return [uid, username, phone].filter(Boolean).join(' / ')
 }
 
 watch(range, () => {
@@ -267,6 +289,18 @@ onMounted(loadAll)
 .pagination-bar {
   display: flex; justify-content: flex-end; align-items: center; gap: 10px;
   padding: 10px 14px; border-top: 1px solid var(--lc-border);
+}
+.visitor-filter-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px 0;
+}
+.filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--lc-subtle);
 }
 .mini-pagination {
   display: flex;

@@ -24,6 +24,6 @@ export function getAdminAnalyticsClientDistribution(range = '7d') {
   return request.get('/admin/analytics/client-distribution', { params: { range } })
 }
 
-export function getAdminAnalyticsVisitors(page = 1, pageSize = 20) {
-  return request.get('/admin/analytics/visitors', { params: { page, pageSize } })
+export function getAdminAnalyticsVisitors(page = 1, pageSize = 20, loggedInOnly = false) {
+  return request.get('/admin/analytics/visitors', { params: { page, pageSize, loggedInOnly } })
 }

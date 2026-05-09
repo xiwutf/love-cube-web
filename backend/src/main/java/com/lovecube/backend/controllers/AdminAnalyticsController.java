@@ -154,26 +154,33 @@ public class AdminAnalyticsController {
     public Map<String, Object> getVisitors(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize,
+            @RequestParam(value = "loggedInOnly", defaultValue = "false") boolean loggedInOnly
     ) {
         adminAuthService.requirePermission(authHeader, PermissionConstants.SYSTEM_MANAGE);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 5), 100);
         int offset = (safePage - 1) * safePageSize;
-        List<Map<String, Object>> items = siteVisitLogRepository.findLatestVisitors(offset, safePageSize)
+        List<Object[]> rows = loggedInOnly
+                ? siteVisitLogRepository.findLatestLoggedInVisitors(offset, safePageSize)
+                : siteVisitLogRepository.findLatestVisitors(offset, safePageSize);
+        List<Map<String, Object>> items = rows
                 .stream()
                 .map(row -> Map.<String, Object>of(
                         "id", toLong(row[0]),
                         "visitorId", row[1] == null ? "-" : String.valueOf(row[1]),
-                        "path", row[2] == null ? "/" : String.valueOf(row[2]),
-                        "ip", row[3] == null ? "-" : String.valueOf(row[3]),
-                        "deviceType", row[4] == null ? "other" : String.valueOf(row[4]),
-                        "browser", row[5] == null ? "other" : String.valueOf(row[5]),
-                        "updatedAt", row[6] == null ? null : String.valueOf(row[6])
+                        "userId", row[2] == null ? null : toLong(row[2]),
+                        "username", row[3] == null ? null : String.valueOf(row[3]),
+                        "phone", row[4] == null ? null : String.valueOf(row[4]),
+                        "path", row[5] == null ? "/" : String.valueOf(row[5]),
+                        "ip", row[6] == null ? "-" : String.valueOf(row[6]),
+                        "deviceType", row[7] == null ? "other" : String.valueOf(row[7]),
+                        "browser", row[8] == null ? "other" : String.valueOf(row[8]),
+                        "updatedAt", row[9] == null ? null : String.valueOf(row[9])
                 ))
                 .toList();
         return Map.of(
-                "total", siteVisitLogRepository.countDistinctVisitors(),
+                "total", loggedInOnly ? siteVisitLogRepository.countDistinctLoggedInVisitors() : siteVisitLogRepository.countDistinctVisitors(),
                 "items", items
         );
     }

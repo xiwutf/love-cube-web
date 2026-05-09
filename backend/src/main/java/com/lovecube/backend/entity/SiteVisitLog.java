@@ -16,6 +16,9 @@ public class SiteVisitLog {
     @Column(name = "visitor_id", nullable = false, length = 64)
     private String visitorId;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     @Column(name = "path", nullable = false, length = 255)
     private String path;
 

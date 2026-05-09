@@ -66,20 +66,45 @@ public interface SiteVisitLogRepository extends JpaRepository<SiteVisitLog, Long
     List<Object[]> aggregateOs(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query(value = """
-            SELECT l.id, l.visitor_id, l.path, l.ip_address, l.device_type, l.browser, l.created_at
+            SELECT l.id, l.visitor_id, l.user_id, usr.username, usr.phone_number, l.path, l.ip_address, l.device_type, l.browser, l.created_at
             FROM site_visit_log l
             INNER JOIN (
               SELECT visitor_id, MAX(created_at) AS last_at
               FROM site_visit_log
               GROUP BY visitor_id
-            ) u ON u.visitor_id = l.visitor_id AND u.last_at = l.created_at
+            ) latest ON latest.visitor_id = l.visitor_id AND latest.last_at = l.created_at
+            LEFT JOIN users usr ON usr.userid = l.user_id
             ORDER BY l.created_at DESC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
     List<Object[]> findLatestVisitors(@Param("offset") int offset, @Param("limit") int limit);
 
+    @Query(value = """
+            SELECT l.id, l.visitor_id, l.user_id, usr.username, usr.phone_number, l.path, l.ip_address, l.device_type, l.browser, l.created_at
+            FROM site_visit_log l
+            INNER JOIN (
+              SELECT visitor_id, MAX(created_at) AS last_at
+              FROM site_visit_log
+              GROUP BY visitor_id
+            ) latest ON latest.visitor_id = l.visitor_id AND latest.last_at = l.created_at
+            INNER JOIN users usr ON usr.userid = l.user_id
+            ORDER BY l.created_at DESC
+            LIMIT :limit OFFSET :offset
+            """, nativeQuery = true)
+    List<Object[]> findLatestLoggedInVisitors(@Param("offset") int offset, @Param("limit") int limit);
+
     @Query(value = "SELECT COUNT(DISTINCT visitor_id) FROM site_visit_log", nativeQuery = true)
     long countDistinctVisitors();
+
+    @Query(value = """
+            SELECT COUNT(*) FROM (
+              SELECT visitor_id
+              FROM site_visit_log
+              WHERE user_id IS NOT NULL
+              GROUP BY visitor_id
+            ) t
+            """, nativeQuery = true)
+    long countDistinctLoggedInVisitors();
 
     @Query(value = """
             SELECT referrer

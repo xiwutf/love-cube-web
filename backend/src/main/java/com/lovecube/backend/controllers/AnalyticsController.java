@@ -1,7 +1,9 @@
 package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.SiteVisitLog;
+import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.SiteVisitLogRepository;
+import com.lovecube.backend.services.AdminAuthService;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,9 +13,11 @@ import java.util.Map;
 @RequestMapping("/api/analytics")
 public class AnalyticsController {
     private final SiteVisitLogRepository siteVisitLogRepository;
+    private final AdminAuthService adminAuthService;
 
-    public AnalyticsController(SiteVisitLogRepository siteVisitLogRepository) {
+    public AnalyticsController(SiteVisitLogRepository siteVisitLogRepository, AdminAuthService adminAuthService) {
         this.siteVisitLogRepository = siteVisitLogRepository;
+        this.adminAuthService = adminAuthService;
     }
 
     @PostMapping("/track")
@@ -34,6 +38,7 @@ public class AnalyticsController {
         String userAgent = request.getHeader("User-Agent");
         SiteVisitLog log = new SiteVisitLog();
         log.setVisitorId(visitorId);
+        log.setUserId(resolveCurrentUserId(request.getHeader("Authorization")));
         log.setPath(path);
         log.setReferrer(toText(payload.get("referrer")));
         log.setIpAddress(resolveClientIp(request));
@@ -43,6 +48,18 @@ public class AnalyticsController {
         log.setOs(resolveOs(userAgent));
         siteVisitLogRepository.save(log);
         return Map.of("ok", true);
+    }
+
+    private Long resolveCurrentUserId(String authHeader) {
+        if (authHeader == null || authHeader.isBlank()) {
+            return null;
+        }
+        try {
+            User user = adminAuthService.requireUser(authHeader);
+            return user == null ? null : user.getUserid();
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     private String toText(Object value) {

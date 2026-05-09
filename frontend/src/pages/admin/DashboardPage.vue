@@ -16,7 +16,8 @@
           <div class="stat-content">
             <p>{{ item.label }}</p>
             <strong>{{ formatNumber(item.value) }}</strong>
-                <span>{{ item.meta || '较昨日' }} <em :class="item.delta >= 0 ? 'up' : 'down'">{{ formatDelta(item.delta) }}</em></span>
+            <span>{{ item.meta || '较昨日' }} <em :class="item.delta >= 0 ? 'up' : 'down'">{{ formatDelta(item.delta) }}</em></span>
+            <small v-if="item.detail" class="stat-detail">{{ item.detail }}</small>
           </div>
           <svg class="sparkline" viewBox="0 0 92 36" aria-hidden="true">
             <polyline :class="`spark-${item.tone}`" :points="item.spark"></polyline>
@@ -202,6 +203,9 @@ const emptyDashboardData = {
     fellowshipProfilesTotal: 0,
     fellowshipProfilesBasicFilled: 0
   },
+  engagementData: {
+    dynamicsSevenDays: 0
+  },
   trends: {
     labels: [],
     newUsers: [],
@@ -296,6 +300,7 @@ function mergeDashboardData(apiData = {}) {
     localResourceData: { ...emptyDashboardData.localResourceData, ...(apiData.localResourceData || {}) },
     helpAndShareData: { ...emptyDashboardData.helpAndShareData, ...(apiData.helpAndShareData || {}) },
     growthData: { ...emptyDashboardData.growthData, ...(apiData.growthData || {}) },
+    engagementData: { ...emptyDashboardData.engagementData, ...(apiData.engagementData || {}) },
     trends: { ...emptyDashboardData.trends, ...(apiData.trends || {}) },
     activityRatio: { ...emptyDashboardData.activityRatio, ...(apiData.activityRatio || {}) },
     recent: { ...emptyDashboardData.recent, ...(apiData.recent || {}) }
@@ -320,6 +325,13 @@ const profileCompletionRate = computed(() => {
   return Math.round((profileCompletedCount.value / profileTotalCount.value) * 1000) / 10
 })
 
+const pendingReviewBreakdown = computed(() => ({
+  dynamics7d: pick('engagementData', 'dynamicsSevenDays'),
+  shares: pick('helpAndShareData', 'positiveSharesPending'),
+  helps: pick('helpAndShareData', 'helpRequestsPending'),
+  resources: pick('localResourceData', 'pendingLocalResources')
+}))
+
 const overviewCards = computed(() => [
   {
     key: 'users',
@@ -341,9 +353,11 @@ const overviewCards = computed(() => [
   },
   {
     key: 'review',
-    label: '待审核内容',
+    label: '待处理内容总数',
     value: pick('contentData', 'pendingContent'),
     delta: trendDelta(trends.value.contentPublish),
+    meta: '较昨日',
+    detail: `动(7天)${formatNumber(pendingReviewBreakdown.value.dynamics7d)} / 分享${formatNumber(pendingReviewBreakdown.value.shares)} / 互助${formatNumber(pendingReviewBreakdown.value.helps)} / 资源${formatNumber(pendingReviewBreakdown.value.resources)}`,
     tone: 'orange',
     icon: '审',
     spark: sparkPoints(trends.value.contentPublish)
@@ -363,9 +377,9 @@ const overviewCards = computed(() => [
 const todoItems = computed(() => [
   {
     key: 'dynamics',
-    title: '待审核动态',
-    count: pick('fellowshipData', 'pendingDynamics'),
-    desc: '待审核用户发布的动态',
+    title: '近7天动态待关注',
+    count: pick('engagementData', 'dynamicsSevenDays'),
+    desc: '近7天新增动态，进入后可逐条核对',
     tone: 'red',
     icon: '动',
     to: '/admin/fellowship-dynamics'
@@ -613,6 +627,14 @@ onMounted(() => {
   margin: 0;
   color: var(--lc-muted);
   font-size: 13px;
+}
+
+.stat-content .stat-detail {
+  display: block;
+  margin-top: 4px;
+  color: var(--lc-subtle);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .stat-content strong {
