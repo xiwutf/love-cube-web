@@ -23,6 +23,7 @@ export default {
     { path: 'platform/growth', component: () => import('@/pages/platform/GrowthCenterPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/security', component: () => import('@/pages/platform/MySecurityPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/feedback', component: () => import('@/pages/platform/MyFeedbackPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    { path: 'feedback', component: () => import('@/pages/platform/MyFeedbackPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/verify', component: () => import('@/pages/platform/MyVerifyPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/privacy', component: () => import('@/pages/platform/MyPrivacyPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me/notifications', component: () => import('@/pages/platform/MyNotificationsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
