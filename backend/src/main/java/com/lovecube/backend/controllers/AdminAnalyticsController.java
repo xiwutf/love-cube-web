@@ -164,21 +164,7 @@ public class AdminAnalyticsController {
         List<Object[]> rows = loggedInOnly
                 ? siteVisitLogRepository.findLatestLoggedInVisitors(offset, safePageSize)
                 : siteVisitLogRepository.findLatestVisitors(offset, safePageSize);
-        List<Map<String, Object>> items = rows
-                .stream()
-                .map(row -> Map.<String, Object>of(
-                        "id", toLong(row[0]),
-                        "visitorId", row[1] == null ? "-" : String.valueOf(row[1]),
-                        "userId", row[2] == null ? null : toLong(row[2]),
-                        "username", row[3] == null ? null : String.valueOf(row[3]),
-                        "phone", row[4] == null ? null : String.valueOf(row[4]),
-                        "path", row[5] == null ? "/" : String.valueOf(row[5]),
-                        "ip", row[6] == null ? "-" : String.valueOf(row[6]),
-                        "deviceType", row[7] == null ? "other" : String.valueOf(row[7]),
-                        "browser", row[8] == null ? "other" : String.valueOf(row[8]),
-                        "updatedAt", row[9] == null ? null : String.valueOf(row[9])
-                ))
-                .toList();
+        List<Map<String, Object>> items = rows.stream().map(this::visitorRowToMap).toList();
         return Map.of(
                 "total", loggedInOnly ? siteVisitLogRepository.countDistinctLoggedInVisitors() : siteVisitLogRepository.countDistinctVisitors(),
                 "items", items
@@ -212,5 +198,21 @@ public class AdminAnalyticsController {
         } catch (Exception ignore) {
             return 0L;
         }
+    }
+
+    /** {@link Map#of} 不允许 null 值；访客未登录时 user / username / phone 可能为 null。 */
+    private Map<String, Object> visitorRowToMap(Object[] row) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", toLong(row[0]));
+        m.put("visitorId", row[1] == null ? "-" : String.valueOf(row[1]));
+        m.put("userId", row[2] == null ? null : toLong(row[2]));
+        m.put("username", row[3] == null ? null : String.valueOf(row[3]));
+        m.put("phone", row[4] == null ? null : String.valueOf(row[4]));
+        m.put("path", row[5] == null ? "/" : String.valueOf(row[5]));
+        m.put("ip", row[6] == null ? "-" : String.valueOf(row[6]));
+        m.put("deviceType", row[7] == null ? "other" : String.valueOf(row[7]));
+        m.put("browser", row[8] == null ? "other" : String.valueOf(row[8]));
+        m.put("updatedAt", row[9] == null ? null : String.valueOf(row[9]));
+        return m;
     }
 }
