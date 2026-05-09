@@ -482,7 +482,7 @@ async function showMenu(item) {
 .comment-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .comment-author { font-size: 14px; font-weight: 600; color: #333; }
 .comment-time { font-size: 11px; color: #bbb; }
-.comment-text { font-size: 14px; color: #444; line-height: 1.5; margin: 0; word-break: break-word; }
+.comment-text { font-size: 14px; color: #444; line-height: 1.5; margin: 0; overflow-wrap: break-word; }
 .comment-del {
   flex-shrink: 0;
   border: none;
