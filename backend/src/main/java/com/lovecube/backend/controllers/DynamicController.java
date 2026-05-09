@@ -192,12 +192,13 @@ public class DynamicController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "1") int pageNum,
             @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "false") boolean newestFirst,
             @RequestHeader("Authorization") String authHeader) {
         try {
             if (getCurrentUserId(authHeader) == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
             }
-            Map<String, Object> result = dynamicService.listDynamicComments(id, pageNum, pageSize);
+            Map<String, Object> result = dynamicService.listDynamicComments(id, pageNum, pageSize, newestFirst);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();

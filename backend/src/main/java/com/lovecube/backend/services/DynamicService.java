@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -154,16 +156,22 @@ public class DynamicService {
         return dynamicRepository.countByUserIdAndIsDeletedFalseAndSceneType(userId, SCENE_TYPE_FELLOWSHIP);
     }
 
-    public Map<String, Object> listDynamicComments(Long dynamicId, int pageNum, int pageSize) {
+    public Map<String, Object> listDynamicComments(Long dynamicId, int pageNum, int pageSize, boolean newestFirst) {
         Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
         if (dynamic == null) {
             throw new RuntimeException("动态不存在");
         }
         int safePage = Math.max(1, pageNum);
         int safeSize = Math.min(100, Math.max(1, pageSize));
-        Page<DynamicComment> pageResult = dynamicCommentRepository.findByDynamicIdAndStatusOrderByCreatedAtAsc(
-                dynamicId, "published", PageRequest.of(safePage - 1, safeSize));
-        List<DynamicComment> comments = pageResult.getContent();
+        Page<DynamicComment> pageResult = newestFirst
+                ? dynamicCommentRepository.findByDynamicIdAndStatusOrderByCreatedAtDesc(
+                        dynamicId, "published", PageRequest.of(safePage - 1, safeSize))
+                : dynamicCommentRepository.findByDynamicIdAndStatusOrderByCreatedAtAsc(
+                        dynamicId, "published", PageRequest.of(safePage - 1, safeSize));
+        List<DynamicComment> comments = new ArrayList<>(pageResult.getContent());
+        if (newestFirst) {
+            Collections.reverse(comments);
+        }
         Set<Long> userIds = comments.stream().map(DynamicComment::getUserId).collect(Collectors.toSet());
         Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u));

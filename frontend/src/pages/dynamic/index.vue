@@ -53,6 +53,41 @@
               <span>{{ item.commentCount || 0 }}</span>
             </div>
           </div>
+
+          <div
+            v-if="Number(item.commentCount) > 0"
+            class="comment-preview"
+            @click="onComment(item)"
+          >
+            <template v-if="item.commentPreview === undefined">
+              <p class="comment-preview-loading">评论加载中…</p>
+            </template>
+            <template v-else>
+              <p
+                v-for="c in item.commentPreview"
+                :key="c.id"
+                class="comment-preview-line"
+              >
+                <span class="preview-name">{{ c.authorName || '用户' }}</span><span class="preview-colon">：</span><span class="preview-text">{{ previewCommentBody(c.content) }}</span>
+              </p>
+              <p
+                v-if="!item.commentPreview.length && Number(item.commentCount) > 0"
+                class="comment-preview-more"
+              >
+                {{
+                  Number(item.commentCount) > PREVIEW_COMMENT_LIMIT
+                    ? `查看全部 ${item.commentCount} 条评论`
+                    : '轻触查看评论'
+                }}
+              </p>
+              <p
+                v-else-if="item.commentPreview.length && Number(item.commentCount) > PREVIEW_COMMENT_LIMIT"
+                class="comment-preview-more"
+              >
+                查看全部 {{ item.commentCount }} 条评论
+              </p>
+            </template>
+          </div>
         </div>
 
         <van-empty v-if="!loading && !list.length" description="还没有动态，去发一条吧" image-size="100" />
@@ -166,6 +201,9 @@ const activeDynamic = ref(null)
 const deletingCommentId = ref(null)
 let page = 1
 const PAGE_SIZE = 10
+/** 动态卡片内仅展示最新几条评论预览 */
+const PREVIEW_COMMENT_LIMIT = 3
+const PREVIEW_BODY_MAX = 72
 
 async function load() {
   if (noMore.value) return
@@ -174,6 +212,11 @@ async function load() {
     const data = await getDynamics(page, PAGE_SIZE)
     const items = Array.isArray(data) ? data : (data?.list || data?.items || data?.records || data?.content || [])
     list.value.push(...items)
+    items.forEach((it) => {
+      if (Number(it.commentCount) > 0) {
+        void refreshCommentPreview(it)
+      }
+    })
     if (items.length < PAGE_SIZE || data?.hasNext === false) noMore.value = true
     else page++
   } catch (e) {
@@ -251,6 +294,27 @@ function goUserProfile(item) {
   router.push(`/fellowship/user-profile/${uid}`)
 }
 
+function previewCommentBody(text) {
+  const s = String(text || '').trim()
+  if (s.length <= PREVIEW_BODY_MAX) return s
+  return `${s.slice(0, PREVIEW_BODY_MAX)}…`
+}
+
+async function refreshCommentPreview(item) {
+  if (!item?.id) return
+  if (Number(item.commentCount) <= 0) {
+    item.commentPreview = []
+    return
+  }
+  try {
+    const data = await getDynamicComments(item.id, 1, PREVIEW_COMMENT_LIMIT, { newestFirst: true })
+    const rows = data?.items || data?.list || []
+    item.commentPreview = Array.isArray(rows) ? rows : []
+  } catch {
+    item.commentPreview = []
+  }
+}
+
 async function onComment(item) {
   if (!item?.id) return
   activeDynamic.value = item
@@ -297,6 +361,7 @@ async function submitComment() {
       activeDynamic.value.commentCount = (activeDynamic.value.commentCount || 0) + 1
     }
     await loadCommentsForActive()
+    await refreshCommentPreview(activeDynamic.value)
     showToast({ message: '已发送', type: 'success' })
   } catch (e) {
     showToast({ message: e?.message || '发送失败', type: 'fail' })
@@ -318,6 +383,7 @@ async function removeComment(c) {
     await deleteDynamicComment(dynId, c.id)
     activeDynamic.value.commentCount = Math.max(0, (activeDynamic.value.commentCount || 0) - 1)
     await loadCommentsForActive()
+    await refreshCommentPreview(activeDynamic.value)
     showToast({ message: '已删除', type: 'success' })
   } catch (e) {
     showToast({ message: e?.message || '删除失败', type: 'fail' })
@@ -418,6 +484,34 @@ async function showMenu(item) {
 .comment-btn {
   display: flex; align-items: center; gap: 4px;
   font-size: 13px; color: #999; padding: 4px 8px; cursor: pointer;
+}
+
+.comment-preview {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f5f6f8;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.comment-preview-loading {
+  margin: 0;
+  font-size: 12px;
+  color: #999;
+}
+.comment-preview-line {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+.comment-preview-line:last-of-type { margin-bottom: 0; }
+.preview-name { color: #576b95; font-weight: 600; }
+.preview-colon { color: #576b95; }
+.preview-text { color: #333; }
+.comment-preview-more {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #969799;
 }
 
 .avatar-fallback {

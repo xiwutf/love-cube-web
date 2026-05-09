@@ -11,4 +11,7 @@ public interface DynamicCommentRepository extends JpaRepository<DynamicComment, 
 
     Page<DynamicComment> findByDynamicIdAndStatusOrderByCreatedAtAsc(
             Long dynamicId, String status, Pageable pageable);
+
+    Page<DynamicComment> findByDynamicIdAndStatusOrderByCreatedAtDesc(
+            Long dynamicId, String status, Pageable pageable);
 }
