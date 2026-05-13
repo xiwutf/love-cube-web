@@ -24,4 +24,6 @@ public interface GroupJoinRequestRepository extends JpaRepository<GroupJoinReque
     List<GroupJoinRequest> findByGroupIdOrderByRequestedAtDesc(String groupId);
 
     boolean existsByGroupIdAndUserIdAndStatus(String groupId, Long userId, String status);
+
+    List<GroupJoinRequest> findByUserIdAndStatusOrderByRequestedAtDesc(Long userId, String status);
 }

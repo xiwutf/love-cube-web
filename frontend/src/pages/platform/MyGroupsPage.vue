@@ -11,6 +11,14 @@
       </div>
     </header>
 
+    <div v-if="stewardHubVisible" class="steward-hub-banner" role="region" aria-label="团体管理入口">
+      <div class="steward-hub-text">
+        <strong>入团审核与团体设置</strong>
+        <p>处理待审申请、编辑团体资料、发布公告等，请前往「我的团体」管理页。</p>
+      </div>
+      <router-link to="/admin/my-groups" class="steward-hub-btn">打开管理</router-link>
+    </div>
+
     <nav class="tabs" aria-label="分类">
       <button type="button" :class="{ active: tab === 'created' }" @click="tab = 'created'">
         我创建的 <span class="count">{{ created.length }}</span>
@@ -20,6 +28,9 @@
       </button>
       <button type="button" :class="{ active: tab === 'joined' }" @click="tab = 'joined'">
         我加入的 <span class="count">{{ joined.length }}</span>
+      </button>
+      <button type="button" :class="{ active: tab === 'pending' }" @click="tab = 'pending'">
+        审核中 <span class="count">{{ pending.length }}</span>
       </button>
     </nav>
 
@@ -32,7 +43,7 @@
 
     <template v-else>
       <div v-if="currentList.length" class="groups-grid">
-        <article v-for="group in currentList" :key="group.id" class="group-card">
+        <article v-for="group in currentList" :key="group.joinRequestId || group.id" class="group-card">
           <router-link :to="`/platform/groups/${group.id}`" class="cover-wrap">
             <img :src="group.coverUrl" :alt="group.name">
           </router-link>
@@ -67,7 +78,14 @@
             </div>
             <div class="card-foot">
               <span class="status-tag">{{ group.statusLabel }}</span>
-              <router-link class="enter-btn" :to="`/platform/groups/${group.id}`">{{ group.enterLabel }}</router-link>
+              <div class="card-foot-actions">
+                <router-link
+                  v-if="stewardHubVisible && group.managed"
+                  class="enter-btn enter-btn-admin"
+                  :to="{ path: `/admin/my-groups/${group.id}`, query: { tab: 'members' } }"
+                >入团审核</router-link>
+                <router-link class="enter-btn" :to="`/platform/groups/${group.id}`">{{ group.enterLabel }}</router-link>
+              </div>
             </div>
           </div>
         </article>
@@ -76,6 +94,7 @@
         <h3>{{ emptyTitle }}</h3>
         <p>{{ emptyText }}</p>
         <router-link v-if="tab === 'created'" to="/platform/groups/create" class="btn-primary inline">创建团体</router-link>
+        <router-link v-else-if="tab === 'pending'" to="/platform/groups" class="btn-primary inline">去发现团体</router-link>
         <router-link v-else to="/platform/groups" class="btn-primary inline">去发现团体</router-link>
       </div>
     </template>
@@ -96,6 +115,12 @@ const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b
 
 const userStore = useUserStore()
 
+const stewardHubVisible = computed(
+  () =>
+    userStore.isLoggedIn &&
+    (userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all'))
+)
+
 const loading = ref(false)
 const error = ref('')
 const tab = ref('created')
@@ -103,23 +128,27 @@ const tab = ref('created')
 const created = ref([])
 const managed = ref([])
 const joined = ref([])
+const pending = ref([])
 const patchingDisplayGroupId = ref(null)
 
 const currentList = computed(() => {
   if (tab.value === 'created') return created.value
   if (tab.value === 'managed') return managed.value
+  if (tab.value === 'pending') return pending.value
   return joined.value
 })
 
 const emptyTitle = computed(() => {
   if (tab.value === 'created') return '还没有创建的团体'
   if (tab.value === 'managed') return '没有作为管理员参与的团体'
+  if (tab.value === 'pending') return '没有待审核的加入申请'
   return '还没有加入的团体'
 })
 
 const emptyText = computed(() => {
   if (tab.value === 'created') return '创建第一个团体，邀请伙伴一起成长。'
   if (tab.value === 'managed') return '由团长将你设为管理员后，会显示在这里。'
+  if (tab.value === 'pending') return '在团体大厅申请加入需要审核的团体后，会显示在这里。'
   return '去团体大厅搜索感兴趣的团体并加入。'
 })
 
@@ -129,11 +158,12 @@ function normalize(item, tabKey) {
   let roleLabel = '成员'
   if (tabKey === 'created') roleLabel = '团长'
   else if (tabKey === 'managed') roleLabel = '管理员'
+  else if (tabKey === 'pending') roleLabel = '审核中'
   else if (item.myRole === 'owner') roleLabel = '团长'
   else if (item.hasPendingRequest) roleLabel = '审核中'
 
   const statusLabel = item.hasPendingRequest ? '审核中' : (item.status === 'published' ? '进行中' : item.status || '进行中')
-  const enterLabel = item.managed ? '管理' : '进入'
+  const enterLabel = item.applicationPending ? '查看' : item.managed ? '管理' : '进入'
 
   return {
     id: item.id,
@@ -149,6 +179,8 @@ function normalize(item, tabKey) {
     enterLabel,
     managed: Boolean(item.managed),
     hasPendingRequest: Boolean(item.hasPendingRequest),
+    applicationPending: Boolean(item.applicationPending),
+    joinRequestId: item.joinRequestId != null ? item.joinRequestId : null,
     myMemberRealName: item.myMemberRealName != null ? String(item.myMemberRealName) : ''
   }
 }
@@ -189,16 +221,27 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    if (userStore.token) {
+      await userStore.loadAdminContext().catch(() => null)
+    }
     const data = await fetchMeGroupsBuckets()
     const raw = data?.data ?? data
     created.value = (raw?.createdGroups ?? []).map((g) => normalize(g, 'created'))
     managed.value = (raw?.managedGroups ?? []).map((g) => normalize(g, 'managed'))
     joined.value = (raw?.joinedGroups ?? []).map((g) => normalize(g, 'joined'))
+    pending.value = (raw?.pendingJoinGroups ?? []).map((g) => normalize(g, 'pending'))
+
+    const noOther =
+      created.value.length === 0 && managed.value.length === 0 && joined.value.length === 0
+    if (noOther && pending.value.length > 0) {
+      tab.value = 'pending'
+    }
   } catch (err) {
     error.value = err.message || '无法加载我的团体'
     created.value = []
     managed.value = []
     joined.value = []
+    pending.value = []
   } finally {
     loading.value = false
   }
@@ -241,6 +284,56 @@ onMounted(load)
 .head-actions {
   display: flex;
   gap: var(--lc-space-3);
+}
+
+.steward-hub-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-4);
+  margin-top: var(--lc-space-5);
+  padding: var(--lc-space-4) var(--lc-space-5);
+  border: 1px solid var(--lc-blue-border);
+  border-radius: var(--lc-radius-sm);
+  background: var(--lc-blue-light);
+  flex-wrap: wrap;
+}
+
+.steward-hub-text {
+  flex: 1;
+  min-width: min(100%, 220px);
+}
+
+.steward-hub-text strong {
+  display: block;
+  margin: 0 0 var(--lc-space-1);
+  color: var(--lc-text);
+  font-size: var(--lc-text-base);
+}
+
+.steward-hub-text p {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.steward-hub-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 var(--lc-space-5);
+  border-radius: var(--lc-radius-xs);
+  border: 0;
+  color: var(--lc-surface);
+  background: linear-gradient(135deg, var(--lc-pink), var(--lc-blue));
+  box-shadow: var(--lc-shadow-blue);
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .btn-secondary,
@@ -439,6 +532,14 @@ onMounted(load)
   gap: var(--lc-space-3);
   margin-top: auto;
   padding-top: var(--lc-space-3);
+  flex-wrap: wrap;
+}
+
+.card-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-2);
+  flex-wrap: wrap;
 }
 
 .status-tag {
@@ -460,6 +561,11 @@ onMounted(load)
   font-weight: 900;
   font-size: var(--lc-text-sm);
   text-decoration: none;
+}
+
+.enter-btn-admin {
+  border-color: var(--lc-pink);
+  color: var(--lc-pink);
 }
 
 .loading-state,

@@ -40,7 +40,7 @@
             <strong>{{ formatNumber(item.count) }}</strong>
             <p>{{ item.desc }}</p>
           </div>
-          <router-link class="todo-action" :to="item.to">立即处理</router-link>
+          <router-link class="todo-action" :to="item.to">{{ item.actionLabel || '立即处理' }}</router-link>
         </article>
       </div>
     </section>
@@ -353,11 +353,11 @@ const overviewCards = computed(() => [
   },
   {
     key: 'review',
-    label: '待处理内容总数',
+    label: '待审核内容合计',
     value: pick('contentData', 'pendingContent'),
     delta: trendDelta(trends.value.contentPublish),
     meta: '较昨日',
-    detail: `动(7天)${formatNumber(pendingReviewBreakdown.value.dynamics7d)} / 分享${formatNumber(pendingReviewBreakdown.value.shares)} / 互助${formatNumber(pendingReviewBreakdown.value.helps)} / 资源${formatNumber(pendingReviewBreakdown.value.resources)}`,
+    detail: `分享${formatNumber(pendingReviewBreakdown.value.shares)} / 互助${formatNumber(pendingReviewBreakdown.value.helps)} / 资源${formatNumber(pendingReviewBreakdown.value.resources)}；近7天动态 ${formatNumber(pendingReviewBreakdown.value.dynamics7d)}（仅统计，非待清零队列）`,
     tone: 'orange',
     icon: '审',
     spark: sparkPoints(trends.value.contentPublish)
@@ -377,12 +377,13 @@ const overviewCards = computed(() => [
 const todoItems = computed(() => [
   {
     key: 'dynamics',
-    title: '近7天动态待关注',
+    title: '近7天新增动态',
     count: pick('engagementData', 'dynamicsSevenDays'),
-    desc: '近7天新增动态，进入后可逐条核对',
-    tone: 'red',
+    desc: '统计近7天发帖量，数字不会因「已看过」而减少；处置需删帖或等超过7天',
+    tone: 'green',
     icon: '动',
-    to: '/admin/fellowship-dynamics'
+    to: '/admin/fellowship-dynamics',
+    actionLabel: '去查看'
   },
   {
     key: 'profiles',

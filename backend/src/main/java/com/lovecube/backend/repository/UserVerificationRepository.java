@@ -18,4 +18,6 @@ public interface UserVerificationRepository extends JpaRepository<UserVerificati
     List<UserVerification> findApprovedByUserIds(@Param("ids") Collection<Long> ids);
     List<UserVerification> findAllByOrderBySubmittedAtDesc();
     long countByStatus(String status);
+
+    long countByStatusIgnoreCase(String status);
 }

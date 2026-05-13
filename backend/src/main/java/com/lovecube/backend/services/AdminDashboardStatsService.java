@@ -37,7 +37,6 @@ import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserPhotoRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
-import com.lovecube.backend.repository.VerificationRequestRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -74,7 +73,6 @@ public class AdminDashboardStatsService {
     private final ArticleRepository articleRepository;
     private final PlatformEventRepository platformEventRepository;
     private final UserRepository userRepository;
-    private final VerificationRequestRepository verificationRequestRepository;
     private final UserVerificationRepository userVerificationRepository;
     private final ReportRecordRepository reportRecordRepository;
     private final UserFeedbackRepository userFeedbackRepository;
@@ -111,7 +109,6 @@ public class AdminDashboardStatsService {
             ArticleRepository articleRepository,
             PlatformEventRepository platformEventRepository,
             UserRepository userRepository,
-            VerificationRequestRepository verificationRequestRepository,
             UserVerificationRepository userVerificationRepository,
             ReportRecordRepository reportRecordRepository,
             UserFeedbackRepository userFeedbackRepository,
@@ -145,7 +142,6 @@ public class AdminDashboardStatsService {
         this.articleRepository = articleRepository;
         this.platformEventRepository = platformEventRepository;
         this.userRepository = userRepository;
-        this.verificationRequestRepository = verificationRequestRepository;
         this.userVerificationRepository = userVerificationRepository;
         this.reportRecordRepository = reportRecordRepository;
         this.userFeedbackRepository = userFeedbackRepository;
@@ -240,8 +236,9 @@ public class AdminDashboardStatsService {
                 + userInteractionRepository.countByInteractionTypeAndCreatedAtGreaterThanEqual(
                 UserInteraction.InteractionType.SUPER_LIKE, todayStart);
         long todayMessages = chatMessageRepository.countByTimestampGreaterThanEqual(todayStartMillis);
-        long pendingVerifications = verificationRequestRepository.countByStatusIgnoreCase("pending")
-                + userVerificationRepository.countByStatus("pending");
+        // 与后台「认证审核」列表一致：仅统计 user_verifications，避免 verification_requests 遗留 pending
+        // 导致首页有数、审核页无待办。
+        long pendingVerifications = userVerificationRepository.countByStatusIgnoreCase("pending");
         long pendingReports = reportRecordRepository.countByStatusIgnoreCase("pending");
         long pendingFeedbacks = userFeedbackRepository.countByStatusNot("resolved");
         long todayReports = reportRecordRepository.countByCreatedAtGreaterThanEqual(todayStart);
@@ -305,7 +302,8 @@ public class AdminDashboardStatsService {
         long contentPublishedLast7d = announcementRepository.countPublishedSince(sevenDaysStart)
                 + articleRepository.countPublishedSince(sevenDaysStart)
                 + platformEventRepository.countByCreatedAtGreaterThanEqual(sevenDaysStart);
-        long pendingContent = dynamicsSevenDays + positiveSharesPending + helpRequestsPending + pendingLocalResources;
+        // 待处理内容：仅含确有审核/处置状态的类型；近7天动态量为运营参考，不应计入待办总数。
+        long pendingContent = positiveSharesPending + helpRequestsPending + pendingLocalResources;
 
         Map<String, Object> trends = buildSevenDayTrends(hiddenSuperAdminOperator, sevenDaysStart);
         Map<String, Object> activityRatio = buildActivityRatio(

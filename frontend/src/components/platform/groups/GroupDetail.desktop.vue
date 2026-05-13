@@ -34,6 +34,11 @@
               class="manage-link"
               :to="`/platform/groups/${group.id}/members`"
             >团体管理</router-link>
+            <router-link
+              v-if="showAdminStewardLink"
+              class="manage-link manage-link-admin"
+              :to="{ path: `/admin/my-groups/${group.id}`, query: { tab: 'members' } }"
+            >入团审核（后台）</router-link>
           </div>
         </div>
       </section>
@@ -827,6 +832,12 @@ const userStore = useUserStore()
 const contentCheck = useContentCheck()
 const currentUserIdNum = computed(() => Number(userStore.userInfo?.id || userStore.userId || 0))
 const group = ref(null)
+const showAdminStewardLink = computed(() => {
+  const g = group.value
+  if (!g || !userStore.isLoggedIn) return false
+  if (!(g.managed || g.canReviewJoins)) return false
+  return userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all')
+})
 const rawMembers = ref([])
 const rawPosts = ref([])
 const rawNotices = ref([])
@@ -976,6 +987,9 @@ async function loadDetail() {
   try {
     const data = await fetchGroupDetail(route.params.id)
     group.value = normalizeGroup(data)
+    if (userStore.token && (group.value?.managed || group.value?.canReviewJoins)) {
+      await userStore.loadAdminContext().catch(() => null)
+    }
   } catch (error) {
     group.value = null
     errors.detail = error.message || '无法连接 /api/platform/groups/{id}'
@@ -2095,6 +2109,7 @@ onMounted(async () => {
   align-items: flex-start;
   gap: var(--lc-space-2);
   padding-top: var(--lc-space-4);
+  flex-wrap: wrap;
 }
 
 .join-btn,
@@ -2149,6 +2164,12 @@ onMounted(async () => {
   background: var(--lc-surface);
   font-weight: 900;
   text-decoration: none;
+}
+
+.manage-link-admin {
+  border-color: var(--lc-pink);
+  color: var(--lc-pink);
+  background: var(--lc-surface);
 }
 
 .remove-member-btn {

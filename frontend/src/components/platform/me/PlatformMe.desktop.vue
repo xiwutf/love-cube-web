@@ -460,6 +460,15 @@ const mobileGridItems = computed(() => {
     { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
     { title: '问题工单', icon: '💡', tone: 'violet', to: '/me/feedback', tip: '提交得+5经验' }
   ]
+  if (userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all')) {
+    items.splice(2, 0, {
+      title: '团体后台',
+      icon: '📋',
+      tone: 'green',
+      to: '/admin/my-groups',
+      tip: '入团审核、公告与资料'
+    })
+  }
   if (userStore.isAdmin) {
     items.unshift({ title: '管理中心', icon: '🛠️', tone: 'green', to: '/admin/dashboard' })
   }
@@ -809,6 +818,7 @@ onMounted(async () => {
   if (route.query?.panel === 'settings') openSettingsPanel()
   if (route.query?.panel === 'edit') openEditPanel()
   if (!user.value) await userStore.refreshCurrentUser().catch(() => {})
+  if (userStore.token) await userStore.loadAdminContext().catch(() => null)
   await refreshUnreadCount()
   const [statsRes, inviteRes, growthRes, myGroupsRes, hotGroupsRes] = await Promise.allSettled([
     getUserStatsCached(), getInviteInfo(), getMyGrowth(), fetchMyGroups(), fetchHotGroups()
