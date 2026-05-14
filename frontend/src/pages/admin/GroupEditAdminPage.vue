@@ -119,8 +119,10 @@
               <p>{{ member.joinedAt || member.requestedAt || '未记录时间' }}</p>
               <p v-if="member.status === 'pending' && member.applyReason">申请说明：{{ member.applyReason }}</p>
             </div>
-            <span class="admin-tag" :class="member.role">{{ roleLabel(member.role) }}</span>
-            <span class="admin-tag" :class="member.status">{{ memberStatusLabel(member.status) }}</span>
+            <div class="member-row-tags">
+              <span class="admin-tag" :class="member.role">{{ roleLabel(member.role) }}</span>
+              <span class="admin-tag" :class="member.status">{{ memberStatusLabel(member.status) }}</span>
+            </div>
             <div class="row-actions">
               <template v-if="member.status === 'pending'">
                 <button type="button" class="admin-btn primary" :disabled="saving" @click="approveMemberRecord(member)">通过</button>
@@ -186,7 +188,9 @@
               <strong>{{ admin.username || '未知用户' }}</strong>
               <p>ID: {{ admin.userId }}</p>
             </div>
-            <span class="admin-role-tag" :class="`ga-${admin.role?.toLowerCase()}`">{{ admin.roleName }}</span>
+            <div class="member-row-tags">
+              <span class="admin-role-tag" :class="`ga-${admin.role?.toLowerCase()}`">{{ admin.roleName }}</span>
+            </div>
             <div class="row-actions">
               <button
                 v-if="admin.role !== 'OWNER'"
@@ -203,13 +207,42 @@
 
         <div class="add-admin-form">
           <h3>添加管理员</h3>
-          <div class="add-admin-row">
-            <input v-model.trim="newAdminUserId" class="admin-input" type="text" placeholder="用户 ID">
+          <p class="add-admin-hint">
+            请先从已加入成员中选择对方；若对方尚未加入本团体，可填写其用户 ID（数字）。也可在「成员审核」页查看已加入名单与 ID。
+          </p>
+          <div class="add-admin-stack">
+            <label class="add-admin-field">
+              <span>从已加入成员选择</span>
+              <select
+                v-model="newAdminPickerUserId"
+                class="admin-input"
+                @change="onAdminPickerChange"
+              >
+                <option value="">请选择成员…</option>
+                <option v-for="m in selectableAdminMembers" :key="m.userId" :value="String(m.userId)">
+                  {{ m.name }}（ID {{ m.userId }}）
+                </option>
+              </select>
+            </label>
+            <label class="add-admin-field">
+              <span>或填写用户 ID</span>
+              <input
+                v-model.trim="newAdminManualUserId"
+                class="admin-input"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="仅数字，例如 12345"
+                @input="onAdminManualInput"
+              >
+            </label>
+          </div>
+          <div class="add-admin-row add-admin-actions-row">
             <select v-model="newAdminRole" class="admin-input admin-input-sm">
               <option value="ADMIN">副管理员</option>
               <option value="REVIEWER">审核员</option>
             </select>
-            <button type="button" class="admin-btn primary" :disabled="saving || !newAdminUserId" @click="addGroupAdminRecord">添加</button>
+            <button type="button" class="admin-btn primary" :disabled="saving || !canSubmitNewAdmin" @click="addGroupAdminRecord">添加</button>
           </div>
         </div>
       </section>
@@ -244,9 +277,11 @@ import {
 import CoverUploadField from '@/components/admin/CoverUploadField.vue'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
+import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const contentCheck = useContentCheck()
 const groupId = String(route.params.id)
 const isMyGroupsContext = route.path.includes('/my-groups/')
@@ -270,8 +305,11 @@ const memberStatus = ref('approved')
 const saving = ref(false)
 const message = ref('')
 const messageType = ref('success')
-const newAdminUserId = ref('')
+const newAdminPickerUserId = ref('')
+const newAdminManualUserId = ref('')
 const newAdminRole = ref('ADMIN')
+/** 打开「管理员设置」时拉取的已加入成员，用于添加管理员时按昵称选择 */
+const adminCandidateMembers = ref([])
 
 const loading = reactive({ detail: true, members: false, posts: false, notices: false, admins: false })
 const errors = reactive({ detail: '', members: '', posts: '', notices: '', admins: '' })
@@ -311,6 +349,33 @@ const memberStatusOptions = computed(() => {
     { label: '待审核', value: 'pending' },
     { label: '全部', value: 'all' }
   ]
+})
+
+const currentOperatorUserId = computed(() => {
+  const u = userStore.syncCurrentUser()
+  const id = u?.userId || u?.id || userStore.userId
+  const n = Number(id)
+  return Number.isFinite(n) && n > 0 ? n : 0
+})
+
+/** 已是管理员或当前登录用户不可再添加 */
+const selectableAdminMembers = computed(() => {
+  const adminIds = new Set(groupAdmins.value.map((a) => Number(a.userId)))
+  const self = currentOperatorUserId.value
+  return adminCandidateMembers.value.filter((m) => {
+    const uid = Number(m.userId)
+    if (!Number.isFinite(uid) || uid < 1) return false
+    if (adminIds.has(uid)) return false
+    if (self && uid === self) return false
+    return true
+  })
+})
+
+const canSubmitNewAdmin = computed(() => {
+  const raw = (newAdminPickerUserId.value || '').trim() || (newAdminManualUserId.value || '').trim()
+  if (!raw) return false
+  const n = Number(raw)
+  return Number.isInteger(n) && n > 0
 })
 
 const postItems = computed(() => posts.value
@@ -429,24 +494,53 @@ watch(
 async function loadGroupAdmins() {
   loading.admins = true
   errors.admins = ''
+  adminCandidateMembers.value = []
   try {
-    const data = await getAdminGroupAdmins(groupId)
+    const [admRes, memRes] = await Promise.allSettled([
+      getAdminGroupAdmins(groupId),
+      fetchAdminGroupMembers(groupId)
+    ])
+    if (admRes.status !== 'fulfilled') throw admRes.reason
+    const data = admRes.value
     groupAdmins.value = Array.isArray(data) ? data : data?.data ?? []
+    if (memRes.status === 'fulfilled') {
+      adminCandidateMembers.value = unwrapList(memRes.value).map(normalizeMemberRow)
+    }
   } catch (err) {
     errors.admins = err.message || '管理员列表加载失败'
     groupAdmins.value = []
+    adminCandidateMembers.value = []
   } finally {
     loading.admins = false
   }
 }
 
+function onAdminPickerChange() {
+  if ((newAdminPickerUserId.value || '').trim()) newAdminManualUserId.value = ''
+}
+
+function onAdminManualInput() {
+  if ((newAdminManualUserId.value || '').trim()) newAdminPickerUserId.value = ''
+}
+
+function resetNewAdminForm() {
+  newAdminPickerUserId.value = ''
+  newAdminManualUserId.value = ''
+}
+
 async function addGroupAdminRecord() {
-  if (!newAdminUserId.value) return
+  const raw = (newAdminPickerUserId.value || '').trim() || (newAdminManualUserId.value || '').trim()
+  if (!raw) return
+  const uid = Number(raw)
+  if (!Number.isInteger(uid) || uid < 1) {
+    flash('请输入有效的用户 ID', 'error')
+    return
+  }
   saving.value = true
   try {
-    await addAdminGroupAdmin(groupId, { userId: Number(newAdminUserId.value), role: newAdminRole.value })
+    await addAdminGroupAdmin(groupId, { userId: uid, role: newAdminRole.value })
     flash('管理员已添加')
-    newAdminUserId.value = ''
+    resetNewAdminForm()
     await loadGroupAdmins()
   } catch (err) {
     flash(err.message || '添加失败', 'error')
@@ -827,21 +921,27 @@ onMounted(async () => {
 
 .detail-tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   margin: 14px 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
 }
 
 .detail-tabs button {
   position: relative;
-  height: 38px;
+  flex: 0 0 auto;
+  min-height: 40px;
   border: 1px solid var(--lc-border);
   border-radius: 8px;
-  padding: 0 16px;
+  padding: 8px 14px;
   color: var(--lc-muted);
   background: var(--lc-surface);
   font-weight: 900;
   cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .detail-tabs button.active {
@@ -958,9 +1058,16 @@ onMounted(async () => {
   background: var(--lc-bg);
 }
 
+.member-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .member-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: center;
   padding: 12px;
@@ -1060,16 +1167,120 @@ onMounted(async () => {
     flex-direction: column;
   }
 
+  .section-head .filter-btns {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
 
   .member-row {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 48px 1fr;
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    padding: 14px;
+    gap: 10px 12px;
+  }
+
+  .member-row > img {
+    grid-column: 1;
+    grid-row: 1;
+    width: 48px;
+    height: 48px;
+  }
+
+  .member-row > div:first-of-type {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .member-row > .member-row-tags {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .member-row > .row-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .member-row > .row-actions .admin-btn {
+    min-height: 44px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .image-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow-x: visible;
+    gap: 10px;
+  }
+
+  .detail-tabs button {
+    min-height: 48px;
+    white-space: normal;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .detail-tabs button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .head-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .head-actions .admin-btn,
+  .head-actions a.admin-btn {
+    width: 100%;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .filter-btns button {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  .add-admin-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-admin-row .admin-input,
+  .add-admin-row .admin-input-sm,
+  .add-admin-row .admin-btn {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+
+  .add-admin-stack .admin-input,
+  .add-admin-actions-row .admin-input,
+  .add-admin-actions-row .admin-input-sm,
+  .add-admin-actions-row .admin-btn {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
   }
 }
 
@@ -1122,6 +1333,40 @@ onMounted(async () => {
   margin: 0 0 12px;
   font-size: 15px;
   color: var(--lc-text);
+}
+
+.add-admin-hint {
+  margin: 0 0 14px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--lc-muted);
+}
+
+.add-admin-stack {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.add-admin-field {
+  display: grid;
+  gap: 6px;
+}
+
+.add-admin-field > span {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--lc-muted);
+}
+
+.add-admin-actions-row {
+  margin-top: 4px;
+}
+
+.add-admin-actions-row .admin-input-sm {
+  flex: 1 1 140px;
+  max-width: min(240px, 100%);
 }
 
 .add-admin-row {

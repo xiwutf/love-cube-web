@@ -230,6 +230,15 @@ export const useUserStore = defineStore('user', () => {
     // Fine-grained: any admin role from context
     return (adminContext.value?.roles?.length ?? 0) > 0
   })
+  /** 仅持有 GROUP_OWNER（团长）后台入口、无平台运营类角色的账号 */
+  const isGroupStewardOnly = computed(() => {
+    if (!token.value || !adminContext.value) return false
+    const lr = String(userInfo.value?.role || '').toLowerCase()
+    if (['admin', 'super_admin', 'root'].includes(lr)) return false
+    const roles = adminContext.value.roles
+    if (!Array.isArray(roles) || roles.length !== 1) return false
+    return String(roles[0]).toUpperCase() === 'GROUP_OWNER'
+  })
   const isFellowshipEnabled = computed(() => Boolean(userInfo.value?.fellowshipEnabled))
   const isFellowshipMatchVisible = computed(() => Boolean(userInfo.value?.fellowshipMatchVisible))
 
@@ -249,6 +258,7 @@ export const useUserStore = defineStore('user', () => {
     adminContext,
     isLoggedIn,
     isAdmin,
+    isGroupStewardOnly,
     isFellowshipEnabled,
     isFellowshipMatchVisible,
     setAuth,

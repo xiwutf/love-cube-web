@@ -1,7 +1,7 @@
 <template>
   <div class="admin-layout">
     <header class="admin-mobile-bar">
-      <router-link to="/admin" class="admin-mobile-brand" @click="closeNavDrawer">
+      <router-link :to="adminConsoleHomePath" class="admin-mobile-brand" @click="closeNavDrawer">
         <img :src="loveCubeIcon" alt="">
         <span class="admin-mobile-brand-text">LoveCube</span>
       </router-link>
@@ -27,11 +27,11 @@
     />
 
     <aside id="admin-nav-drawer" class="admin-sidebar" :class="{ 'is-drawer-open': navDrawerOpen }">
-      <router-link to="/admin" class="admin-brand" @click="closeNavDrawer">
+      <router-link :to="adminConsoleHomePath" class="admin-brand" @click="closeNavDrawer">
         <img :src="loveCubeIcon" alt="">
         <span class="admin-brand-copy">
           <strong>LoveCube</strong>
-          <small>后台管理系统</small>
+          <small>{{ userStore.isGroupStewardOnly ? '团体管理' : '后台管理系统' }}</small>
         </span>
       </router-link>
 
@@ -46,7 +46,10 @@
             <a
               :href="href"
               class="admin-nav-link admin-nav-link--top"
-              :class="{ 'is-active': group.items[0].to === '/admin' ? isExactActive : isActive }"
+              :class="{
+              'is-active':
+                group.items[0].to === adminConsoleHomePath ? isExactActive : isActive
+            }"
               @click="
                 (e) => {
                   navigate(e)
@@ -84,7 +87,7 @@
                 <a
                   :href="href"
                   class="admin-subnav-link"
-                  :class="{ 'is-active': item.to === '/admin' ? isExactActive : isActive }"
+                  :class="{ 'is-active': item.to === adminConsoleHomePath ? isExactActive : isActive }"
                   @click="
                     (e) => {
                       navigate(e)
@@ -175,7 +178,13 @@ onUnmounted(() => {
 })
 
 const visibleNavGroups = computed(() =>
-  filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission)
+  filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission, {
+    hideStaffFullConsoleItems: userStore.isGroupStewardOnly
+  })
+)
+
+const adminConsoleHomePath = computed(() =>
+  userStore.isGroupStewardOnly ? '/admin/my-groups' : '/admin'
 )
 
 const visibleNavItems = computed(() => visibleNavGroups.value.flatMap(group => group.items))
@@ -184,8 +193,9 @@ const showRouteBackButton = computed(() => !navHomePaths.value.has(route.path))
 const currentSection = computed(() => resolveAdminSectionTitle(route.path))
 
 function isGroupActive(group) {
+  const home = adminConsoleHomePath.value
   return group.items.some((item) => {
-    if (item.to === '/admin') return route.path === '/admin'
+    if (item.to === home) return route.path === home
     return route.path === item.to || route.path.startsWith(`${item.to}/`)
   })
 }

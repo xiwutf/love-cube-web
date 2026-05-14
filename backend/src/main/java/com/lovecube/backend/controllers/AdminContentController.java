@@ -825,6 +825,9 @@ public class AdminContentController {
             @RequestParam(name = "refresh", defaultValue = "false") boolean refresh
     ) {
         User operator = adminAuthService.requireAdmin(authHeader);
+        if (adminAuthService.isGroupStewardOnly(operator)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "团体负责人请使用「我的团体」管理，无法查看全站运营数据");
+        }
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
         return adminDashboardStatsService.getDashboardStats(hiddenSuperAdminOperator, refresh);
     }

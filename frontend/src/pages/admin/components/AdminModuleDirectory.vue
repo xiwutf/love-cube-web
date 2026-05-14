@@ -50,7 +50,9 @@ import { ADMIN_NAV_GROUPS, filterAdminNavGroups } from '@/constants/adminNavigat
 const userStore = useUserStore()
 
 const directoryGroups = computed(() => {
-  const filtered = filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission)
+  const filtered = filterAdminNavGroups(ADMIN_NAV_GROUPS, userStore.hasPermission, {
+    hideStaffFullConsoleItems: userStore.isGroupStewardOnly
+  })
   return filtered.filter(g => g.id !== 'overview')
 })
 </script>

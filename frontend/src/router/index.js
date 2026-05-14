@@ -52,6 +52,15 @@ router.beforeEach(async (to) => {
     if (!userStore.isAdmin) {
       return { path: '/' }
     }
+    // 团长（仅 GROUP_OWNER）：只能访问「我的团体」与无权限提示页，禁止进入全站运营后台其它路径
+    if (userStore.isGroupStewardOnly) {
+      const p = to.path
+      const stewardOk =
+        p === '/admin/403' || p === '/admin/my-groups' || p.startsWith('/admin/my-groups/')
+      if (!stewardOk) {
+        return { path: '/admin/my-groups' }
+      }
+    }
     // Permission-gated route check
     if (to.meta.permission && !userStore.hasPermission(to.meta.permission)) {
       return { path: '/admin/403' }

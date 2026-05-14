@@ -1,5 +1,6 @@
 package com.lovecube.backend.services;
 
+import com.lovecube.backend.entity.AdminUserRole;
 import com.lovecube.backend.entity.PlatformGroupAdmin;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.AdminRolePermissionRepository;
@@ -306,6 +307,24 @@ public class AdminAuthService {
         ga.setRole(norm);
         platformGroupAdminRepository.save(ga);
         ensureGroupOwnerRole(userId);
+    }
+
+    /**
+     * 仅有团体负责人后台入口角色（{@code GROUP_OWNER}），且无遗留管理员身份、非隐藏超管。
+     * 此类账号只应使用「我的团体」相关功能，不得进入全站运营工作台或拉取全站聚合统计。
+     */
+    public boolean isGroupStewardOnly(User user) {
+        if (user == null || !isAdmin(user)) return false;
+        if (isHiddenSuperAdmin(user)) return false;
+        String legacyRole = user.getRole() == null ? "" : user.getRole().trim().toUpperCase(Locale.ROOT);
+        if (LEGACY_ADMIN_ROLES.contains(legacyRole)) return false;
+        String legacyStatus = user.getUserStatus() == null ? "" : user.getUserStatus().trim().toUpperCase(Locale.ROOT);
+        if (LEGACY_ADMIN_ROLES.contains(legacyStatus)) return false;
+        List<AdminUserRole> rows = adminUserRoleRepository.findByUserId(user.getUserid());
+        if (rows == null || rows.isEmpty()) return false;
+        if (rows.size() != 1) return false;
+        String code = rows.get(0).getRoleCode();
+        return code != null && "GROUP_OWNER".equalsIgnoreCase(code.trim());
     }
 
     public boolean isAdmin(User user) {

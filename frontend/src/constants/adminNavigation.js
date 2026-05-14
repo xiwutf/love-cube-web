@@ -14,6 +14,7 @@ export const ADMIN_NAV_GROUPS = [
         label: '首页',
         icon: '首',
         permission: null,
+        staffFullConsole: true,
         blurb: '运营驾驶舱'
       }
     ]
@@ -209,13 +210,15 @@ export const ADMIN_NAV_GROUPS = [
   }
 ]
 
-export function filterAdminNavGroups(groups, hasPermission) {
+export function filterAdminNavGroups(groups, hasPermission, options = {}) {
+  const hideStaffFullConsoleItems = Boolean(options.hideStaffFullConsoleItems)
   return groups
     .map(group => ({
       ...group,
-      items: group.items.filter(
-        item => item.permission == null || hasPermission(item.permission)
-      )
+      items: group.items.filter((item) => {
+        if (hideStaffFullConsoleItems && item.staffFullConsole) return false
+        return item.permission == null || hasPermission(item.permission)
+      })
     }))
     .filter(group => group.disabled || group.items.length > 0)
 }
