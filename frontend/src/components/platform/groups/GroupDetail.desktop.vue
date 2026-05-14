@@ -723,7 +723,133 @@
             </template>
           </section>
 
-          <section v-else class="panel-card info-card">
+          <section v-else-if="activeTab === 'polls'" class="panel-card">
+            <div class="section-head">
+              <h2>团体投票</h2>
+              <button
+                v-if="group.managed && isPollsSupported"
+                type="button"
+                class="primary-btn small"
+                @click="showPollCreate = !showPollCreate"
+              >
+                {{ showPollCreate ? '取消' : '发起投票' }}
+              </button>
+            </div>
+            <p v-if="!isPollsSupported" class="poll-legacy-hint">当前团体类型暂不支持线上投票。</p>
+            <template v-else>
+              <form v-if="showPollCreate" class="poll-form" @submit.prevent="submitPollCreate">
+                <input v-model.trim="pollForm.title" type="text" maxlength="200" placeholder="投票标题 *" required>
+                <textarea v-model.trim="pollForm.description" rows="2" maxlength="2000" placeholder="说明（可选）"></textarea>
+                <div class="poll-form-row">
+                  <label class="poll-field">
+                    <span>类型</span>
+                    <select v-model="pollForm.selectionMode">
+                      <option value="single">单选</option>
+                      <option value="multiple">多选</option>
+                    </select>
+                  </label>
+                  <label v-if="pollForm.selectionMode === 'multiple'" class="poll-field">
+                    <span>每人最多可选几项 *</span>
+                    <input v-model.number="pollForm.maxChoices" type="number" min="2" max="30" required>
+                  </label>
+                </div>
+                <div class="activity-form-row">
+                  <div>
+                    <label>开始时间 *</label>
+                    <input v-model="pollForm.startTime" type="datetime-local" required>
+                  </div>
+                  <div>
+                    <label>结束时间 *</label>
+                    <input v-model="pollForm.endTime" type="datetime-local" required>
+                  </div>
+                </div>
+                <label class="poll-options-label">选项（每行一个，至少 2 行）*</label>
+                <textarea v-model="pollForm.optionsText" rows="5" maxlength="8000" required placeholder="选项 A&#10;选项 B"></textarea>
+                <div class="post-form-foot">
+                  <span></span>
+                  <button type="submit" class="primary-btn" :disabled="creatingPoll">
+                    {{ creatingPoll ? '发布中...' : '发布投票' }}
+                  </button>
+                </div>
+              </form>
+
+              <div v-if="loading.polls" class="empty-inline">加载中...</div>
+              <div v-else-if="!polls.length" class="empty-inline">暂无投票</div>
+              <div v-else class="poll-list">
+                <article v-for="p in polls" :key="p.id" class="poll-card">
+                  <div class="poll-card-head">
+                    <strong>{{ p.title }}</strong>
+                    <span class="poll-mode-pill">{{ p.selectionMode === 'multiple' ? '多选' : '单选' }}</span>
+                    <span v-if="p.isEnded" class="poll-status ended">已结束</span>
+                    <span v-else-if="p.isNotYetOpen" class="poll-status wait">未开始</span>
+                    <span v-else class="poll-status live">进行中</span>
+                  </div>
+                  <p class="poll-time">🕐 {{ formatActivityTime(p.startTime) }} — {{ formatActivityTime(p.endTime) }}</p>
+                  <p v-if="p.hasVoted" class="poll-voted-tag">你已提交选择</p>
+                  <p v-if="!p.countsVisible" class="poll-count-hint">
+                    各选项票数在管理者「公开结果」前不对普通成员展示；管理者可随时查看票数。
+                  </p>
+                  <button type="button" class="text-link-btn" @click="togglePollExpand(p.id)">
+                    {{ expandedPollId === p.id ? '收起' : '查看并参与' }}
+                  </button>
+
+                  <div v-if="expandedPollId === p.id && pollDetailCache[p.id]" class="poll-detail">
+                    <p v-if="pollDetailCache[p.id].description" class="poll-detail-desc">{{ pollDetailCache[p.id].description }}</p>
+                    <p v-if="pollDetailCache[p.id].countsVisible && pollDetailCache[p.id].voterCount != null" class="poll-voter-total">
+                      参与人数：{{ pollDetailCache[p.id].voterCount }}
+                    </p>
+                    <ul class="poll-option-list">
+                      <li v-for="opt in pollDetailCache[p.id].options" :key="opt.id" class="poll-option-row">
+                        <label class="poll-option-label">
+                          <input
+                            v-if="pollDetailCache[p.id].selectionMode === 'single'"
+                            type="radio"
+                            :name="'poll-sel-' + p.id"
+                            :checked="(pollPick[p.id] || []).includes(opt.id)"
+                            :disabled="!group.isMember || pollDetailCache[p.id].isEnded || pollDetailCache[p.id].isNotYetOpen"
+                            @change="setPollSinglePick(p.id, opt.id)"
+                          >
+                          <input
+                            v-else
+                            type="checkbox"
+                            :checked="(pollPick[p.id] || []).includes(opt.id)"
+                            :disabled="!group.isMember || pollDetailCache[p.id].isEnded || pollDetailCache[p.id].isNotYetOpen"
+                            @change="togglePollMultiPick(p.id, opt.id, pollDetailCache[p.id], $event.target.checked)"
+                          >
+                          <span class="poll-option-text">{{ opt.label }}</span>
+                          <span v-if="pollDetailCache[p.id].countsVisible && opt.voteCount != null" class="poll-option-count">
+                            得票 {{ opt.voteCount }}
+                          </span>
+                        </label>
+                      </li>
+                    </ul>
+                    <div class="poll-detail-actions">
+                      <button
+                        v-if="group.isMember && !pollDetailCache[p.id].isEnded && !pollDetailCache[p.id].isNotYetOpen"
+                        type="button"
+                        class="primary-btn small"
+                        :disabled="votingPollId === p.id || !(pollPick[p.id] || []).length"
+                        @click="submitPollVote(p.id)"
+                      >
+                        {{ votingPollId === p.id ? '提交中...' : '提交选择' }}
+                      </button>
+                      <button
+                        v-if="group.managed && !pollDetailCache[p.id].resultsPublic"
+                        type="button"
+                        class="poll-reveal-btn"
+                        :disabled="revealingPollId === p.id"
+                        @click="revealPollResults(p.id)"
+                      >
+                        {{ revealingPollId === p.id ? '处理中...' : '公开结果（向成员展示票数）' }}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </template>
+          </section>
+
+          <section v-else-if="activeTab === 'profile'" class="panel-card info-card">
             <h2>团体资料</h2>
             <InfoList :group="group" />
           </section>
@@ -792,7 +918,12 @@ import {
   createGroupActivity,
   signUpGroupActivity,
   cancelGroupActivitySignup,
-  updateGroupActivity
+  updateGroupActivity,
+  fetchGroupPolls,
+  createGroupPoll,
+  fetchGroupPoll,
+  submitGroupPollVotes,
+  revealGroupPollResults
 } from '@/api/groups.js'
 import {
   AUDIT_JOIN_MESSAGE_PROMPT,
@@ -852,7 +983,7 @@ const roleChangingMemberId = ref(null)
 const message = ref('')
 const messageType = ref('success')
 
-const loading = reactive({ detail: false, members: false, posts: false, notices: false, checkin: false, tasks: false, activities: false })
+const loading = reactive({ detail: false, members: false, posts: false, notices: false, checkin: false, tasks: false, activities: false, polls: false })
 const errors = reactive({ detail: '', members: '', posts: '', notices: '' })
 
 // 打卡
@@ -883,6 +1014,23 @@ const activityForm = reactive({ title: '', description: '', startTime: '', endTi
 const creatingActivity = ref(false)
 const signingActivityId = ref(null)
 const cancellingActivityId = ref(null)
+const polls = ref([])
+const showPollCreate = ref(false)
+const creatingPoll = ref(false)
+const pollForm = reactive({
+  title: '',
+  description: '',
+  selectionMode: 'single',
+  maxChoices: 2,
+  startTime: '',
+  endTime: '',
+  optionsText: ''
+})
+const expandedPollId = ref(null)
+const pollDetailCache = reactive({})
+const pollPick = reactive({})
+const votingPollId = ref(null)
+const revealingPollId = ref(null)
 const postForm = reactive({ content: '', imageUrls: '' })
 const quickPostContent = ref('')
 const quickPosting = ref(false)
@@ -903,22 +1051,31 @@ const activeTab = computed(() => {
   if (route.path.endsWith('/checkin')) return 'checkin'
   if (route.path.endsWith('/tasks')) return 'tasks'
   if (route.path.endsWith('/activities')) return 'activities'
+  if (route.path.endsWith('/polls')) return 'polls'
   return 'home'
 })
 
 const tabs = computed(() => {
   const id = group.value?.id || route.params.id
-  return [
+  const rows = [
     { key: 'home', label: '首页', to: `/platform/groups/${id}` },
     { key: 'posts', label: '动态', to: `/platform/groups/${id}/posts` },
     { key: 'checkin', label: '打卡', to: `/platform/groups/${id}/checkin` },
     { key: 'tasks', label: '任务', to: `/platform/groups/${id}/tasks` },
-    { key: 'activities', label: '活动', to: `/platform/groups/${id}/activities` },
+    { key: 'activities', label: '活动', to: `/platform/groups/${id}/activities` }
+  ]
+  if (!isLegacyPlatformGroupId(id)) {
+    rows.push({ key: 'polls', label: '投票', to: `/platform/groups/${id}/polls` })
+  }
+  rows.push(
     { key: 'members', label: '成员', to: `/platform/groups/${id}/members` },
     { key: 'notices', label: '公告', to: `/platform/groups/${id}/notices` },
     { key: 'profile', label: '资料', to: `/platform/groups/${id}/profile` }
-  ]
+  )
+  return rows
 })
+
+const isPollsSupported = computed(() => Boolean(group.value?.id && !isLegacyPlatformGroupId(group.value.id)))
 
 const heroImage = computed(() => group.value?.coverUrl || DEFAULT_COVER)
 const latestNotice = computed(() => notices.value[0] || group.value?.latestNotice || null)
@@ -1321,6 +1478,140 @@ async function submitActivity() {
     flashMessage(err.message || '发布失败', 'error')
   } finally {
     creatingActivity.value = false
+  }
+}
+
+async function loadPolls() {
+  if (!group.value?.id) return
+  if (!isPollsSupported.value) {
+    polls.value = []
+    return
+  }
+  loading.polls = true
+  try {
+    const res = await fetchGroupPolls(group.value.id, { page: 1, size: 50 })
+    polls.value = Array.isArray(res?.items) ? res.items : []
+  } catch {
+    polls.value = []
+  } finally {
+    loading.polls = false
+  }
+}
+
+async function refreshPollDetail(id) {
+  if (!group.value?.id || isLegacyPlatformGroupId(group.value.id)) return
+  const d = await fetchGroupPoll(group.value.id, id)
+  pollDetailCache[id] = d
+  pollPick[id] = Array.isArray(d.mySelections) ? [...d.mySelections] : []
+}
+
+async function togglePollExpand(id) {
+  if (expandedPollId.value === id) {
+    expandedPollId.value = null
+    return
+  }
+  expandedPollId.value = id
+  try {
+    await refreshPollDetail(id)
+  } catch (e) {
+    flashMessage(e.message || '加载失败', 'error')
+    expandedPollId.value = null
+  }
+}
+
+function setPollSinglePick(pollId, optId) {
+  pollPick[pollId] = [optId]
+}
+
+function togglePollMultiPick(pollId, optId, detail, checked) {
+  const max = Number(detail.maxChoices || 2)
+  let cur = [...(pollPick[pollId] || [])]
+  if (checked) {
+    if (!cur.includes(optId) && cur.length < max) {
+      cur.push(optId)
+    }
+  } else {
+    cur = cur.filter((x) => x !== optId)
+  }
+  pollPick[pollId] = cur
+}
+
+async function submitPollCreate() {
+  if (!group.value?.id || creatingPoll.value) return
+  creatingPoll.value = true
+  try {
+    const lines = pollForm.optionsText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)
+    if (lines.length < 2) {
+      flashMessage('请至少填写两个选项', 'error')
+      return
+    }
+    const payload = {
+      title: pollForm.title,
+      description: pollForm.description,
+      selectionMode: pollForm.selectionMode,
+      startTime: pollForm.startTime ? `${pollForm.startTime}:00` : '',
+      endTime: pollForm.endTime ? `${pollForm.endTime}:00` : '',
+      options: lines
+    }
+    if (pollForm.selectionMode === 'multiple') {
+      payload.maxChoices = pollForm.maxChoices
+    }
+    await createGroupPoll(group.value.id, payload)
+    showPollCreate.value = false
+    Object.assign(pollForm, {
+      title: '',
+      description: '',
+      selectionMode: 'single',
+      maxChoices: 2,
+      startTime: '',
+      endTime: '',
+      optionsText: ''
+    })
+    expandedPollId.value = null
+    for (const k of Object.keys(pollDetailCache)) {
+      delete pollDetailCache[k]
+    }
+    await loadPolls()
+    flashMessage('投票已发布')
+  } catch (err) {
+    flashMessage(err.message || '发布失败', 'error')
+  } finally {
+    creatingPoll.value = false
+  }
+}
+
+async function submitPollVote(pollId) {
+  const pick = pollPick[pollId] || []
+  if (!pick.length) {
+    flashMessage('请选择选项', 'error')
+    return
+  }
+  if (votingPollId.value) return
+  votingPollId.value = pollId
+  try {
+    await submitGroupPollVotes(group.value.id, pollId, { optionIds: pick })
+    await refreshPollDetail(pollId)
+    await loadPolls()
+    flashMessage('投票已提交')
+  } catch (e) {
+    flashMessage(e.message || '提交失败', 'error')
+  } finally {
+    votingPollId.value = null
+  }
+}
+
+async function revealPollResults(pollId) {
+  if (revealingPollId.value) return
+  revealingPollId.value = pollId
+  try {
+    await revealGroupPollResults(group.value.id, pollId)
+    await refreshPollDetail(pollId)
+    await loadPolls()
+    flashMessage('已向全体成员展示票数')
+  } catch (e) {
+    flashMessage(e.message || '操作失败', 'error')
+  } finally {
+    revealingPollId.value = null
   }
 }
 
@@ -1795,6 +2086,7 @@ function goToTab(key) {
     checkin: `/platform/groups/${id}/checkin`,
     tasks: `/platform/groups/${id}/tasks`,
     activities: `/platform/groups/${id}/activities`,
+    polls: `/platform/groups/${id}/polls`,
     members: `/platform/groups/${id}/members`,
     notices: `/platform/groups/${id}/notices`,
     profile: `/platform/groups/${id}/profile`
@@ -1980,6 +2272,7 @@ watch(activeTab, async (tab) => {
     await loadRankings()
   } else if (tab === 'tasks') await loadTodayTasks()
   else if (tab === 'activities') await loadActivities()
+  else if (tab === 'polls') await loadPolls()
 })
 
 onMounted(async () => {
@@ -1991,6 +2284,7 @@ onMounted(async () => {
     await loadRankings()
   } else if (activeTab.value === 'tasks') await loadTodayTasks()
   else if (activeTab.value === 'activities') await loadActivities()
+  else if (activeTab.value === 'polls') await loadPolls()
 })
 </script>
 
@@ -3656,5 +3950,169 @@ onMounted(async () => {
   .member-actions {
     grid-column: 2;
   }
+}
+
+/* ── 团体投票 ── */
+.poll-legacy-hint {
+  margin: 0;
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+}
+.poll-form {
+  display: grid;
+  gap: var(--lc-space-3);
+  margin-bottom: var(--lc-space-5);
+  padding-bottom: var(--lc-space-4);
+  border-bottom: 1px solid var(--lc-border);
+}
+.poll-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-4);
+  align-items: flex-end;
+}
+.poll-field {
+  display: grid;
+  gap: var(--lc-space-1);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+}
+.poll-field select,
+.poll-field input[type='number'] {
+  min-width: 200px;
+  height: 36px;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  padding: 0 var(--lc-space-2);
+  background: var(--lc-surface);
+  color: var(--lc-text);
+}
+.poll-options-label {
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+  font-weight: 800;
+}
+.poll-list {
+  display: grid;
+  gap: var(--lc-space-4);
+}
+.poll-card {
+  padding: var(--lc-space-4);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-bg);
+}
+.poll-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-2);
+}
+.poll-card-head strong {
+  color: var(--lc-text);
+  font-size: var(--lc-text-md);
+}
+.poll-mode-pill {
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  padding: 2px var(--lc-space-2);
+  border-radius: 999px;
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
+}
+.poll-status {
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  margin-left: auto;
+}
+.poll-status.live { color: var(--lc-green); }
+.poll-status.wait { color: var(--lc-amber); }
+.poll-status.ended { color: var(--lc-subtle); }
+.poll-time {
+  margin: 0 0 var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+}
+.poll-voted-tag {
+  margin: 0 0 var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-green);
+  font-weight: 800;
+}
+.poll-count-hint {
+  margin: 0 0 var(--lc-space-2);
+  font-size: var(--lc-text-xs);
+  color: var(--lc-subtle);
+  line-height: 1.5;
+}
+.poll-detail {
+  margin-top: var(--lc-space-4);
+  padding-top: var(--lc-space-3);
+  border-top: 1px dashed var(--lc-border);
+}
+.poll-detail-desc {
+  margin: 0 0 var(--lc-space-3);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-muted);
+  line-height: 1.6;
+}
+.poll-voter-total {
+  margin: 0 0 var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text);
+  font-weight: 800;
+}
+.poll-option-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--lc-space-2);
+}
+.poll-option-row {
+  margin: 0;
+}
+.poll-option-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text);
+  cursor: pointer;
+}
+.poll-option-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+}
+.poll-option-count {
+  font-size: var(--lc-text-xs);
+  color: var(--lc-muted);
+  white-space: nowrap;
+}
+.poll-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-3);
+  margin-top: var(--lc-space-4);
+}
+.poll-reveal-btn {
+  height: 32px;
+  padding: 0 var(--lc-space-3);
+  border-radius: var(--lc-radius-xs);
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface);
+  color: var(--lc-text);
+  font-size: var(--lc-text-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.poll-reveal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 </style>

@@ -309,6 +309,43 @@ export function updateGroupActivity(groupId, activityId, payload) {
   return request.patch(`/groups/${groupId}/activities/${activityId}`, payload)
 }
 
+// ── 团体投票（仅 platform_groups 字符串 ID；纯数字 legacy 团体无此能力）────────
+
+export function fetchGroupPolls(groupId, params = {}) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 })
+  }
+  return request.get(`/groups/${groupId}/polls`, { params })
+}
+
+export function createGroupPoll(groupId, payload) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('当前团体类型不支持线上投票'))
+  }
+  return request.post(`/groups/${groupId}/polls`, payload)
+}
+
+export function fetchGroupPoll(groupId, pollId) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('当前团体类型不支持线上投票'))
+  }
+  return request.get(`/groups/${groupId}/polls/${pollId}`)
+}
+
+export function submitGroupPollVotes(groupId, pollId, payload) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('当前团体类型不支持线上投票'))
+  }
+  return request.post(`/groups/${groupId}/polls/${pollId}/votes`, payload)
+}
+
+export function revealGroupPollResults(groupId, pollId) {
+  if (isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('当前团体类型不支持线上投票'))
+  }
+  return request.post(`/groups/${groupId}/polls/${pollId}/reveal-results`)
+}
+
 // ── Admin groups (back-office) ────────────────────────────────────────────────
 
 export function getAdminGroups() {

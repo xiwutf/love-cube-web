@@ -109,4 +109,47 @@ public class GroupExternalEngagementController {
         return engagementService.updateActivity(id, activityId, authHeader,
                 payload != null ? payload : Map.of());
     }
+
+    @GetMapping("/{id}/polls")
+    public Map<String, Object> listPolls(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return engagementService.listPolls(id, page, size, authHeader);
+    }
+
+    @PostMapping("/{id}/polls")
+    public Map<String, Object> createPoll(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody(required = false) Map<String, Object> payload) {
+        return engagementService.createPoll(id, authHeader, payload != null ? payload : Map.of());
+    }
+
+    @GetMapping("/{id}/polls/{pollId}")
+    public Map<String, Object> getPoll(
+            @PathVariable String id,
+            @PathVariable Long pollId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return engagementService.getPoll(id, pollId, authHeader);
+    }
+
+    @PostMapping("/{id}/polls/{pollId}/votes")
+    public Map<String, Object> submitPollVotes(
+            @PathVariable String id,
+            @PathVariable Long pollId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody(required = false) Map<String, Object> payload) {
+        return engagementService.submitPollVotes(id, pollId, authHeader,
+                payload != null ? payload : Map.of());
+    }
+
+    @PostMapping("/{id}/polls/{pollId}/reveal-results")
+    public Map<String, Object> revealPollResults(
+            @PathVariable String id,
+            @PathVariable Long pollId,
+            @RequestHeader("Authorization") String authHeader) {
+        return engagementService.revealPollResults(id, pollId, authHeader);
+    }
 }

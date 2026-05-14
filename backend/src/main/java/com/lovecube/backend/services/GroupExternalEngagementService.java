@@ -3,6 +3,9 @@ package com.lovecube.backend.services;
 import com.lovecube.backend.entity.GroupEngagementActivity;
 import com.lovecube.backend.entity.GroupEngagementActivitySignup;
 import com.lovecube.backend.entity.GroupEngagementCheckin;
+import com.lovecube.backend.entity.GroupEngagementPoll;
+import com.lovecube.backend.entity.GroupEngagementPollOption;
+import com.lovecube.backend.entity.GroupEngagementPollVote;
 import com.lovecube.backend.entity.GroupEngagementTaskProgress;
 import com.lovecube.backend.entity.GroupMember;
 import com.lovecube.backend.entity.PlatformGroup;
@@ -11,6 +14,9 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.GroupEngagementActivityRepository;
 import com.lovecube.backend.repository.GroupEngagementActivitySignupRepository;
 import com.lovecube.backend.repository.GroupEngagementCheckinRepository;
+import com.lovecube.backend.repository.GroupEngagementPollOptionRepository;
+import com.lovecube.backend.repository.GroupEngagementPollRepository;
+import com.lovecube.backend.repository.GroupEngagementPollVoteRepository;
 import com.lovecube.backend.repository.GroupEngagementTaskProgressRepository;
 import com.lovecube.backend.repository.GroupMemberRepository;
 import com.lovecube.backend.repository.PlatformGroupRepository;
@@ -71,6 +77,9 @@ public class GroupExternalEngagementService {
     private final GroupEngagementTaskProgressRepository taskProgressRepository;
     private final GroupEngagementActivityRepository activityRepository;
     private final GroupEngagementActivitySignupRepository activitySignupRepository;
+    private final GroupEngagementPollRepository pollRepository;
+    private final GroupEngagementPollOptionRepository pollOptionRepository;
+    private final GroupEngagementPollVoteRepository pollVoteRepository;
     private final GrowthService growthService;
     private final PlatCheckinLikeRepository checkinLikeRepository;
     private final PlatCheckinCommentRepository checkinCommentRepository;
@@ -86,6 +95,9 @@ public class GroupExternalEngagementService {
             GroupEngagementTaskProgressRepository taskProgressRepository,
             GroupEngagementActivityRepository activityRepository,
             GroupEngagementActivitySignupRepository activitySignupRepository,
+            GroupEngagementPollRepository pollRepository,
+            GroupEngagementPollOptionRepository pollOptionRepository,
+            GroupEngagementPollVoteRepository pollVoteRepository,
             GrowthService growthService,
             PlatCheckinLikeRepository checkinLikeRepository,
             PlatCheckinCommentRepository checkinCommentRepository,
@@ -99,6 +111,9 @@ public class GroupExternalEngagementService {
         this.taskProgressRepository = taskProgressRepository;
         this.activityRepository = activityRepository;
         this.activitySignupRepository = activitySignupRepository;
+        this.pollRepository = pollRepository;
+        this.pollOptionRepository = pollOptionRepository;
+        this.pollVoteRepository = pollVoteRepository;
         this.growthService = growthService;
         this.checkinLikeRepository = checkinLikeRepository;
         this.checkinCommentRepository = checkinCommentRepository;
@@ -707,6 +722,355 @@ public class GroupExternalEngagementService {
         activity.setUpdatedAt(LocalDateTime.now());
         activityRepository.save(activity);
         return Map.of("updated", true, "message", "活动已更新");
+    }
+
+    public Map<String, Object> listPolls(String groupId, int page, int size, String authHeader) {
+        requireActiveGroup(groupId);
+        Long userId = resolveOptionalUserId(authHeader);
+        User viewer = userId != null ? userRepository.findById(userId).orElse(null) : null;
+
+        List<GroupEngagementPoll> all = pollRepository.findByGroupExternalIdOrderByCreatedAtDesc(groupId).stream()
+                .filter(p -> "published".equals(p.getStatus()))
+                .collect(Collectors.toList());
+
+        int total = all.size();
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(50, Math.max(1, size));
+        int from = Math.min((safePage - 1) * safeSize, total);
+        int to = Math.min(from + safeSize, total);
+        List<GroupEngagementPoll> pageItems = from < total ? all.subList(from, to) : List.of();
+
+        Set<Long> votedPollIds = Set.of();
+        if (userId != null && !pageItems.isEmpty()) {
+            List<Long> pids = pageItems.stream().map(GroupEngagementPoll::getId).collect(Collectors.toList());
+            votedPollIds = new HashSet<>(pollVoteRepository.findPollIdsVotedByUserIn(userId, pids));
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (GroupEngagementPoll p : pageItems) {
+            boolean countsVisible = shouldExposePollCounts(p, viewer);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", p.getId());
+            row.put("title", p.getTitle());
+            row.put("selectionMode", p.getSelectionMode());
+            row.put("maxChoices", p.getMaxChoices());
+            row.put("startTime", p.getStartTime());
+            row.put("endTime", p.getEndTime());
+            row.put("resultsPublic", Boolean.TRUE.equals(p.getResultsPublic()));
+            row.put("createdAt", p.getCreatedAt());
+            row.put("isEnded", now.isAfter(p.getEndTime()));
+            row.put("isNotYetOpen", now.isBefore(p.getStartTime()));
+            row.put("hasVoted", votedPollIds.contains(p.getId()));
+            row.put("countsVisible", countsVisible);
+            items.add(row);
+        }
+        return Map.of("items", items, "total", total, "page", safePage, "pageSize", safeSize);
+    }
+
+    public Map<String, Object> getPoll(String groupId, Long pollId, String authHeader) {
+        requireActiveGroup(groupId);
+        GroupEngagementPoll poll = pollRepository.findByIdAndGroupExternalId(pollId, groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "投票不存在"));
+        Long userId = resolveOptionalUserId(authHeader);
+        User viewer = userId != null ? userRepository.findById(userId).orElse(null) : null;
+        boolean countsVisible = shouldExposePollCounts(poll, viewer);
+
+        List<GroupEngagementPollOption> optionRows =
+                pollOptionRepository.findByPollIdOrderBySortOrderAscIdAsc(pollId);
+        Map<Long, Long> countByOption = Map.of();
+        long voterTotal = 0;
+        if (countsVisible) {
+            countByOption = toLongCountMap(pollVoteRepository.countVotesByPollGrouped(pollId));
+            voterTotal = pollVoteRepository.countDistinctVotersByPollId(pollId);
+        }
+
+        List<Long> mySelections = List.of();
+        if (userId != null) {
+            mySelections = pollVoteRepository.findByPollIdAndUserId(pollId, userId).stream()
+                    .map(GroupEngagementPollVote::getOptionId)
+                    .collect(Collectors.toList());
+        }
+
+        List<Map<String, Object>> options = new ArrayList<>();
+        for (GroupEngagementPollOption o : optionRows) {
+            Map<String, Object> om = new LinkedHashMap<>();
+            om.put("id", o.getId());
+            om.put("label", o.getLabel());
+            om.put("sortOrder", o.getSortOrder());
+            if (countsVisible) {
+                om.put("voteCount", countByOption.getOrDefault(o.getId(), 0L).intValue());
+            } else {
+                om.put("voteCount", null);
+            }
+            options.add(om);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", poll.getId());
+        body.put("groupId", groupId);
+        body.put("title", poll.getTitle());
+        body.put("description", poll.getDescription() != null ? poll.getDescription() : "");
+        body.put("selectionMode", poll.getSelectionMode());
+        body.put("maxChoices", poll.getMaxChoices());
+        body.put("startTime", poll.getStartTime());
+        body.put("endTime", poll.getEndTime());
+        body.put("resultsPublic", Boolean.TRUE.equals(poll.getResultsPublic()));
+        body.put("countsVisible", countsVisible);
+        body.put("isEnded", now.isAfter(poll.getEndTime()));
+        body.put("isNotYetOpen", now.isBefore(poll.getStartTime()));
+        body.put("status", poll.getStatus());
+        body.put("createdAt", poll.getCreatedAt());
+        body.put("options", options);
+        body.put("mySelections", mySelections);
+        if (countsVisible) {
+            body.put("voterCount", voterTotal);
+        } else {
+            body.put("voterCount", null);
+        }
+        return body;
+    }
+
+    @Transactional
+    public Map<String, Object> createPoll(String groupId, String authHeader, Map<String, Object> payload) {
+        User user = adminAuthService.requireUser(authHeader);
+        requireActiveGroup(groupId);
+        requireManagerRole(groupId, user);
+
+        PlatformGroup group = platformGroupRepository.findById(groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "团体不存在"));
+
+        String title = String.valueOf(payload.getOrDefault("title", "")).trim();
+        if (title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "投票标题不能为空");
+        }
+        if (title.length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "标题最多 200 字");
+        }
+
+        String mode = String.valueOf(payload.getOrDefault("selectionMode", "single")).trim().toLowerCase();
+        if (!"single".equals(mode) && !"multiple".equals(mode)) {
+            mode = "single";
+        }
+
+        List<String> optionLabels = readStringList(payload.get("options"));
+        if (optionLabels.size() < 2) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "至少需要 2 个选项");
+        }
+        if (optionLabels.size() > 30) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "选项最多 30 个");
+        }
+        for (int i = 0; i < optionLabels.size(); i++) {
+            if (optionLabels.get(i).length() > 500) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "单个选项最多 500 字");
+            }
+        }
+
+        int maxChoices = 1;
+        if ("multiple".equals(mode)) {
+            Object mc = payload.get("maxChoices");
+            if (mc == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "多选投票需填写每人最多可选几项");
+            }
+            maxChoices = Integer.parseInt(String.valueOf(mc));
+            if (maxChoices < 2 || maxChoices > optionLabels.size()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "每人最多可选项数须在 2 到选项个数之间");
+            }
+        }
+
+        String startStr = String.valueOf(payload.getOrDefault("startTime", "")).trim();
+        String endStr = String.valueOf(payload.getOrDefault("endTime", "")).trim();
+        if (startStr.isBlank() || endStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "投票时间不能为空");
+        }
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+        try {
+            startTime = LocalDateTime.parse(startStr);
+            endTime = LocalDateTime.parse(endStr);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "时间格式不正确，请使用 ISO 8601 格式");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "结束时间必须晚于开始时间");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        GroupEngagementPoll poll = new GroupEngagementPoll();
+        poll.setGroupExternalId(groupId);
+        poll.setCreatorUserId(user.getUserid());
+        poll.setTitle(title);
+        poll.setDescription(String.valueOf(payload.getOrDefault("description", "")).trim());
+        poll.setSelectionMode(mode);
+        poll.setMaxChoices(maxChoices);
+        poll.setStartTime(startTime);
+        poll.setEndTime(endTime);
+        poll.setStatus("published");
+        poll.setResultsPublic(false);
+        poll.setCreatedAt(now);
+        poll.setUpdatedAt(now);
+        pollRepository.save(poll);
+
+        int order = 0;
+        for (String label : optionLabels) {
+            GroupEngagementPollOption opt = new GroupEngagementPollOption();
+            opt.setPollId(poll.getId());
+            opt.setLabel(label);
+            opt.setSortOrder(order++);
+            opt.setCreatedAt(now);
+            pollOptionRepository.save(opt);
+        }
+
+        String pollTitle = title;
+        memberRepository.findByGroupIdOrderByJoinedAtAsc(groupId).stream()
+                .filter(m -> !m.getUserId().equals(user.getUserid()))
+                .forEach(m -> notificationService.send(
+                        m.getUserId(), "GROUP_POLL_PUBLISHED",
+                        "团体发起了新投票：" + pollTitle,
+                        "团体「" + group.getName() + "」发起了新投票，欢迎参与。",
+                        "platform_group", groupId));
+
+        return Map.of("id", poll.getId(), "message", "投票已发布");
+    }
+
+    @Transactional
+    public Map<String, Object> submitPollVotes(String groupId, Long pollId, String authHeader,
+                                                Map<String, Object> payload) {
+        User user = adminAuthService.requireUser(authHeader);
+        requireActiveGroup(groupId);
+        if (!memberRepository.existsByGroupIdAndUserId(groupId, user.getUserid())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅团体成员可参与投票");
+        }
+
+        GroupEngagementPoll poll = pollRepository.findByIdAndGroupExternalId(pollId, groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "投票不存在"));
+        if (!"published".equals(poll.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "投票不可用");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(poll.getStartTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "投票尚未开始");
+        }
+        if (now.isAfter(poll.getEndTime())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "投票已结束");
+        }
+
+        List<Long> optionIds = readLongList(payload.get("optionIds"));
+        if (optionIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请选择至少一个选项");
+        }
+        if (optionIds.size() != new HashSet<>(optionIds).size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "选项不能重复");
+        }
+
+        List<GroupEngagementPollOption> validOptions =
+                pollOptionRepository.findByPollIdOrderBySortOrderAscIdAsc(pollId);
+        Set<Long> allowed = validOptions.stream().map(GroupEngagementPollOption::getId).collect(Collectors.toSet());
+        for (Long oid : optionIds) {
+            if (!allowed.contains(oid)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "存在无效选项");
+            }
+        }
+
+        if ("single".equalsIgnoreCase(poll.getSelectionMode())) {
+            if (optionIds.size() != 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "单选投票只能选择一个选项");
+            }
+        } else {
+            int max = poll.getMaxChoices() != null ? poll.getMaxChoices() : 1;
+            if (optionIds.size() > max) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "多选投票最多选择 " + max + " 个选项");
+            }
+        }
+
+        pollVoteRepository.deleteByPollIdAndUserId(pollId, user.getUserid());
+        for (Long oid : optionIds) {
+            GroupEngagementPollVote v = new GroupEngagementPollVote();
+            v.setPollId(pollId);
+            v.setOptionId(oid);
+            v.setUserId(user.getUserid());
+            v.setCreatedAt(LocalDateTime.now());
+            pollVoteRepository.save(v);
+        }
+        poll.setUpdatedAt(LocalDateTime.now());
+        pollRepository.save(poll);
+
+        return Map.of("ok", true, "message", "投票已提交");
+    }
+
+    @Transactional
+    public Map<String, Object> revealPollResults(String groupId, Long pollId, String authHeader) {
+        User user = adminAuthService.requireUser(authHeader);
+        requireActiveGroup(groupId);
+        requireManagerRole(groupId, user);
+
+        GroupEngagementPoll poll = pollRepository.findByIdAndGroupExternalId(pollId, groupId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "投票不存在"));
+        poll.setResultsPublic(true);
+        poll.setUpdatedAt(LocalDateTime.now());
+        pollRepository.save(poll);
+        return Map.of("resultsPublic", true, "message", "已向成员展示票数");
+    }
+
+    private boolean userCanManageGroup(String groupId, User user) {
+        if (user == null) {
+            return false;
+        }
+        boolean siteAdmin = adminAuthService.isAdmin(user);
+        GroupMember self = memberRepository.findByGroupIdAndUserId(groupId, user.getUserid()).orElse(null);
+        boolean ownerLike = siteAdmin || (self != null && "owner".equalsIgnoreCase(self.getRole()));
+        boolean grpAdmin = self != null && "admin".equalsIgnoreCase(self.getRole());
+        return ownerLike || grpAdmin;
+    }
+
+    private boolean shouldExposePollCounts(GroupEngagementPoll poll, User viewer) {
+        if (Boolean.TRUE.equals(poll.getResultsPublic())) {
+            return true;
+        }
+        return userCanManageGroup(poll.getGroupExternalId(), viewer);
+    }
+
+    private List<String> readStringList(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> out = new ArrayList<>();
+        for (Object o : list) {
+            if (o == null) {
+                continue;
+            }
+            String s = String.valueOf(o).trim();
+            if (!s.isBlank()) {
+                out.add(s);
+            }
+        }
+        return out;
+    }
+
+    private List<Long> readLongList(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        List<Long> out = new ArrayList<>();
+        for (Object o : list) {
+            if (o == null) {
+                continue;
+            }
+            try {
+                if (o instanceof Number n) {
+                    out.add(n.longValue());
+                } else {
+                    out.add(Long.parseLong(String.valueOf(o).trim()));
+                }
+            } catch (NumberFormatException ignored) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "选项 ID 格式不正确");
+            }
+        }
+        return out;
     }
 
     private void requireActiveGroup(String groupId) {
