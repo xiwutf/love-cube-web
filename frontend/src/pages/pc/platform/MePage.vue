@@ -147,6 +147,7 @@
         </div>
         <div class="modal-actions">
           <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="outline-action" @click="goChangePhonePage">换绑手机号</button>
           <button type="button" class="outline-action" @click="goChangePasswordPage">修改密码</button>
           <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
         </div>
@@ -538,6 +539,11 @@ function handleLogout() {
 function goChangePasswordPage() {
   closeSettingsPanel()
   router.push('/fellowship/change-password')
+}
+
+function goChangePhonePage() {
+  closeSettingsPanel()
+  router.push('/fellowship/change-phone')
 }
 
 async function copyInviteCode() {

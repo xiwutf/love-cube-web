@@ -5,6 +5,7 @@
     <van-cell-group inset title="账号" class="group">
       <van-cell title="统一账号中心" is-link @click="router.push('/account')" />
       <van-cell title="修改密码" is-link @click="router.push('/fellowship/change-password')" />
+      <van-cell title="换绑手机号" is-link @click="router.push('/fellowship/change-phone')" />
       <van-cell
         title="关闭联谊功能"
         is-link

@@ -23,8 +23,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -33,6 +35,7 @@ import java.time.LocalDateTime;
 public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private static final int USERNAME_MAX_LENGTH = 20;
+    private static final Pattern CHINA_MOBILE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -271,6 +274,72 @@ public class AuthController {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("message", "Password updated"));
+    }
+
+    @Transactional
+    @PutMapping("/phone")
+    public ResponseEntity<?> changePhone(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, String> body
+    ) {
+        String password = body.get("password");
+        String newPhone = normalizePhoneNumber(body.get("newPhone"));
+        String confirmPhone = normalizePhoneNumber(body.get("confirmPhone"));
+
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "请输入登录密码以验证身份"));
+        }
+        if (newPhone == null || newPhone.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "请输入新手机号"));
+        }
+        if (!CHINA_MOBILE_PATTERN.matcher(newPhone).matches()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "请输入有效的 11 位中国大陆手机号"));
+        }
+        if (confirmPhone == null || confirmPhone.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "请再次输入新手机号"));
+        }
+        if (!newPhone.equals(confirmPhone)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "两次输入的新手机号不一致"));
+        }
+
+        User user = adminAuthService.requireUser(authHeader);
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "登录密码不正确"));
+        }
+
+        String currentPhone = normalizePhoneNumber(user.getPhoneNumber());
+        if (currentPhone != null && currentPhone.equals(newPhone)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "新手机号不能与当前手机号相同"));
+        }
+
+        User existing = userRepository.findByPhoneNumber(newPhone);
+        if (existing != null && !Objects.equals(existing.getUserid(), user.getUserid())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "该手机号已被其他账号使用"));
+        }
+
+        try {
+            user.setPhoneNumber(newPhone);
+            userRepository.save(user);
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "手机号已更新");
+            result.put("phone", newPhone);
+            return ResponseEntity.ok(result);
+        } catch (DataIntegrityViolationException ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            log.warn("Change phone failed: data integrity — userId={}, phone={}", user.getUserid(), newPhone);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "message",
+                    "手机号更新失败：该号码可能已被占用，请更换后重试"
+            ));
+        }
+    }
+
+    private String normalizePhoneNumber(String rawPhone) {
+        if (rawPhone == null) {
+            return null;
+        }
+        String digits = rawPhone.replaceAll("\\s+", "");
+        return digits.isEmpty() ? null : digits;
     }
 
     private String normalizeUsername(String rawUsername) {

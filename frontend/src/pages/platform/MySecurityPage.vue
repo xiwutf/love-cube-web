@@ -24,7 +24,7 @@
               <div class="sec-row-sub">{{ user?.phone ? maskPhone(user.phone) : '未绑定' }}</div>
             </div>
           </div>
-          <span class="sec-badge" :class="user?.phone ? 'ok' : 'warn'">{{ user?.phone ? '已绑定' : '未绑定' }}</span>
+          <button type="button" class="sec-action-btn" @click="goChangePhone">{{ user?.phone ? '换绑' : '绑定' }}</button>
         </div>
         <div class="sec-row">
           <div class="sec-row-left">
@@ -130,6 +130,10 @@ function maskPhone(phone) {
 
 function goChangePwd() {
   router.push('/fellowship/change-password')
+}
+
+function goChangePhone() {
+  router.push('/fellowship/change-phone')
 }
 
 onMounted(async () => {

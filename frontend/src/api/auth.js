@@ -14,3 +14,8 @@ export function register(data) {
 export function changePassword(data) {
   return request.put('/auth/password', data)
 }
+
+/** 换绑当前登录用户手机号（需验证登录密码） */
+export function changePhone(data) {
+  return request.put('/auth/phone', data)
+}

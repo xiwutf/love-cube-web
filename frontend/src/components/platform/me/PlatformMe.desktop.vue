@@ -269,6 +269,7 @@
         </div>
         <div class="modal-actions settings-actions">
           <button type="button" class="primary-action" @click="openEditPanel">编辑个人资料</button>
+          <button type="button" class="outline-action" @click="goChangePhonePage">换绑手机号</button>
           <button type="button" class="outline-action" @click="goChangePasswordPage">修改密码</button>
           <button type="button" class="danger-action" @click="handleLogout">退出登录</button>
         </div>
@@ -347,7 +348,7 @@ function accountGrowthTaskRoute(code) {
     ACC_PHOTO: '/me/profile',
     ACC_BIO: { path: '/me', query: { panel: 'edit' } },
     ACC_JOIN_GROUP: '/platform/groups',
-    ACC_FIRST_POST: '/platform/publish',
+    ACC_FIRST_POST: '/platform/positive-share',
     ACC_BIND_PHONE: '/me/security'
   }
   return routes[code] || '/me'
@@ -417,7 +418,7 @@ const mobileGrowthLevel = computed(() => {
 const mobileDailyTasks = computed(() => {
   const codeToRoute = {
     DAILY_LOGIN: '/platform/checkin',
-    DAILY_POST: '/platform/publish',
+    DAILY_POST: '/platform/positive-share',
     DAILY_COMMENT: '/platform/content?type=mood',
     DAILY_VIEW: '/platform/content',
     DAILY_LIKE: '/platform/content?type=mood'
@@ -492,7 +493,7 @@ const dailyTasks = computed(() => {
   const rows = growthInfo.value?.dailyTasks
   const codeToRoute = {
     DAILY_LOGIN: '/platform/checkin',
-    DAILY_POST: '/platform/publish',
+    DAILY_POST: '/platform/positive-share',
     DAILY_COMMENT: '/platform/content?type=mood',
     DAILY_VIEW: '/platform/content',
     DAILY_LIKE: '/platform/content?type=mood'
@@ -787,6 +788,11 @@ function handleLogout() {
 function goChangePasswordPage() {
   closeSettingsPanel()
   router.push('/fellowship/change-password')
+}
+
+function goChangePhonePage() {
+  closeSettingsPanel()
+  router.push('/fellowship/change-phone')
 }
 
 async function copyInviteCode() {
