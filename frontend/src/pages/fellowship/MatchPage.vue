@@ -134,83 +134,7 @@
       </div>
     </van-dialog>
 
-    <van-popup v-model:show="showIcebreaker" position="bottom" round :style="{ maxHeight: '85vh' }">
-      <div class="icebreaker-popup">
-        <h3 class="icebreaker-title">破冰小问答</h3>
-        <p class="icebreaker-sub">回答 3 道题，对方也完成后可互相查看</p>
-        <div v-if="icebreakerLoading" class="icebreaker-loading">加载中…</div>
-        <template v-else>
-          <div v-for="q in icebreakerQuestions" :key="q.id" class="icebreaker-q">
-            <p class="icebreaker-q-text">{{ q.questionText }}</p>
-            <van-field
-              v-model="icebreakerDraft[q.id]"
-              type="textarea"
-              rows="2"
-              maxlength="200"
-              placeholder="写下你的回答…"
-              :readonly="icebreakerSession?.myCompleted"
-            />
-            <p v-if="icebreakerSession?.canViewPeerAnswers && q.peerAnswer" class="icebreaker-peer">
-              对方：{{ q.peerAnswer }}
-            </p>
-          </div>
-          <van-button
-            v-if="!icebreakerSession?.myCompleted"
-            round
-            block
-            color="#FF5F84"
-            :loading="icebreakerSubmitting"
-            @click="submitIcebreaker"
-          >
-            提交回答
-          </van-button>
-          <van-button v-else round block plain hairline style="margin-top: 10px" @click="goChatFromIcebreaker">
-            去聊天
-          </van-button>
-        </template>
-      </div>
-    </van-popup>
-
-    <van-popup v-model:show="showCompatibility" position="bottom" round :style="{ maxHeight: '85vh' }">
-      <div class="icebreaker-popup">
-        <h3 class="icebreaker-title">默契测试</h3>
-        <p class="icebreaker-sub">选最符合你的选项，双方完成后显示匹配度</p>
-        <div v-if="compatibilityLoading" class="icebreaker-loading">加载中…</div>
-        <template v-else>
-          <div v-if="compatibilitySession?.canViewResult" class="compat-score">
-            匹配度 <strong>{{ compatibilitySession.compatibilityScore }}%</strong>
-          </div>
-          <div v-for="q in compatibilityQuestions" :key="q.id" class="icebreaker-q">
-            <p class="icebreaker-q-text">{{ q.questionText }}</p>
-            <van-radio-group
-              v-model="compatibilityDraft[q.id]"
-              direction="vertical"
-              :disabled="compatibilitySession?.myCompleted"
-            >
-              <van-radio v-for="opt in q.options" :key="opt.key" :name="opt.key" icon-size="16">
-                {{ opt.text }}
-              </van-radio>
-            </van-radio-group>
-            <p v-if="compatibilitySession?.canViewResult && q.peerOption" class="icebreaker-peer">
-              对方选了：{{ optionLabel(q, q.peerOption) }}
-            </p>
-          </div>
-          <van-button
-            v-if="!compatibilitySession?.myCompleted"
-            round
-            block
-            color="#FF5F84"
-            :loading="compatibilitySubmitting"
-            @click="submitCompatibility"
-          >
-            提交答案
-          </van-button>
-          <van-button v-else round block plain hairline style="margin-top: 10px" @click="goChatFromCompatibility">
-            去聊天
-          </van-button>
-        </template>
-      </div>
-    </van-popup>
+    <PeerMatchGamesPopups ref="gamesRef" :peer-user-id="matchedUserId" @go-chat="goChat" />
 
     <AppTabBar />
   </div>
@@ -222,7 +146,8 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import SwipeCard from '@/components/SwipeCard.vue'
-import { getMatchList, likeUser, dislikeUser, matchFollowUser, getIcebreakerSession, submitIcebreakerAnswers, getCompatibilitySession, submitCompatibilityAnswers } from '@/api/match.js'
+import PeerMatchGamesPopups from '@/components/fellowship/PeerMatchGamesPopups.vue'
+import { getMatchList, likeUser, dislikeUser, matchFollowUser } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
@@ -233,19 +158,8 @@ const cardStack = ref([])
 const topCardRef = ref(null)
 const showFilter = ref(false)
 const showMatched = ref(false)
-const showIcebreaker = ref(false)
-const showCompatibility = ref(false)
 const swipeQuota = ref(null)
-const icebreakerLoading = ref(false)
-const icebreakerSubmitting = ref(false)
-const icebreakerSession = ref(null)
-const icebreakerQuestions = ref([])
-const icebreakerDraft = reactive({})
-const compatibilityLoading = ref(false)
-const compatibilitySubmitting = ref(false)
-const compatibilitySession = ref(null)
-const compatibilityQuestions = ref([])
-const compatibilityDraft = reactive({})
+const gamesRef = ref(null)
 const pager = reactive({
   page: 1,
   size: 8,
@@ -291,7 +205,7 @@ async function loadCards() {
   } catch (err) {
     if (isFellowshipPhotosGateError(err)) {
       showToast({ message: err?.message || '请先上传生活照后再使用匹配', type: 'fail' })
-      router.push('/fellowship/profile/edit')
+      router.push(fellowshipPath('/profile/edit'))
       return
     }
     showToast({ message: '加载失败', type: 'fail' })
@@ -334,7 +248,7 @@ async function onAction(action) {
     }
     if (isFellowshipPhotosGateError(err)) {
       showToast({ message: err?.message || '请先上传生活照', type: 'fail' })
-      router.push('/fellowship/profile/edit')
+      router.push(fellowshipPath('/profile/edit'))
       return
     }
     showToast({ message: '操作失败，请稍后重试', type: 'fail' })
@@ -368,7 +282,7 @@ async function loadMore() {
   } catch (err) {
     if (isFellowshipPhotosGateError(err)) {
       showToast({ message: err?.message || '请先上传生活照', type: 'fail' })
-      router.push('/fellowship/profile/edit')
+      router.push(fellowshipPath('/profile/edit'))
     }
   } finally {
     pager.loadingMore = false
@@ -385,109 +299,14 @@ function goChat() {
   if (matchedUserId) router.push(fellowshipPath(`/chat/${matchedUserId}`))
 }
 
-async function openIcebreaker() {
+function openIcebreaker() {
   showMatched.value = false
-  if (!matchedUserId) return
-  showIcebreaker.value = true
-  icebreakerLoading.value = true
-  try {
-    const session = await getIcebreakerSession(matchedUserId)
-    icebreakerSession.value = session
-    icebreakerQuestions.value = Array.isArray(session?.questions) ? session.questions : []
-    icebreakerQuestions.value.forEach((q) => {
-      if (q.myAnswer) icebreakerDraft[q.id] = q.myAnswer
-    })
-  } catch {
-    showToast({ message: '加载破冰题失败', type: 'fail' })
-    showIcebreaker.value = false
-  } finally {
-    icebreakerLoading.value = false
-  }
+  gamesRef.value?.openIcebreaker()
 }
 
-async function submitIcebreaker() {
-  if (!matchedUserId || icebreakerSubmitting.value) return
-  const answers = icebreakerQuestions.value
-    .map((q) => ({
-      questionId: q.id,
-      answerText: String(icebreakerDraft[q.id] || '').trim()
-    }))
-    .filter((a) => a.answerText)
-  if (!answers.length) {
-    showToast('请至少回答一题')
-    return
-  }
-  icebreakerSubmitting.value = true
-  try {
-    const res = await submitIcebreakerAnswers(matchedUserId, answers)
-    icebreakerSession.value = res?.session || icebreakerSession.value
-    icebreakerQuestions.value = res?.session?.questions || icebreakerQuestions.value
-    showToast({ type: 'success', message: '回答已保存' })
-  } catch {
-    showToast({ message: '提交失败', type: 'fail' })
-  } finally {
-    icebreakerSubmitting.value = false
-  }
-}
-
-function goChatFromIcebreaker() {
-  showIcebreaker.value = false
-  goChat()
-}
-
-async function openCompatibility() {
+function openCompatibility() {
   showMatched.value = false
-  if (!matchedUserId) return
-  showCompatibility.value = true
-  compatibilityLoading.value = true
-  try {
-    const session = await getCompatibilitySession(matchedUserId)
-    compatibilitySession.value = session
-    compatibilityQuestions.value = Array.isArray(session?.questions) ? session.questions : []
-    compatibilityQuestions.value.forEach((q) => {
-      if (q.myOption) compatibilityDraft[q.id] = q.myOption
-    })
-  } catch {
-    showToast({ message: '加载默契测试失败', type: 'fail' })
-    showCompatibility.value = false
-  } finally {
-    compatibilityLoading.value = false
-  }
-}
-
-async function submitCompatibility() {
-  if (!matchedUserId || compatibilitySubmitting.value) return
-  const answers = compatibilityQuestions.value
-    .map((q) => ({
-      questionId: q.id,
-      selectedOption: String(compatibilityDraft[q.id] || '').trim()
-    }))
-    .filter((a) => a.selectedOption)
-  if (!answers.length) {
-    showToast('请至少完成一题')
-    return
-  }
-  compatibilitySubmitting.value = true
-  try {
-    const res = await submitCompatibilityAnswers(matchedUserId, answers)
-    compatibilitySession.value = res?.session || compatibilitySession.value
-    compatibilityQuestions.value = res?.session?.questions || compatibilityQuestions.value
-    showToast({ type: 'success', message: '答案已保存' })
-  } catch {
-    showToast({ message: '提交失败', type: 'fail' })
-  } finally {
-    compatibilitySubmitting.value = false
-  }
-}
-
-function optionLabel(question, key) {
-  const opt = (question?.options || []).find((item) => item.key === key)
-  return opt?.text || key
-}
-
-function goChatFromCompatibility() {
-  showCompatibility.value = false
-  goChat()
+  gamesRef.value?.openCompatibility()
 }
 
 function goUserProfile(userId) {

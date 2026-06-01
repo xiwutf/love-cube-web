@@ -1407,11 +1407,6 @@ const {
   line-height: 1.4;
 }
 
-.gd-post-actions button.on {
-  color: var(--lc-indigo, #4f46e5);
-  font-weight: 700;
-}
-
 .gd-post-comments {
   margin-top: 10px;
   padding-top: 10px;

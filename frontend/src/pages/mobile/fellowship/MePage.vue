@@ -4,10 +4,10 @@
       <h1 class="page-title">个人中心</h1>
       <p class="header-tip">完善资料提升匹配率</p>
       <div class="header-actions">
-        <button class="header-icon-btn" @click="router.push('/fellowship/settings')">
+        <button class="header-icon-btn" @click="router.push(fellowshipPath('/settings'))">
           <van-icon name="setting-o" size="20" />
         </button>
-        <button class="header-icon-btn" @click="router.push('/fellowship/messages?tab=notification')">
+        <button class="header-icon-btn" @click="router.push(fellowshipPath('/messages?tab=notification'))">
           <van-icon name="bell" size="20" />
           <span v-if="notificationCount > 0" class="badge-dot">{{ notificationCount }}</span>
         </button>
@@ -33,11 +33,11 @@
             <div class="name-block">
               <h2 class="nickname">{{ displayName }}</h2>
               <div class="badge-row">
-                <button class="verified-badge" :class="verificationLevel" type="button" @click="router.push('/fellowship/verify')">
+                <button class="verified-badge" :class="verificationLevel" type="button" @click="router.push(fellowshipPath('/verify'))">
                   <span class="verified-mark">V</span>
                   <span>{{ verificationLabel }}</span>
                 </button>
-                <button class="vip-medal" :class="{ active: vipActive }" type="button" @click="router.push('/m/fellowship/vip')">
+                <button class="vip-medal" :class="{ active: vipActive }" type="button" @click="router.push(fellowshipPath('/vip'))">
                   <span class="vip-crown">VIP</span>
                   <span>{{ vipActive ? '已开通' : '尊享' }}</span>
                 </button>
@@ -45,7 +45,7 @@
             </div>
             <p class="base-info">{{ displayAge }}岁 · {{ displayCity }} · {{ displayJob }}</p>
             <p class="intro">{{ displayIntro }}</p>
-            <div class="identity-strip" @click="router.push('/fellowship/verify')">
+            <div class="identity-strip" @click="router.push(fellowshipPath('/verify'))">
               <span v-for="item in identityPerks" :key="item">{{ item }}</span>
             </div>
             <div class="tags-row">
@@ -57,9 +57,9 @@
             </div>
           </div>
 
-          <button class="edit-link" @click="router.push('/fellowship/profile/edit')">编辑资料</button>
-          <button class="message-link" @click="router.push('/fellowship/messages')">消息</button>
-          <div class="premium-seal" @click="router.push('/fellowship/vip')">
+          <button class="edit-link" @click="router.push(fellowshipPath('/profile/edit'))">编辑资料</button>
+          <button class="message-link" @click="router.push(fellowshipPath('/messages'))">消息</button>
+          <div class="premium-seal" @click="router.push(fellowshipPath('/vip'))">
             <span>LOVE</span>
             <strong>PREMIUM</strong>
           </div>
@@ -67,7 +67,7 @@
         </div>
       </section>
 
-      <section v-show="!loadingPage" v-if="swipeQuota && !swipeQuota.unlimited" class="swipe-quota-banner" @click="router.push('/m/fellowship/vip')">
+      <section v-show="!loadingPage" v-if="swipeQuota && !swipeQuota.unlimited" class="swipe-quota-banner" @click="router.push(fellowshipPath('/vip'))">
         <div>
           <p class="sq-title">今日滑卡 {{ swipeQuota.used }}/{{ swipeQuota.limit }}</p>
           <p class="sq-sub">开通 VIP 无限滑卡 · 解锁访客与喜欢名单</p>
@@ -90,7 +90,7 @@
             <div class="progress-bar" :style="{ width: `${completionPercent}%` }" />
           </div>
           <p class="cell-sub">再完善 1 项，匹配率提升 30%</p>
-          <button class="minor-link" @click="router.push('/fellowship/profile/edit')">去完善</button>
+          <button class="minor-link" @click="router.push(fellowshipPath('/profile/edit'))">去完善</button>
         </div>
         <div class="status-cell">
           <div class="metric-icon metric-trend">
@@ -128,7 +128,7 @@
       <section v-show="!loadingPage" class="photos-card">
         <div class="block-header">
           <h3>我的照片</h3>
-          <button class="block-link" @click="router.push('/fellowship/profile-edit')">全部照片 ></button>
+          <button class="block-link" @click="router.push(fellowshipPath('/profile/edit'))">全部照片 ></button>
         </div>
         <div class="photos-row">
           <div v-for="(photo, index) in displayPhotos" :key="photo.id || index" class="photo-item">
@@ -154,7 +154,7 @@
       <section v-show="!loadingPage" class="activity-card">
         <div class="block-header">
           <h3>平台公告</h3>
-          <button class="block-link" @click="router.push('/fellowship/messages')">全部 ></button>
+          <button class="block-link" @click="router.push(fellowshipPath('/messages'))">全部 ></button>
         </div>
         <ul class="activity-list">
           <li v-for="item in activityItems" :key="item.title" class="activity-item">
@@ -170,7 +170,7 @@
         </ul>
       </section>
 
-      <section v-show="!loadingPage" class="vip-banner" @click="router.push('/fellowship/vip')">
+      <section v-show="!loadingPage" class="vip-banner" @click="router.push(fellowshipPath('/vip'))">
         <div class="vip-banner-main">
           <span class="vip-banner-kicker">Love Cube Premium</span>
           <p class="vip-title">开通会员 · 让优质身份被优先看见</p>
@@ -206,8 +206,10 @@ import {
 import { getFellowshipMeStatsCached } from '@/api/fellowship.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const userStore = useUserStore()
 const avatarInput = ref(null)
 const photoInput = ref(null)
@@ -292,16 +294,16 @@ const identityPerks = ['真人核验', '资料可信', '优先推荐']
 const menuItems = computed(() => {
   const s = fellowshipStats.value
   return [
-    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/m/fellowship/my-likes?tab=mutual', theme: 'pink' },
-    { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/m/fellowship/messages?tab=visitor', theme: 'blue' },
-    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/m/fellowship/liked-me', theme: 'yellow' },
+    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: fellowshipPath('/my-likes?tab=mutual'), theme: 'pink' },
+    { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: fellowshipPath('/messages?tab=visitor'), theme: 'blue' },
+    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: fellowshipPath('/liked-me'), theme: 'yellow' },
     { key: 'play', title: '成长玩法', sub: '任务签到心声', icon: 'gem-o', to: '/m/platform', theme: 'teal' },
     { key: 'local', title: '本地服务', sub: '招聘二手租房', icon: 'location-o', to: '/m/platform/local', theme: 'amber' },
-    { key: 'ai', title: 'AI 助手', sub: '润色与话术', icon: 'bulb-o', to: '/m/fellowship/ai-tools', theme: 'violet' },
-    { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/m/fellowship/invite', theme: 'purple' },
-    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/m/fellowship/event-signups', theme: 'green' },
-    { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
-    { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: '/fellowship/privacy', theme: 'gray' }
+    { key: 'ai', title: 'AI 助手', sub: '润色与话术', icon: 'bulb-o', to: fellowshipPath('/ai-tools'), theme: 'violet' },
+    { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: fellowshipPath('/invite'), theme: 'purple' },
+    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: fellowshipPath('/event-signups'), theme: 'green' },
+    { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: fellowshipPath('/following'), theme: 'orange' },
+    { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: fellowshipPath('/privacy'), theme: 'gray' }
   ]
 })
 

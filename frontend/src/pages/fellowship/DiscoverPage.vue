@@ -5,7 +5,7 @@
         <img class="home-logo-icon" :src="loveCubeIcon" alt="">
         <span class="home-logo-text">Love Cube</span>
       </div>
-      <button class="home-avatar-btn" @click="router.push('/fellowship/me')">
+      <button class="home-avatar-btn" @click="router.push(fellowshipPath('/me'))">
         <van-icon name="contact" size="22" color="#ff5f84" />
       </button>
     </header>
@@ -26,7 +26,7 @@
             <p class="tip-desc">当前资料完成度 {{ completion.percent || 0 }}%，建议先补充关键信息</p>
           </div>
         </div>
-        <van-button round size="small" color="#ff5f84" @click="router.push('/fellowship/profile/edit')">
+        <van-button round size="small" color="#ff5f84" @click="router.push(fellowshipPath('/profile/edit'))">
           完善资料
         </van-button>
       </div>
@@ -39,7 +39,7 @@
             <p class="tip-desc">认证后更容易获得回应与推荐</p>
           </div>
         </div>
-        <van-button round size="small" plain color="#2563eb" @click="router.push('/fellowship/verify')">
+        <van-button round size="small" plain color="#2563eb" @click="router.push(fellowshipPath('/verify'))">
           去认证
         </van-button>
       </div>
@@ -69,14 +69,14 @@
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">为你推荐</span>
-          <span class="section-more" @click="router.push('/fellowship/match')">查看更多</span>
+          <span class="section-more" @click="router.push(fellowshipPath('/match'))">查看更多</span>
         </div>
         <div v-if="safeRecommends.length" class="rec-scroll">
           <div
             v-for="user in safeRecommends"
             :key="user.userId || user.userid"
             class="rec-item"
-            @click="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)"
+            @click="router.push(fellowshipPath(`/user-profile/${user.userId || user.userid}`))"
           >
             <div class="rec-avatar-ring">
               <van-image
@@ -98,7 +98,7 @@
         </div>
         <div v-else class="empty-guide">
           <van-empty description="当前推荐较少，去完善资料试试" image-size="64" />
-          <van-button round type="primary" size="small" color="#ff5f84" @click="router.push('/fellowship/profile/edit')">
+          <van-button round type="primary" size="small" color="#ff5f84" @click="router.push(fellowshipPath('/profile/edit'))">
             去完善资料
           </van-button>
         </div>
@@ -107,14 +107,14 @@
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">新人</span>
-          <span class="section-more" @click="router.push('/fellowship/newcomers')">查看更多</span>
+          <span class="section-more" @click="router.push(fellowshipPath('/newcomers'))">查看更多</span>
         </div>
         <div v-if="safeNewcomers.length" class="nc-list">
           <div
             v-for="user in safeNewcomers"
             :key="user.userId || user.userid"
             class="nc-item"
-            @click="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)"
+            @click="router.push(fellowshipPath(`/user-profile/${user.userId || user.userid}`))"
           >
             <van-image round width="48" height="48" :src="getAvatar(user)" fit="cover">
               <template #error>
@@ -125,7 +125,7 @@
               <p class="nc-name">{{ user.nickname || user.username }}</p>
               <p class="nc-meta">{{ user.age || '--' }} 岁 · {{ user.location || '未知' }}</p>
             </div>
-            <button class="nc-greet-btn" @click.stop="router.push(`/fellowship/user-profile/${user.userId || user.userid}`)">
+            <button class="nc-greet-btn" @click.stop="router.push(fellowshipPath(`/user-profile/${user.userId || user.userid}`))">
               打招呼
             </button>
           </div>
@@ -161,8 +161,10 @@ import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.w
 import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.webp'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 import { getAvatar } from '@/utils/image.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const profileStore = useFellowshipProfileStore()
 
 // Module-level cache: stale-while-revalidate, 5-min TTL

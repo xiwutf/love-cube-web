@@ -3,7 +3,7 @@
     <NavBar title="喜欢我的人" />
     <div v-if="loading" class="loading-wrap"><van-loading size="20" /></div>
     <template v-else>
-      <div v-if="locked" class="vip-banner" @click="router.push('/fellowship/vip')">
+      <div v-if="locked" class="vip-banner" @click="router.push(fellowshipPath('/vip'))">
         <p>有 {{ totalCount }} 人喜欢你</p>
         <span>开通 VIP 查看完整名单</span>
       </div>
@@ -30,8 +30,10 @@ import NavBar from '@/components/NavBar.vue'
 import UserCard from '@/components/UserCard.vue'
 import { getLikedMeUsers } from '@/api/personal.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const loading = ref(false)
 const list = ref([])
 const locked = ref(false)
@@ -61,18 +63,18 @@ async function loadList() {
 function onProfile(user) {
   if (user?.locked || !user?.userId) {
     showToast('开通 VIP 后可查看资料')
-    router.push('/fellowship/vip')
+    router.push(fellowshipPath('/vip'))
     return
   }
   goProfile(user.userId)
 }
 
 function goProfile(userId) {
-  router.push(`/fellowship/user-profile/${userId}`)
+  router.push(fellowshipPath(`/user-profile/${userId}`))
 }
 
 function goChat(userId) {
-  router.push(`/fellowship/chat/${userId}`)
+  router.push(fellowshipPath(`/chat/${userId}`))
 }
 
 onMounted(loadList)

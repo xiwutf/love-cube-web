@@ -2,7 +2,8 @@
   <van-pull-refresh v-model="refreshingLocal" @refresh="emit('refresh')">
     <div class="tab-content">
       <van-list v-model:loading="loadingLocal" :finished="true" finished-text="">
-        <van-swipe-cell v-for="item in list" :key="item.userId" class="chat-cell">
+      <template v-for="item in list" :key="item.userId">
+        <van-swipe-cell v-if="!item.matchedOnly" class="chat-cell">
           <div class="chat-item" @click="emit('chat', item)">
             <div class="chat-avatar-wrap">
               <van-image round width="50" height="50" :src="item.avatar" fit="cover">
@@ -24,6 +25,25 @@
             <van-button square type="danger" text="删除" style="height: 100%" @click="emit('delete-chat', item)" />
           </template>
         </van-swipe-cell>
+
+        <div v-else class="chat-item chat-item--matched" @click="emit('chat', item)">
+          <div class="chat-avatar-wrap">
+            <van-image round width="50" height="50" :src="item.avatar" fit="cover">
+              <template #error>
+                <div class="avatar-fb">{{ (item.nickname || '?')[0] }}</div>
+              </template>
+            </van-image>
+            <span class="match-badge">新配对</span>
+          </div>
+          <div class="chat-info">
+            <div class="chat-row">
+              <span class="chat-name">{{ item.nickname }}</span>
+              <span class="chat-time">{{ formatTime(item.lastTime) }}</span>
+            </div>
+            <p class="chat-last chat-last--hint">{{ item.lastMessage || '配对成功，打个招呼吧' }}</p>
+          </div>
+        </div>
+      </template>
 
         <div v-if="!loading && !list.length" class="empty-wrap">
           <van-empty description="暂无聊天消息" image-size="70" />

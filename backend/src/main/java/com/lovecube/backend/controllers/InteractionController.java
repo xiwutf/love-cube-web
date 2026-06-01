@@ -4,6 +4,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.GrowthService;
+import com.lovecube.backend.services.MatchService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.SwipeQuotaService;
 import com.lovecube.backend.services.UnifiedProfileService;
@@ -44,6 +45,9 @@ public class InteractionController {
 
     @Autowired
     private VipService vipService;
+
+    @Autowired
+    private MatchService matchService;
 
     private ResponseEntity<?> forbiddenIfNeedsFellowshipPhotos(User u) {
         if (u != null && unifiedProfileService.isFellowshipActiveButMissingLifePhotos(u)) {
@@ -91,6 +95,7 @@ public class InteractionController {
                     notificationService.send(userId, NotificationCatalog.TYPE_PROFILE_LIKED, "有人喜欢你",
                         senderName + " 喜欢了你", "USER", String.valueOf(currentUser.getUserid()));
                     if (matched) {
+                        persistMutualMatchIfNeeded(currentUser.getUserid(), userId);
                         notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
                             "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
                             String.valueOf(currentUser.getUserid()));
@@ -203,6 +208,7 @@ public class InteractionController {
                             "USER",
                             String.valueOf(currentUser.getUserid()));
                     if (matched) {
+                        persistMutualMatchIfNeeded(currentUser.getUserid(), userId);
                         notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
                                 "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
                                 String.valueOf(currentUser.getUserid()));
@@ -279,6 +285,7 @@ public class InteractionController {
                 notificationService.send(userId, NotificationCatalog.TYPE_PROFILE_LIKED, "有人超级喜欢你",
                         senderName + " 超级喜欢了你", "USER", String.valueOf(currentUser.getUserid()));
                 if (matched) {
+                    persistMutualMatchIfNeeded(currentUser.getUserid(), userId);
                     notificationService.send(userId, NotificationCatalog.TYPE_MUTUAL_MATCH, "你们配对成功！",
                             "你和 " + senderName + " 互相喜欢，快去打招呼吧 🎉", "USER",
                             String.valueOf(currentUser.getUserid()));
@@ -425,6 +432,13 @@ public class InteractionController {
     /**
      * 从token获取当前用户
      */
+    private void persistMutualMatchIfNeeded(Long userId, Long targetUserId) {
+        try {
+            matchService.ensureMutualMatchRecord(userId, targetUserId);
+        } catch (Exception ignored) {
+        }
+    }
+
     private User getCurrentUser(String authHeader) {
         try {
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {

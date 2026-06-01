@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,30 +66,54 @@ public class MessageController {
 
             Long userId = currentUser.getUserid();
 
-            // 获取所有聊天对象
+            // 已有聊天记录的会话
             List<Object[]> chatPartners = chatMessageRepository.findDistinctChatPartners(userId);
-            
-            List<Map<String, Object>> chatList = chatPartners.stream()
-                .map(obj -> {
-                    Long partnerId = ((Number) obj[0]).longValue();
-                    String username = (String) obj[1];
-                    String avatar = (String) obj[2];
+            Set<Long> partnerIds = new HashSet<>();
+            List<Map<String, Object>> chatList = new ArrayList<>();
 
-                    // 获取最新一条消息
-                    ChatMessage latestMessage = chatMessageRepository.findLatestChatMessage(userId, partnerId);
-                    
-                    Map<String, Object> chatItem = new HashMap<>();
-                    chatItem.put("id", partnerId);
-                    chatItem.put("nickname", username != null ? username : "未知用户");
-                    chatItem.put("avatarUrl", avatar != null ? avatar : "/images/default-avatar.png");
-                    chatItem.put("lastMessage", latestMessage != null ? latestMessage.getContent() : "暂无消息");
-                    chatItem.put("lastTime", latestMessage != null ? latestMessage.getTimestamp() : System.currentTimeMillis());
-                    chatItem.put("unread", getUnreadMessageCount(userId, partnerId));
-                    
-                    return chatItem;
-                })
-                .sorted((a, b) -> Long.compare((Long) b.get("lastTime"), (Long) a.get("lastTime"))) // 按时间倒序
-                .collect(Collectors.toList());
+            for (Object[] obj : chatPartners) {
+                Long partnerId = ((Number) obj[0]).longValue();
+                String username = (String) obj[1];
+                String avatar = (String) obj[2];
+                ChatMessage latestMessage = chatMessageRepository.findLatestChatMessage(userId, partnerId);
+
+                Map<String, Object> chatItem = new HashMap<>();
+                chatItem.put("id", partnerId);
+                chatItem.put("userId", partnerId);
+                chatItem.put("partnerId", partnerId);
+                chatItem.put("nickname", username != null ? username : "未知用户");
+                chatItem.put("avatarUrl", avatar != null ? avatar : "/images/default-avatar.png");
+                chatItem.put("lastMessage", latestMessage != null ? latestMessage.getContent() : "暂无消息");
+                chatItem.put("lastTime", latestMessage != null ? latestMessage.getTimestamp() : System.currentTimeMillis());
+                chatItem.put("unread", getUnreadMessageCount(userId, partnerId));
+                chatItem.put("matchedOnly", false);
+                chatList.add(chatItem);
+                partnerIds.add(partnerId);
+            }
+
+            // 互赞但尚未发消息的配对，补进列表便于首聊
+            for (Map<String, Object> mutual : interactionService.getMutualLikeUsers(userId)) {
+                Object uidObj = mutual.get("userId");
+                if (uidObj == null) continue;
+                Long partnerId = ((Number) uidObj).longValue();
+                if (partnerIds.contains(partnerId)) continue;
+
+                Map<String, Object> chatItem = new HashMap<>();
+                chatItem.put("id", partnerId);
+                chatItem.put("userId", partnerId);
+                chatItem.put("partnerId", partnerId);
+                chatItem.put("nickname", mutual.get("nickname") != null ? mutual.get("nickname") : "未知用户");
+                Object avatarUrl = mutual.get("avatarUrl");
+                chatItem.put("avatarUrl", avatarUrl != null ? avatarUrl : "/images/default-avatar.png");
+                chatItem.put("lastMessage", "配对成功，打个招呼吧");
+                chatItem.put("lastTime", toEpochMillis(mutual.get("createdAt")));
+                chatItem.put("unread", 0);
+                chatItem.put("matchedOnly", true);
+                chatList.add(chatItem);
+                partnerIds.add(partnerId);
+            }
+
+            chatList.sort((a, b) -> Long.compare((Long) b.get("lastTime"), (Long) a.get("lastTime")));
 
             return ResponseEntity.ok(chatList);
 
@@ -250,6 +276,16 @@ public class MessageController {
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    private long toEpochMillis(Object createdAt) {
+        if (createdAt instanceof LocalDateTime ldt) {
+            return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        }
+        if (createdAt instanceof java.util.Date date) {
+            return date.getTime();
+        }
+        return System.currentTimeMillis();
     }
 
     /**

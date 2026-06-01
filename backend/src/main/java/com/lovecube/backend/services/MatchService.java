@@ -270,6 +270,22 @@ public class MatchService
     }
 
     /**
+     * 互赞配对成功后写入双向匹配记录（幂等）
+     */
+    @Transactional
+    public void ensureMutualMatchRecord(Long userId, Long targetUserId) {
+        if (userId == null || targetUserId == null || userId.equals(targetUserId)) {
+            return;
+        }
+        if (!checkMatchExists(userId, targetUserId)) {
+            createMatch(userId, targetUserId);
+        }
+        if (!checkMatchExists(targetUserId, userId)) {
+            createMatch(targetUserId, userId);
+        }
+    }
+
+    /**
      * 创建匹配记录
      */
     @Transactional

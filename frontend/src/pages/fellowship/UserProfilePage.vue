@@ -99,9 +99,11 @@ import { toFullUrl, getAvatar } from '@/utils/image.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { storage } from '@/utils/storage.js'
 import { useReport } from '@/composables/useReport.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const route = useRoute()
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const loading = ref(true)
 const user = ref(null)
 const liked = ref(false)
@@ -136,6 +138,11 @@ async function handleLike() {
   try {
     const res = await likeUser(route.params.id)
     liked.value = Boolean(res?.isLiked ?? true)
+    if (res?.matched) {
+      showToast({ message: '配对成功，去打个招呼吧 🎉', type: 'success' })
+      router.push(fellowshipPath(`/chat/${route.params.id}`))
+      return
+    }
     showToast({ message: liked.value ? '已喜欢 ❤️' : '已取消喜欢', type: 'success' })
   } catch (e) {
     showToast({ message: e.message || '操作失败', type: 'fail' })
@@ -145,10 +152,10 @@ async function handleLike() {
 function handleChat() {
   const myId = storage.get('userId')
   if (!myId) {
-    router.push(`/fellowship/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    router.push({ path: fellowshipPath('/login'), query: { redirect: route.fullPath } })
     return
   }
-  router.push(`/fellowship/chat/${route.params.id}`)
+  router.push(fellowshipPath(`/chat/${route.params.id}`))
 }
 
 async function handleBlock() {

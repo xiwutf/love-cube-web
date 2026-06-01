@@ -24,7 +24,7 @@
           @refresh="loadChat"
           @chat="goChat"
           @delete-chat="handleDeleteChat"
-          @discover="router.push('/fellowship/discover')"
+          @discover="router.push(fellowshipPath('/discover'))"
           @update:loading="loadingChat = $event"
           @update:refreshing="refreshingChat = $event"
         />
@@ -101,9 +101,11 @@ import { deleteChat } from '@/api/chat.js'
 import { useUserStore } from '@/stores/user.js'
 import { formatTime } from '@/utils/format.js'
 import { getAvatar } from '@/utils/image.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const route = useRoute()
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const msgStore = useMessageStore()
 const userStore = useUserStore()
 
@@ -143,12 +145,13 @@ async function loadChat() {
   try {
     const data = normalizeListPayload(await getChatList())
     chatList.value = data.map((item) => ({
-      userId: item.partnerId || item.userId,
+      userId: item.partnerId || item.userId || item.id,
       nickname: item.nickname || item.partnerName || '用户',
       avatar: getAvatar(item),
       lastMessage: item.lastMessage || item.content || '',
       lastTime: item.lastTime || item.timestamp || item.updatedAt || item.createdAt,
-      unread: Number(item.unreadCount || item.unread || 0)
+      unread: Number(item.unreadCount || item.unread || 0),
+      matchedOnly: Boolean(item.matchedOnly)
     }))
     msgStore.clearChat()
   } catch {
@@ -237,8 +240,12 @@ async function handleNotifClick(item) {
     markNotifRead(item.id).catch(() => {})
     msgStore.setUnreadNotification(Math.max(0, msgStore.unreadNotification - 1))
   }
-  if (item.targetType === 'USER' && item.targetId) router.push(`/fellowship/user-profile/${item.targetId}`)
-  else if (item.targetType === 'CHAT' && item.targetId) router.push(`/fellowship/chat/${item.targetId}`)
+  if (item.type === 'MUTUAL_MATCH' && item.targetId) {
+    router.push(fellowshipPath(`/chat/${item.targetId}`))
+    return
+  }
+  if (item.targetType === 'USER' && item.targetId) router.push(fellowshipPath(`/user-profile/${item.targetId}`))
+  else if (item.targetType === 'CHAT' && item.targetId) router.push(fellowshipPath(`/chat/${item.targetId}`))
 }
 
 async function readAll() {
@@ -296,7 +303,7 @@ function goChat(item) {
     showToast('该聊天对象不存在')
     return
   }
-  router.push(`/fellowship/chat/${item.userId}`)
+  router.push(fellowshipPath(`/chat/${item.userId}`))
 }
 
 function interactFromUser(item) {
@@ -319,7 +326,7 @@ function goInteractProfile(item) {
     showToast('暂时无法查看该用户')
     return
   }
-  router.push(`/fellowship/user-profile/${id}`)
+  router.push(fellowshipPath(`/user-profile/${id}`))
 }
 
 function goVisitorProfile(item) {
@@ -327,7 +334,7 @@ function goVisitorProfile(item) {
     showToast('暂时无法查看该访客')
     return
   }
-  router.push(`/fellowship/user-profile/${item.visitorId}`)
+  router.push(fellowshipPath(`/user-profile/${item.visitorId}`))
 }
 
 function interactPreview(item) {
@@ -346,6 +353,10 @@ function getVisitorName(item) {
 }
 
 async function handleDeleteChat(item) {
+  if (item.matchedOnly) {
+    showToast({ type: 'fail', message: '尚未开始聊天，无法删除' })
+    return
+  }
   try {
     await showConfirmDialog({ title: '删除聊天', message: `确认删除与 ${item.nickname} 的全部聊天记录吗？` })
   } catch {
@@ -365,7 +376,7 @@ function normalizeType(type) {
 }
 
 function notifIcon(type) {
-  const map = { LIKE: '❤', MESSAGE: '💬', SYSTEM: '📢', REPORT_HANDLED: '🛡', BANNED: '⛔' }
+  const map = { LIKE: '❤', MESSAGE: '💬', SYSTEM: '📢', REPORT_HANDLED: '🛡', BANNED: '⛔', MUTUAL_MATCH: '🎉' }
   return map[type] || '🔔'
 }
 

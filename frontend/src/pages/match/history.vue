@@ -43,8 +43,10 @@ import NavBar from '@/components/NavBar.vue'
 import UserCard from '@/components/UserCard.vue'
 import { getMatchBrowseHistory } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const activeName = ref('liked')
 const items = ref([])
 const loading = ref(false)
@@ -133,7 +135,7 @@ function onTabChange(name) {
 
 function goProfile(userId) {
   if (!userId) return
-  router.push(`/fellowship/user-profile/${userId}`)
+  router.push(fellowshipPath(`/user-profile/${userId}`))
 }
 </script>
 

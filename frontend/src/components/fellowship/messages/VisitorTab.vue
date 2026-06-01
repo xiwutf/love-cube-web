@@ -1,7 +1,7 @@
 ﻿<template>
   <van-pull-refresh v-model="refreshingLocal" @refresh="emit('refresh')">
     <div class="tab-content">
-      <div v-if="locked" class="vip-lock-banner" @click="router.push('/fellowship/vip')">
+      <div v-if="locked" class="vip-lock-banner" @click="router.push(fellowshipPath('/vip'))">
         <p>访客信息已隐藏</p>
         <span>开通 VIP 查看谁看过你</span>
       </div>
@@ -38,6 +38,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const props = defineProps({
   list: { type: Array, default: () => [] },
@@ -51,6 +52,7 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh', 'profile', 'update:loading', 'update:refreshing'])
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 
 const loadingLocal = computed({ get: () => props.loading, set: (value) => emit('update:loading', value) })
 const refreshingLocal = computed({ get: () => props.refreshing, set: (value) => emit('update:refreshing', value) })
@@ -58,7 +60,7 @@ const refreshingLocal = computed({ get: () => props.refreshing, set: (value) => 
 function onProfile(item) {
   if (props.locked || item.locked) {
     showToast('开通 VIP 后可查看访客资料')
-    router.push('/fellowship/vip')
+    router.push(fellowshipPath('/vip'))
     return
   }
   emit('profile', item)

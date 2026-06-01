@@ -49,9 +49,11 @@ import UserCard from '@/components/UserCard.vue'
 import { likeUser } from '@/api/match.js'
 import { getMyLikeUsers, getMutualLikeUsers } from '@/api/personal.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const route = useRoute()
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const activeTab = ref(route.query.tab === 'mutual' ? 1 : 0)
 
 const loadingSent = ref(false)
@@ -97,11 +99,11 @@ async function cancelLike(user) {
 }
 
 function goProfile(userId) {
-  router.push(`/fellowship/user-profile/${userId}`)
+  router.push(fellowshipPath(`/user-profile/${userId}`))
 }
 
 function goChat(userId) {
-  router.push(`/fellowship/chat/${userId}`)
+  router.push(fellowshipPath(`/chat/${userId}`))
 }
 
 onMounted(async () => {

@@ -16,6 +16,29 @@
         <van-loading type="spinner" color="#ff6b8a" />
       </div>
 
+      <div v-else-if="!allMessages.length" class="chat-empty">
+        <van-image round width="64" height="64" :src="partnerAvatar" fit="cover">
+          <template #error><div class="bubble-avatar lg">{{ partnerName[0] }}</div></template>
+        </van-image>
+        <p class="chat-empty-title">和 {{ partnerName }} 打个招呼吧</p>
+        <p class="chat-empty-sub">配对成功，选一句开场白或玩个小互动</p>
+        <div v-if="hintPhrases.length" class="hint-chips">
+          <button
+            v-for="(phrase, idx) in hintPhrases"
+            :key="idx"
+            type="button"
+            class="hint-chip"
+            @click="applyHint(phrase)"
+          >
+            {{ phrase }}
+          </button>
+        </div>
+        <div class="starter-actions">
+          <van-button round size="small" plain color="#FF5F84" @click="openIcebreaker">破冰问答</van-button>
+          <van-button round size="small" plain color="#6366f1" @click="openCompatibility">默契测试</van-button>
+        </div>
+      </div>
+
       <div v-for="(msg, i) in allMessages" :key="msg.id || i" class="msg-block">
         <div v-if="showTimeDivider(msg, allMessages[i - 1])" class="time-divider">
           {{ formatTime(msg.timestamp) }}
@@ -48,6 +71,8 @@
       />
         <van-button type="primary" size="small" :disabled="!inputText.trim()" @click="handleSend">发送</van-button>
     </div>
+
+    <PeerMatchGamesPopups ref="gamesRef" :peer-user-id="receiverId" />
   </div>
 </template>
 
@@ -57,17 +82,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { showActionSheet } from '@/utils/vantActionSheet.js'
 import NavBar from '@/components/NavBar.vue'
+import PeerMatchGamesPopups from '@/components/fellowship/PeerMatchGamesPopups.vue'
 import { useWebSocket } from '@/composables/useWebSocket.js'
 import { getChatHistory, markChatRead } from '@/api/chat.js'
+import { fetchIcebreakerHints } from '@/api/aiAssist.js'
 import { getAvatar, DEFAULT_AVATAR } from '@/utils/image.js'
 import { formatTime } from '@/utils/format.js'
 import { storage } from '@/utils/storage.js'
 import request from '@/api/request.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useReport } from '@/composables/useReport.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const route = useRoute()
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 const receiverId = route.params.receiverId
 const myId = storage.get('userId')
 
@@ -85,6 +114,8 @@ const { messages: wsMessages, errors: wsErrors, status: wsStatus, connect, send 
 const { openReport } = useReport()
 const inputText = ref('')
 const msgListRef = ref(null)
+const gamesRef = ref(null)
+const hintPhrases = ref([])
 
 const allMessages = computed(() => {
   const all = [...historyMessages.value, ...wsMessages.value]
@@ -110,7 +141,7 @@ const statusLabel = computed(() => {
 
 onMounted(async () => {
   if (!myId) {
-    router.replace({ path: '/fellowship/login', query: { redirect: encodeURIComponent(route.fullPath) } })
+    router.replace({ path: fellowshipPath('/login'), query: { redirect: encodeURIComponent(route.fullPath) } })
     return
   }
   try {
@@ -143,6 +174,12 @@ onMounted(async () => {
       myAvatar.value = getAvatar(rawMe)
     }
     await markChatRead(myId, receiverId).catch(() => {})
+    if (!historyMessages.value.length) {
+      fetchIcebreakerHints('chat').then((res) => {
+        const list = Array.isArray(res?.phrases) ? res.phrases : (Array.isArray(res?.suggestions) ? res.suggestions : [])
+        hintPhrases.value = list.slice(0, 3)
+      }).catch(() => {})
+    }
   } finally {
     historyLoading.value = false
     scrollToBottom()
@@ -165,6 +202,18 @@ watch(
   },
   { deep: true }
 )
+
+function applyHint(phrase) {
+  inputText.value = phrase
+}
+
+function openIcebreaker() {
+  gamesRef.value?.openIcebreaker()
+}
+
+function openCompatibility() {
+  gamesRef.value?.openCompatibility()
+}
 
 function handleSend() {
   const text = inputText.value.trim()
@@ -345,6 +394,64 @@ function showTimeDivider(curr, prev) {
   background: #f5f5f5;
   border-radius: 20px;
   padding: 0 12px;
+}
+
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px 40px;
+  text-align: center;
+  gap: 10px;
+}
+
+.chat-empty-title {
+  margin: 8px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a2236;
+}
+
+.chat-empty-sub {
+  margin: 0;
+  font-size: 13px;
+  color: #8898aa;
+  line-height: 1.5;
+}
+
+.hint-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+}
+
+.hint-chip {
+  border: 1px solid #ffe0ea;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.starter-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bubble-avatar.lg {
+  width: 64px;
+  height: 64px;
+  font-size: 22px;
 }
 </style>
 
