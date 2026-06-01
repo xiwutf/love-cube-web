@@ -2,7 +2,7 @@
   <section class="help-my">
     <header class="page-head">
       <h1>我的互助</h1>
-      <router-link to="/platform/help" class="back">← 返回广场</router-link>
+      <router-link :to="helpPath()" class="back">← 返回广场</router-link>
     </header>
 
     <section v-if="userStore.isLoggedIn" class="stats-card">
@@ -35,7 +35,7 @@
       <ul v-else class="rows authored">
         <li v-for="row in authored" :key="row.id">
           <div class="row-main">
-            <router-link :to="`/platform/help/${row.id}`" class="row-title">{{ row.title }}</router-link>
+            <router-link :to="helpPath(String(row.id))" class="row-title">{{ row.title }}</router-link>
             <span class="pill">{{ typeLabel(row.helpType) }}</span>
             <span :class="['st', row.status]">{{ statusLabel(row.status) }}</span>
           </div>
@@ -58,7 +58,7 @@
       <ul v-else class="rows">
         <li v-for="(item, idx) in replied" :key="idx">
           <div class="row-main">
-            <router-link :to="`/platform/help/${item.request?.id}`" class="row-title">{{ item.request?.title }}</router-link>
+            <router-link :to="helpPath(String(item.request?.id))" class="row-title">{{ item.request?.title }}</router-link>
             <span class="pill accent">{{ myReplyOutcome(item) }}</span>
           </div>
           <div class="row-sub muted sm">{{ formatTime(item.reply?.createdAt) }}</div>
@@ -72,8 +72,10 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { fetchHelpUserStats, fetchMyHelpAuthored, fetchMyHelpReplied } from '@/api/help.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 
+const { helpPath } = usePlatformPath()
 const userStore = useUserStore()
 
 const authored = ref([])

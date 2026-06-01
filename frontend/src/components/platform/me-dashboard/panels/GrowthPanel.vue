@@ -2,7 +2,7 @@
   <section class="card" aria-label="成长等级">
     <header class="head">
       <h2>成长等级</h2>
-      <router-link class="more" to="/pc/platform/growth-record">成长记录 ></router-link>
+      <router-link class="more" :to="platformPath('growth')">成长记录 ></router-link>
     </header>
 
     <div class="body">
@@ -33,11 +33,15 @@
 </template>
 
 <script setup>
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
+
 defineProps({
   growthLevel: { type: Object, required: true },
   growthProgress: { type: String, required: true },
   compact: { type: Boolean, default: false },
 })
+
+const { platformPath } = usePlatformPath()
 </script>
 
 <style scoped>

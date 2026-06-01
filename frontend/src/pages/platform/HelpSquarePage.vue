@@ -11,9 +11,9 @@
           <span class="metric-chip">高热度 {{ hotCount }}</span>
         </div>
         <div class="hero-actions">
-          <router-link v-if="userStore.isLoggedIn" to="/platform/help/create" class="btn primary">发布需求</router-link>
+          <router-link v-if="userStore.isLoggedIn" :to="helpPath('create')" class="btn primary">发布需求</router-link>
           <router-link v-else to="/login" class="btn primary">登录后发布</router-link>
-          <router-link to="/platform/help/my" class="btn ghost">我的互助</router-link>
+          <router-link :to="helpPath('my')" class="btn ghost">我的互助</router-link>
         </div>
       </div>
     </header>
@@ -31,6 +31,19 @@
         </button>
       </nav>
     </div>
+
+    <section v-if="leaderboard.length" class="leaderboard-panel platform-card">
+      <h2>互助达人榜</h2>
+      <p class="lb-sub">信用分 = 回应×1 + 被接受×3 + 成功解决×10</p>
+      <ol class="lb-list">
+        <li v-for="row in leaderboard" :key="row.userId">
+          <span class="lb-rank">#{{ row.rank }}</span>
+          <span class="lb-name">{{ row.nickname }}</span>
+          <span class="lb-score">{{ row.creditScore }} 分</span>
+          <span class="lb-meta">成功 {{ row.successCount }} 次</span>
+        </li>
+      </ol>
+    </section>
 
     <p v-if="error" class="banner error">{{ error }}</p>
     <p v-else-if="loading" class="banner">加载中…</p>
@@ -65,11 +78,11 @@
             <td>{{ row.replyCount ?? 0 }}</td>
             <td class="nowrap">{{ formatTime(row.createdAt) }}</td>
             <td class="actions">
-              <router-link class="link" :to="`/platform/help/${row.id}`">查看详情</router-link>
+              <router-link class="link" :to="helpPath(String(row.id))">查看详情</router-link>
               <router-link
                 v-if="canOffer(row)"
                 class="link accent"
-                :to="`/platform/help/${row.id}?offer=1`"
+                :to="`${helpPath(String(row.id))}?offer=1`"
               >我能帮忙</router-link>
             </td>
           </tr>
@@ -88,11 +101,11 @@
           <p class="card-meta">{{ row.publisherName }} · {{ row.region || '地区未填' }} · {{ formatTime(row.createdAt) }}</p>
           <p class="card-meta">回应 {{ row.replyCount ?? 0 }} 人</p>
           <div class="card-actions">
-            <router-link class="btn sm ghost" :to="`/platform/help/${row.id}`">查看详情</router-link>
+            <router-link class="btn sm ghost" :to="helpPath(String(row.id))">查看详情</router-link>
             <router-link
               v-if="canOffer(row)"
               class="btn sm primary"
-              :to="`/platform/help/${row.id}?offer=1`"
+              :to="`${helpPath(String(row.id))}?offer=1`"
             >我能帮忙</router-link>
           </div>
         </article>
@@ -111,9 +124,11 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { fetchHelpRequests } from '@/api/help.js'
+import { fetchHelpLeaderboard, fetchHelpRequests } from '@/api/help.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 
+const { helpPath } = usePlatformPath()
 const userStore = useUserStore()
 const loading = ref(true)
 const error = ref('')
@@ -121,6 +136,7 @@ const items = ref([])
 const page = ref(1)
 const totalPages = ref(1)
 const filterType = ref('')
+const leaderboard = ref([])
 
 const typeFilters = [
   { value: '', label: '全部' },
@@ -185,7 +201,15 @@ function goPage(p) {
   load(p)
 }
 
-onMounted(() => load(1))
+onMounted(async () => {
+  load(1)
+  try {
+    const res = await fetchHelpLeaderboard({ limit: 8 })
+    leaderboard.value = Array.isArray(res?.items) ? res.items : []
+  } catch {
+    leaderboard.value = []
+  }
+})
 </script>
 
 <style scoped>
@@ -495,6 +519,53 @@ onMounted(() => load(1))
   .mobile-only {
     display: none;
   }
+}
+
+.leaderboard-panel {
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-panel h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.lb-sub {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--lc-subtle);
+}
+
+.lb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lb-list li {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--lc-soft);
+  font-size: 13px;
+}
+
+.lb-rank {
+  font-weight: 800;
+  color: var(--lc-indigo);
+}
+
+.lb-score {
+  font-weight: 700;
+  color: var(--lc-emerald);
+}
+
+.lb-meta {
+  font-size: 11px;
+  color: var(--lc-subtle);
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {

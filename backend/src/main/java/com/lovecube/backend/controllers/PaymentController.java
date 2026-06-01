@@ -18,6 +18,9 @@ public class PaymentController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.lovecube.backend.services.VipService vipService;
+
     private static final Map<String, Integer> PACKAGE_MONTHS = Map.of(
         "month",  1,
         "season", 3,
@@ -69,7 +72,25 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of(
             "message",   "VIP 开通成功",
             "vipStatus", user.getVipStatus(),
-            "expiresAt", user.getVipExpiresAt().toString()
+            "expiresAt", user.getVipExpiresAt().toString(),
+            "vipActive", true
         ));
+    }
+
+    @GetMapping("/vip/status")
+    public ResponseEntity<?> getVipStatus(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未提供或格式错误的 token");
+        }
+        String token = authHeader.substring(7);
+        String openid = JwtUtil.getOpenIdFromToken(token);
+        if (openid == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("token 无效");
+        }
+        User user = userRepository.findByOpenid(openid);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("用户不存在");
+        }
+        return ResponseEntity.ok(vipService.buildVipStatus(user));
     }
 }

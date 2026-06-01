@@ -43,3 +43,7 @@ export function fetchMyHelpReplied(params = {}) {
 export function fetchHelpUserStats(userId) {
   return request.get(`/help/user/stats/${userId}`)
 }
+
+export function fetchHelpLeaderboard(params = {}) {
+  return request.get('/help/leaderboard', { params })
+}

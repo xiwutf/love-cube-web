@@ -9,6 +9,8 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.GrowthService;
+import com.lovecube.backend.services.InviteEffectiveSettleService;
+import com.lovecube.backend.services.LoginStreakService;
 import com.lovecube.backend.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -44,6 +46,8 @@ public class AuthController {
     private final GrowthService growthService;
     private final GrowthEventService growthEventService;
     private final com.lovecube.backend.growth.service.GrowthRewardService growthRewardService;
+    private final LoginStreakService loginStreakService;
+    private final InviteEffectiveSettleService inviteEffectiveSettleService;
 
     public AuthController(
             UserRepository userRepository,
@@ -52,7 +56,9 @@ public class AuthController {
             AdminAuthService adminAuthService,
             GrowthService growthService,
             GrowthEventService growthEventService,
-            com.lovecube.backend.growth.service.GrowthRewardService growthRewardService
+            com.lovecube.backend.growth.service.GrowthRewardService growthRewardService,
+            LoginStreakService loginStreakService,
+            InviteEffectiveSettleService inviteEffectiveSettleService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -61,6 +67,8 @@ public class AuthController {
         this.growthService = growthService;
         this.growthEventService = growthEventService;
         this.growthRewardService = growthRewardService;
+        this.loginStreakService = loginStreakService;
+        this.inviteEffectiveSettleService = inviteEffectiveSettleService;
     }
 
     @PostMapping("/login")
@@ -97,6 +105,12 @@ public class AuthController {
 
         String token = JwtUtil.generateToken(user.getOpenid());
         growthService.recordAction(user.getUserid(), "LOGIN", "LOGIN_" + java.time.LocalDate.now());
+        loginStreakService.recordLogin(user.getUserid(), LocalDate.now());
+        try {
+            inviteEffectiveSettleService.trySettleForInvitee(user.getUserid());
+        } catch (Exception ignored) {
+            // settle must not break login
+        }
         publishGrowthEventSafely(
                 GrowthEventType.USER_DAILY_ACTIVE,
                 user.getUserid(),

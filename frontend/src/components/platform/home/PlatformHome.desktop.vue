@@ -81,7 +81,7 @@ const localRecommendations = ref([])
 const homeUpdates = ref([])
 
 function goContent(){ router.push('/platform/content') }
-function goPublish(){ router.push('/platform/publish') }
+function goPublish(){ router.push('/platform/positive-share') }
 function goLocal(){ router.push('/platform/local') }
 function goChangelog(){ router.push('/platform/changelog') }
 function goPendingUpdates(){ router.push('/platform/pending-updates') }

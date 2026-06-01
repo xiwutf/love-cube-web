@@ -1,5 +1,6 @@
 package com.lovecube.backend.services;
 
+import com.lovecube.backend.entity.PositiveShareDailyTopic;
 import com.lovecube.backend.entity.PositiveShare;
 import com.lovecube.backend.entity.PositiveShareBookmark;
 import com.lovecube.backend.entity.PositiveShareComment;
@@ -9,6 +10,7 @@ import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.PositiveShareBookmarkRepository;
 import com.lovecube.backend.repository.PositiveShareCommentRepository;
 import com.lovecube.backend.repository.PositiveShareLikeRepository;
+import com.lovecube.backend.repository.PositiveShareDailyTopicRepository;
 import com.lovecube.backend.repository.PositiveShareRepository;
 import com.lovecube.backend.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
@@ -42,6 +45,7 @@ public class PositiveShareService {
     private final UserRepository userRepository;
     private final HomeConfigService homeConfigService;
     private final NotificationService notificationService;
+    private final PositiveShareDailyTopicRepository dailyTopicRepository;
 
     public PositiveShareService(
             PositiveShareRepository positiveShareRepository,
@@ -50,7 +54,8 @@ public class PositiveShareService {
             PositiveShareCommentRepository positiveShareCommentRepository,
             UserRepository userRepository,
             HomeConfigService homeConfigService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            PositiveShareDailyTopicRepository dailyTopicRepository
     ) {
         this.positiveShareRepository = positiveShareRepository;
         this.positiveShareLikeRepository = positiveShareLikeRepository;
@@ -59,6 +64,7 @@ public class PositiveShareService {
         this.userRepository = userRepository;
         this.homeConfigService = homeConfigService;
         this.notificationService = notificationService;
+        this.dailyTopicRepository = dailyTopicRepository;
     }
 
     @Transactional
@@ -573,5 +579,98 @@ public class PositiveShareService {
         item.put("bookmarked", bookmarked);
         item.put("mine", currentUserId != null && currentUserId.equals(share.getUserId()));
         return item;
+    }
+
+    public Map<String, Object> getDailyTopic() {
+        LocalDate today = LocalDate.now();
+        PositiveShareDailyTopic topic = dailyTopicRepository.findFirstByTopicDateAndEnabled(today, 1)
+                .orElseGet(() -> dailyTopicRepository.findFirstByEnabledOrderByTopicDateDesc(1).orElse(null));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("topicDate", today.toString());
+        if (topic == null) {
+            result.put("topicText", "今天，你想分享什么温暖的想法？");
+            result.put("hintText", "写下一句真实的心里话");
+            return result;
+        }
+        result.put("topicText", topic.getTopicText());
+        result.put("hintText", topic.getHintText());
+        return result;
+    }
+
+    public Map<String, Object> getShareStreak(Long userId) {
+        List<java.sql.Date> rawDates = positiveShareRepository.findDistinctShareDatesByUserId(userId);
+        java.util.Set<LocalDate> dates = rawDates.stream()
+                .map(d -> d.toLocalDate())
+                .collect(Collectors.toCollection(java.util.TreeSet::new));
+
+        int currentStreak = 0;
+        LocalDate cursor = LocalDate.now();
+        if (!dates.contains(cursor)) {
+            cursor = cursor.minusDays(1);
+        }
+        while (dates.contains(cursor)) {
+            currentStreak++;
+            cursor = cursor.minusDays(1);
+        }
+
+        int longest = 0;
+        int run = 0;
+        LocalDate prev = null;
+        for (LocalDate d : dates) {
+            if (prev == null || d.minusDays(1).equals(prev)) {
+                run++;
+            } else {
+                run = 1;
+            }
+            longest = Math.max(longest, run);
+            prev = d;
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("currentStreak", currentStreak);
+        result.put("longestStreak", longest);
+        result.put("shareDays", dates.size());
+        result.put("checkedToday", dates.contains(LocalDate.now()));
+        return result;
+    }
+
+    public Map<String, Object> getWeeklyCreatorRankings(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 30);
+        LocalDateTime since = LocalDate.now().minusDays(7).atStartOfDay();
+        List<Object[]> rows = positiveShareRepository.findWeeklyCreatorScores(since, safeLimit);
+        List<Long> userIds = rows.stream()
+                .map(r -> ((Number) r[0]).longValue())
+                .toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        int rank = 1;
+        for (Object[] row : rows) {
+            Long uid = ((Number) row[0]).longValue();
+            int postCount = ((Number) row[1]).intValue();
+            int likeSum = ((Number) row[2]).intValue();
+            int score = postCount * 5 + likeSum;
+            User u = userMap.get(uid);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("rank", rank++);
+            item.put("userId", uid);
+            item.put("nickname", u != null ? resolveDisplayName(u) : "用户");
+            item.put("postCount", postCount);
+            item.put("likeSum", likeSum);
+            item.put("score", score);
+            items.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("since", since.toLocalDate().toString());
+        result.put("items", items);
+        return result;
+    }
+
+    private String resolveDisplayName(User user) {
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername();
+        }
+        return "用户" + user.getUserid();
     }
 }

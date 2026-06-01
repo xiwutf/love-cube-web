@@ -61,6 +61,9 @@ public class User {
     @Column(name = "vip_expires_at")
     private LocalDateTime vipExpiresAt;
 
+    @Column(name = "platform_member_expires_at")
+    private LocalDateTime platformMemberExpiresAt;
+
     @Column(name = "invite_code", unique = true, length = 32)
     private String inviteCode;
 

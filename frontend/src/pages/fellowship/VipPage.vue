@@ -92,25 +92,27 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { showConfirmDialog, showToast, showLoadingToast, closeToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
-import { buyVip } from '@/api/vip.js'
+import { buyVip, fetchVipStatus } from '@/api/vip.js'
 import { useUserStore } from '@/stores/user.js'
 import { getAvatar } from '@/utils/image.js'
 
 const userStore = useUserStore()
 const paying    = ref(false)
 const selected  = ref('month')
+const vipActive = ref(false)
+const expiresAt = ref('')
 
 const userAvatar  = computed(() => getAvatar(userStore.userInfo))
 const userName    = computed(() => userStore.userInfo?.nickname || '用户')
 const userInitial = computed(() => (userName.value || '?')[0])
 
 const benefits = [
-  { icon: 'fire-o', title: '曝光加权', desc: '优先进入推荐' },
+  { icon: 'fire-o', title: '无限滑卡', desc: '每日滑卡不限次数' },
   { icon: 'eye-o', title: '访客解锁', desc: '看见谁关注了你' },
-  { icon: 'chat-o', title: '高频互动', desc: '更多聊天机会' },
+  { icon: 'good-job-o', title: '喜欢我的人', desc: '查看完整喜欢名单' },
   { icon: 'gold-coin-o', title: '尊贵金标', desc: '身份更有辨识度' },
 ]
 
@@ -121,9 +123,22 @@ const packages = [
 ]
 
 const statusText = computed(() => {
+  if (vipActive.value) {
+    return expiresAt.value ? `VIP 生效中 · 到期 ${expiresAt.value.slice(0, 10)}` : 'VIP 生效中'
+  }
   const pkg = packages.find(p => p.id === selected.value)
   return pkg ? `开通${pkg.name}后立即生效` : '未开通 VIP'
 })
+
+async function loadVipStatus() {
+  try {
+    const res = await fetchVipStatus()
+    vipActive.value = Boolean(res?.vipActive)
+    expiresAt.value = res?.expiresAt || ''
+  } catch {
+    vipActive.value = false
+  }
+}
 
 async function handlePay() {
   const pkg = packages.find(p => p.id === selected.value)
@@ -142,6 +157,7 @@ async function handlePay() {
     await buyVip(pkg.id, pkg.name, pkg.price)
     closeToast()
     showToast({ type: 'success', message: 'VIP 开通成功！' })
+    await loadVipStatus()
   } catch (e) {
     closeToast()
     showToast({ type: 'fail', message: e?.message || '支付失败，请重试' })
@@ -149,6 +165,8 @@ async function handlePay() {
     paying.value = false
   }
 }
+
+onMounted(loadVipStatus)
 </script>
 
 <style scoped>

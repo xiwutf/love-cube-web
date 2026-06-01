@@ -5,7 +5,7 @@
 
     <template v-else-if="detail">
       <header class="head">
-        <router-link to="/platform/help" class="back">← 互助广场</router-link>
+        <router-link :to="helpPath()" class="back">← 互助广场</router-link>
         <div class="head-row">
           <span class="pill">{{ typeLabel(detail.helpType) }}</span>
           <span :class="['badge', detail.status]">{{ statusLabel(detail.status) }}</span>
@@ -147,10 +147,12 @@ import {
   rejectHelpReply,
   resolveHelpRequest
 } from '@/api/help.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
 const router = useRouter()
+const { helpPath } = usePlatformPath()
 const userStore = useUserStore()
 
 const loading = ref(true)

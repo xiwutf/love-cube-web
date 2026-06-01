@@ -6,6 +6,7 @@ import com.lovecube.backend.repository.ChatMessageRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.UserInteractionService;
 import com.lovecube.backend.services.UserVisitorService;
+import com.lovecube.backend.services.VipService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,9 @@ public class MessageController {
     
     @Autowired
     private UserVisitorService visitorService;
+
+    @Autowired
+    private VipService vipService;
 
     /**
      * 获取聊天列表
@@ -162,10 +166,19 @@ public class MessageController {
 
             Long userId = currentUser.getUserid();
             
-            // 获取访客列表（默认获取前20条）
             List<Map<String, Object>> visitorList = visitorService.getVisitorList(userId, 0, 20);
-
-            return ResponseEntity.ok(visitorList);
+            boolean vipActive = vipService.isActiveVip(currentUser);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("vipActive", vipActive);
+            body.put("totalCount", visitorList.size());
+            if (vipActive) {
+                body.put("items", visitorList);
+            } else {
+                body.put("items", visitorList.stream().map(this::maskVisitor).collect(Collectors.toList()));
+                body.put("locked", true);
+                body.put("upgradeHint", "开通 VIP 可查看完整访客信息");
+            }
+            return ResponseEntity.ok(body);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -317,5 +330,19 @@ public class MessageController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "标记访客消息已读失败: " + e.getMessage()));
         }
+    }
+
+    private Map<String, Object> maskVisitor(Map<String, Object> row) {
+        Map<String, Object> masked = new LinkedHashMap<>(row);
+        masked.put("nickname", "神秘访客");
+        masked.put("avatarUrl", "/images/default-avatar.png");
+        masked.put("locked", true);
+        masked.remove("visitorId");
+        masked.remove("userId");
+        Map<String, Object> visitor = new LinkedHashMap<>();
+        visitor.put("nickname", "神秘访客");
+        visitor.put("avatarUrl", "/images/default-avatar.png");
+        masked.put("visitor", visitor);
+        return masked;
     }
 } 

@@ -1,7 +1,7 @@
 <template>
   <section class="create-page">
     <header class="page-head">
-      <router-link class="back-link" to="/platform/groups">← 返回团体大厅</router-link>
+      <router-link class="back-link" :to="groupsPath()">← 返回团体大厅</router-link>
       <h1>创建团体</h1>
       <p>填写资料后即可创建；你将自动成为团体所有者。</p>
     </header>
@@ -67,7 +67,7 @@
       <p v-if="errorMsg" class="err">{{ errorMsg }}</p>
 
       <div class="actions">
-        <router-link class="btn ghost" to="/platform/groups">取消</router-link>
+        <router-link class="btn ghost" :to="groupsPath()">取消</router-link>
         <button type="submit" class="btn primary" :disabled="submitting">{{ submitting ? '创建中…' : '创建团体' }}</button>
       </div>
     </form>
@@ -79,10 +79,12 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createGroup } from '@/api/groups.js'
 import { uploadImage } from '@/api/upload.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { groupsPath } = usePlatformPath()
 
 const form = reactive({
   name: '',
@@ -110,7 +112,7 @@ const errorMsg = ref('')
 
 onMounted(() => {
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect('/platform/groups/create')
+    userStore.setPostLoginRedirect(groupsPath('create'))
     router.push('/login')
   }
 })
@@ -137,7 +139,7 @@ async function onCoverFile(e) {
 
 async function submit() {
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect('/platform/groups/create')
+    userStore.setPostLoginRedirect(groupsPath('create'))
     router.push('/login')
     return
   }
@@ -157,7 +159,7 @@ async function submit() {
     const res = await createGroup(payload)
     const id = res?.id ?? res?.data?.id
     if (id) {
-      router.replace(`/platform/groups/${id}`)
+      router.replace(groupsPath(String(id)))
     } else {
       errorMsg.value = '创建成功但未返回团体 ID'
     }

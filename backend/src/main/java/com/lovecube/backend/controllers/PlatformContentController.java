@@ -15,6 +15,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.HomeConfigService;
+import com.lovecube.backend.services.EventEngagementService;
 import com.lovecube.backend.services.PositiveShareService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,7 @@ public class PlatformContentController {
     private final DynamicRepository dynamicRepository;
     private final GrowthService growthService;
     private final PositiveShareService positiveShareService;
+    private final EventEngagementService eventEngagementService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
@@ -55,7 +57,8 @@ public class PlatformContentController {
             HomeConfigRepository homeConfigRepository,
             DynamicRepository dynamicRepository,
             GrowthService growthService,
-            PositiveShareService positiveShareService
+            PositiveShareService positiveShareService,
+            EventEngagementService eventEngagementService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -68,6 +71,7 @@ public class PlatformContentController {
         this.dynamicRepository = dynamicRepository;
         this.growthService = growthService;
         this.positiveShareService = positiveShareService;
+        this.eventEngagementService = eventEngagementService;
     }
 
     /**
@@ -272,16 +276,44 @@ public class PlatformContentController {
             if (event == null) {
                 continue;
             }
-            rows.add(Map.of(
-                    "eventId", event.getId(),
-                    "title", event.getTitle(),
-                    "summary", event.getSummary() == null ? "" : event.getSummary(),
-                    "location", event.getLocation() == null ? "" : event.getLocation(),
-                    "eventTime", event.getEventTime(),
-                    "signupAt", signup.getCreatedAt()
-            ));
+            rows.add(buildSignupRow(event, signup));
         }
         return rows;
+    }
+
+    @PostMapping("/events/{id}/checkin")
+    @Transactional
+    public Map<String, Object> checkinEvent(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        String code = body != null ? String.valueOf(body.getOrDefault("code", "")) : "";
+        return eventEngagementService.checkin(user, id, code);
+    }
+
+    @GetMapping("/events/{id}/review-candidates")
+    public List<Map<String, Object>> listEventReviewCandidates(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        return eventEngagementService.listReviewCandidates(user, id);
+    }
+
+    @PostMapping("/events/{id}/reviews")
+    @Transactional
+    public Map<String, Object> submitEventReview(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        User user = adminAuthService.requireUser(authHeader);
+        Long targetUserId = parseLong(body.get("targetUserId"));
+        Integer rating = body.get("rating") instanceof Number n ? n.intValue() : null;
+        String comment = body != null ? String.valueOf(body.getOrDefault("comment", "")) : "";
+        return eventEngagementService.submitReview(user, id, targetUserId, rating, comment);
     }
 
     @GetMapping("/platform/stats")
@@ -382,6 +414,29 @@ public class PlatformContentController {
             User user = adminAuthService.requireUser(authHeader);
             growthService.recordAction(user.getUserid(), "VIEW_CONTENT", bizId);
         } catch (Exception ignored) {
+        }
+    }
+
+    private Map<String, Object> buildSignupRow(PlatformEvent event, EventSignup signup) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("eventId", event.getId());
+        row.put("title", event.getTitle());
+        row.put("summary", event.getSummary() == null ? "" : event.getSummary());
+        row.put("location", event.getLocation() == null ? "" : event.getLocation());
+        row.put("eventTime", event.getEventTime());
+        row.put("signupAt", signup.getCreatedAt());
+        row.put("checkedIn", Boolean.TRUE.equals(signup.getCheckedIn()));
+        row.put("checkedInAt", signup.getCheckedInAt());
+        row.put("checkinEnabled", event.getCheckinCode() != null && !event.getCheckinCode().isBlank());
+        row.put("canReview", Boolean.TRUE.equals(signup.getCheckedIn()));
+        return row;
+    }
+
+    private Long parseLong(Object value) {
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
         }
     }
 }

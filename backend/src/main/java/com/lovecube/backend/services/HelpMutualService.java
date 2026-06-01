@@ -340,10 +340,12 @@ public class HelpMutualService {
             m.put("helpCount", 0);
             m.put("successCount", 0);
             m.put("acceptedCount", 0);
+            m.put("creditScore", 0);
         } else {
             m.put("helpCount", s.getHelpCount());
             m.put("successCount", s.getSuccessCount());
             m.put("acceptedCount", s.getAcceptedCount());
+            m.put("creditScore", s.getCreditScore() == null ? 0 : s.getCreditScore());
         }
         return m;
     }
@@ -599,6 +601,7 @@ public class HelpMutualService {
             return x;
         });
         s.setHelpCount((s.getHelpCount() == null ? 0 : s.getHelpCount()) + 1);
+        refreshCreditScore(s);
         userHelpStatsRepository.save(s);
     }
 
@@ -609,6 +612,7 @@ public class HelpMutualService {
             return x;
         });
         s.setAcceptedCount((s.getAcceptedCount() == null ? 0 : s.getAcceptedCount()) + 1);
+        refreshCreditScore(s);
         userHelpStatsRepository.save(s);
     }
 
@@ -619,6 +623,43 @@ public class HelpMutualService {
             return x;
         });
         s.setSuccessCount((s.getSuccessCount() == null ? 0 : s.getSuccessCount()) + 1);
+        refreshCreditScore(s);
         userHelpStatsRepository.save(s);
+    }
+
+    private void refreshCreditScore(UserHelpStats s) {
+        int help = s.getHelpCount() == null ? 0 : s.getHelpCount();
+        int accepted = s.getAcceptedCount() == null ? 0 : s.getAcceptedCount();
+        int success = s.getSuccessCount() == null ? 0 : s.getSuccessCount();
+        s.setCreditScore(help + accepted * 3 + success * 10);
+    }
+
+    public Map<String, Object> getLeaderboard(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        List<UserHelpStats> stats = userHelpStatsRepository.findTop20ByOrderByCreditScoreDescSuccessCountDesc()
+                .stream().limit(safeLimit).toList();
+        List<Long> userIds = stats.stream().map(UserHelpStats::getUserId).toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        int rank = 1;
+        for (UserHelpStats s : stats) {
+            if (safe(s.getCreditScore()) <= 0) continue;
+            User u = userMap.get(s.getUserId());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("rank", rank++);
+            row.put("userId", s.getUserId());
+            row.put("nickname", u != null ? displayName(u) : "用户");
+            row.put("creditScore", s.getCreditScore());
+            row.put("successCount", s.getSuccessCount());
+            row.put("helpCount", s.getHelpCount());
+            items.add(row);
+        }
+        return Map.of("items", items);
+    }
+
+    private int safe(Integer v) {
+        return v == null ? 0 : v;
     }
 }

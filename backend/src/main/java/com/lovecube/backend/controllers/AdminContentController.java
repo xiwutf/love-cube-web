@@ -231,6 +231,10 @@ public class AdminContentController {
         if (payload.getSignupCount() == null) {
             payload.setSignupCount(0);
         }
+        if ("published".equals(payload.getStatus())
+                && (payload.getCheckinCode() == null || payload.getCheckinCode().isBlank())) {
+            payload.setCheckinCode(com.lovecube.backend.services.EventEngagementService.generateCheckinCode());
+        }
         return platformEventRepository.save(payload);
     }
 

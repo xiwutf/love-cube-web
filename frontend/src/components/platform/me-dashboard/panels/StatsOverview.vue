@@ -2,7 +2,7 @@
   <section class="bar" aria-label="数据概览">
     <header class="head">
       <h2>数据概览</h2>
-      <router-link to="/modules">全部数据 ></router-link>
+      <router-link :to="modulesPath()">全部数据 ></router-link>
     </header>
     <div class="bar-grid" :style="{ '--stat-count': Math.max(1, items.length) }">
       <div
@@ -24,12 +24,14 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const props = defineProps({
   items: { type: Array, required: true }
 })
 
 const router = useRouter()
+const { modulesPath } = usePlatformPath()
 
 function go(to) {
   if (!to) return

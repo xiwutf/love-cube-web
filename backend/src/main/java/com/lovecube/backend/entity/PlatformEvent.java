@@ -49,6 +49,9 @@ public class PlatformEvent {
     @Column(name = "view_count")
     private Integer viewCount;
 
+    @Column(name = "checkin_code", length = 16)
+    private String checkinCode;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

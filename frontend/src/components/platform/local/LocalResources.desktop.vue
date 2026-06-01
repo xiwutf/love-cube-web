@@ -11,7 +11,7 @@
       </div>
       <p class="hero-contribute">
         本地条目由运营审核后展示。你也可以
-        <router-link class="hero-contribute-link" to="/platform/publish?mode=clue">提交资源线索</router-link>
+        <router-link class="hero-contribute-link" to="/platform/publish/clue">提交资源线索</router-link>
         ，通过后会出现在这里。
       </p>
     </header>
@@ -59,7 +59,7 @@
       <h3>暂无本地资源</h3>
       <p>欢迎提交线索（需登录），审核通过后会公开显示；也可发布动态或加入团体，获得更多推荐。</p>
       <div class="local-empty-actions">
-        <router-link class="platform-btn platform-btn-primary" to="/platform/publish?mode=clue">提交资源线索</router-link>
+        <router-link class="platform-btn platform-btn-primary" to="/platform/publish/clue">提交资源线索</router-link>
         <router-link class="platform-btn" to="/platform/positive-share">去发布动态</router-link>
         <router-link class="platform-btn" to="/platform/groups">去加入团体</router-link>
       </div>
@@ -74,6 +74,9 @@ import { getLocalResourceDetail, getLocalResources, markLocalResourceInterest } 
 
 const filters = [
   { value: 'all', label: '全部' },
+  { value: 'job', label: '招聘' },
+  { value: 'second_hand', label: '二手' },
+  { value: 'rental', label: '租房' },
   { value: 'people', label: '找人' },
   { value: 'activity', label: '找活动' },
   { value: 'group', label: '找圈子' },
@@ -93,6 +96,9 @@ const hotItems = computed(() => items.value.filter(item => Number(item.heat || 0
 
 function typeLabel(type) {
   const map = {
+    job: '招聘',
+    second_hand: '二手',
+    rental: '租房',
     people: '找人',
     activity: '找活动',
     group: '找圈子',

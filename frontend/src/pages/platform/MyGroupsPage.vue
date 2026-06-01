@@ -6,8 +6,8 @@
         <p>查看你创建、管理及加入的团体</p>
       </div>
       <div class="head-actions">
-        <router-link to="/platform/groups" class="btn-secondary">团体大厅</router-link>
-        <router-link to="/platform/groups/create" class="btn-primary">创建团体</router-link>
+        <router-link :to="groupsPath()" class="btn-secondary">团体大厅</router-link>
+        <router-link :to="groupsPath('create')" class="btn-primary">创建团体</router-link>
       </div>
     </header>
 
@@ -44,7 +44,7 @@
     <template v-else>
       <div v-if="currentList.length" class="groups-grid">
         <article v-for="group in currentList" :key="group.joinRequestId || group.id" class="group-card">
-          <router-link :to="`/platform/groups/${group.id}`" class="cover-wrap">
+          <router-link :to="groupsPath(String(group.id))" class="cover-wrap">
             <img :src="group.coverUrl" :alt="group.name">
           </router-link>
           <div class="group-info">
@@ -84,7 +84,7 @@
                   class="enter-btn enter-btn-admin"
                   :to="{ path: `/admin/my-groups/${group.id}`, query: { tab: 'members' } }"
                 >入团审核</router-link>
-                <router-link class="enter-btn" :to="`/platform/groups/${group.id}`">{{ group.enterLabel }}</router-link>
+                <router-link class="enter-btn" :to="groupsPath(String(group.id))">{{ group.enterLabel }}</router-link>
               </div>
             </div>
           </div>
@@ -93,9 +93,9 @@
       <div v-else class="empty-card">
         <h3>{{ emptyTitle }}</h3>
         <p>{{ emptyText }}</p>
-        <router-link v-if="tab === 'created'" to="/platform/groups/create" class="btn-primary inline">创建团体</router-link>
-        <router-link v-else-if="tab === 'pending'" to="/platform/groups" class="btn-primary inline">去发现团体</router-link>
-        <router-link v-else to="/platform/groups" class="btn-primary inline">去发现团体</router-link>
+        <router-link v-if="tab === 'created'" :to="groupsPath('create')" class="btn-primary inline">创建团体</router-link>
+        <router-link v-else-if="tab === 'pending'" :to="groupsPath()" class="btn-primary inline">去发现团体</router-link>
+        <router-link v-else :to="groupsPath()" class="btn-primary inline">去发现团体</router-link>
       </div>
     </template>
   </section>
@@ -103,7 +103,9 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { fetchMeGroupsBuckets, patchMyGroupMemberRealName } from '@/api/groups.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import {
   ERR_EMPTY_DISPLAY_NAME_PATCH,
   MEMBER_DISPLAY_PANEL_HINT,
@@ -114,6 +116,7 @@ import { useUserStore } from '@/stores/user.js'
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
 
 const userStore = useUserStore()
+const { groupsPath } = usePlatformPath()
 
 const stewardHubVisible = computed(
   () =>

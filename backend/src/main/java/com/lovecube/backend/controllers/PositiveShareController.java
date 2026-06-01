@@ -230,6 +230,22 @@ public class PositiveShareController {
         }
     }
 
+    @GetMapping("/daily-topic")
+    public Map<String, Object> dailyTopic() {
+        return positiveShareService.getDailyTopic();
+    }
+
+    @GetMapping("/weekly-rankings")
+    public Map<String, Object> weeklyRankings(@RequestParam(defaultValue = "10") int limit) {
+        return positiveShareService.getWeeklyCreatorRankings(limit);
+    }
+
+    @GetMapping("/my/streak")
+    public Map<String, Object> myStreak(@RequestHeader("Authorization") String authHeader) {
+        User user = adminAuthService.requireUser(authHeader);
+        return positiveShareService.getShareStreak(user.getUserid());
+    }
+
     private void publishGrowthEventSafely(
             GrowthEventType eventType,
             Long actorUserId,

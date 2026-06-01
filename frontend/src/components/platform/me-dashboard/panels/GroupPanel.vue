@@ -19,17 +19,17 @@
       </div>
 
       <div class="action-side">
-        <router-link class="btn btn-enter" to="/platform/me/groups">进入团体</router-link>
-        <router-link class="btn btn-post" to="/platform/groups">发布公告</router-link>
-        <router-link class="btn btn-member" to="/platform/me/groups">成员管理</router-link>
-        <router-link class="more-link" to="/platform/me/groups">全部团体 ></router-link>
+        <router-link class="btn btn-enter" :to="myGroupsPath()">进入团体</router-link>
+        <router-link class="btn btn-post" :to="groupsPath()">发布公告</router-link>
+        <router-link class="btn btn-member" :to="myGroupsPath()">成员管理</router-link>
+        <router-link class="more-link" :to="myGroupsPath()">全部团体 ></router-link>
       </div>
     </div>
 
     <div class="rank-section">
       <div class="rank-head">
         <h3>团体活跃榜（本周）</h3>
-        <router-link class="rank-more" to="/platform/groups">查看完整榜单 ></router-link>
+        <router-link class="rank-more" :to="groupsPath()">查看完整榜单 ></router-link>
       </div>
 
       <ol class="rank-grid">
@@ -46,10 +46,14 @@
 </template>
 
 <script setup>
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
+
 defineProps({
   groupInfo: { type: Object, required: true },
   groupRanking: { type: Array, required: true },
 })
+
+const { groupsPath, myGroupsPath } = usePlatformPath()
 </script>
 
 <style scoped>

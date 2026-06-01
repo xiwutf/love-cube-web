@@ -2,7 +2,7 @@
   <section class="card" aria-label="我的成就">
     <header class="head">
       <h2>我的成就</h2>
-      <router-link class="more" to="/modules">全部成就 ></router-link>
+      <router-link class="more" :to="modulesPath()">全部成就 ></router-link>
     </header>
 
     <div class="badges">
@@ -21,9 +21,13 @@
 </template>
 
 <script setup>
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
+
 defineProps({
   items: { type: Array, required: true }
 })
+
+const { modulesPath } = usePlatformPath()
 </script>
 
 <style scoped>

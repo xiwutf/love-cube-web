@@ -8,7 +8,7 @@
         </div>
         <div class="hero-actions">
           <button type="button" class="primary-btn" @click="goCreate">创建团体</button>
-          <router-link to="/platform/me/groups" class="secondary-link">我的团体</router-link>
+          <router-link :to="myGroupsPath()" class="secondary-link">我的团体</router-link>
         </div>
       </header>
 
@@ -49,7 +49,7 @@
             </div>
             <div v-else-if="groupItems.length" class="groups-grid">
               <article v-for="group in groupItems" :key="group.id" class="group-card">
-                <router-link :to="`/platform/groups/${group.id}`" class="card-cover">
+                <router-link :to="groupsPath(String(group.id))" class="card-cover">
                   <img :src="group.coverUrl" :alt="group.name">
                 </router-link>
                 <div class="group-info">
@@ -69,7 +69,7 @@
                     <span v-for="t in group.tagList" :key="t" class="tag">{{ t }}</span>
                   </div>
                   <div class="card-actions">
-                    <router-link class="link-detail" :to="`/platform/groups/${group.id}`">查看详情</router-link>
+                    <router-link class="link-detail" :to="groupsPath(String(group.id))">查看详情</router-link>
                     <button type="button" class="action-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
                       {{ actionLabel(group) }}
                     </button>
@@ -113,7 +113,7 @@
             <div v-if="sideLoading.hot" class="side-state">加载中...</div>
             <div v-else-if="errors.hot" class="side-error">{{ errors.hot }}</div>
             <div v-else class="compact-list">
-              <router-link v-for="group in popularGroups" :key="group.id" :to="`/platform/groups/${group.id}`" class="compact-item">
+              <router-link v-for="group in popularGroups" :key="group.id" :to="groupsPath(String(group.id))" class="compact-item">
                 <img :src="group.coverUrl" :alt="group.name">
                 <div>
                   <strong>{{ group.name }}</strong>
@@ -129,7 +129,7 @@
             <div v-if="sideLoading.feed" class="side-state">加载中...</div>
             <div v-else-if="errors.feed" class="side-error">{{ errors.feed }}</div>
             <div v-else class="activity-list">
-              <router-link v-for="item in activities" :key="item.id" :to="`/platform/groups/${item.groupId}/posts`" class="activity-item">
+              <router-link v-for="item in activities" :key="item.id" :to="groupsPath(String(item.groupId), 'posts')" class="activity-item">
                 <img :src="item.coverUrl" :alt="item.groupName">
                 <div>
                   <strong>{{ item.groupName }}</strong>
@@ -159,10 +159,10 @@
       </form>
 
       <section class="m-quick-grid" aria-label="快捷入口">
-        <router-link class="m-quick-item" to="/platform/me/groups">我的团体</router-link>
+        <router-link class="m-quick-item" :to="myGroupsPath()">我的团体</router-link>
         <button type="button" class="m-quick-item" @click="goCreate">创建团体</button>
-        <router-link class="m-quick-item" to="/platform/me/groups">加入审核</router-link>
-        <router-link class="m-quick-item" to="/platform/me/groups">团体管理</router-link>
+        <router-link class="m-quick-item" :to="myGroupsPath()">加入审核</router-link>
+        <router-link class="m-quick-item" :to="myGroupsPath()">团体管理</router-link>
       </section>
 
       <div v-if="message" class="page-message" :class="{ error: messageType === 'error' }">{{ message }}</div>
@@ -178,7 +178,7 @@
 
           <section v-else-if="groupItems.length" class="m-group-list">
             <article v-for="group in groupItems" :key="group.id" class="m-group-card">
-              <router-link :to="`/platform/groups/${group.id}`" class="m-cover">
+              <router-link :to="groupsPath(String(group.id))" class="m-cover">
                 <img :src="group.coverUrl" :alt="group.name">
               </router-link>
 
@@ -222,7 +222,7 @@
                 </div>
 
                 <div class="m-actions">
-                  <router-link class="m-btn ghost" :to="`/platform/groups/${group.id}`">查看团体</router-link>
+                  <router-link class="m-btn ghost" :to="groupsPath(String(group.id))">查看团体</router-link>
                   <button type="button" class="m-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
                     {{ mobileActionLabel(group) }}
                   </button>
@@ -268,12 +268,14 @@ import {
   supplementMemberDisplayTitle
 } from '@/utils/groupMemberDisplayName.js'
 import { useUserStore } from '@/stores/user.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const PAGE_SIZE = 8
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { groupsPath, myGroupsPath } = usePlatformPath()
 
 const loading = ref(false)
 const listTotal = ref(0)
@@ -429,21 +431,21 @@ async function openMemberDisplayPromptForList(group) {
 
 function goCreate() {
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect('/platform/groups/create')
+    userStore.setPostLoginRedirect(groupsPath('create'))
     router.push('/login')
     return
   }
-  router.push('/platform/groups/create')
+  router.push(groupsPath('create'))
 }
 
 function onAction(group) {
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect('/platform/groups')
+    userStore.setPostLoginRedirect(groupsPath())
     router.push('/login')
     return
   }
   if (group.isOwner || group.managed) {
-    router.push(`/platform/groups/${group.id}`)
+    router.push(groupsPath(String(group.id)))
     return
   }
   if (group.joinModeKey === 'invite') return

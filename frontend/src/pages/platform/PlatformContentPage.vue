@@ -56,7 +56,7 @@ const filtered = computed(() => {
   return list
 })
 
-function goPublish(){ router.push('/platform/publish') }
+function goPublish(){ router.push('/platform/positive-share') }
 
 function unwrapList(res) {
   if (Array.isArray(res)) return res

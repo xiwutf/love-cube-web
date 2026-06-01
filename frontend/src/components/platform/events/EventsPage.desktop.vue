@@ -110,7 +110,7 @@
             <router-link
               v-for="item in visibleList"
               :key="item.id"
-              :to="`/events/${item.id}`"
+              :to="eventsPath(item.id)"
               class="activity-card"
             >
               <div class="activity-cover">
@@ -143,9 +143,9 @@
         <section class="side-card">
           <div class="side-head">
             <h2>热门活动</h2>
-            <router-link to="/events">查看更多</router-link>
+            <router-link :to="eventsPath()">查看更多</router-link>
           </div>
-          <router-link v-for="item in hotActivities" :key="item.id" :to="`/events/${item.id}`" class="hot-item">
+          <router-link v-for="item in hotActivities" :key="item.id" :to="eventsPath(item.id)" class="hot-item">
             <img :src="item.coverUrl" :alt="item.title" loading="lazy">
             <span>
               <strong>{{ item.title }}</strong>
@@ -171,6 +171,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { fetchEvents, fetchEventsStats } from '@/api/platformContent.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
+
+const { eventsPath } = usePlatformPath()
 
 const PAGE_SIZE = 10
 const activeCategory = ref('')

@@ -9,7 +9,16 @@ export default {
     { path: 'platform', component: () => import('@/pages/platform/HomePage.vue'), meta: { module: 'platform' } },
     { path: 'platform/local', component: () => import('@/pages/platform/LocalResourcesPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/content', component: () => import('@/pages/platform/PlatformContentPage.vue'), meta: { module: 'platform' } },
-    { path: 'platform/publish', component: () => import('@/pages/platform/PlatformPublishPage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    {
+      path: 'platform/publish/clue',
+      name: 'PlatformPublishClue',
+      component: () => import('@/pages/platform/PlatformPublishPage.vue'),
+      meta: { module: 'platform', requiresAuth: true }
+    },
+    {
+      path: 'platform/publish',
+      redirect: to => (String(to.query?.mode) === 'clue' ? { path: '/platform/publish/clue' } : '/platform/positive-share')
+    },
     { path: 'platform/checkin', component: () => import('@/pages/platform/CheckinPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'me', redirect: '/platform/me', meta: { module: 'platform' } },
     { path: 'platform/me', component: () => import('@/pages/platform/MePage.vue'), meta: { module: 'platform', requiresAuth: true } },

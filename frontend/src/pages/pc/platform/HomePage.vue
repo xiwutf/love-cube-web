@@ -62,6 +62,14 @@ import articleCoverImage from '@/assets/公告模块卡片.webp'
 import lifeCoverImage from '@/assets/未来扩展模块.webp'
 import aiCoverImage from '@/assets/AI工具模块卡片.webp'
 import activityCoverImage from '@/assets/活动模块.webp'
+import {
+  PC_EVENTS,
+  PC_HOME,
+  PC_ME,
+  PC_PLAY,
+  pcEventsPath,
+  pcPath
+} from '@/constants/pcPaths.js'
 
 const announcements = ref([])
 const articles = ref([])
@@ -161,12 +169,12 @@ const fallbackPendingUpdates = [
 ]
 
 const coreModules = [
-  { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: '/', icon: '⚙', tone: 'pink' },
+  { title: '平台中心', desc: '资讯、文章、动态\n精彩内容尽在这里', to: PC_HOME, icon: '⚙', tone: 'pink' },
   { title: '联谊', desc: '完善资料，结识志同道合的朋友', to: '/fellowship', icon: '♥', tone: 'pink' },
-  { title: '团队', desc: '寻找你的团体\n连接志同道合的伙伴', to: '/platform/groups', icon: '◎', tone: 'green' },
-  { title: '活动中心', desc: '线上线下活动\n发现有趣的人和事', to: '/events', icon: '♔', tone: 'orange' },
-  { title: 'AI 工具', desc: '智能助手、效率工具\n让生活更高效', to: '/modules', icon: '✣', tone: 'violet' },
-  { title: '用户中心', desc: '个人资料、消息、动态\n管理你的多端空间', to: '/me', icon: '●', tone: 'blue' }
+  { title: '团队', desc: '寻找你的团体\n连接志同道合的伙伴', to: pcPath('groups'), icon: '◎', tone: 'green' },
+  { title: '活动中心', desc: '线上线下活动\n发现有趣的人和事', to: PC_EVENTS, icon: '♔', tone: 'orange' },
+  { title: 'AI 工具', desc: '智能助手、效率工具\n让生活更高效', to: pcPath('modules'), icon: '✣', tone: 'violet' },
+  { title: '用户中心', desc: '个人资料、消息、动态\n管理你的多端空间', to: PC_ME, icon: '●', tone: 'blue' }
 ]
 
 const notice = computed(() => {
@@ -175,7 +183,9 @@ const notice = computed(() => {
   return {
     title: configured?.title || first.title,
     text: configured?.text || configured?.summary || first.summary || '平台持续升级中，欢迎提出你的建议。',
-    to: first.id && !String(first.id).startsWith('fallback') ? `/announcements/${first.id}` : '/announcements'
+    to: first.id && !String(first.id).startsWith('fallback')
+      ? `/announcements/${first.id}`
+      : pcPath('announcements')
   }
 })
 
@@ -199,10 +209,11 @@ const heroStats = computed(() => [
 ])
 
 const quickActionLinks = computed(() => [
-  { label: '先看活动', to: '/events' },
-  { label: '查看公告', to: '/announcements' },
+  { label: '成长玩法', to: PC_PLAY },
+  { label: '先看活动', to: PC_EVENTS },
+  { label: '查看公告', to: pcPath('announcements') },
   { label: '去看看', to: '/fellowship' },
-  { label: '个人中心', to: '/me' }
+  { label: '个人中心', to: PC_ME }
 ])
 
 const heroLiveFeed = computed(() => {
@@ -234,7 +245,9 @@ const officialItems = computed(() => {
     title: item.title || '平台公告',
     date: formatDate(item.publishDate || item.createdAt),
     tag: index === 0 ? '置顶' : '公告',
-    to: item.id && !String(item.id).startsWith('fallback') ? `/announcements/${item.id}` : '/announcements'
+    to: item.id && !String(item.id).startsWith('fallback')
+      ? `/announcements/${item.id}`
+      : pcPath('announcements')
   }))
 })
 
@@ -258,7 +271,7 @@ const featuredItems = computed(() => {
     summary: item.summary || item.description || '更多精选内容正在持续更新。',
     category: item.category || ['平台资讯', '生活随笔', '每日心声', '用户故事'][index] || '精选内容',
     meta: [item.authorName || '平台编辑', item.viewCount ? `${item.viewCount}阅读` : '', formatDate(item.publishDate || item.createdAt)].filter(Boolean).join(' · '),
-    to: item.id && !String(item.id).startsWith('fallback') ? `/articles/${item.id}` : '/articles',
+    to: item.id && !String(item.id).startsWith('fallback') ? `/articles/${item.id}` : pcPath('articles'),
     tone: ['blue', 'green', 'violet', 'pink'][index % 4],
     cover: item.coverUrl || item.cover || [articleCoverImage, lifeCoverImage, aiCoverImage, activityCoverImage][index % 4]
   }))
@@ -272,7 +285,7 @@ const activityItems = computed(() => {
     summary: item.summary || item.description || '活动服务持续开放。',
     date: formatDate(item.eventTime || item.startTime || item.createdAt),
     status: item.status || (index === 0 ? '报名中' : '即将开始'),
-    to: item.id && !String(item.id).startsWith('fallback') ? `/events/${item.id}` : '/events'
+    to: item.id && !String(item.id).startsWith('fallback') ? pcEventsPath(item.id) : PC_EVENTS
   }))
 })
 

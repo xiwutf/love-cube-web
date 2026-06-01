@@ -29,11 +29,20 @@ public class EventSignup {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "checked_in", nullable = false)
+    private Boolean checkedIn;
+
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (checkedIn == null) {
+            checkedIn = false;
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.lovecube.backend.growth.enums.SourcePlatform;
 import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.services.FellowshipProfileService;
+import com.lovecube.backend.services.InviteEffectiveSettleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,13 +19,16 @@ import java.util.Map;
 public class FellowshipProfileController {
     private final FellowshipProfileService fellowshipProfileService;
     private final GrowthEventService growthEventService;
+    private final InviteEffectiveSettleService inviteEffectiveSettleService;
 
     public FellowshipProfileController(
             FellowshipProfileService fellowshipProfileService,
-            GrowthEventService growthEventService
+            GrowthEventService growthEventService,
+            InviteEffectiveSettleService inviteEffectiveSettleService
     ) {
         this.fellowshipProfileService = fellowshipProfileService;
         this.growthEventService = growthEventService;
+        this.inviteEffectiveSettleService = inviteEffectiveSettleService;
     }
 
     @GetMapping("/me")
@@ -49,6 +53,11 @@ public class FellowshipProfileController {
             User currentUser = fellowshipProfileService.requireCurrentUser(authHeader);
             Map<String, Object> profile = fellowshipProfileService.updateMyProfile(currentUser, payload);
             publishGrowthEventSafely(currentUser.getUserid());
+            try {
+                inviteEffectiveSettleService.trySettleForInvitee(currentUser.getUserid());
+            } catch (Exception ignored) {
+                // settle must not block profile update
+            }
             return ResponseEntity.ok(fellowshipProfileService.toResponse(profile));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));

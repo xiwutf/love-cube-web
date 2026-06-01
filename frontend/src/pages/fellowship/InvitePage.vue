@@ -8,10 +8,13 @@
 
     <MyInvitePanel
       :invite-code="summary.inviteCode"
-      :invite-count="summary.inviteCount"
+      :invite-count="summary.effectiveCount ?? summary.inviteCount"
     >
       <template #extra>
         <button type="button" class="copy-code-btn" @click="copyCode">复制邀请码</button>
+        <p v-if="summary.pendingCount > 0" class="invite-pending-hint">
+          {{ summary.pendingCount }} 位好友注册中，累计登录 3 天后计为有效邀请
+        </p>
       </template>
     </MyInvitePanel>
 
@@ -19,8 +22,8 @@
       <h3>邀请说明</h3>
       <ul>
         <li>邀请链接会打开注册页并自动填入邀请码</li>
-        <li>注册时也可以手动修改邀请码</li>
-        <li>没有邀请码也可以正常注册</li>
+        <li>被邀请人累计登录 3 天后，计为「有效邀请」</li>
+        <li>有效邀请可解锁成长徽章与贡献值奖励</li>
       </ul>
     </section>
 
@@ -32,7 +35,10 @@
         <article v-for="item in invitees" :key="item.userId" class="invitee-item">
           <div>
             <p class="name">{{ item.nickname || item.username || `用户${item.userId}` }}</p>
-            <p class="meta">ID {{ item.userId }} · 状态：{{ item.status || 'NORMAL' }}</p>
+            <p class="meta">
+              ID {{ item.userId }} ·
+              {{ item.inviteStatus === 'EFFECTIVE' ? '有效邀请' : '待生效' }}
+            </p>
           </div>
           <p class="time">{{ formatTime(item.registeredAt) }}</p>
         </article>
@@ -50,7 +56,7 @@ import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
 
 const router = useRouter()
 const loading = ref(false)
-const summary = ref({ inviteCode: '', inviteCount: 0 })
+const summary = ref({ inviteCode: '', inviteCount: 0, effectiveCount: 0, pendingCount: 0 })
 const invitees = ref([])
 
 async function loadData() {

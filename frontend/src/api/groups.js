@@ -346,6 +346,14 @@ export function revealGroupPollResults(groupId, pollId) {
   return request.post(`/groups/${groupId}/polls/${pollId}/reveal-results`)
 }
 
+export function fetchGroupSeasonRankings(params = {}) {
+  return request.get('/groups/season/rankings', { params })
+}
+
+export function fetchGroupSeasonRank(groupId) {
+  return request.get(`/groups/season/${groupId}/rank`)
+}
+
 // ── Admin groups (back-office) ────────────────────────────────────────────────
 
 export function getAdminGroups() {

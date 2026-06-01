@@ -45,7 +45,7 @@
       <p v-if="message" class="msg" :class="{ err: messageType === 'error' }">{{ message }}</p>
       <div class="actions">
         <button type="submit" class="btn primary" :disabled="saving">{{ saving ? '提交中…' : '提交审核' }}</button>
-        <router-link to="/platform/help" class="btn ghost">返回广场</router-link>
+        <router-link :to="helpPath()" class="btn ghost">返回广场</router-link>
       </div>
     </form>
   </section>
@@ -55,8 +55,10 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createHelpRequest } from '@/api/help.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const router = useRouter()
+const { helpPath } = usePlatformPath()
 const saving = ref(false)
 const message = ref('')
 const messageType = ref('')
@@ -99,7 +101,7 @@ async function submit() {
     const res = await createHelpRequest(payload)
     const id = res?.id
     if (id) {
-      router.replace(`/platform/help/${id}`)
+      router.replace(helpPath(String(id)))
       return
     }
     message.value = '已提交'

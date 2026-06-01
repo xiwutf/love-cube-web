@@ -9,8 +9,10 @@ import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVisitorRepository;
 import com.lovecube.backend.services.BlacklistService;
+import com.lovecube.backend.services.SwipeQuotaService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.UserVisitorService;
+import com.lovecube.backend.services.VipService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +37,8 @@ public class FellowshipUserController {
     private final MatchRecordRepository matchRecordRepository;
     private final UserBlacklistRepository userBlacklistRepository;
     private final EventSignupRepository eventSignupRepository;
+    private final VipService vipService;
+    private final SwipeQuotaService swipeQuotaService;
 
     public FellowshipUserController(UnifiedProfileService unifiedProfileService,
                                     UserRepository userRepository,
@@ -43,7 +48,9 @@ public class FellowshipUserController {
                                     UserInteractionRepository userInteractionRepository,
                                     MatchRecordRepository matchRecordRepository,
                                     UserBlacklistRepository userBlacklistRepository,
-                                    EventSignupRepository eventSignupRepository) {
+                                    EventSignupRepository eventSignupRepository,
+                                    VipService vipService,
+                                    SwipeQuotaService swipeQuotaService) {
         this.unifiedProfileService = unifiedProfileService;
         this.userRepository = userRepository;
         this.blacklistService = blacklistService;
@@ -53,6 +60,8 @@ public class FellowshipUserController {
         this.matchRecordRepository = matchRecordRepository;
         this.userBlacklistRepository = userBlacklistRepository;
         this.eventSignupRepository = eventSignupRepository;
+        this.vipService = vipService;
+        this.swipeQuotaService = swipeQuotaService;
     }
 
     @GetMapping("/me/stats")
@@ -73,15 +82,17 @@ public class FellowshipUserController {
             long blacklistCount = userBlacklistRepository.findByUserId(userId).size();
             long eventSignupCount = eventSignupRepository.countByUserId(userId);
 
-            return ResponseEntity.ok(Map.of(
-                    "todayVisitorCount", todayVisitorCount,
-                    "totalVisitorCount", totalVisitorCount,
-                    "likesReceived", likesReceived,
-                    "mutualMatchCount", mutualMatchCount,
-                    "followingCount", followingCount,
-                    "blacklistCount", blacklistCount,
-                    "eventSignupCount", eventSignupCount
-            ));
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("todayVisitorCount", todayVisitorCount);
+            body.put("totalVisitorCount", totalVisitorCount);
+            body.put("likesReceived", likesReceived);
+            body.put("mutualMatchCount", mutualMatchCount);
+            body.put("followingCount", followingCount);
+            body.put("blacklistCount", blacklistCount);
+            body.put("eventSignupCount", eventSignupCount);
+            body.putAll(vipService.buildVipStatus(currentUser));
+            body.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
+            return ResponseEntity.ok(body);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {

@@ -2,7 +2,7 @@
   <section class="card" aria-label="最近动态">
     <header class="head">
       <h2>最近动态</h2>
-      <router-link class="more" to="/modules">查看全部 ></router-link>
+      <router-link class="more" :to="modulesPath()">查看全部 ></router-link>
     </header>
 
     <ul class="list">
@@ -18,9 +18,13 @@
 </template>
 
 <script setup>
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
+
 defineProps({
   items: { type: Array, required: true }
 })
+
+const { modulesPath } = usePlatformPath()
 </script>
 
 <style scoped>

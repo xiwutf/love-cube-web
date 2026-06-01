@@ -15,10 +15,10 @@
         </nav>
 
         <div class="pc-account">
-          <router-link to="/events" class="pc-nav-action">✓ 签到</router-link>
-          <router-link to="/messages" class="pc-nav-action">□ 消息通知</router-link>
+          <router-link :to="pcPath('checkin')" class="pc-nav-action">✓ 签到</router-link>
+          <router-link :to="pcPath('messages')" class="pc-nav-action">□ 消息通知</router-link>
           <template v-if="userStore.isLoggedIn">
-            <router-link to="/me" class="pc-login-entry">{{ userStore.userInfo?.username || '个人中心' }}</router-link>
+            <router-link :to="PC_ME" class="pc-login-entry">{{ userStore.userInfo?.username || '个人中心' }}</router-link>
             <router-link v-if="userStore.isAdmin" to="/admin" class="pc-admin-entry">后台</router-link>
             <button type="button" class="pc-logout-btn" @click="handleLogout">退出</button>
           </template>
@@ -42,14 +42,14 @@
         <div class="pc-footer-cols">
           <section class="pc-footer-col">
             <h4>平台</h4>
-            <router-link to="/modules">模块中心</router-link>
-            <router-link to="/announcements">平台公告</router-link>
+            <router-link :to="pcPath('modules')">模块中心</router-link>
+            <router-link :to="pcPath('announcements')">平台公告</router-link>
             <router-link to="/fellowship-intro">联谊</router-link>
           </section>
           <section class="pc-footer-col">
             <h4>内容</h4>
-            <router-link to="/articles">精选内容</router-link>
-            <router-link to="/events">活动中心</router-link>
+            <router-link :to="pcPath('articles')">精选内容</router-link>
+            <router-link :to="PC_EVENTS">活动中心</router-link>
             <router-link to="/feedback">建议反馈</router-link>
           </section>
           <section class="pc-footer-col">
@@ -69,6 +69,12 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
+import {
+  PC_EVENTS,
+  PC_HOME,
+  PC_ME,
+  pcPath
+} from '@/constants/pcPaths.js'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 
 const route = useRoute()
@@ -77,13 +83,13 @@ const userStore = useUserStore()
 const isScrolled = ref(false)
 
 const navItems = [
-  { to: '/pc/platform', label: '首页' },
-  { to: '/platform/positive-share', label: '每日心声' },
-  { to: '/modules', label: '模块中心' },
-  { to: '/announcements', label: '平台公告' },
-  { to: '/articles', label: '精选内容' },
-  { to: '/events', label: '活动' },
-  { to: '/platform/groups', label: '团队' },
+  { to: PC_HOME, label: '首页' },
+  { to: pcPath('positive-share'), label: '每日心声' },
+  { to: pcPath('modules'), label: '模块中心' },
+  { to: pcPath('announcements'), label: '平台公告' },
+  { to: pcPath('articles'), label: '精选内容' },
+  { to: PC_EVENTS, label: '活动' },
+  { to: pcPath('groups'), label: '团队' },
   { to: '/fellowship-intro', label: '联谊' }
 ]
 
@@ -94,7 +100,7 @@ function isActive(basePath) {
 
 function handleLogout() {
   userStore.logout()
-  router.push('/')
+  router.push(PC_HOME)
 }
 
 function handleScroll() {

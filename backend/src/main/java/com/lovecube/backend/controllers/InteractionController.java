@@ -5,13 +5,16 @@ import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.NotificationService;
+import com.lovecube.backend.services.SwipeQuotaService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.UserInteractionService;
+import com.lovecube.backend.services.VipService;
 import com.lovecube.backend.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +38,12 @@ public class InteractionController {
 
     @Autowired
     private UnifiedProfileService unifiedProfileService;
+
+    @Autowired
+    private SwipeQuotaService swipeQuotaService;
+
+    @Autowired
+    private VipService vipService;
 
     private ResponseEntity<?> forbiddenIfNeedsFellowshipPhotos(User u) {
         if (u != null && unifiedProfileService.isFellowshipActiveButMissingLifePhotos(u)) {
@@ -71,6 +80,7 @@ public class InteractionController {
                 if (need != null) {
                     return need;
                 }
+                consumeSwipeOrFail(currentUser);
                 // 如果没有点赞，则点赞
                 interactionService.likeUser(currentUser.getUserid(), userId);
                 growthService.recordAction(currentUser.getUserid(), "LIKE_CONTENT", "LIKE_USER_" + userId);
@@ -95,6 +105,11 @@ public class InteractionController {
                 return ResponseEntity.ok(likeResult);
             }
             
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "message", e.getReason() != null ? e.getReason() : "操作受限",
+                    "code", "SWIPE_DAILY_LIMIT"
+            ));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -172,6 +187,7 @@ public class InteractionController {
                 if (need != null) {
                     return need;
                 }
+                consumeSwipeOrFail(currentUser);
             }
             boolean created = interactionService.followUserIfNotFollowing(currentUser.getUserid(), userId);
             boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
@@ -200,6 +216,11 @@ public class InteractionController {
             result.put("matched", matched);
             result.put("matchedUserId", matched ? userId : null);
             return ResponseEntity.ok(result);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "message", e.getReason() != null ? e.getReason() : "操作受限",
+                    "code", "SWIPE_DAILY_LIMIT"
+            ));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -219,8 +240,14 @@ public class InteractionController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "用户认证失败"));
             }
+            consumeSwipeOrFail(currentUser);
             interactionService.skipUser(currentUser.getUserid(), userId);
             return ResponseEntity.ok(Map.of("message", "已跳过", "skipped", true, "matched", false));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "message", e.getReason() != null ? e.getReason() : "操作受限",
+                    "code", "SWIPE_DAILY_LIMIT"
+            ));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -244,6 +271,7 @@ public class InteractionController {
             if (need != null) {
                 return need;
             }
+            consumeSwipeOrFail(currentUser);
             interactionService.superLikeUser(currentUser.getUserid(), userId);
             boolean matched = interactionService.checkMutualLike(currentUser.getUserid(), userId);
             String senderName = currentUser.getUsername() != null ? currentUser.getUsername() : "有人";
@@ -262,6 +290,11 @@ public class InteractionController {
             result.put("matched", matched);
             result.put("matchedUserId", matched ? userId : null);
             return ResponseEntity.ok(result);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "message", e.getReason() != null ? e.getReason() : "操作受限",
+                    "code", "SWIPE_DAILY_LIMIT"
+            ));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -359,10 +392,21 @@ public class InteractionController {
     public ResponseEntity<?> getReceivedLikes(@RequestHeader("Authorization") String authHeader) {
         User currentUser = getCurrentUser(authHeader);
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "鐢ㄦ埛璁よ瘉澶辫触"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
         }
         List<Map<String, Object>> list = interactionService.getReceivedLikeUsers(currentUser.getUserid());
-        return ResponseEntity.ok(list);
+        boolean vipActive = vipService.isActiveVip(currentUser);
+        Map<String, Object> body = new HashMap<>();
+        body.put("vipActive", vipActive);
+        body.put("totalCount", list.size());
+        if (vipActive) {
+            body.put("items", list);
+        } else {
+            body.put("items", list.stream().map(this::maskLikeUser).toList());
+            body.put("locked", true);
+            body.put("upgradeHint", "开通 VIP 可查看完整名单");
+        }
+        return ResponseEntity.ok(body);
     }
 
     /**
@@ -398,5 +442,18 @@ public class InteractionController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private void consumeSwipeOrFail(User user) {
+        swipeQuotaService.consumeSwipe(user);
+    }
+
+    private Map<String, Object> maskLikeUser(Map<String, Object> row) {
+        Map<String, Object> masked = new HashMap<>(row);
+        masked.put("nickname", "神秘用户");
+        masked.put("avatarUrl", "/images/default-avatar.png");
+        masked.put("locked", true);
+        masked.remove("userId");
+        return masked;
     }
 }

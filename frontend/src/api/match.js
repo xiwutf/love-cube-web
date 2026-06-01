@@ -45,7 +45,8 @@ export async function getMatchList(params = {}) {
       total: Number(data?.total || 0),
       page: Number(data?.page || query.page || 1),
       size: Number(data?.size || query.size || 20),
-      hasMore: Boolean(data?.hasMore)
+      hasMore: Boolean(data?.hasMore),
+      swipeQuota: data?.swipeQuota || null
     }
   }
   return unwrapList(data)
@@ -112,4 +113,20 @@ export async function filterMatches(data = {}) {
 
   const res = await request.post('/matches/filter', payload)
   return unwrapList(res)
+}
+
+export function getIcebreakerSession(peerUserId) {
+  return request.get(`/match/icebreaker/${peerUserId}`)
+}
+
+export function submitIcebreakerAnswers(peerUserId, answers) {
+  return request.post(`/match/icebreaker/${peerUserId}`, { answers })
+}
+
+export function getCompatibilitySession(peerUserId) {
+  return request.get(`/match/compatibility/${peerUserId}`)
+}
+
+export function submitCompatibilityAnswers(peerUserId, answers) {
+  return request.post(`/match/compatibility/${peerUserId}`, { answers })
 }

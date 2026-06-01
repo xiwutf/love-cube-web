@@ -32,6 +32,14 @@ export function claimAccountTask(taskCode) {
   return request.post(`/account-tasks/${taskCode}/claim`)
 }
 
+export function claimWeeklyTask(taskCode) {
+  return request.post(`/weekly-tasks/${taskCode}/claim`)
+}
+
+export function claimNewcomerTask(taskCode) {
+  return request.post(`/newcomer-tasks/${taskCode}/claim`)
+}
+
 export function getMyBadges() {
   return request.get('/badges/me')
 }

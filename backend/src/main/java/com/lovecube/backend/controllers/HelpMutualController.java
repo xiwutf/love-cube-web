@@ -131,6 +131,11 @@ public class HelpMutualController {
         return helpMutualService.closeRequest(id, user);
     }
 
+    @GetMapping("/leaderboard")
+    public Map<String, Object> leaderboard(@RequestParam(defaultValue = "10") int limit) {
+        return helpMutualService.getLeaderboard(limit);
+    }
+
     @GetMapping("/user/stats/{userId}")
     public Map<String, Object> userStats(@PathVariable long userId) {
         return helpMutualService.getUserStats(userId);

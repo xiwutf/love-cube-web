@@ -49,4 +49,24 @@ public interface PositiveShareRepository extends JpaRepository<PositiveShare, Lo
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
     long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
+
+    @Query(value = """
+            SELECT DATE(created_at) AS d FROM positive_share
+            WHERE user_id = :userId AND status = 'PUBLISHED'
+            GROUP BY DATE(created_at)
+            ORDER BY d DESC
+            """, nativeQuery = true)
+    List<java.sql.Date> findDistinctShareDatesByUserId(@Param("userId") Long userId);
+
+    @Query(value = """
+            SELECT p.user_id,
+                   COUNT(*) AS post_count,
+                   COALESCE(SUM(p.encourage_count), 0) AS like_sum
+            FROM positive_share p
+            WHERE p.status = 'PUBLISHED' AND p.created_at >= :since
+            GROUP BY p.user_id
+            ORDER BY (COUNT(*) * 5 + COALESCE(SUM(p.encourage_count), 0)) DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<Object[]> findWeeklyCreatorScores(@Param("since") LocalDateTime since, @Param("limit") int limit);
 }

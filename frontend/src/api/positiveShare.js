@@ -47,3 +47,15 @@ export function commentPositiveShare(id, payload) {
 export function fetchPositiveShareComments(id, params = {}) {
   return request.get(`/positive-shares/${id}/comments`, { params })
 }
+
+export function fetchPositiveShareDailyTopic() {
+  return request.get('/positive-shares/daily-topic')
+}
+
+export function fetchMyPositiveShareStreak() {
+  return request.get('/positive-shares/my/streak')
+}
+
+export function fetchPositiveShareWeeklyRankings(params = {}) {
+  return request.get('/positive-shares/weekly-rankings', { params })
+}

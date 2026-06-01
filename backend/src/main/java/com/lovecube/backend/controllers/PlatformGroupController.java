@@ -30,6 +30,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.GroupMemberRealNameSupport;
+import com.lovecube.backend.services.GroupSeasonService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PlatformGroupSupport;
 import org.springframework.data.domain.Page;
@@ -66,6 +67,7 @@ public class PlatformGroupController {
     private final PlatCheckinLikeRepository checkinLikeRepository;
     private final PlatCheckinCommentRepository checkinCommentRepository;
     private final UserGrowthRepository userGrowthRepository;
+    private final GroupSeasonService groupSeasonService;
 
     // 团体任务定义（code → 名称/EXP奖励/对应成长action）
     private static final Map<String, String> TASK_NAMES = Map.of(
@@ -102,7 +104,8 @@ public class PlatformGroupController {
             GrowthService growthService,
             PlatCheckinLikeRepository checkinLikeRepository,
             PlatCheckinCommentRepository checkinCommentRepository,
-            UserGrowthRepository userGrowthRepository) {
+            UserGrowthRepository userGrowthRepository,
+            GroupSeasonService groupSeasonService) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
@@ -120,6 +123,7 @@ public class PlatformGroupController {
         this.checkinLikeRepository = checkinLikeRepository;
         this.checkinCommentRepository = checkinCommentRepository;
         this.userGrowthRepository = userGrowthRepository;
+        this.groupSeasonService = groupSeasonService;
     }
 
 
@@ -1609,6 +1613,7 @@ public class PlatformGroupController {
         checkin.setStreakDays(streakDays);
         checkin.setCreatedAt(LocalDateTime.now());
         checkinRepository.save(checkin);
+        try { groupSeasonService.recordCheckin(id); } catch (Exception ignored) { }
 
         // 打卡完成团体"打卡"任务（EXP 在用户领取任务奖励时才发放，此处只标记完成）
         completeGroupTask(id, user.getUserid(), "CHECKIN");
@@ -1697,6 +1702,7 @@ public class PlatformGroupController {
         String actionType = TASK_ACTION_TYPES.getOrDefault(taskCode, "GROUP_CHECKIN");
         String bizId = "GROUP_TASK_" + id + "_" + taskCode + "_" + today;
         growthService.recordAction(user.getUserid(), actionType, bizId);
+        try { groupSeasonService.recordTaskClaim(id); } catch (Exception ignored) { }
 
         int rewardExp = TASK_REWARDS.getOrDefault(taskCode, 0);
         notificationService.send(user.getUserid(), "GROUP_TASK_REWARD_CLAIMED",
@@ -1933,6 +1939,7 @@ public class PlatformGroupController {
         }
 
         activityRepository.incrementParticipantCount(activityId);
+        try { groupSeasonService.recordActivitySignup(id); } catch (Exception ignored) { }
 
         // 通知活动创建者（不通知自己）
         if (!user.getUserid().equals(activity.getCreatorUserId())) {

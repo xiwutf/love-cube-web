@@ -27,6 +27,9 @@ public class UserHelpStats {
     @Column(name = "accepted_count", nullable = false)
     private Integer acceptedCount;
 
+    @Column(name = "credit_score", nullable = false)
+    private Integer creditScore;
+
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
@@ -42,6 +45,9 @@ public class UserHelpStats {
         }
         if (acceptedCount == null) {
             acceptedCount = 0;
+        }
+        if (creditScore == null) {
+            creditScore = 0;
         }
     }
 

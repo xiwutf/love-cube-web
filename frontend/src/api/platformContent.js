@@ -41,6 +41,18 @@ export function getMyEventSignups() {
   return request.get('/events/my-signups')
 }
 
+export function checkinEvent(eventId, code) {
+  return request.post(`/events/${eventId}/checkin`, { code })
+}
+
+export function fetchEventReviewCandidates(eventId) {
+  return request.get(`/events/${eventId}/review-candidates`)
+}
+
+export function submitEventReview(eventId, payload) {
+  return request.post(`/events/${eventId}/reviews`, payload)
+}
+
 export function fetchHomeConfig() {
   return request.get('/home/config')
 }

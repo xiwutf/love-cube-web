@@ -165,12 +165,15 @@ import { getUserStatsCached, updateProfile } from '@/api/user.js'
 import { getMyFellowshipProfile, updateMyFellowshipProfile } from '@/api/fellowshipProfile.js'
 import { getInviteInfo } from '@/api/invite.js'
 import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
+import { PC_EVENTS, PC_ME, pcPath } from '@/constants/pcPaths.js'
+import { usePlayTaskRoutes } from '@/composables/usePlayTaskRoutes.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
 import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
 
 const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
+const { accountTaskRoute, dailyTaskRoute } = usePlayTaskRoutes()
 const user = computed(() => userStore.userInfo)
 const unreadCount = ref(0)
 const editOpen = ref(false)
@@ -210,15 +213,7 @@ const badges = ref([])
 const claimingAccountCode = ref('')
 
 function accountGrowthTaskRoutePc(code) {
-  const routes = {
-    ACC_AVATAR: { path: '/pc/platform/me', query: { panel: 'edit' } },
-    ACC_PHOTO: '/me/profile',
-    ACC_BIO: { path: '/pc/platform/me', query: { panel: 'edit' } },
-    ACC_JOIN_GROUP: '/platform/groups',
-    ACC_FIRST_POST: '/platform/positive-share',
-    ACC_BIND_PHONE: '/me/security'
-  }
-  return routes[code] || { path: '/pc/platform/me' }
+  return accountTaskRoute(code)
 }
 
 const dashboardAccountTasks = computed(() => {
@@ -267,12 +262,6 @@ const growthLevel = computed(() => {
 })
 
 const dailyTasks = computed(() => {
-  const codeToRoute = {
-    DAILY_LOGIN: '/pc/platform/me',
-    DAILY_POST: '/platform/positive-share',
-    DAILY_VIEW: '/articles',
-    DAILY_LIKE: '/platform/positive-share'
-  }
   const rows = growthInfo.value?.dailyTasks
   if (!Array.isArray(rows)) return []
   return rows.map(item => ({
@@ -281,7 +270,7 @@ const dailyTasks = computed(() => {
     current: Number(item.progress ?? 0),
     total: Number(item.targetCount ?? 1),
     done: Boolean(item.completed),
-    to: codeToRoute[item.code] || '/pc/platform/me'
+    to: dailyTaskRoute(item.code)
   }))
 })
 
@@ -338,28 +327,28 @@ const profileLightStats = [
 ]
 
 const workspaceItems = computed(() => [
-  { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
-  { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
-  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
-  { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
+  { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: pcPath('positive-share') },
+  { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: pcPath('positive-share') },
+  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: PC_EVENTS },
+  { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: pcPath('messages') }
 ])
 
 const overviewItems = computed(() => [
-  { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
-  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
-  { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
-  { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: '/me/likes' },
-  { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },
-  { label: '当前等级', value: `Lv.${growthLevel.value.level}`, icon: '◇', tone: 'blue', to: '/modules' }
+  { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: pcPath('positive-share') },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: PC_EVENTS },
+  { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: pcPath('me/favorites') },
+  { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: pcPath('positive-share') },
+  { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: pcPath('positive-share') },
+  { label: '当前等级', value: `Lv.${growthLevel.value.level}`, icon: '◇', tone: 'blue', to: pcPath('modules') }
 ])
 
 const quickActions = computed(() => [
-  { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: '/platform/positive-share' },
-  { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: '/modules' },
-  { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: '/messages' },
-  { title: '账号设置', desc: '账号与安全', icon: '◇', tone: 'green', to: { path: '/pc/platform/me', query: { panel: 'settings' } } },
+  { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: pcPath('positive-share') },
+  { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: pcPath('modules') },
+  { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: pcPath('messages') },
+  { title: '账号设置', desc: '账号与安全', icon: '◇', tone: 'green', to: { path: PC_ME, query: { panel: 'settings' } } },
   { title: '邀请码', desc: '邀请好友加入', icon: '▭', tone: 'amber', to: '/fellowship/invite' },
-  { title: '编辑资料', desc: '修改个人资料', icon: '✎', tone: 'blue', to: { path: '/pc/platform/me', query: { panel: 'edit' } } }
+  { title: '编辑资料', desc: '修改个人资料', icon: '✎', tone: 'blue', to: { path: PC_ME, query: { panel: 'edit' } } }
 ])
 
 async function refreshUnreadCount() {

@@ -53,6 +53,7 @@
       <van-tab title="访客" :badge="msgStore.unreadVisitor || ''">
         <VisitorTab
           :list="visitorList"
+          :locked="visitorLocked"
           :loading="loadingVisitor"
           :refreshing="refreshingVisitor"
           :format-time="formatTime"
@@ -119,6 +120,7 @@ const loadingInteract = ref(false)
 const refreshingInteract = ref(false)
 
 const visitorList = ref([])
+const visitorLocked = ref(false)
 const loadingVisitor = ref(false)
 const refreshingVisitor = ref(false)
 
@@ -187,7 +189,9 @@ async function loadInteract() {
 async function loadVisitor() {
   loadingVisitor.value = true
   try {
-    const data = normalizeListPayload(await getVisitorList())
+    const payload = await getVisitorList()
+    visitorLocked.value = Boolean(payload?.locked && !payload?.vipActive)
+    const data = normalizeListPayload(payload)
     visitorList.value = data.map((item) => ({
       ...item,
       visitorId: item.visitorId || item.userId || item.visitor?.userId || null,

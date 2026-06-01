@@ -7,6 +7,11 @@
         <h1 class="hero-title">每日心声</h1>
         <p class="hero-sub">把今天的温暖、感恩与思考记录下来</p>
         <p class="hero-sub">一句鼓励，也许能照亮另一个人的一天</p>
+        <div v-if="dailyTopic" class="hero-topic">
+          <span class="hero-topic-label">今日话题</span>
+          <p class="hero-topic-text">{{ dailyTopic.topicText }}</p>
+          <p v-if="dailyTopic.hintText" class="hero-topic-hint">{{ dailyTopic.hintText }}</p>
+        </div>
         <button type="button" class="hero-btn" @click="scrollToEditor">✏ 写下今日心声</button>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -214,6 +219,18 @@
           <p class="warm-note-sub">世界会因你而更美好 🌸</p>
         </section>
 
+        <!-- Weekly creators -->
+        <section v-if="weeklyRank.length" class="side-card weekly-rank-card">
+          <h3 class="side-title">本周共创榜</h3>
+          <ul class="weekly-rank-list">
+            <li v-for="item in weeklyRank" :key="item.userId">
+              <span class="wr-rank">#{{ item.rank }}</span>
+              <span class="wr-name">{{ item.nickname }}</span>
+              <strong class="wr-score">{{ item.score }}</strong>
+            </li>
+          </ul>
+        </section>
+
         <!-- Hot Categories -->
         <section class="side-card hot-cat-card">
           <h3 class="side-title">热门分类</h3>
@@ -267,6 +284,9 @@ import {
   fetchPositiveShareComments,
   fetchMyPositiveShares,
   fetchPositiveShares,
+  fetchPositiveShareDailyTopic,
+  fetchMyPositiveShareStreak,
+  fetchPositiveShareWeeklyRankings,
   likePositiveShare,
   unbookmarkPositiveShare,
   unlikePositiveShare
@@ -345,7 +365,10 @@ const myEncourageCount = computed(() =>
   list.value.filter(item => item.mine).reduce((sum, item) => sum + Number(item.encourageCount || 0), 0)
 )
 const myFavoriteCount = ref(0)
-const streakDays = computed(() => (myShareCount.value > 0 ? 1 : 0))
+const dailyTopic = ref(null)
+const shareStreak = ref({ currentStreak: 0, longestStreak: 0, checkedToday: false })
+const weeklyRank = ref([])
+const streakDays = computed(() => Number(shareStreak.value?.currentStreak ?? 0))
 
 const hotCategories = computed(() => {
   const counter = {}
@@ -417,11 +440,13 @@ function handlePublished(created) {
   if (!created) return
   if (activeTab.value === 'my') {
     list.value = [created, ...list.value]
+    loadGameplayMeta()
     return
   }
   if ((activeTab.value === 'latest' || activeTab.value === 'today') && created.status === 'PUBLISHED') {
     list.value = [created, ...list.value]
   }
+  loadGameplayMeta()
 }
 
 async function handleLike(item) {
@@ -527,9 +552,27 @@ function scrollToEditor() {
   editorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+async function loadGameplayMeta() {
+  try {
+    const [topicRes, streakRes, rankRes] = await Promise.allSettled([
+      fetchPositiveShareDailyTopic(),
+      fetchMyPositiveShareStreak(),
+      fetchPositiveShareWeeklyRankings({ limit: 5 })
+    ])
+    if (topicRes.status === 'fulfilled') dailyTopic.value = topicRes.value
+    if (streakRes.status === 'fulfilled') shareStreak.value = streakRes.value || shareStreak.value
+    if (rankRes.status === 'fulfilled') {
+      weeklyRank.value = Array.isArray(rankRes.value?.items) ? rankRes.value.items : []
+    }
+  } catch {
+    /* silent */
+  }
+}
+
 onMounted(() => {
   fetchList(false)
   refreshBookmarkStat()
+  loadGameplayMeta()
 })
 </script>
 
@@ -577,6 +620,69 @@ onMounted(() => {
   color: #7c6850;
   font-size: 14px;
   line-height: 1.65;
+}
+
+.hero-topic {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.hero-topic-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lc-orange);
+  letter-spacing: 0.04em;
+}
+
+.hero-topic-text {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #5c4a32;
+  line-height: 1.5;
+}
+
+.hero-topic-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #9a8568;
+}
+
+.weekly-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.weekly-rank-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--lc-soft);
+  font-size: 13px;
+}
+
+.wr-rank {
+  font-weight: 800;
+  color: var(--lc-indigo);
+  min-width: 28px;
+}
+
+.wr-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wr-score {
+  color: var(--lc-pink);
+  font-weight: 800;
 }
 
 .hero-btn {

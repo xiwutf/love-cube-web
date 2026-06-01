@@ -37,9 +37,9 @@
                   <span class="verified-mark">V</span>
                   <span>{{ verificationLabel }}</span>
                 </button>
-                <button class="vip-medal" type="button" @click="router.push('/fellowship/vip')">
+                <button class="vip-medal" :class="{ active: vipActive }" type="button" @click="router.push('/m/fellowship/vip')">
                   <span class="vip-crown">VIP</span>
-                  <span>尊享</span>
+                  <span>{{ vipActive ? '已开通' : '尊享' }}</span>
                 </button>
               </div>
             </div>
@@ -65,6 +65,22 @@
           </div>
           <div class="heart-glow" />
         </div>
+      </section>
+
+      <section v-show="!loadingPage" v-if="swipeQuota && !swipeQuota.unlimited" class="swipe-quota-banner" @click="router.push('/m/fellowship/vip')">
+        <div>
+          <p class="sq-title">今日滑卡 {{ swipeQuota.used }}/{{ swipeQuota.limit }}</p>
+          <p class="sq-sub">开通 VIP 无限滑卡 · 解锁访客与喜欢名单</p>
+        </div>
+        <van-icon name="arrow" size="16" />
+      </section>
+
+      <section v-show="!loadingPage" class="play-hub-banner" @click="router.push('/m/platform')">
+        <div>
+          <p class="sq-title">成长玩法中心</p>
+          <p class="sq-sub">任务 · 签到 · 心声 · 互助</p>
+        </div>
+        <van-icon name="arrow" size="16" />
       </section>
 
       <section v-show="!loadingPage" class="status-panel">
@@ -219,8 +235,13 @@ const fellowshipStats = ref({
   mutualMatchCount: 0,
   followingCount: 0,
   blacklistCount: 0,
-  eventSignupCount: 0
+  eventSignupCount: 0,
+  vipActive: false,
+  swipeQuota: null
 })
+
+const vipActive = computed(() => Boolean(fellowshipStats.value.vipActive))
+const swipeQuota = computed(() => fellowshipStats.value.swipeQuota || null)
 
 const displayName = computed(() => profile.value.nickname || userInfo.value?.username || 'Love Cube 用户')
 const displayAvatar = computed(
@@ -271,13 +292,15 @@ const identityPerks = ['真人核验', '资料可信', '优先推荐']
 const menuItems = computed(() => {
   const s = fellowshipStats.value
   return [
-    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
-    { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
-    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/liked-me', theme: 'yellow' },
-    { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
-    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/fellowship/event-signups', theme: 'green' },
+    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/m/fellowship/my-likes?tab=mutual', theme: 'pink' },
+    { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/m/fellowship/messages?tab=visitor', theme: 'blue' },
+    { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/m/fellowship/liked-me', theme: 'yellow' },
+    { key: 'play', title: '成长玩法', sub: '任务签到心声', icon: 'gem-o', to: '/m/platform', theme: 'teal' },
+    { key: 'local', title: '本地服务', sub: '招聘二手租房', icon: 'location-o', to: '/m/platform/local', theme: 'amber' },
+    { key: 'ai', title: 'AI 助手', sub: '润色与话术', icon: 'bulb-o', to: '/m/fellowship/ai-tools', theme: 'violet' },
+    { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/m/fellowship/invite', theme: 'purple' },
+    { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/m/fellowship/event-signups', theme: 'green' },
     { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
-    { key: 'blacklist', title: '黑名单', sub: s.blacklistCount > 0 ? `${s.blacklistCount}人` : '管理黑名单', icon: 'shield', to: '/fellowship/blacklist', theme: 'indigo' },
     { key: 'privacy', title: '隐私设置', sub: '隐私与权限', icon: 'setting', to: '/fellowship/privacy', theme: 'gray' }
   ]
 })
@@ -1141,6 +1164,46 @@ onMounted(async () => {
 }
 
 .hidden-input { display: none; }
+
+.swipe-quota-banner,
+.play-hub-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 14px 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.swipe-quota-banner {
+  background: linear-gradient(135deg, #fff1f5, #ffe4ec);
+  border: 1px solid #fbcfe8;
+}
+
+.play-hub-banner {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border: 1px solid #ddd6fe;
+}
+
+.sq-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.sq-sub {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.vip-medal.active {
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+  color: #78350f;
+}
 
 @keyframes skeleton-slide {
   to { transform: translateX(100%); }

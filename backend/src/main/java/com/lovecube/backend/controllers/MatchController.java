@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.MatchService;
+import com.lovecube.backend.services.SwipeQuotaService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.VerificationService;
 import org.slf4j.Logger;
@@ -34,6 +35,9 @@ public class MatchController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SwipeQuotaService swipeQuotaService;
 
     private ResponseEntity<?> gateFellowshipLifePhotos(Long userId) {
         User u = userRepository.findById(userId).orElse(null);
@@ -95,6 +99,10 @@ public class MatchController {
             response.put("size", safeSize);
             response.put("total", total);
             response.put("hasMore", pageResult.hasNext());
+            User currentUser = userRepository.findById(currentUserId).orElse(null);
+            if (currentUser != null) {
+                response.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
+            }
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

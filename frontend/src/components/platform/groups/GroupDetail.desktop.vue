@@ -5,7 +5,7 @@
       <h2>团体详情加载失败</h2>
       <p>{{ errors.detail }}</p>
       <button type="button" @click="loadDetail">重试</button>
-      <router-link to="/platform/groups">返回团体列表</router-link>
+      <router-link :to="groupsPath()">返回团体列表</router-link>
     </div>
 
     <template v-else-if="group">
@@ -32,7 +32,7 @@
             <router-link
               v-if="group.managed || group.canReviewJoins"
               class="manage-link"
-              :to="`/platform/groups/${group.id}/members`"
+              :to="groupsPath(String(group.id), 'members')"
             >团体管理</router-link>
             <router-link
               v-if="showAdminStewardLink"
@@ -863,7 +863,28 @@
           <section v-if="activeTab === 'home'" class="side-card">
             <h2>成员概况</h2>
             <p>{{ group.memberCount }} 位成员 · {{ admins.length }} 位管理员</p>
-            <router-link :to="`/platform/groups/${group.id}/members`">查看成员列表</router-link>
+            <router-link :to="groupsPath(String(group.id), 'members')">查看成员列表</router-link>
+          </section>
+          <section v-if="activeTab === 'home' && seasonRank" class="side-card season-card">
+            <h2>赛季排行</h2>
+            <p class="season-title">{{ seasonRank.seasonTitle || '本季' }}</p>
+            <div class="home-checkin-stats">
+              <div class="home-stat">
+                <span class="home-stat-val">{{ seasonRank.score ?? 0 }}</span>
+                <span class="home-stat-label">赛季积分</span>
+              </div>
+              <div class="home-stat">
+                <span class="home-stat-val">{{ seasonRank.rank ?? '—' }}</span>
+                <span class="home-stat-label">当前排名</span>
+              </div>
+            </div>
+            <ul v-if="seasonTop.length" class="season-top-list">
+              <li v-for="item in seasonTop" :key="item.groupId">
+                <span>#{{ item.rank }}</span>
+                <span>{{ item.groupName }}</span>
+                <strong>{{ item.score }}</strong>
+              </li>
+            </ul>
           </section>
         </aside>
       </section>
@@ -923,7 +944,9 @@ import {
   createGroupPoll,
   fetchGroupPoll,
   submitGroupPollVotes,
-  revealGroupPollResults
+  revealGroupPollResults,
+  fetchGroupSeasonRank,
+  fetchGroupSeasonRankings
 } from '@/api/groups.js'
 import {
   AUDIT_JOIN_MESSAGE_PROMPT,
@@ -934,6 +957,7 @@ import {
   MEMBER_DISPLAY_PANEL_HINT,
   supplementMemberDisplayTitle
 } from '@/utils/groupMemberDisplayName.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
@@ -959,10 +983,17 @@ const todayStr = new Date().toISOString().slice(0, 10)
 
 const route = useRoute()
 const router = useRouter()
+const { groupsPath } = usePlatformPath()
 const userStore = useUserStore()
 const contentCheck = useContentCheck()
 const currentUserIdNum = computed(() => Number(userStore.userInfo?.id || userStore.userId || 0))
 const group = ref(null)
+
+function groupTabPath(segment) {
+  const id = String(group.value?.id || route.params.id || '')
+  return segment && segment !== 'home' ? groupsPath(id, segment) : groupsPath(id)
+}
+
 const showAdminStewardLink = computed(() => {
   const g = group.value
   if (!g || !userStore.isLoggedIn) return false
@@ -1015,6 +1046,8 @@ const creatingActivity = ref(false)
 const signingActivityId = ref(null)
 const cancellingActivityId = ref(null)
 const polls = ref([])
+const seasonRank = ref(null)
+const seasonTop = ref([])
 const showPollCreate = ref(false)
 const creatingPoll = ref(false)
 const pollForm = reactive({
@@ -1058,19 +1091,19 @@ const activeTab = computed(() => {
 const tabs = computed(() => {
   const id = group.value?.id || route.params.id
   const rows = [
-    { key: 'home', label: '首页', to: `/platform/groups/${id}` },
-    { key: 'posts', label: '动态', to: `/platform/groups/${id}/posts` },
-    { key: 'checkin', label: '打卡', to: `/platform/groups/${id}/checkin` },
-    { key: 'tasks', label: '任务', to: `/platform/groups/${id}/tasks` },
-    { key: 'activities', label: '活动', to: `/platform/groups/${id}/activities` }
+    { key: 'home', label: '首页', to: groupTabPath('home') },
+    { key: 'posts', label: '动态', to: groupTabPath('posts') },
+    { key: 'checkin', label: '打卡', to: groupTabPath('checkin') },
+    { key: 'tasks', label: '任务', to: groupTabPath('tasks') },
+    { key: 'activities', label: '活动', to: groupTabPath('activities') }
   ]
   if (!isLegacyPlatformGroupId(id)) {
-    rows.push({ key: 'polls', label: '投票', to: `/platform/groups/${id}/polls` })
+    rows.push({ key: 'polls', label: '投票', to: groupTabPath('polls') })
   }
   rows.push(
-    { key: 'members', label: '成员', to: `/platform/groups/${id}/members` },
-    { key: 'notices', label: '公告', to: `/platform/groups/${id}/notices` },
-    { key: 'profile', label: '资料', to: `/platform/groups/${id}/profile` }
+    { key: 'members', label: '成员', to: groupTabPath('members') },
+    { key: 'notices', label: '公告', to: groupTabPath('notices') },
+    { key: 'profile', label: '资料', to: groupTabPath('profile') }
   )
   return rows
 })
@@ -1234,7 +1267,22 @@ async function loadNotices() {
 
 async function loadRelatedData() {
   if (!group.value?.id) return
-  await Promise.all([loadMembers(), loadPosts(), loadNotices(), loadActivitiesForHome(), loadCheckinSummary(), loadTodayTasks()])
+  await Promise.all([loadMembers(), loadPosts(), loadNotices(), loadActivitiesForHome(), loadCheckinSummary(), loadTodayTasks(), loadSeasonInfo()])
+}
+
+async function loadSeasonInfo() {
+  if (!group.value?.id || !isLegacyPlatformGroupId(group.value.id)) return
+  try {
+    const [rankRes, topRes] = await Promise.all([
+      fetchGroupSeasonRank(group.value.id),
+      fetchGroupSeasonRankings({ page: 1, size: 5 })
+    ])
+    seasonRank.value = rankRes || null
+    seasonTop.value = Array.isArray(topRes?.items) ? topRes.items : []
+  } catch {
+    seasonRank.value = null
+    seasonTop.value = []
+  }
 }
 
 async function loadCheckinSummary() {
@@ -1682,7 +1730,7 @@ function activityStatusClass(act) {
 async function applyJoin() {
   if (joinDisabled.value || joining.value) return
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || `/platform/groups/${route.params.id}`)
+    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || groupsPath(String(route.params.id)))
     router.push('/login')
     return
   }
@@ -1818,7 +1866,7 @@ function canDeleteComment(c) {
 
 async function togglePostLike(post) {
   if (!userStore.isLoggedIn) {
-    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || `/platform/groups/${route.params.id}`)
+    userStore.setPostLoginRedirect(route.fullPath.replace(/^#/, '') || groupsPath(String(route.params.id)))
     router.push('/login')
     return
   }
@@ -2079,19 +2127,7 @@ function toggleNotice(id) {
 }
 
 function goToTab(key) {
-  const id = group.value?.id || route.params.id
-  const pathMap = {
-    home: `/platform/groups/${id}`,
-    posts: `/platform/groups/${id}/posts`,
-    checkin: `/platform/groups/${id}/checkin`,
-    tasks: `/platform/groups/${id}/tasks`,
-    activities: `/platform/groups/${id}/activities`,
-    polls: `/platform/groups/${id}/polls`,
-    members: `/platform/groups/${id}/members`,
-    notices: `/platform/groups/${id}/notices`,
-    profile: `/platform/groups/${id}/profile`
-  }
-  if (pathMap[key]) router.push(pathMap[key])
+  router.push(groupTabPath(key))
 }
 
 function normalizeGroup(item) {
@@ -4114,5 +4150,31 @@ onMounted(async () => {
 .poll-reveal-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.season-card .season-title {
+  margin: 0 0 var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+  color: var(--lc-subtle);
+}
+
+.season-top-list {
+  list-style: none;
+  margin: var(--lc-space-3) 0 0;
+  padding: 0;
+}
+
+.season-top-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-2);
+  padding: 6px 0;
+  font-size: var(--lc-text-sm);
+  border-bottom: 1px solid var(--lc-soft);
+}
+
+.season-top-list li strong {
+  margin-left: auto;
+  color: var(--lc-indigo);
 }
 </style>

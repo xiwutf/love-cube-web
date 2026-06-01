@@ -1,7 +1,7 @@
 <template>
-  <LocalResourcesDesktop />
+  <LocalServicesPage />
 </template>
 
 <script setup>
-import LocalResourcesDesktop from '@/components/platform/local/LocalResources.desktop.vue'
+import LocalServicesPage from '@/pages/mobile/platform/LocalServicesPage.vue'
 </script>

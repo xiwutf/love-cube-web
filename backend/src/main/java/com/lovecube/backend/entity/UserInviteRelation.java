@@ -31,6 +31,9 @@ public class UserInviteRelation {
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
+    @Column(name = "effective_at")
+    private LocalDateTime effectiveAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

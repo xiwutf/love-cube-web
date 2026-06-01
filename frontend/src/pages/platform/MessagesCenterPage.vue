@@ -58,13 +58,14 @@
         <van-tab title="联谊消息">
           <div class="fellowship-entry">
             <p>联谊消息在业务模块内查看，消息通知中心仅提供入口</p>
-            <router-link class="platform-btn platform-btn-primary" to="/fellowship/messages">去看看</router-link>
+            <router-link class="platform-btn platform-btn-primary" to="/m/fellowship/messages">去看看</router-link>
           </div>
         </van-tab>
 
-        <van-tab title="订单消息（预留）">
+        <van-tab title="订单消息">
           <div class="fellowship-entry">
-            <p>Ϣڹ滮УڴƵͳ</p>
+            <p>订单与会员消息将在平台会员体系上线后统一推送</p>
+            <router-link class="platform-btn platform-btn-primary" to="/m/platform/member">查看平台会员</router-link>
           </div>
         </van-tab>
       </van-tabs>

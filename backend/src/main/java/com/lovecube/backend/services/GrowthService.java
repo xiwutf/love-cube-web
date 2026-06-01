@@ -3,6 +3,7 @@ package com.lovecube.backend.services;
 import com.lovecube.backend.entity.*;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.*;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +59,7 @@ public class GrowthService {
     private final UserRepository userRepository;
     private final UserPhotoRepository userPhotoRepository;
     private final PlatGroupMemberRepository platGroupMemberRepository;
+    private final ExtendedTaskService extendedTaskService;
 
     public GrowthService(
             UserGrowthRepository userGrowthRepository,
@@ -70,7 +72,8 @@ public class GrowthService {
             UserAccountTaskProgressRepository userAccountTaskProgressRepository,
             UserRepository userRepository,
             UserPhotoRepository userPhotoRepository,
-            PlatGroupMemberRepository platGroupMemberRepository
+            PlatGroupMemberRepository platGroupMemberRepository,
+            @Lazy ExtendedTaskService extendedTaskService
     ) {
         this.userGrowthRepository = userGrowthRepository;
         this.userGrowthLogRepository = userGrowthLogRepository;
@@ -83,6 +86,32 @@ public class GrowthService {
         this.userRepository = userRepository;
         this.userPhotoRepository = userPhotoRepository;
         this.platGroupMemberRepository = platGroupMemberRepository;
+        this.extendedTaskService = extendedTaskService;
+    }
+
+    /** 发放一次性奖励经验（bizId 去重，用于连续签到等里程碑）。 */
+    @Transactional
+    public Map<String, Object> grantBonusExp(Long userId, int exp, String actionType, String bizId) {
+        if (exp <= 0 || actionType == null || bizId == null) {
+            return Map.of("granted", false, "message", "参数不合法");
+        }
+        String normalizedAction = actionType.trim().toUpperCase(Locale.ROOT);
+        String normalizedBizId = bizId.trim();
+        if (userGrowthLogRepository.existsByUserIdAndActionTypeAndBizId(userId, normalizedAction, normalizedBizId)) {
+            return Map.of("granted", false, "duplicate", true);
+        }
+        UserGrowth growth = getOrCreateGrowth(userId);
+        UserGrowthLog log = new UserGrowthLog();
+        log.setUserId(userId);
+        log.setActionType(normalizedAction);
+        log.setBizId(normalizedBizId);
+        log.setExp(exp);
+        userGrowthLogRepository.save(log);
+        growth.setExp(Math.max(0, growth.getExp()) + exp);
+        refreshLevelAndTitle(growth);
+        userGrowthRepository.save(growth);
+        refreshBadges(userId);
+        return Map.of("granted", true, "exp", exp, "level", growth.getLevel());
     }
 
     public Map<String, Object> recordAction(Long userId, String actionType, String bizId) {
@@ -113,6 +142,7 @@ public class GrowthService {
 
         updateDailyTaskProgress(userId, normalizedAction);
         refreshBadges(userId);
+        extendedTaskService.onActionRecorded(userId, normalizedAction);
 
         return Map.of(
                 "recorded", true,

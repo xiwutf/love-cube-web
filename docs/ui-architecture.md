@@ -129,31 +129,38 @@ src/layouts/FellowshipLayout.vue
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | Phase 1 | 结构分离（布局、路由、核心页面） | ✅ 已完成 |
-| Phase 2 | 核心页面迁移（逐页推进） | 🔲 待规划 |
+| Phase 2 | 核心页面迁移（逐页推进） | 🔄 进行中 |
 | Phase 3 | 旧页面逐步废弃 | 🔲 最后再做 |
 
-**规则**：
+**移动端优先原则（2026-06）：** 新玩法默认先落地 `/m/*` 与 `/fellowship/*`（Vant H5）；PC 走 `/pc/*` 或平台层桌面布局。用户主路径以手机为准。
 
-- 一次只迁移 **1~2 个页面**，不允许全量重构
-- 新页面走新路由（灰度验证）
-- 旧页面必须保留至 Phase 3
+**Phase 2 已完成 / 进行中清单**：
 
-**Phase 1 完成清单**：
-
-| 新路由 | 页面文件 |
-|--------|---------|
-| `/pc/platform` | `pages/pc/platform/HomePage.vue` |
-| `/pc/platform/me` | `pages/pc/platform/MePage.vue` |
-| `/m/platform/me` | `pages/mobile/platform/MePage.vue` |
-| `/m/fellowship/me` | `pages/mobile/fellowship/MePage.vue` |
-
-**Phase 2 候选**：
-
-| 候选路由 | 优先级 |
-|---------|--------|
-| `/pc/events` | 高 |
-| `/pc/articles` | 中 |
-| `/m/platform` | 中 |
+| 新路由 | 页面文件 | 状态 |
+|--------|---------|------|
+| `/pc/platform` | `pages/pc/platform/HomePage.vue` | ✅ |
+| `/pc/platform/me` | `pages/pc/platform/MePage.vue` | ✅ |
+| `/m/fellowship/me` | `pages/mobile/fellowship/MePage.vue` | ✅ |
+| `/m/fellowship/discover` … `match` … `messages` | 复用 fellowship 页面 + MobileLayout | ✅ |
+| `/m/platform` | `pages/mobile/platform/HubPage.vue` | ✅ |
+| `/m/platform/tasks` | `pages/mobile/platform/MyTasksPage.vue` + `MyTasksPanel` | ✅ |
+| `/m/platform/checkin` | `pages/mobile/platform/CheckinPage.vue` + `CheckinPanel` | ✅ |
+| `/m/platform/content` | 复用 `PlatformContentPage.vue`（任务跳转） | ✅ |
+| `/m/platform/positive-share` | `pages/mobile/platform/PositiveSharePage.vue` | ✅ |
+| `/m/platform/help` | `pages/mobile/platform/HelpSquarePage.vue` | ✅ |
+| `/m/platform/help/:id` `create` `my` | 复用 `Help*Page.vue` + `usePlatformPath` | ✅ |
+| `/m/platform/messages` | `pages/mobile/platform/MessagesPage.vue`（壳 + 复用消息中心） | ✅ |
+| `/pc/platform/play` | `pages/pc/platform/PlayHubPage.vue` | ✅ |
+| `/m/platform/groups` | `pages/mobile/platform/GroupsPage.vue` | ✅ |
+| `/m/platform/my-groups` | `pages/mobile/platform/MyGroupsPage.vue`（壳 + 复用 MyGroupsPage） | ✅ |
+| `/m/platform/groups/:id` 等子路由 | `GroupDetailMobile.vue`（含动态评论、成员审核、管理员角色、赛季榜、打卡榜） | ✅ |
+| `/m/platform/local` | `pages/mobile/platform/LocalServicesPage.vue` | ✅ |
+| `/m/platform/topics` | `pages/mobile/platform/TopicsPage.vue` | ✅ |
+| `/m/platform/messages` | 复用 `MessagesCenterPage.vue` | ✅ |
+| `/m/platform/member` | `pages/mobile/platform/MemberPage.vue` | ✅ |
+| `/m/fellowship/ai-tools` | `pages/mobile/fellowship/AiToolsPage.vue` | ✅ |
+| `/pc/events` `/pc/events/:id` | `EventsPage.vue` + `EventDetailPage.vue`（`eventsPath` 自适应） | ✅ |
+| `/pc/platform/tasks` `checkin` `help` `groups` … | PC 玩法子路由 + `pcPaths` / `usePlatformPath` 内链统一 | ✅ |
 
 ---
 

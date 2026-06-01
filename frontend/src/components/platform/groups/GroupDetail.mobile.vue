@@ -1,7 +1,7 @@
 ﻿<template>
-  <GroupDetailDesktop />
+  <GroupDetailMobile />
 </template>
 
 <script setup>
-import GroupDetailDesktop from '@/components/platform/groups/GroupDetail.desktop.vue'
+import GroupDetailMobile from '@/components/mobile/platform/GroupDetailMobile.vue'
 </script>

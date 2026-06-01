@@ -102,7 +102,7 @@
     <nav class="mobile-quick-nav">
       <router-link to="/platform" :class="{ 'is-active': isMobilePlatformHomeActive() }">首页</router-link>
       <router-link to="/platform/local" :class="{ 'is-active': isActive('/platform/local') }">本地</router-link>
-      <router-link to="/platform/publish" class="mobile-publish-entry" :class="{ 'is-active': isActive('/platform/publish') }">发布</router-link>
+      <router-link to="/platform/positive-share" class="mobile-publish-entry" :class="{ 'is-active': isActive('/platform/positive-share') }">发布</router-link>
       <router-link to="/platform/groups" :class="{ 'is-active': isActive('/platform/groups') }">团体</router-link>
       <router-link to="/me" :class="{ 'is-active': isActive('/me') || isActive('/platform/me') }">我的</router-link>
     </nav>

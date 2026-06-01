@@ -136,15 +136,23 @@ public class FellowshipInviteService {
     }
 
     public long countEffectiveInvites(Long userId) {
+        return userInviteRelationRepository.countByInviterUserIdAndStatus(userId, "EFFECTIVE");
+    }
+
+    public long countPendingInvites(Long userId) {
         return userInviteRelationRepository.countByInviterUserIdAndStatus(userId, "SUCCESS");
     }
 
     public Map<String, Object> getMyCodeSummary(User user) {
         String code = ensureUserInviteCode(user);
-        long inviteCount = userInviteRelationRepository.countByInviterUserIdAndStatus(user.getUserid(), "SUCCESS");
+        long effectiveCount = countEffectiveInvites(user.getUserid());
+        long pendingCount = countPendingInvites(user.getUserid());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("inviteCode", code);
-        result.put("inviteCount", inviteCount);
+        result.put("inviteCount", effectiveCount);
+        result.put("effectiveCount", effectiveCount);
+        result.put("pendingCount", pendingCount);
+        result.put("totalRegistered", effectiveCount + pendingCount);
         return result;
     }
 
@@ -161,8 +169,13 @@ public class FellowshipInviteService {
     public List<Map<String, Object>> getMyInvitees(User user) {
         List<UserInviteRelation> records = userInviteRelationRepository
                 .findByInviterUserIdAndStatusOrderByCreatedAtDesc(user.getUserid(), "SUCCESS");
+        List<UserInviteRelation> effectiveRecords = userInviteRelationRepository
+                .findByInviterUserIdAndStatusOrderByCreatedAtDesc(user.getUserid(), "EFFECTIVE");
+        List<UserInviteRelation> all = new ArrayList<>(records);
+        all.addAll(effectiveRecords);
+        all.sort(Comparator.comparing(UserInviteRelation::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
 
-        Set<Long> inviteeIds = records.stream()
+        Set<Long> inviteeIds = all.stream()
                 .map(UserInviteRelation::getInvitedUserId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
@@ -171,7 +184,7 @@ public class FellowshipInviteService {
                 .collect(Collectors.toMap(User::getUserid, item -> item));
 
         List<Map<String, Object>> result = new ArrayList<>();
-        for (UserInviteRelation record : records) {
+        for (UserInviteRelation record : all) {
             User invitee = userMap.get(record.getInvitedUserId());
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("userId", record.getInvitedUserId());
@@ -179,6 +192,8 @@ public class FellowshipInviteService {
             item.put("username", invitee != null ? safe(invitee.getUsername()) : "");
             item.put("registeredAt", record.getCreatedAt());
             item.put("status", invitee != null ? normalizeStatus(invitee.getUserStatus()) : "NORMAL");
+            item.put("inviteStatus", "EFFECTIVE".equals(record.getStatus()) ? "EFFECTIVE" : "PENDING");
+            item.put("effectiveAt", record.getEffectiveAt());
             result.add(item);
         }
         return result;

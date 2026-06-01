@@ -1,7 +1,7 @@
 <template>
   <section class="platform-page module-page">
     <div class="detail-nav-row">
-      <router-link to="/events" class="platform-backlink">返回活动列表</router-link>
+      <router-link :to="eventsPath()" class="platform-backlink">返回活动列表</router-link>
       <router-link to="/fellowship-intro" class="platform-link">了解联谊</router-link>
     </div>
 
@@ -39,8 +39,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchEventDetail, signupEvent } from '@/api/platformContent.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const route = useRoute()
+const { eventsPath } = usePlatformPath()
 const item = ref(null)
 const signedUp = ref(false)
 const signingUp = ref(false)
