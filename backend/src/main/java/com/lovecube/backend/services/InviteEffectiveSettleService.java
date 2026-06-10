@@ -62,10 +62,11 @@ public class InviteEffectiveSettleService {
         settleGrowthEvent(relation.getInviterUserId(), inviteeUserId);
 
         try {
-            long effectiveCount = inviteRelationRepository
-                    .countByInviterUserIdAndStatus(relation.getInviterUserId(), "EFFECTIVE");
+            long registeredCount = inviteRelationRepository
+                    .countByInviterUserIdAndStatus(relation.getInviterUserId(), "EFFECTIVE")
+                    + inviteRelationRepository.countByInviterUserIdAndStatus(relation.getInviterUserId(), "SUCCESS");
             growthRewardService.checkAndGrantInviteMilestoneRewards(
-                    relation.getInviterUserId(), (int) effectiveCount);
+                    relation.getInviterUserId(), (int) registeredCount);
         } catch (Exception ignored) {
             // milestone must not break settle
         }

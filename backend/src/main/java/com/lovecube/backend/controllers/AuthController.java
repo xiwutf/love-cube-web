@@ -192,14 +192,22 @@ public class AuthController {
                         saved.getRegisterUserAgent()
                 );
                 try {
-                    long effectiveCount = fellowshipInviteService.countEffectiveInvites(inviter.getUserid());
-                    growthRewardService.checkAndGrantInviteMilestoneRewards(inviter.getUserid(), (int) effectiveCount);
+                    long registeredCount = fellowshipInviteService.countRegisteredInvites(inviter.getUserid());
+                    growthRewardService.checkAndGrantInviteMilestoneRewards(inviter.getUserid(), (int) registeredCount);
                 } catch (Exception ignored) {
                     // milestone reward must not break registration
                 }
             }
 
             String token = JwtUtil.generateToken(saved.getOpenid());
+            LocalDate today = LocalDate.now();
+            growthService.recordAction(saved.getUserid(), "LOGIN", "LOGIN_" + today);
+            loginStreakService.recordLogin(saved.getUserid(), today);
+            try {
+                inviteEffectiveSettleService.trySettleForInvitee(saved.getUserid());
+            } catch (Exception ignored) {
+                // settle must not break registration
+            }
             publishGrowthEventSafely(
                     GrowthEventType.USER_REGISTERED,
                     saved.getUserid(),

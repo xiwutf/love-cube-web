@@ -143,16 +143,22 @@ public class FellowshipInviteService {
         return userInviteRelationRepository.countByInviterUserIdAndStatus(userId, "SUCCESS");
     }
 
+    /** 累计邀请注册人数（SUCCESS + EFFECTIVE，注册即计入）。 */
+    public long countRegisteredInvites(Long userId) {
+        return countEffectiveInvites(userId) + countPendingInvites(userId);
+    }
+
     public Map<String, Object> getMyCodeSummary(User user) {
         String code = ensureUserInviteCode(user);
         long effectiveCount = countEffectiveInvites(user.getUserid());
         long pendingCount = countPendingInvites(user.getUserid());
+        long registeredCount = effectiveCount + pendingCount;
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("inviteCode", code);
-        result.put("inviteCount", effectiveCount);
+        result.put("inviteCount", registeredCount);
         result.put("effectiveCount", effectiveCount);
         result.put("pendingCount", pendingCount);
-        result.put("totalRegistered", effectiveCount + pendingCount);
+        result.put("totalRegistered", registeredCount);
         return result;
     }
 

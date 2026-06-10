@@ -8,13 +8,10 @@
 
     <MyInvitePanel
       :invite-code="summary.inviteCode"
-      :invite-count="summary.effectiveCount ?? summary.inviteCount"
+      :invite-count="summary.inviteCount"
     >
       <template #extra>
         <button type="button" class="copy-code-btn" @click="copyCode">复制邀请码</button>
-        <p v-if="summary.pendingCount > 0" class="invite-pending-hint">
-          {{ summary.pendingCount }} 位好友注册中，累计登录 3 天后计为有效邀请
-        </p>
       </template>
     </MyInvitePanel>
 
@@ -22,8 +19,8 @@
       <h3>邀请说明</h3>
       <ul>
         <li>邀请链接会打开注册页并自动填入邀请码</li>
-        <li>被邀请人累计登录 3 天后，计为「有效邀请」</li>
-        <li>有效邀请可解锁成长徽章与贡献值奖励</li>
+        <li>好友完成注册后，即计入「已邀请」人数</li>
+        <li>邀请人数达标可解锁成长徽章与贡献值奖励</li>
       </ul>
     </section>
 
@@ -37,7 +34,7 @@
             <p class="name">{{ item.nickname || item.username || `用户${item.userId}` }}</p>
             <p class="meta">
               ID {{ item.userId }} ·
-              {{ item.inviteStatus === 'EFFECTIVE' ? '有效邀请' : '待生效' }}
+              已邀请
             </p>
           </div>
           <p class="time">{{ formatTime(item.registeredAt) }}</p>

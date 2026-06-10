@@ -179,7 +179,7 @@ public class GrowthController {
         });
 
         // Invite milestone progress
-        int inviteCount = (int) fellowshipInviteService.countEffectiveInvites(userId);
+        int inviteCount = (int) fellowshipInviteService.countRegisteredInvites(userId);
         dto.setInviteMilestoneProgress(inviteCount);
         growthRewardCatalog.getNextInviteReward(inviteCount).ifPresent(r -> {
             dto.setNextInviteRewardName(r.rewardName());
