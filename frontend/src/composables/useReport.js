@@ -41,7 +41,7 @@ export function useReport() {
     // Step 3: submit
     try {
       await submitReport({ targetType, targetId, targetUserId, reasonType, alsoBlock })
-      showToast({ message: '举报已提交，感谢反馈', type: 'success' })
+      showToast({ message: '举报已提交，处理结果将通过消息中心通知你', type: 'success', duration: 3000 })
       return true
     } catch (e) {
       showToast({ message: e.message || '提交失败，请重试', type: 'fail' })

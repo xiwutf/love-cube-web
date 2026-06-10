@@ -40,6 +40,7 @@ public final class NotificationCatalog {
     public static final String TYPE_CONTENT_LIKED = "CONTENT_LIKED";
     public static final String TYPE_USER_FOLLOWED = "USER_FOLLOWED";
     public static final String TYPE_MUTUAL_MATCH = "MUTUAL_MATCH";
+    public static final String TYPE_GROUP_WEEKLY_DIGEST = "GROUP_WEEKLY_DIGEST";
 
     /** 设置面板与默认行：覆盖所有可配置类型 */
     public static List<String> allConfigurableTypes() {
@@ -47,6 +48,7 @@ public final class NotificationCatalog {
             TYPE_GROUP_APPLICATION_APPROVED,
             TYPE_GROUP_APPLICATION_REJECTED,
             TYPE_GROUP_JOIN_REQUEST,
+            TYPE_GROUP_WEEKLY_DIGEST,
             TYPE_CONTENT_MODERATION_PASSED,
             TYPE_CONTENT_MODERATION_REJECTED,
             TYPE_CONTENT_COMMENTED,
@@ -67,6 +69,7 @@ public final class NotificationCatalog {
             case TYPE_GROUP_APPLICATION_APPROVED,
                  TYPE_GROUP_APPLICATION_REJECTED,
                  TYPE_GROUP_JOIN_REQUEST,
+                 TYPE_GROUP_WEEKLY_DIGEST,
                  TYPE_CONTENT_MODERATION_PASSED,
                  TYPE_CONTENT_MODERATION_REJECTED,
                  TYPE_MATCH_PROFILE_REVIEW_PASSED,
@@ -122,7 +125,8 @@ public final class NotificationCatalog {
                 || "GROUP_POST_CREATED".equals(t)
                 || t.startsWith("GROUP_CHECKIN")
                 || t.startsWith("GROUP_TASK")
-                || t.startsWith("GROUP_ACTIVITY");
+                || t.startsWith("GROUP_ACTIVITY")
+                || TYPE_GROUP_WEEKLY_DIGEST.equals(t);
             case "REVIEW" -> t.contains("MODERATION")
                 || t.contains("MATCH_PROFILE_REVIEW")
                 || TYPE_GROUP_APPLICATION_REJECTED.equals(t);

@@ -27,6 +27,16 @@
               {{ typeLabel(item.interactionType) }}
             </van-tag>
             <p v-if="item.actedAt" class="acted-at">{{ formatActedAt(item.actedAt) }}</p>
+            <van-button
+              v-if="activeName === 'skipped' && item.interactionType === 'skip'"
+              size="mini"
+              plain
+              type="primary"
+              :loading="rewindingId === item.userId"
+              @click.stop="handleRewind(item)"
+            >
+              撤回跳过
+            </van-button>
           </div>
         </template>
       </UserCard>
@@ -36,24 +46,28 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import UserCard from '@/components/UserCard.vue'
-import { getMatchBrowseHistory } from '@/api/match.js'
+import { getMatchBrowseHistory, rewindSkip } from '@/api/match.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
+const route = useRoute()
 const router = useRouter()
 const { fellowshipPath } = useFellowshipNavBase()
-const activeName = ref('liked')
+const activeName = ref(
+  route.query.tab === 'skipped' ? 'skipped' : route.query.tab === 'all' ? 'all' : 'liked'
+)
 const items = ref([])
 const loading = ref(false)
 const finished = ref(false)
 const page = ref(1)
 const pageSize = 20
 const fetching = ref(false)
+const rewindingId = ref(null)
 
 function typeLabel(t) {
   const m = { like: '喜欢', super_like: '超级喜欢', follow: '收藏', skip: '跳过' }
@@ -136,6 +150,25 @@ function onTabChange(name) {
 function goProfile(userId) {
   if (!userId) return
   router.push(fellowshipPath(`/user-profile/${userId}`))
+}
+
+async function handleRewind(item) {
+  if (!item?.userId || rewindingId.value) return
+  rewindingId.value = item.userId
+  try {
+    await rewindSkip(item.userId)
+    items.value = items.value.filter((row) => row.userId !== item.userId)
+    showToast({ type: 'success', message: '已撤回跳过，可在认识页再次看到 TA' })
+  } catch (e) {
+    if (e?.data?.code === 'REWIND_DAILY_LIMIT' || e?.status === 429) {
+      showToast({ type: 'fail', message: e?.message || '今日撤回次数已用完' })
+      router.push(fellowshipPath('/vip'))
+    } else {
+      showToast({ type: 'fail', message: e?.message || '撤回失败' })
+    }
+  } finally {
+    rewindingId.value = null
+  }
 }
 </script>
 

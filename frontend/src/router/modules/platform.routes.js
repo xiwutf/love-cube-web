@@ -59,6 +59,8 @@ export default {
     { path: 'platform/help/:id', component: () => import('@/pages/platform/HelpDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'policies/:id', component: () => import('@/pages/platform/PolicyPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups', component: () => import('@/pages/platform/GroupsPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/season', component: () => import('@/pages/platform/GroupSeasonRankingsPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/groups/join', component: () => import('@/pages/platform/GroupJoinByInvitePage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/create', component: () => import('@/pages/platform/GroupCreatePage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'platform/me/groups', component: () => import('@/pages/platform/MyGroupsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'platform/groups/my', redirect: '/platform/me/groups', meta: { module: 'platform' } },

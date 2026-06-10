@@ -25,7 +25,32 @@
         </div>
       </header>
 
-      <nav class="gd-tabs" aria-label="团体内容">
+      <GroupCapabilityBanner :group-id="group.id" class="gd-capability-banner" />
+
+      <div v-if="group.managed && pendingMemberCount > 0" class="gd-pending-banner">
+        <span>有 {{ pendingMemberCount }} 条入团申请待审核</span>
+        <router-link :to="groupTabPath('members')">去审核</router-link>
+      </div>
+
+      <GroupInvitePanel
+        v-if="group.managed && joinModeKey === 'invite'"
+        :group-id="group.id"
+        :join-mode-key="joinModeKey"
+        :managed="group.managed"
+      />
+
+      <div v-if="group.managed && weeklyDigest" class="gd-digest">
+        <p>本周打卡率 {{ weeklyDigest.checkinRatePercent }}% · 活跃 {{ weeklyDigest.activeMembers }} 人</p>
+        <button type="button" class="gd-link-btn" :disabled="sendingDigest" @click="sendWeeklyDigestNow">
+          {{ sendingDigest ? '…' : '发周报' }}
+        </button>
+      </div>
+
+      <p v-if="joinModeKey === 'invite' && inviteCodeFromQuery && !group.isMember" class="gd-invite-hint">
+        已识别邀请码，点击下方按钮验证并加入
+      </p>
+
+      <nav class="gd-tabs gd-tabs-sticky" aria-label="团体内容">
         <router-link
           v-for="tab in tabs"
           :key="tab.key"
@@ -79,19 +104,11 @@
           <router-link :to="groupTabPath('notices')" class="gd-link">全部公告 →</router-link>
         </article>
         <article v-if="seasonRank" class="gd-card gd-season">
-          <h2>赛季排行</h2>
-          <p class="gd-sub">{{ seasonRank.seasonTitle || '本季' }}</p>
-          <div class="gd-season-stats">
-            <div><strong>{{ seasonRank.score ?? 0 }}</strong><span>赛季积分</span></div>
-            <div><strong>{{ seasonRank.rank ?? '—' }}</strong><span>当前排名</span></div>
-          </div>
-          <ul v-if="seasonTop.length" class="gd-season-top">
-            <li v-for="item in seasonTop" :key="item.groupId">
-              <span>#{{ item.rank }}</span>
-              <span>{{ item.groupName }}</span>
-              <strong>{{ item.score }}</strong>
-            </li>
-          </ul>
+          <GroupSeasonPanel
+            :season-rank="seasonRank"
+            :season-top="seasonTop"
+            title="季度赛季榜"
+          />
         </article>
       </div>
 
@@ -121,6 +138,9 @@
             </button>
             <button type="button" :class="{ on: expandedPostId === post.id }" @click="toggleCommentPanel(post)">
               评论 {{ post.comments }}
+            </button>
+            <button v-if="userStore.isLoggedIn" type="button" class="gd-link-btn" @click="openPostReport(post)">
+              举报
             </button>
           </div>
           <div v-if="expandedPostId === post.id" class="gd-post-comments">
@@ -355,6 +375,11 @@
           <label class="gd-label">结束时间 *</label>
           <input v-model="activityForm.endTime" type="datetime-local" required>
           <input v-model.trim="activityForm.location" type="text" maxlength="200" placeholder="地点（可选）">
+          <label class="gd-label">关联平台活动（可选）</label>
+          <select v-model="activityForm.platformEventId">
+            <option value="">不关联</option>
+            <option v-for="ev in platformEvents" :key="ev.id" :value="ev.id">{{ ev.title }}</option>
+          </select>
           <button type="submit" class="gd-btn primary" :disabled="creatingActivity">
             {{ creatingActivity ? '发布中…' : '确认发布' }}
           </button>
@@ -394,6 +419,26 @@
                 {{ signingActivityId === act.id ? '…' : '取消报名' }}
               </button>
             </template>
+            <button
+              v-if="act.signedUpByMe && act.hasCheckinCode && !act.checkedInByMe && !act.isEnded"
+              type="button"
+              class="gd-btn sm primary"
+              @click="openActivityCheckin(act)"
+            >签到</button>
+            <button
+              v-if="group.managed && act.status === 'published' && !act.isEnded"
+              type="button"
+              class="gd-btn sm"
+              :disabled="checkinCodeBusyId === act.id"
+              @click="generateActivityCode(act)"
+            >{{ act.hasCheckinCode ? '刷新码' : '签到码' }}</button>
+            <button
+              v-if="act.canReview && act.pendingReviewCount > 0"
+              type="button"
+              class="gd-btn sm primary"
+              @click="openActivityReview(act)"
+            >互评 {{ act.pendingReviewCount }}</button>
+            <router-link v-if="act.platformEventPath" :to="act.platformEventPath" class="gd-link-btn">平台活动</router-link>
             <button
               v-if="group.managed && act.status === 'published'"
               type="button"
@@ -527,10 +572,52 @@
         <p class="gd-desc-block">{{ group.description }}</p>
       </div>
     </template>
+
+    <div v-if="activityReviewOpen" class="gd-modal" @click.self="closeActivityReview">
+      <div class="gd-modal-body gd-modal-tall">
+        <h3>活动互评</h3>
+        <p v-if="activityReviewLoading" class="gd-hint">加载中…</p>
+        <ul v-else class="gd-review-list">
+          <li v-for="c in activityReviewCandidates" :key="c.userId">
+            <span>{{ c.nickname }}</span>
+            <template v-if="c.reviewed"><em>已评</em></template>
+            <template v-else>
+              <select v-model="activityReviewRatings[c.userId]">
+                <option v-for="n in 5" :key="n" :value="n">{{ n }}分</option>
+              </select>
+              <button type="button" class="gd-btn sm" @click="submitOneReview(c)">提交</button>
+            </template>
+          </li>
+        </ul>
+        <button type="button" class="gd-link-btn" @click="closeActivityReview">关闭</button>
+      </div>
+    </div>
+
+    <div v-if="activityCheckinOpen" class="gd-modal" @click.self="activityCheckinOpen = false">
+      <div class="gd-modal-body">
+        <h3>现场签到</h3>
+        <input v-model.trim="activityCheckinCode" type="text" maxlength="8" placeholder="输入签到码">
+        <button type="button" class="gd-btn primary" :disabled="activityCheckinSubmitting" @click="submitActivityCheckin">
+          {{ activityCheckinSubmitting ? '…' : '确认' }}
+        </button>
+      </div>
+    </div>
+
+    <GroupPostReportDialog
+      :open="reportDialogOpen"
+      :post-id="reportPostId"
+      :target-user-id="reportTargetUserId"
+      @close="reportDialogOpen = false"
+      @submitted="message = '举报已提交'; messageType = 'success'"
+    />
   </section>
 </template>
 
 <script setup>
+import GroupCapabilityBanner from '@/components/platform/groups/GroupCapabilityBanner.vue'
+import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
+import GroupSeasonPanel from '@/components/platform/groups/GroupSeasonPanel.vue'
+import GroupPostReportDialog from '@/components/platform/groups/GroupPostReportDialog.vue'
 import { useGroupDetailMobile } from '@/composables/useGroupDetailMobile.js'
 
 const {
@@ -545,6 +632,9 @@ const {
   activeTab,
   groupTabPath,
   groupsPath,
+  joinModeKey,
+  inviteCodeFromQuery,
+  pendingMemberCount,
   joinDisabled,
   joinButtonText,
   joining,
@@ -640,13 +730,39 @@ const {
   submitPollVote,
   revealPollResults,
   submitPollCreate,
-  loadDetail
+  loadDetail,
+  platformEvents,
+  weeklyDigest,
+  sendingDigest,
+  sendWeeklyDigestNow,
+  reportDialogOpen,
+  reportPostId,
+  reportTargetUserId,
+  openPostReport,
+  activityCheckinOpen,
+  activityCheckinCode,
+  activityCheckinSubmitting,
+  openActivityCheckin,
+  submitActivityCheckin,
+  checkinCodeBusyId,
+  generateActivityCode,
+  activityReviewOpen,
+  activityReviewCandidates,
+  activityReviewLoading,
+  activityReviewRatings,
+  openActivityReview,
+  closeActivityReview,
+  submitOneReview
 } = useGroupDetailMobile()
 </script>
 
 <style scoped>
 .gd-mobile {
   padding-bottom: 24px;
+}
+
+.gd-capability-banner {
+  margin: 12px 0 0;
 }
 
 .gd-state {
@@ -663,6 +779,36 @@ const {
 .gd-hero {
   background: var(--lc-surface, #fff);
   border-bottom: 1px solid var(--lc-soft, #e8ecf4);
+}
+
+.gd-pending-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-size: 13px;
+  color: #9a3412;
+}
+
+.gd-pending-banner a {
+  color: #c2410c;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gd-invite-hint {
+  margin: 10px 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  font-size: 12px;
+  color: #065f46;
 }
 
 .gd-cover {
@@ -709,6 +855,85 @@ const {
 
 .gd-join:disabled {
   opacity: 0.55;
+}
+
+.gd-tabs-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--lc-surface, #fff);
+  box-shadow: 0 1px 0 var(--lc-border, #e5e7eb);
+}
+
+.gd-digest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--lc-surface-muted, #f8fafc);
+  font-size: 13px;
+}
+
+.gd-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 40%);
+}
+
+.gd-modal-body {
+  width: 100%;
+  max-width: 480px;
+  padding: 16px;
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+}
+
+.gd-modal-body input,
+.gd-modal-body select {
+  width: 100%;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid var(--lc-border, #e5e7eb);
+  border-radius: 8px;
+}
+
+.gd-modal-tall {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.gd-review-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gd-review-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.gd-review-list select {
+  width: auto;
+  margin: 0;
+}
+
+.gd-review-list em {
+  color: var(--lc-text-muted, #64748b);
+  font-style: normal;
 }
 
 .gd-tabs {

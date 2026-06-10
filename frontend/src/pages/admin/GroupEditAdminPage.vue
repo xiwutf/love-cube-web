@@ -17,7 +17,7 @@
               <h1 class="platform-title">{{ group.name }}</h1>
               <p class="platform-subtitle">
                 <span class="role-chip">{{ userRoleName }}</span>
-                · {{ group.category || '未分类' }} · {{ group.region || '未设置地区' }} · {{ group.memberCount }} 位成员
+                · {{ categoryDisplay(group.category) }} · {{ group.region || '未设置地区' }} · {{ group.memberCount }} 位成员
               </p>
             </div>
           </div>
@@ -60,8 +60,10 @@
             <input v-model.trim="form.region" class="admin-input" maxlength="40" placeholder="例如：北京">
           </label>
           <label class="form-field">
-            <span>类型</span>
-            <input v-model.trim="form.category" class="admin-input" maxlength="40" placeholder="例如：青年团体">
+            <span>分类</span>
+            <select v-model="form.category" class="admin-input">
+              <option v-for="c in categoryOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+            </select>
           </label>
           <label class="form-field">
             <span>加入方式</span>
@@ -278,6 +280,7 @@ import CoverUploadField from '@/components/admin/CoverUploadField.vue'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
 import { useUserStore } from '@/stores/user.js'
+import { PLATFORM_GROUP_CATEGORY_OPTIONS, labelForGroupCategory } from '@/utils/groupCategories.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -313,7 +316,34 @@ const adminCandidateMembers = ref([])
 
 const loading = reactive({ detail: true, members: false, posts: false, notices: false, admins: false })
 const errors = reactive({ detail: '', members: '', posts: '', notices: '', admins: '' })
-const form = reactive({ name: '', region: '', category: '', description: '', coverUrl: '', joinType: 'approval', status: 'active' })
+const form = reactive({ name: '', region: '', category: 'interest', description: '', coverUrl: '', joinType: 'approval', status: 'active' })
+
+const LEGACY_CATEGORY_MAP = {
+  study: 'growth',
+  family: 'life',
+  service: 'volunteer',
+  church: 'interest'
+}
+
+const categoryOptions = computed(() => {
+  const base = [...PLATFORM_GROUP_CATEGORY_OPTIONS]
+  const cur = String(form.category || '').trim().toLowerCase()
+  if (cur && !base.some((o) => o.value === cur)) {
+    base.push({ label: labelForGroupCategory(cur), value: cur })
+  }
+  return base
+})
+
+function categoryDisplay(value) {
+  return labelForGroupCategory(value) || '未分类'
+}
+
+function normalizeCategoryValue(raw) {
+  const key = String(raw || '').trim().toLowerCase()
+  if (!key) return 'interest'
+  if (PLATFORM_GROUP_CATEGORY_OPTIONS.some((o) => o.value === key)) return key
+  return LEGACY_CATEGORY_MAP[key] || key
+}
 
 const ALL_TABS = [
   { key: 'info',    label: '基础信息' },
@@ -765,7 +795,7 @@ function syncForm(item) {
   Object.assign(form, {
     name: item.name,
     region: item.region,
-    category: item.category,
+    category: normalizeCategoryValue(item.category),
     description: item.description,
     coverUrl: item.coverUrl,
     joinType: item.joinType,

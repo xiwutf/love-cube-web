@@ -16,6 +16,7 @@
 
     <div class="quick">
       <router-link to="/m/platform/my-groups">我的团体</router-link>
+      <router-link :to="groupsPath('season')">赛季榜</router-link>
       <button type="button" @click="goCreate">创建团体</button>
     </div>
 
@@ -80,6 +81,7 @@ import {
   JOIN_MEMBER_REAL_NAME_PROMPT
 } from '@/utils/groupMemberDisplayName.js'
 import { useUserStore } from '@/stores/user.js'
+import { labelForGroupCategory } from '@/utils/groupCategories.js'
 
 const PAGE_SIZE = 10
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
@@ -100,15 +102,6 @@ const messageType = ref('success')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE)))
 
-const categoryLabelMap = {
-  region: '地区团体',
-  church: '社群团体',
-  study: '学习小组',
-  interest: '兴趣团体',
-  family: '生活小组',
-  service: '志愿服务'
-}
-
 function joinModeLabel(joinKey) {
   if (joinKey === 'open') return '公开加入'
   if (joinKey === 'invite') return '邀请加入'
@@ -120,7 +113,7 @@ function normalizeGroup(item) {
   return {
     id: item.id,
     name: item.name || '未命名团体',
-    category: categoryLabelMap[item.category] || item.category || '团体',
+    category: labelForGroupCategory(item.category),
     region: item.location || item.region || '未设置地区',
     memberCount: Number(item.memberCount || 0),
     description: item.description || '暂无简介',

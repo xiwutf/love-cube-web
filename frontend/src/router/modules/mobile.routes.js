@@ -81,6 +81,11 @@ export default {
       meta: authPlatform
     },
     {
+      path: 'platform/groups/join',
+      component: () => import('@/pages/platform/GroupJoinByInvitePage.vue'),
+      meta: authPlatform
+    },
+    {
       path: 'platform/groups/create',
       component: () => import('@/pages/platform/GroupCreatePage.vue'),
       meta: authPlatform
@@ -137,6 +142,11 @@ export default {
     {
       path: 'platform/groups/:id/polls',
       component: () => import('@/pages/mobile/platform/GroupDetailPage.vue'),
+      meta: { module: 'platform' }
+    },
+    {
+      path: 'platform/groups/season',
+      component: () => import('@/pages/platform/GroupSeasonRankingsPage.vue'),
       meta: { module: 'platform' }
     },
     {

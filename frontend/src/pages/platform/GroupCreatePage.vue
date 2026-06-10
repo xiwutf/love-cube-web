@@ -81,6 +81,7 @@ import { createGroup } from '@/api/groups.js'
 import { uploadImage } from '@/api/upload.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
+import { PLATFORM_GROUP_CATEGORY_OPTIONS } from '@/utils/groupCategories.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -90,21 +91,14 @@ const form = reactive({
   name: '',
   description: '',
   memberRealName: '',
-  type: 'region',
+  type: 'interest',
   joinMode: 'audit',
   region: '',
   tags: '',
   coverUrl: ''
 })
 
-const categories = [
-  { label: '地区团体', value: 'region' },
-  { label: '社群团体', value: 'church' },
-  { label: '学习小组', value: 'study' },
-  { label: '兴趣团体', value: 'interest' },
-  { label: '生活小组', value: 'family' },
-  { label: '事工团队', value: 'service' }
-]
+const categories = PLATFORM_GROUP_CATEGORY_OPTIONS
 
 const submitting = ref(false)
 const uploadingCover = ref(false)

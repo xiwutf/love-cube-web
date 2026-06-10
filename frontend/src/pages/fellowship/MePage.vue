@@ -75,10 +75,10 @@
         <van-icon name="arrow" size="16" />
       </section>
 
-      <section v-show="!loadingPage" class="play-hub-banner" @click="router.push('/m/platform')">
+      <section v-show="!loadingPage" class="play-hub-banner" @click="router.push('/fellowship/tasks')">
         <div>
-          <p class="sq-title">成长玩法中心</p>
-          <p class="sq-sub">任务 · 签到 · 心声 · 互助</p>
+          <p class="sq-title">成长任务</p>
+          <p class="sq-sub">{{ dailyTaskSub || '任务 · 签到 · 心声' }}</p>
         </div>
         <van-icon name="arrow" size="16" />
       </section>
@@ -103,15 +103,15 @@
           <div class="metric-icon metric-fire">
             <van-icon name="fire" size="22" />
           </div>
-          <p class="status-title">活跃等级</p>
-          <p class="status-value">Lv.4</p>
+          <p class="status-title">成长等级</p>
+          <p class="status-value">Lv.{{ growthLevel }}</p>
         </div>
         <div class="status-cell">
           <div class="metric-icon metric-eye">
             <van-icon name="eye" size="22" />
           </div>
           <p class="status-title">曝光增加</p>
-          <p class="status-value">+30%</p>
+          <p class="status-value">+{{ exposureBoost }}%</p>
         </div>
       </section>
 
@@ -204,6 +204,7 @@ import {
   uploadFellowshipPhoto
 } from '@/api/fellowshipProfile.js'
 import { getFellowshipMeStatsCached } from '@/api/fellowship.js'
+import { getMyGrowth } from '@/api/growth.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 
@@ -239,9 +240,18 @@ const fellowshipStats = ref({
   vipActive: false,
   swipeQuota: null
 })
+const growthLevel = ref(1)
+const growthTitle = ref('新手用户')
+const dailyTaskDone = ref(0)
+const dailyTaskTotal = ref(0)
 
 const vipActive = computed(() => Boolean(fellowshipStats.value.vipActive))
 const swipeQuota = computed(() => fellowshipStats.value.swipeQuota || null)
+const exposureBoost = computed(() => Math.min(50, 10 + growthLevel.value * 4))
+const dailyTaskSub = computed(() => {
+  if (!dailyTaskTotal.value) return ''
+  return `今日 ${dailyTaskDone.value}/${dailyTaskTotal.value} · ${growthTitle.value}`
+})
 
 const displayName = computed(() => profile.value.nickname || userInfo.value?.username || 'Love Cube 用户')
 const displayAvatar = computed(
@@ -320,10 +330,12 @@ const menuItems = computed(() => {
       to: '/fellowship/notifications',
       theme: 'rose'
     },
-    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '查看匹配', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
+    { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '破冰与默契', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
+    { key: 'tasks', title: '今日任务', sub: dailyTaskSub.value || '查看成长任务', icon: 'todo-list-o', to: '/fellowship/tasks', theme: 'teal' },
+    { key: 'swipe-history', title: '滑卡记录', sub: '喜欢 · 超级喜欢 · 跳过', icon: 'clock-o', to: '/fellowship/match/history', theme: 'cyan' },
     { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
     { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/liked-me', theme: 'yellow' },
-    { key: 'play', title: '成长玩法', sub: '任务签到心声', icon: 'gem-o', to: '/m/platform', theme: 'teal' },
+    { key: 'play', title: '平台玩法', sub: '签到与每日心声', icon: 'gem-o', to: '/m/platform', theme: 'gray' },
     { key: 'invite', title: '邀请码', sub: '邀请好友加入', icon: 'friends', to: '/fellowship/invite', theme: 'purple' },
     { key: 'signup', title: '我的报名', sub: s.eventSignupCount > 0 ? `${s.eventSignupCount}个报名中` : '查看报名', icon: 'calendar', to: '/fellowship/event-signups', theme: 'green' },
     { key: 'collect', title: '我的收藏', sub: s.followingCount > 0 ? `${s.followingCount}人` : '查看收藏', icon: 'star', to: '/fellowship/following', theme: 'orange' },
@@ -469,10 +481,11 @@ onMounted(async () => {
     if (!userStore.userInfo) {
       await userStore.refreshCurrentUser().catch(() => null)
     }
-    const [pageDataRes, notifRes, statsRes] = await Promise.allSettled([
+    const [pageDataRes, notifRes, statsRes, growthRes] = await Promise.allSettled([
       loadPageData(),
       getNotifUnreadCountCached(),
-      getFellowshipMeStatsCached()
+      getFellowshipMeStatsCached(),
+      getMyGrowth()
     ])
     if (pageDataRes.status === 'rejected') {
       console.warn('[me-page] loadPageData failed:', pageDataRes.reason)
@@ -482,6 +495,13 @@ onMounted(async () => {
     }
     if (statsRes.status === 'fulfilled' && statsRes.value) {
       fellowshipStats.value = statsRes.value
+    }
+    if (growthRes.status === 'fulfilled' && growthRes.value) {
+      growthLevel.value = Number(growthRes.value.level ?? 1)
+      growthTitle.value = growthRes.value.title || '新手用户'
+      const daily = Array.isArray(growthRes.value.dailyTasks) ? growthRes.value.dailyTasks : []
+      dailyTaskTotal.value = daily.length
+      dailyTaskDone.value = daily.filter((t) => t.completed).length
     }
   } finally {
     loadingPage.value = false
@@ -1059,6 +1079,8 @@ onMounted(async () => {
 .menu-green { background: linear-gradient(135deg, #e6fbf1, #c8f2df); color: #23b979; }
 .menu-orange { background: linear-gradient(135deg, #fff0e7, #ffd6c4); color: #ff8740; }
 .menu-indigo { background: linear-gradient(135deg, #eaf0ff, #d6e0ff); color: #5274ef; }
+.menu-teal { background: linear-gradient(135deg, #e6fffa, #ccfbf1); color: #0d9488; }
+.menu-cyan { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
 .menu-gray { background: linear-gradient(135deg, #f0f2f8, #e3e6ef); color: #7a8194; }
 
 .menu-title {

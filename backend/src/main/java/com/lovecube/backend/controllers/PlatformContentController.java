@@ -276,7 +276,7 @@ public class PlatformContentController {
             if (event == null) {
                 continue;
             }
-            rows.add(buildSignupRow(event, signup));
+            rows.add(buildSignupRow(event, signup, user.getUserid()));
         }
         return rows;
     }
@@ -417,7 +417,7 @@ public class PlatformContentController {
         }
     }
 
-    private Map<String, Object> buildSignupRow(PlatformEvent event, EventSignup signup) {
+    private Map<String, Object> buildSignupRow(PlatformEvent event, EventSignup signup, Long userId) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("eventId", event.getId());
         row.put("title", event.getTitle());
@@ -428,8 +428,28 @@ public class PlatformContentController {
         row.put("checkedIn", Boolean.TRUE.equals(signup.getCheckedIn()));
         row.put("checkedInAt", signup.getCheckedInAt());
         row.put("checkinEnabled", event.getCheckinCode() != null && !event.getCheckinCode().isBlank());
-        row.put("canReview", Boolean.TRUE.equals(signup.getCheckedIn()));
+        boolean checkedIn = Boolean.TRUE.equals(signup.getCheckedIn());
+        Map<String, Object> reviewSummary = eventEngagementService.buildReviewSummary(userId, event.getId(), checkedIn);
+        row.put("canReview", Boolean.TRUE.equals(reviewSummary.get("canReview")));
+        row.put("pendingReviewCount", reviewSummary.get("pendingReviewCount"));
+        row.put("reviewCompleted", reviewSummary.get("reviewCompleted"));
+        boolean eventEnded = event.getEventTime() != null && event.getEventTime().isBefore(LocalDateTime.now());
+        row.put("eventEnded", eventEnded);
+        row.put("status", resolveSignupStatus(checkedIn, eventEnded, reviewSummary));
         return row;
+    }
+
+    private String resolveSignupStatus(boolean checkedIn, boolean eventEnded, Map<String, Object> reviewSummary) {
+        if (!eventEnded) {
+            return checkedIn ? "checked_in" : "upcoming";
+        }
+        if (!checkedIn) {
+            return "missed";
+        }
+        if (Boolean.TRUE.equals(reviewSummary.get("reviewCompleted"))) {
+            return "completed";
+        }
+        return "review_pending";
     }
 
     private Long parseLong(Object value) {

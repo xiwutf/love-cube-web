@@ -27,6 +27,11 @@ public class SwipeQuotaService {
         Map<String, Object> body = new LinkedHashMap<>();
         boolean vipActive = vipService.isActiveVip(user);
         body.put("vipActive", vipActive);
+        int rewindLimit = vipActive ? VipService.VIP_DAILY_REWIND_LIMIT : VipService.FREE_DAILY_REWIND_LIMIT;
+        int rewindUsed = getTodayRewindCount(user.getUserid());
+        body.put("rewindLimit", rewindLimit);
+        body.put("rewindUsed", rewindUsed);
+        body.put("rewindRemaining", Math.max(0, rewindLimit - rewindUsed));
         if (vipActive) {
             body.put("unlimited", true);
             body.put("used", 0);
@@ -56,6 +61,7 @@ public class SwipeQuotaService {
                     created.setUserId(userId);
                     created.setSwipeDate(today);
                     created.setSwipeCount(0);
+                    created.setRewindCount(0);
                     return created;
                 });
         if (row.getSwipeCount() >= VipService.FREE_DAILY_SWIPE_LIMIT) {
@@ -63,6 +69,44 @@ public class SwipeQuotaService {
         }
         row.setSwipeCount(row.getSwipeCount() + 1);
         swipeRepository.save(row);
+    }
+
+    @Transactional
+    public void consumeRewind(User user) {
+        if (user == null || user.getUserid() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "用户认证失败");
+        }
+        boolean vipActive = vipService.isActiveVip(user);
+        int limit = vipActive ? VipService.VIP_DAILY_REWIND_LIMIT : VipService.FREE_DAILY_REWIND_LIMIT;
+        UserDailySwipe row = getOrCreateTodayRow(user.getUserid());
+        int used = row.getRewindCount() != null ? row.getRewindCount() : 0;
+        if (used >= limit) {
+            String hint = vipActive
+                    ? "今日撤回次数已用完"
+                    : "今日撤回次数已用完，开通 VIP 可每日撤回 " + VipService.VIP_DAILY_REWIND_LIMIT + " 次";
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, hint);
+        }
+        row.setRewindCount(used + 1);
+        swipeRepository.save(row);
+    }
+
+    private UserDailySwipe getOrCreateTodayRow(Long userId) {
+        LocalDate today = LocalDate.now();
+        return swipeRepository.findByUserIdAndSwipeDate(userId, today)
+                .orElseGet(() -> {
+                    UserDailySwipe created = new UserDailySwipe();
+                    created.setUserId(userId);
+                    created.setSwipeDate(today);
+                    created.setSwipeCount(0);
+                    created.setRewindCount(0);
+                    return created;
+                });
+    }
+
+    private int getTodayRewindCount(Long userId) {
+        return swipeRepository.findByUserIdAndSwipeDate(userId, LocalDate.now())
+                .map(r -> r.getRewindCount() != null ? r.getRewindCount() : 0)
+                .orElse(0);
     }
 
     private int getTodayCount(Long userId) {

@@ -148,4 +148,44 @@ public class EventEngagementService {
         }
         return sb.toString();
     }
+
+    /** 某用户在某活动中尚未互评的人数（已签到前提下） */
+    public int countPendingReviews(Long userId, String eventId) {
+        EventSignup mySignup = signupRepository.findByEventIdAndUserId(eventId, userId).orElse(null);
+        if (mySignup == null || !Boolean.TRUE.equals(mySignup.getCheckedIn())) {
+            return 0;
+        }
+        List<EventSignup> checkedIns = signupRepository.findByEventIdAndCheckedInTrue(eventId);
+        long totalTargets = checkedIns.stream()
+                .map(EventSignup::getUserId)
+                .filter(id -> !id.equals(userId))
+                .distinct()
+                .count();
+        if (totalTargets <= 0) {
+            return 0;
+        }
+        List<EventPeerReview> myReviews = reviewRepository.findByEventIdAndReviewerUserId(eventId, userId);
+        Set<Long> reviewedIds = myReviews.stream().map(EventPeerReview::getTargetUserId).collect(Collectors.toSet());
+        return (int) checkedIns.stream()
+                .map(EventSignup::getUserId)
+                .filter(id -> !id.equals(userId))
+                .filter(id -> !reviewedIds.contains(id))
+                .distinct()
+                .count();
+    }
+
+    public Map<String, Object> buildReviewSummary(Long userId, String eventId, boolean checkedIn) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        if (!checkedIn) {
+            summary.put("pendingReviewCount", 0);
+            summary.put("reviewCompleted", true);
+            summary.put("canReview", false);
+            return summary;
+        }
+        int pending = countPendingReviews(userId, eventId);
+        summary.put("pendingReviewCount", pending);
+        summary.put("reviewCompleted", pending <= 0);
+        summary.put("canReview", true);
+        return summary;
+    }
 }

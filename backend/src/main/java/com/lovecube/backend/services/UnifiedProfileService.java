@@ -379,6 +379,13 @@ public class UnifiedProfileService {
      * 适用于 /matches/list 等列表场景，比 buildLegacyUserPayload 少 7 条查询/用户。
      */
     public Map<String, Object> buildMatchCardPayload(User user, Map<String, Boolean> verifyBadges) {
+        return buildMatchCardPayload(user, verifyBadges, null);
+    }
+
+    /**
+     * 匹配列表卡片：可选传入当前浏览者以生成推荐理由。
+     */
+    public Map<String, Object> buildMatchCardPayload(User user, Map<String, Boolean> verifyBadges, User viewer) {
         Map<String, Object> card = new LinkedHashMap<>();
         card.put("userId",       user.getUserid());
         card.put("userid",       user.getUserid());
@@ -399,13 +406,79 @@ public class UnifiedProfileService {
         card.put("birthday",     bday);
         card.put("birthDate",    user.getBirthDate());
         card.put("constellation", user.getBirthDate() == null ? "" : getConstellation(user.getBirthDate().toLocalDate()));
-        card.put("photos",       List.of());
-        card.put("completionRate", 0);
+        if (!photo.isBlank()) {
+            card.put("photos", List.of(photo));
+        } else {
+            card.put("photos", List.of());
+        }
+        card.put("completionRate", estimateProfileCompletion(user));
         card.put("identityRole", "self");
         card.put("guardianRole", "");
         card.put("photoVerified",    verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified")));
         card.put("realnameVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
+        card.put("recommendReasons", viewer != null ? buildRecommendReasons(viewer, user, verifyBadges) : List.of());
         return card;
+    }
+
+    /** 基于 User 字段估算资料完整度（0–100），用于推荐卡片展示。 */
+    public int estimateProfileCompletionForUser(User user) {
+        return estimateProfileCompletion(user);
+    }
+
+    private int estimateProfileCompletion(User user) {
+        if (user == null) {
+            return 0;
+        }
+        int score = 0;
+        if (!defaultText(user.getUsername(), "").isBlank()) score += 15;
+        if (user.getGender() != null) score += 10;
+        if (user.getAge() > 0) score += 10;
+        if (!defaultText(user.getLocation(), "").isBlank()) score += 15;
+        if (!defaultText(user.getOccupation(), "").isBlank()) score += 15;
+        if (!defaultText(user.getBio(), "").isBlank()) score += 15;
+        if (!defaultText(user.getProfilePhoto(), "").isBlank()) score += 10;
+        return Math.min(100, score);
+    }
+
+    /**
+     * 生成匹配推荐理由（仅使用 User + 认证信息，无额外 SQL）。
+     */
+    public List<String> buildRecommendReasons(User viewer, User candidate, Map<String, Boolean> verifyBadges) {
+        List<String> reasons = new ArrayList<>();
+        if (viewer == null || candidate == null) {
+            return reasons;
+        }
+        String vLoc = defaultText(viewer.getLocation(), "").trim();
+        String cLoc = defaultText(candidate.getLocation(), "").trim();
+        if (!vLoc.isEmpty() && vLoc.equals(cLoc)) {
+            reasons.add("同城");
+        } else if (vLoc.length() >= 2 && cLoc.length() >= 2
+                && vLoc.substring(0, 2).equals(cLoc.substring(0, 2))) {
+            reasons.add("同省");
+        }
+        String vOcc = defaultText(viewer.getOccupation(), "").trim();
+        String cOcc = defaultText(candidate.getOccupation(), "").trim();
+        if (!vOcc.isEmpty() && !cOcc.isEmpty() && vOcc.equals(cOcc)) {
+            reasons.add("职业相同");
+        }
+        int ageDiff = Math.abs(viewer.getAge() - candidate.getAge());
+        if (viewer.getAge() > 0 && candidate.getAge() > 0 && ageDiff <= 3) {
+            reasons.add("年龄相近");
+        }
+        if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"))) {
+            reasons.add("真人认证");
+        }
+        if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified"))) {
+            reasons.add("实名认证");
+        }
+        int completion = estimateProfileCompletion(candidate);
+        if (completion >= 80) {
+            reasons.add("资料完善");
+        }
+        if (reasons.isEmpty()) {
+            reasons.add("今日推荐");
+        }
+        return reasons.stream().limit(3).collect(Collectors.toList());
     }
 
     /** 从已有的 fellowshipPayload 中提取完整度，避免重复调用 buildUnifiedProfile。 */

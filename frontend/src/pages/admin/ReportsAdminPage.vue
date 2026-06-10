@@ -18,6 +18,7 @@
         <option value="USER">用户举报</option>
         <option value="DYNAMIC">动态举报</option>
         <option value="MESSAGE">消息举报</option>
+        <option value="GROUP_POST">团体动态</option>
       </select>
     </div>
 
@@ -40,9 +41,19 @@
           <tr v-for="item in filtered" :key="item.id">
             <td>{{ targetTypeLabel(item.targetType || item.reportType) }}</td>
             <td>{{ item.reasonType || item.reportType || '-' }}</td>
-            <td>{{ item.content || '-' }}</td>
             <td>
-              {{ item.reporterId }} → {{ item.targetUserId }}<br>
+              {{ item.content || '-' }}
+              <span v-if="isGroupPost(item)" class="admin-row-meta">
+                <br>动态 ID：{{ item.targetId }}
+                <template v-if="item.groupId"> · 团体 ID：{{ item.groupId }}</template>
+              </span>
+              <span v-if="isGroupPost(item) && item.groupId" class="admin-row-meta">
+                <br>
+                <router-link :to="groupAdminPath(item.groupId)">查看团体动态</router-link>
+              </span>
+            </td>
+            <td>
+              {{ item.reporterId }} → {{ item.targetUserId || '—' }}<br>
               <span class="admin-row-meta">{{ formatDate(item.createdAt) }}</span>
               <span v-if="item.reviewedAt" class="admin-row-meta"> · 审核：{{ formatDate(item.reviewedAt) }}</span>
             </td>
@@ -53,11 +64,27 @@
             </td>
             <td>
               <div v-if="isPending(item)" class="admin-cell-actions">
+                <button
+                  v-if="isGroupPost(item)"
+                  class="admin-btn danger"
+                  :disabled="reviewing"
+                  @click="review(item, 'hide_post')"
+                >下架动态</button>
                 <button class="admin-btn" :disabled="reviewing" @click="review(item, 'reviewed')">已审核</button>
                 <button class="admin-btn" :disabled="reviewing" @click="review(item, 'rejected')">驳回</button>
-                <button class="admin-btn danger" :disabled="reviewing" @click="review(item, 'banned')">封禁用户</button>
+                <button
+                  v-if="item.targetUserId"
+                  class="admin-btn danger"
+                  :disabled="reviewing"
+                  @click="review(item, 'banned')"
+                >封禁用户</button>
               </div>
-              <span v-else class="admin-row-meta">已处理</span>
+              <span v-else class="admin-row-meta">
+                已处理
+                <template v-if="isGroupPost(item) && item.groupId">
+                  · <router-link :to="groupAdminPath(item.groupId)">查看团体</router-link>
+                </template>
+              </span>
             </td>
           </tr>
         </tbody>
@@ -72,11 +99,29 @@
           <span class="admin-tag" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
         </div>
         <p>{{ item.content || '（无附加内容）' }}</p>
-        <p class="admin-row-meta">举报人：{{ item.reporterId }} · 被举报人：{{ item.targetUserId }} · {{ formatDate(item.createdAt) }}</p>
+        <p v-if="isGroupPost(item)" class="admin-row-meta">
+          动态 ID：{{ item.targetId }}
+          <template v-if="item.groupId"> · 团体 ID：{{ item.groupId }}</template>
+        </p>
+        <p v-if="isGroupPost(item) && item.groupId" class="admin-row-meta">
+          <router-link :to="groupAdminPath(item.groupId)">查看团体动态</router-link>
+        </p>
+        <p class="admin-row-meta">举报人：{{ item.reporterId }} · 被举报人：{{ item.targetUserId || '—' }} · {{ formatDate(item.createdAt) }}</p>
         <div v-if="isPending(item)" class="admin-toolbar">
+          <button
+            v-if="isGroupPost(item)"
+            class="admin-btn danger"
+            :disabled="reviewing"
+            @click="review(item, 'hide_post')"
+          >下架动态</button>
           <button class="admin-btn" :disabled="reviewing" @click="review(item, 'reviewed')">已审核</button>
           <button class="admin-btn" :disabled="reviewing" @click="review(item, 'rejected')">驳回</button>
-          <button class="admin-btn danger" :disabled="reviewing" @click="review(item, 'banned')">封禁用户</button>
+          <button
+            v-if="item.targetUserId"
+            class="admin-btn danger"
+            :disabled="reviewing"
+            @click="review(item, 'banned')"
+          >封禁用户</button>
         </div>
       </article>
       <van-empty v-if="!filtered.length" description="暂无举报记录" />
@@ -123,7 +168,8 @@ async function review(item, action) {
   const actionLabel = {
     reviewed: '标记为已审核',
     rejected: '驳回举报',
-    banned: '封禁被举报用户'
+    banned: '封禁被举报用户',
+    hide_post: '下架该团体动态'
   }[action] || '处理举报'
 
   try {
@@ -174,8 +220,16 @@ function statusClass(status) {
   return ''
 }
 
+function isGroupPost(item) {
+  return String(item?.targetType || '').toUpperCase() === 'GROUP_POST'
+}
+
+function groupAdminPath(groupId) {
+  return { path: `/admin/platform/groups/${groupId}`, query: { tab: 'posts' } }
+}
+
 function targetTypeLabel(type) {
-  const map = { USER: '用户', DYNAMIC: '动态', MESSAGE: '消息' }
+  const map = { USER: '用户', DYNAMIC: '动态', MESSAGE: '消息', GROUP_POST: '团体动态' }
   return map[String(type || '').toUpperCase()] || String(type || '-')
 }
 

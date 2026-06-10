@@ -53,6 +53,9 @@ public class PlatGroup {
     @Column(name = "join_mode", nullable = false, length = 20)
     private String joinMode;
 
+    @Column(name = "invite_code", length = 16)
+    private String inviteCode;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

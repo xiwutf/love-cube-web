@@ -6,6 +6,14 @@
       </template>
     </NavBar>
 
+    <div v-if="showSafetyBanner" class="safety-banner">
+      <div class="safety-banner-body">
+        <p class="safety-title">安全聊天提示</p>
+        <p class="safety-text">请勿轻易转账或透露银行卡、验证码；线下见面请选择公共场所并告知亲友；如遇骚扰可右上角举报。</p>
+      </div>
+      <button type="button" class="safety-dismiss" @click="dismissSafetyBanner">知道了</button>
+    </div>
+
     <div v-if="wsStatus !== 'open'" class="ws-status">
       <van-loading v-if="wsStatus === 'connecting'" size="14" />
       <span>{{ statusLabel }}</span>
@@ -22,6 +30,7 @@
         </van-image>
         <p class="chat-empty-title">和 {{ partnerName }} 打个招呼吧</p>
         <p class="chat-empty-sub">配对成功，选一句开场白或玩个小互动</p>
+        <p class="chat-empty-safety">线下见面请选公共场所，保护个人隐私与财产安全</p>
         <div v-if="hintPhrases.length" class="hint-chips">
           <button
             v-for="(phrase, idx) in hintPhrases"
@@ -92,7 +101,7 @@ import { storage } from '@/utils/storage.js'
 import request from '@/api/request.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useReport } from '@/composables/useReport.js'
-import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
+import { markFellowshipFirstChat } from '@/composables/useFellowshipOnboarding.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -116,6 +125,14 @@ const inputText = ref('')
 const msgListRef = ref(null)
 const gamesRef = ref(null)
 const hintPhrases = ref([])
+const showSafetyBanner = ref(false)
+
+const SAFETY_STORAGE_KEY = 'fellowship_chat_safety_ack_v1'
+
+function dismissSafetyBanner() {
+  showSafetyBanner.value = false
+  storage.set(SAFETY_STORAGE_KEY, '1')
+}
 
 const allMessages = computed(() => {
   const all = [...historyMessages.value, ...wsMessages.value]
@@ -143,6 +160,9 @@ onMounted(async () => {
   if (!myId) {
     router.replace({ path: fellowshipPath('/login'), query: { redirect: encodeURIComponent(route.fullPath) } })
     return
+  }
+  if (!storage.get(SAFETY_STORAGE_KEY)) {
+    showSafetyBanner.value = true
   }
   try {
     const [hist, partner, me] = await Promise.allSettled([
@@ -219,6 +239,7 @@ function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
   send(text, receiverId)
+  markFellowshipFirstChat()
   inputText.value = ''
   sendSuccessTip.value = true
   clearTimeout(sendTipTimer)
@@ -277,6 +298,45 @@ function showTimeDivider(curr, prev) {
   font-size: 12px;
   color: #64748b;
   background: #fff8f8;
+}
+
+.safety-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 10px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fff7ed, #fffbeb);
+  border: 1px solid #fed7aa;
+}
+.safety-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+.safety-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9a3412;
+}
+.safety-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b45309;
+}
+.safety-dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: #fff;
+  color: #ea580c;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(234, 88, 12, 0.12);
 }
 
 .msg-list {
@@ -419,6 +479,14 @@ function showTimeDivider(curr, prev) {
   font-size: 13px;
   color: #8898aa;
   line-height: 1.5;
+}
+
+.chat-empty-safety {
+  margin: 0;
+  font-size: 12px;
+  color: #b45309;
+  line-height: 1.45;
+  max-width: 280px;
 }
 
 .hint-chips {

@@ -102,6 +102,7 @@ public class HomeService {
         card.put("avatarUrl", user.getProfilePhoto());
         card.put("age", user.getAge());
         card.put("location", user.getLocation());
+        card.put("completionRate", unifiedProfileService.estimateProfileCompletionForUser(user));
         return card;
     }
 }

@@ -23,6 +23,9 @@ public class UserDailySwipe {
     @Column(name = "swipe_count", nullable = false)
     private Integer swipeCount;
 
+    @Column(name = "rewind_count", nullable = false)
+    private Integer rewindCount = 0;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -32,6 +35,9 @@ public class UserDailySwipe {
         updatedAt = LocalDateTime.now();
         if (swipeCount == null) {
             swipeCount = 0;
+        }
+        if (rewindCount == null) {
+            rewindCount = 0;
         }
     }
 }

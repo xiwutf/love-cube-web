@@ -67,7 +67,33 @@
             </td>
             <td>用户 {{ item.userId }}</td>
             <td><span class="admin-tag" :class="item.verifyType?.toLowerCase()">{{ typeLabel(item.verifyType) }}</span></td>
-            <td class="submit-data-cell">{{ parseSubmitData(item) }}</td>
+            <td class="submit-data-cell">
+              <template v-if="previewFor(item).texts.length || previewFor(item).images.length">
+                <p v-if="previewFor(item).texts.length" class="submit-text">
+                  {{ previewFor(item).texts.join(' / ') }}
+                </p>
+                <div v-if="previewFor(item).images.length" class="submit-images">
+                  <a
+                    v-for="(img, idx) in previewFor(item).images"
+                    :key="`${item.id}-img-${idx}`"
+                    :href="resolveUploadUrl(img.url)"
+                    target="_blank"
+                    rel="noopener"
+                    class="submit-image-link"
+                  >
+                    <img
+                      :src="resolveUploadUrl(img.url)"
+                      :alt="img.label"
+                      class="submit-thumb"
+                      loading="lazy"
+                      @error="onImageError"
+                    >
+                    <span>{{ img.label }}</span>
+                  </a>
+                </div>
+              </template>
+              <span v-else>--</span>
+            </td>
             <td>{{ formatDate(item.submittedAt) }}<br />{{ item.reviewedAt ? formatDate(item.reviewedAt) : '待审核' }}</td>
             <td><span class="admin-tag" :class="item.status">{{ statusLabel(item.status) }}</span></td>
             <td><textarea v-model="rejectMemo[item.id]" class="admin-textarea" placeholder="驳回原因" ></textarea></td>
@@ -114,7 +140,31 @@
             <span class="admin-tag" :class="item.status">{{ statusLabel(item.status) }}</span>
           </div>
         </div>
-        <p class="admin-row-meta">{{ parseSubmitData(item) }}</p>
+        <div class="submit-preview">
+          <p v-if="previewFor(item).texts.length" class="admin-row-meta">
+            {{ previewFor(item).texts.join(' / ') }}
+          </p>
+          <div v-if="previewFor(item).images.length" class="submit-images">
+            <a
+              v-for="(img, idx) in previewFor(item).images"
+              :key="`${item.id}-img-${idx}`"
+              :href="resolveUploadUrl(img.url)"
+              target="_blank"
+              rel="noopener"
+              class="submit-image-link"
+            >
+              <img
+                :src="resolveUploadUrl(img.url)"
+                :alt="img.label"
+                class="submit-thumb"
+                loading="lazy"
+                @error="onImageError"
+              >
+              <span>{{ img.label }}</span>
+            </a>
+          </div>
+          <p v-if="!previewFor(item).texts.length && !previewFor(item).images.length" class="admin-row-meta">--</p>
+        </div>
         <p class="admin-row-meta">提交：{{ formatDate(item.submittedAt) }} / 审核：{{ item.reviewedAt ? formatDate(item.reviewedAt) : '待审核' }}</p>
         <textarea v-model="rejectMemo[item.id]" class="admin-textarea" placeholder="驳回原因（驳回时填写）" ></textarea>
         <div class="admin-toolbar">
@@ -131,6 +181,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { showToast } from 'vant'
 import { getAdminAuthContext, getVerifications, reviewVerification } from '@/api/adminContent.js'
+import { resolveUploadUrl } from '@/utils/image.js'
 
 const loading = ref(true)
 const saving  = ref(false)
@@ -155,6 +206,17 @@ const allFilteredPendingSelected = computed(() =>
   pendingFilteredItems.value.length > 0 &&
   pendingFilteredItems.value.every(item => selectedIds.value.has(item.id))
 )
+const submitPreviewById = computed(() => {
+  const map = new Map()
+  for (const item of items.value) {
+    map.set(item.id, buildSubmitPreview(item))
+  }
+  return map
+})
+
+function previewFor(item) {
+  return submitPreviewById.value.get(item.id) || { texts: [], images: [] }
+}
 
 async function load() {
   loading.value = true
@@ -280,24 +342,51 @@ function statusLabel(status) {
   return { pending: '待审核', approved: '已通过', rejected: '已驳回' }[status] || status
 }
 
-function parseSubmitData(item) {
-  if (!item.submitData) {
-    // Legacy records: show realName + idNumber fields
-    const parts = []
-    if (item.realName) parts.push(`姓名：${item.realName}`)
-    if (item.idNumber) parts.push(`证件：${item.idNumber}`)
-    return parts.join(' / ') || '--'
+function buildSubmitPreview(item) {
+  const texts = []
+  const imageMap = new Map()
+
+  function addImage(url, label) {
+    const key = String(url || '').trim()
+    if (!key) return
+    if (!imageMap.has(key)) imageMap.set(key, label)
   }
-  try {
-    const d = JSON.parse(item.submitData)
-    const parts = []
-    if (d.realName) parts.push(`姓名：${d.realName}`)
-    if (d.idLast4) parts.push(`证件后四位：${d.idLast4}`)
-    if (d.selfieUrl) parts.push('[已上传照片]')
-    return parts.join(' / ') || item.submitData.slice(0, 60)
-  } catch {
-    return item.submitData?.slice(0, 60) || '--'
+
+  if (item.realName) texts.push(`姓名：${item.realName}`)
+  if (item.idNumber) texts.push(`证件：${item.idNumber}`)
+  addImage(item.selfieUrl, '真人照片')
+  addImage(item.idFrontUrl, '身份证正面')
+  addImage(item.idBackUrl, '身份证背面')
+
+  if (item.submitData) {
+    try {
+      const d = JSON.parse(item.submitData)
+      if (d.realName && !item.realName) texts.push(`姓名：${d.realName}`)
+      if (d.idLast4) texts.push(`证件后四位：${d.idLast4}`)
+      if (d.idCard) texts.push(`证件：${d.idCard}`)
+      addImage(d.selfieUrl, '真人照片')
+      addImage(d.photoUrl, '照片')
+      addImage(d.idFrontUrl, '身份证正面')
+      addImage(d.idBackUrl, '身份证背面')
+    } catch {
+      if (!texts.length && imageMap.size === 0) {
+        texts.push(String(item.submitData).slice(0, 60))
+      }
+    }
   }
+
+  return {
+    texts,
+    images: [...imageMap.entries()].map(([url, label]) => ({ url, label }))
+  }
+}
+
+function onImageError(event) {
+  const img = event?.target
+  if (!img || img.dataset.failed) return
+  img.dataset.failed = '1'
+  img.alt = '图片无法加载，请点击查看原链接'
+  img.classList.add('submit-thumb--failed')
 }
 
 function formatDate(value) {
@@ -309,7 +398,39 @@ onMounted(load)
 </script>
 
 <style scoped>
-.submit-data-cell { max-width: 200px; word-break: break-all; font-size: 12px; color: #666; }
+.submit-data-cell { max-width: 240px; word-break: break-all; font-size: 12px; color: #666; }
+.submit-text { margin: 0 0 8px; line-height: 1.5; }
+.submit-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.submit-image-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #58708f;
+  font-size: 11px;
+  text-decoration: none;
+}
+.submit-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 1px solid var(--lc-soft-alt);
+  border-radius: 8px;
+  background: var(--lc-bg);
+}
+.submit-thumb--failed {
+  object-fit: contain;
+  padding: 8px;
+  background: #fff5f5;
+  border-color: #f5c2c7;
+}
+.submit-preview .submit-images {
+  margin-top: 8px;
+}
 .admin-tag.photo    { background: #e8f4ff; color: #1989fa; }
 .admin-tag.realname { background: #e8f8f0; color: #07c160; }
 .admin-tag.idcard   { background: #fff8e1; color: var(--lc-orange); }

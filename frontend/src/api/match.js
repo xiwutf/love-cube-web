@@ -82,6 +82,11 @@ export async function superlikeUser(userId) {
   return request.post(`/interactions/superlike/${userId}`)
 }
 
+/** 撤回对某用户的跳过，使其重新出现在推荐中 */
+export async function rewindSkip(userId) {
+  return request.post(`/interactions/rewind/${userId}`)
+}
+
 /** 认识页中间按钮：收藏（关注），落库 FOLLOW，非 SUPER_LIKE */
 export async function matchFollowUser(userId) {
   return request.post(`/interactions/match-follow/${userId}`)

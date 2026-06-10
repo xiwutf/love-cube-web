@@ -31,4 +31,10 @@ public class PlatGroupActivitySignup {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "checked_in", nullable = false)
+    private Boolean checkedIn = false;
+
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
 }

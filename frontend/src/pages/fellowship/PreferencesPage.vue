@@ -3,6 +3,14 @@
     <NavBar title="择偶条件" />
 
     <van-form class="form-wrap" @submit="handleSave">
+      <div v-if="biasHints.length" class="bias-card">
+        <p class="bias-title">推荐可能偏少</p>
+        <ul class="bias-list">
+          <li v-for="(hint, idx) in biasHints" :key="idx">{{ hint }}</li>
+        </ul>
+        <button type="button" class="bias-link" @click="router.push(fellowshipPath('/match'))">去匹配页调整筛选</button>
+      </div>
+
       <van-cell-group inset>
         <van-field
           :model-value="`${form.minAge} - ${form.maxAge} 岁`"
@@ -83,9 +91,12 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
+import { buildPreferenceBiasHints } from '@/utils/fellowshipPreferenceHints.js'
+import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 
 const STORAGE_KEY = 'fellowship-preferences'
 const router = useRouter()
+const { fellowshipPath } = useFellowshipNavBase()
 
 const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
 const form = reactive({
@@ -127,6 +138,13 @@ const genderLabel = computed(() => {
   return map[form.gender] || '不限'
 })
 
+const biasHints = computed(() => buildPreferenceBiasHints({
+  minAge: form.minAge,
+  maxAge: form.maxAge,
+  region: form.city,
+  gender: form.gender
+}))
+
 function onGenderConfirm({ selectedValues }) {
   form.gender = selectedValues[0]
   showGenderPicker.value = false
@@ -167,6 +185,39 @@ function handleSave() {
 
 .action-wrap {
   margin: 20px 16px 0;
+}
+
+.bias-card {
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.bias-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #9a3412;
+}
+
+.bias-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #c2410c;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bias-link {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #ea580c;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .age-popup {

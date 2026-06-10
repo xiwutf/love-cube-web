@@ -19,4 +19,15 @@ public interface PlatGroupActivitySignupRepository extends JpaRepository<PlatGro
             List<Long> activityIds, Long userId, String status);
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    List<PlatGroupActivitySignup> findByActivityIdAndStatusAndCheckedInTrue(Long activityId, String status);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT COUNT(DISTINCT s.userId) FROM PlatGroupActivitySignup s
+            WHERE s.groupId = :groupId AND s.status = 'signed_up'
+            AND s.updatedAt >= :since
+            """)
+    long countDistinctActiveSignupsSince(
+            @org.springframework.data.repository.query.Param("groupId") Long groupId,
+            @org.springframework.data.repository.query.Param("since") LocalDateTime since);
 }

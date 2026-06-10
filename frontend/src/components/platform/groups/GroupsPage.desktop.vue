@@ -9,6 +9,8 @@
         <div class="hero-actions">
           <button type="button" class="primary-btn" @click="goCreate">创建团体</button>
           <router-link :to="myGroupsPath()" class="secondary-link">我的团体</router-link>
+          <router-link :to="groupsPath('join')" class="secondary-link">我有邀请码</router-link>
+          <router-link :to="groupsPath('season')" class="secondary-link">赛季排行榜</router-link>
         </div>
       </header>
 
@@ -269,6 +271,7 @@ import {
 } from '@/utils/groupMemberDisplayName.js'
 import { useUserStore } from '@/stores/user.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
+import { PLATFORM_GROUP_CATEGORY_OPTIONS, labelForGroupCategory } from '@/utils/groupCategories.js'
 
 const PAGE_SIZE = 8
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
@@ -295,18 +298,7 @@ const errors = reactive({ list: '', hot: '', feed: '' })
 const sideLoading = reactive({ hot: false, feed: false })
 const patchingDisplayGroupId = ref(null)
 
-const categories = [
-  { label: '地区团体', value: 'region' },
-  { label: '社群团体', value: 'church' },
-  { label: '学习小组', value: 'study' },
-  { label: '兴趣团体', value: 'interest' },
-  { label: '生活小组', value: 'family' },
-  { label: '事工团队', value: 'service' }
-]
-const categoryLabelMap = categories.reduce((acc, item) => {
-  acc[item.value] = item.label
-  return acc
-}, {})
+const categories = [...PLATFORM_GROUP_CATEGORY_OPTIONS]
 
 const groupItems = computed(() => remoteGroups.value)
 const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE)))
@@ -333,8 +325,8 @@ function formatLastActive(raw) {
 }
 
 function normalizeCategory(item) {
-  const raw = (item.category || item.typeName || item.type || '团体').toString().trim()
-  return categoryLabelMap[raw] || raw
+  const raw = (item.category || item.typeName || item.type || '').toString().trim()
+  return raw ? labelForGroupCategory(raw) : '团体'
 }
 
 function normalizeGroup(item) {

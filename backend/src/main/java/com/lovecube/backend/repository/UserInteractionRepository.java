@@ -130,6 +130,9 @@ public interface UserInteractionRepository extends JpaRepository<UserInteraction
     Page<UserInteraction> findByFromUserIdAndInteractionTypeInOrderByCreatedAtDesc(
             Long fromUserId, Collection<UserInteraction.InteractionType> types, Pageable pageable);
 
+    Optional<UserInteraction> findFirstByFromUserIdAndInteractionTypeOrderByCreatedAtDesc(
+            Long fromUserId, UserInteraction.InteractionType interactionType);
+
     /**
      * 批量标记互动为已读
      */

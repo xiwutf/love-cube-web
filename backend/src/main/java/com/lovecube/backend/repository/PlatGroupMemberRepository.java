@@ -22,4 +22,8 @@ public interface PlatGroupMemberRepository extends JpaRepository<PlatGroupMember
     List<PlatGroupMember> findByUserId(Long userId);
 
     long countByGroupIdAndStatusAndRole(Long groupId, String status, String role);
+
+    long countByGroupIdAndStatus(Long groupId, String status);
+
+    long countByStatus(String status);
 }

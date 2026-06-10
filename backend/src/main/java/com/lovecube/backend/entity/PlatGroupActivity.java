@@ -49,4 +49,10 @@ public class PlatGroupActivity {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "checkin_code", length = 16)
+    private String checkinCode;
+
+    @Column(name = "platform_event_id", length = 64)
+    private String platformEventId;
 }

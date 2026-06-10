@@ -21,11 +21,20 @@
     <div class="stamp like-stamp" :style="{ opacity: likeOpacity }">LIKE 💚</div>
     <div class="stamp nope-stamp" :style="{ opacity: nopeOpacity }">NOPE 💔</div>
     <div class="stamp super-stamp" :style="{ opacity: superOpacity }">收藏 ⭐</div>
+    <div class="stamp superlike-stamp" :style="{ opacity: superLikeOpacity }">SUPER 💖</div>
 
     <!-- 用户信息 -->
     <div class="card-info">
-      <h3 class="card-name">{{ user.nickname }} <span class="card-age">{{ user.age }}</span></h3>
+      <div v-if="reasonTags.length" class="reason-row">
+        <span v-for="tag in reasonTags" :key="tag" class="reason-tag">{{ tag }}</span>
+      </div>
+      <h3 class="card-name">
+        {{ user.nickname }}
+        <span class="card-age">{{ user.age }}</span>
+        <span v-if="user.photoVerified" class="verify-dot" title="真人认证">✓</span>
+      </h3>
       <p class="card-meta">{{ user.location }} · {{ user.occupation }}</p>
+      <p v-if="completionLabel" class="card-completion">{{ completionLabel }}</p>
     </div>
   </div>
 </template>
@@ -38,9 +47,21 @@ const props = defineProps({
   user: { type: Object, required: true }
 })
 
-const emit = defineEmits(['like', 'dislike', 'collect', 'view-profile'])
+const emit = defineEmits(['like', 'dislike', 'collect', 'superlike', 'view-profile'])
 
 const cardAvatarSrc = computed(() => resolveMatchCardImage(props.user))
+
+const reasonTags = computed(() => {
+  const list = props.user?.recommendReasons
+  return Array.isArray(list) ? list.slice(0, 3) : []
+})
+
+const completionLabel = computed(() => {
+  const rate = Number(props.user?.completionRate || 0)
+  if (rate >= 80) return '资料完善'
+  if (rate >= 50) return '资料较完整'
+  return ''
+})
 
 function resolveMatchCardImage(user) {
   const photo = resolvePrimaryPhoto(user)
@@ -83,6 +104,7 @@ const cardStyle = computed(() => {
 const likeOpacity  = computed(() => Math.max(0, Math.min(1,  deltaX.value / THRESHOLD)))
 const nopeOpacity  = computed(() => Math.max(0, Math.min(1, -deltaX.value / THRESHOLD)))
 const superOpacity = computed(() => Math.max(0, Math.min(1, -deltaY.value / Math.abs(THRESHOLD_Y))))
+const superLikeOpacity = computed(() => 0)
 
 function onTouchStart(e) {
   if (isFlying.value) return
@@ -142,7 +164,8 @@ function flyOut(tx, ty, action) {
 defineExpose({
   triggerLike:      () => flyOut(window.innerWidth * 1.5, 50, 'like'),
   triggerDislike:   () => flyOut(-window.innerWidth * 1.5, 50, 'dislike'),
-  triggerCollect: () => flyOut(0, -window.innerHeight, 'collect'),
+  triggerCollect:   () => flyOut(0, -window.innerHeight, 'collect'),
+  triggerSuperLike: () => flyOut(0, -window.innerHeight * 0.85, 'superlike'),
 })
 </script>
 
@@ -187,6 +210,11 @@ defineExpose({
   left: 50%; transform: translateX(-50%) rotate(0deg);
   border-color: #FF6B8A; color: #FF6B8A; top: 60px;
 }
+.superlike-stamp {
+  left: 50%; transform: translateX(-50%) rotate(0deg);
+  border-color: #6366f1; color: #6366f1; top: 28px;
+  font-size: 22px;
+}
 
 .card-info {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -196,5 +224,34 @@ defineExpose({
 }
 .card-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
 .card-age  { font-size: 18px; font-weight: 400; margin-left: 8px; }
+.verify-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #1989fa;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
 .card-meta { font-size: 13px; opacity: .85; }
+.card-completion { font-size: 12px; opacity: .75; margin-top: 4px; }
+.reason-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.reason-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
 </style>

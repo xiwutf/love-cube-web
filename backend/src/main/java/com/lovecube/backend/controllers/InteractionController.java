@@ -310,6 +310,37 @@ public class InteractionController {
     }
 
     /**
+     * 撤回对某用户的「跳过」，使其重新出现在推荐中。
+     */
+    @PostMapping("/rewind/{userId}")
+    public ResponseEntity<?> rewindSkip(@PathVariable Long userId,
+                                        @RequestHeader("Authorization") String authHeader) {
+        try {
+            User currentUser = getCurrentUser(authHeader);
+            if (currentUser == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "用户认证失败"));
+            }
+            swipeQuotaService.consumeRewind(currentUser);
+            Map<String, Object> payload = interactionService.rewindSkip(currentUser.getUserid(), userId);
+            Map<String, Object> body = new HashMap<>(payload);
+            body.put("rewindQuota", swipeQuotaService.getStatus(currentUser));
+            return ResponseEntity.ok(body);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of(
+                    "message", e.getReason() != null ? e.getReason() : "操作受限",
+                    "code", "REWIND_DAILY_LIMIT"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "撤回失败"));
+        }
+    }
+
+    /**
      * 查询当前用户是否已喜欢某用户
      */
     @GetMapping("/like-status/{userId}")

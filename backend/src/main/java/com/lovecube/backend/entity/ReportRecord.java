@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -47,4 +48,8 @@ public class ReportRecord {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    /** 团体动态举报时由接口填充，对应 platform_group.id */
+    @Transient
+    private Long groupId;
 }

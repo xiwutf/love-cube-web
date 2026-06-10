@@ -2,9 +2,15 @@ import request from './request.js'
 
 // ── Platform groups (public module) ──────────────────────────────────────────
 
-export function isLegacyPlatformGroupId(id) {
+/** 数字编号团体（platform_group 表），支持邀请码、赛季、互评、周报等 */
+export function isNumericPlatformGroupId(id) {
   if (id === null || id === undefined) return false
   return /^\d+$/.test(String(id))
+}
+
+/** @deprecated 历史命名：与 isNumericPlatformGroupId 相同，true = 数字 ID */
+export function isLegacyPlatformGroupId(id) {
+  return isNumericPlatformGroupId(id)
 }
 
 /** 团体动态列表：数组或 { items, total, page, pageSize } */
@@ -130,16 +136,33 @@ export function fetchGroupFeed() {
 export function joinGroup(id, opts = {}) {
   let message = ''
   let memberRealName = ''
+  let inviteCode = ''
   if (typeof opts === 'string') {
     message = opts
   } else if (opts && typeof opts === 'object') {
     message = String(opts.message ?? '')
     memberRealName = String(opts.memberRealName ?? '').trim()
+    inviteCode = String(opts.inviteCode ?? '').trim()
   }
+  const body = { message, memberRealName }
+  if (inviteCode) body.inviteCode = inviteCode
   if (isLegacyPlatformGroupId(id)) {
-    return request.post(`/platform/groups/${id}/join`, { message, memberRealName })
+    return request.post(`/platform/groups/${id}/join`, body)
   }
-  return request.post(`/groups/${id}/join`, { message, memberRealName })
+  return request.post(`/groups/${id}/join`, body)
+}
+
+export function fetchGroupByInviteCode(code) {
+  const normalized = String(code || '').trim()
+  return request.get(`/platform/groups/by-invite-code/${encodeURIComponent(normalized)}`)
+}
+
+export function fetchGroupInviteInfo(groupId) {
+  return request.get(`/platform/groups/${groupId}/invite-info`)
+}
+
+export function refreshGroupInviteCode(groupId) {
+  return request.post(`/platform/groups/${groupId}/invite-code/refresh`)
 }
 
 export function leaveGroup(id) {
@@ -352,6 +375,52 @@ export function fetchGroupSeasonRankings(params = {}) {
 
 export function fetchGroupSeasonRank(groupId) {
   return request.get(`/groups/season/${groupId}/rank`)
+}
+
+export function generateGroupActivityCheckinCode(groupId, activityId) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持活动签到'))
+  }
+  return request.post(`/platform/groups/${groupId}/activities/${activityId}/checkin-code`)
+}
+
+export function checkinGroupActivity(groupId, activityId, code) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持活动签到'))
+  }
+  return request.post(`/platform/groups/${groupId}/activities/${activityId}/checkin`, { code })
+}
+
+export function fetchGroupActivityReviewCandidates(groupId, activityId) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持活动互评'))
+  }
+  return request.get(`/platform/groups/${groupId}/activities/${activityId}/review-candidates`)
+}
+
+export function submitGroupActivityReview(groupId, activityId, payload) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持活动互评'))
+  }
+  return request.post(`/platform/groups/${groupId}/activities/${activityId}/reviews`, payload)
+}
+
+export function fetchGroupWeeklyDigest(groupId) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持周报'))
+  }
+  return request.get(`/platform/groups/${groupId}/weekly-digest`)
+}
+
+export function sendGroupWeeklyDigest(groupId) {
+  if (!isLegacyPlatformGroupId(groupId)) {
+    return Promise.reject(new Error('仅数字 ID 团体支持周报'))
+  }
+  return request.post(`/platform/groups/${groupId}/weekly-digest/send`)
+}
+
+export function fetchAdminPlatformGroupStats() {
+  return request.get('/admin/platform-groups/stats')
 }
 
 // ── Admin groups (back-office) ────────────────────────────────────────────────

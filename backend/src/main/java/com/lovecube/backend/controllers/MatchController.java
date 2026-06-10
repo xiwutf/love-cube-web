@@ -86,10 +86,11 @@ public class MatchController {
             long total = pageResult.getTotalElements();
             List<Long> userIds = pageUsers.stream().map(User::getUserid).collect(Collectors.toList());
             Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
+            User currentUser = userRepository.findById(currentUserId).orElse(null);
 
             List<Map<String, Object>> enriched = pageUsers.stream().map(u ->
                 unifiedProfileService.buildMatchCardPayload(
-                    u, verifyMap.getOrDefault(u.getUserid(), Map.of()))
+                    u, verifyMap.getOrDefault(u.getUserid(), Map.of()), currentUser)
             ).collect(Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
@@ -99,7 +100,6 @@ public class MatchController {
             response.put("size", safeSize);
             response.put("total", total);
             response.put("hasMore", pageResult.hasNext());
-            User currentUser = userRepository.findById(currentUserId).orElse(null);
             if (currentUser != null) {
                 response.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
             }

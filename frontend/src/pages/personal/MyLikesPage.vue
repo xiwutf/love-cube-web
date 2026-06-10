@@ -30,13 +30,19 @@
             @click="goProfile(u.userId)"
           >
             <template #action>
-              <van-button size="small" type="primary" @click.stop="goChat(u.userId)">去聊天</van-button>
+              <div class="mutual-actions">
+                <van-button size="mini" plain type="primary" @click.stop="openGames(u.userId, 'ice')">破冰</van-button>
+                <van-button size="mini" plain color="#6366f1" @click.stop="openGames(u.userId, 'compat')">默契</van-button>
+                <van-button size="small" type="primary" @click.stop="goChat(u.userId)">聊天</van-button>
+              </div>
             </template>
           </UserCard>
           <van-empty v-if="!mutualLikes.length" description="暂时还没有互相喜欢" />
         </template>
       </van-tab>
     </van-tabs>
+
+    <PeerMatchGamesPopups ref="gamesRef" :peer-user-id="gamesPeerId" @go-chat="goChat(gamesPeerId)" />
   </div>
 </template>
 
@@ -46,6 +52,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
 import UserCard from '@/components/UserCard.vue'
+import PeerMatchGamesPopups from '@/components/fellowship/PeerMatchGamesPopups.vue'
 import { likeUser } from '@/api/match.js'
 import { getMyLikeUsers, getMutualLikeUsers } from '@/api/personal.js'
 import { normalizeUser } from '@/utils/normalizeUser.js'
@@ -60,6 +67,8 @@ const loadingSent = ref(false)
 const loadingMutual = ref(false)
 const sentLikes = ref([])
 const mutualLikes = ref([])
+const gamesRef = ref(null)
+const gamesPeerId = ref(null)
 
 function mapUsers(list) {
   return (Array.isArray(list) ? list : []).map((item) => normalizeUser(item)).filter(Boolean)
@@ -106,6 +115,15 @@ function goChat(userId) {
   router.push(fellowshipPath(`/chat/${userId}`))
 }
 
+function openGames(userId, mode) {
+  gamesPeerId.value = userId
+  if (mode === 'compat') {
+    gamesRef.value?.openCompatibility()
+  } else {
+    gamesRef.value?.openIcebreaker()
+  }
+}
+
 onMounted(async () => {
   await Promise.allSettled([loadSent(), loadMutual()])
 })
@@ -121,6 +139,13 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   padding: 32px 0;
+}
+
+.mutual-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 </style>
 

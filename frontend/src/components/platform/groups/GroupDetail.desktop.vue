@@ -43,6 +43,35 @@
         </div>
       </section>
 
+      <GroupCapabilityBanner :group-id="group.id" />
+
+      <div v-if="group.managed && pendingMemberCount > 0" class="pending-audit-banner">
+        <p>有 <strong>{{ pendingMemberCount }}</strong> 条入团申请待审核</p>
+        <button type="button" class="text-link-btn" @click="goToTab('members')">去审核</button>
+      </div>
+
+      <GroupInvitePanel
+        v-if="group.managed && joinModeKey === 'invite'"
+        :group-id="group.id"
+        :join-mode-key="joinModeKey"
+        :managed="group.managed"
+      />
+
+      <div v-if="group.managed && weeklyDigest" class="weekly-digest-banner">
+        <p>
+          本周打卡率 <strong>{{ weeklyDigest.checkinRatePercent }}%</strong>，
+          活跃成员 <strong>{{ weeklyDigest.activeMembers }}</strong> 人，
+          待领取任务 <strong>{{ weeklyDigest.unclaimedTasks }}</strong> 项
+        </p>
+        <button type="button" class="text-link-btn" :disabled="sendingDigest" @click="sendWeeklyDigestNow">
+          {{ sendingDigest ? '发送中…' : '发送周报到消息中心' }}
+        </button>
+      </div>
+
+      <p v-if="joinModeKey === 'invite' && inviteCodeFromQuery && !group.isMember" class="invite-join-hint">
+        你正在通过邀请加入，点击「验证邀请并加入」即可完成入团
+      </p>
+
       <nav class="tabs" aria-label="团体内容">
         <router-link v-for="tab in tabs" :key="tab.key" :to="tab.to" :class="{ active: activeTab === tab.key }">
           {{ tab.label }}
@@ -219,6 +248,14 @@
                   </template>
                 </section>
 
+                <section v-if="seasonRank" class="panel-card season-home-card">
+                  <GroupSeasonPanel
+                    :season-rank="seasonRank"
+                    :season-top="seasonTop.slice(0, 5)"
+                    title="季度赛季榜"
+                  />
+                </section>
+
                 <!-- 最近活动 -->
                 <section class="panel-card">
                   <div class="section-head">
@@ -315,6 +352,12 @@
                   <button type="button" @click="toggleCommentPanel(post)">
                     评论 {{ post.comments }}
                   </button>
+                  <button
+                    v-if="userStore.isLoggedIn"
+                    type="button"
+                    class="report-post-btn"
+                    @click="openPostReport(post)"
+                  >举报</button>
                 </div>
                 <div v-if="expandedPostId === post.id" class="comment-panel">
                   <p v-if="commentsLoading[post.id]" class="comment-status">评论加载中...</p>
@@ -664,7 +707,19 @@
                   <label>人数上限（0=不限）</label>
                   <input v-model.number="activityForm.maxParticipants" type="number" min="0" max="9999">
                 </div>
+                <div>
+                  <label>关联平台活动（可选）</label>
+                  <select v-model="activityForm.platformEventId" class="activity-event-select">
+                    <option value="">不关联</option>
+                    <option v-for="ev in platformEvents" :key="ev.id" :value="ev.id">{{ ev.title }}</option>
+                  </select>
+                </div>
               </div>
+              <p v-if="activityForm.platformEventId" class="activity-event-hint">
+                关联后可从
+                <router-link :to="`/events/${activityForm.platformEventId}`" target="_blank">活动中心</router-link>
+                查看详情
+              </p>
               <div class="post-form-foot">
                 <span></span>
                 <button type="submit" class="primary-btn" :disabled="creatingActivity">
@@ -692,6 +747,9 @@
                   <span v-if="act.location">📍 {{ act.location }}</span>
                   <span>👥 {{ act.participantCount }}{{ act.maxParticipants > 0 ? ' / ' + act.maxParticipants : '' }} 人</span>
                 </div>
+                <div v-if="act.platformEventPath" class="activity-platform-link">
+                  <router-link :to="act.platformEventPath" target="_blank">查看平台活动详情 →</router-link>
+                </div>
                 <div class="activity-actions">
                   <template v-if="!act.isEnded && act.status === 'published'">
                     <button
@@ -709,7 +767,27 @@
                       @click="cancelSignUp(act)"
                     >{{ signingActivityId === act.id ? '处理中...' : '取消报名' }}</button>
                   </template>
-                  <span v-if="act.signedUpByMe && !act.isEnded" class="signed-badge">已报名</span>
+                  <span v-if="act.signedUpByMe && act.checkedInByMe" class="signed-badge">已签到</span>
+                  <span v-else-if="act.signedUpByMe && !act.isEnded" class="signed-badge">已报名</span>
+                  <button
+                    v-if="act.signedUpByMe && act.hasCheckinCode && !act.checkedInByMe && !act.isEnded"
+                    type="button"
+                    class="primary-btn small outline"
+                    @click="openActivityCheckin(act)"
+                  >现场签到</button>
+                  <button
+                    v-if="group.managed && act.status === 'published' && !act.isEnded"
+                    type="button"
+                    class="text-link-btn"
+                    :disabled="checkinCodeBusyId === act.id"
+                    @click="generateActivityCode(act)"
+                  >{{ checkinCodeBusyId === act.id ? '生成中…' : (act.hasCheckinCode ? '刷新签到码' : '生成签到码') }}</button>
+                  <button
+                    v-if="act.canReview && act.pendingReviewCount > 0"
+                    type="button"
+                    class="primary-btn small"
+                    @click="openActivityReview(act)"
+                  >互评（{{ act.pendingReviewCount }}）</button>
                   <button
                     v-if="group.managed && act.status === 'published'"
                     type="button"
@@ -866,25 +944,12 @@
             <router-link :to="groupsPath(String(group.id), 'members')">查看成员列表</router-link>
           </section>
           <section v-if="activeTab === 'home' && seasonRank" class="side-card season-card">
-            <h2>赛季排行</h2>
-            <p class="season-title">{{ seasonRank.seasonTitle || '本季' }}</p>
-            <div class="home-checkin-stats">
-              <div class="home-stat">
-                <span class="home-stat-val">{{ seasonRank.score ?? 0 }}</span>
-                <span class="home-stat-label">赛季积分</span>
-              </div>
-              <div class="home-stat">
-                <span class="home-stat-val">{{ seasonRank.rank ?? '—' }}</span>
-                <span class="home-stat-label">当前排名</span>
-              </div>
-            </div>
-            <ul v-if="seasonTop.length" class="season-top-list">
-              <li v-for="item in seasonTop" :key="item.groupId">
-                <span>#{{ item.rank }}</span>
-                <span>{{ item.groupName }}</span>
-                <strong>{{ item.score }}</strong>
-              </li>
-            </ul>
+            <GroupSeasonPanel
+              :season-rank="seasonRank"
+              :season-top="seasonTop.slice(0, 5)"
+              compact
+              :show-breakdown="false"
+            />
           </section>
         </aside>
       </section>
@@ -896,6 +961,51 @@
       :hit-words="contentCheck.state.hitWords"
       @use-suggestion="contentCheck.applySuggestion"
       @continue="contentCheck.continueAnyway"
+    />
+
+    <div v-if="activityCheckinOpen" class="activity-modal-overlay" @click.self="activityCheckinOpen = false">
+      <div class="activity-modal">
+        <h3>现场签到</h3>
+        <p>请输入管理员提供的 6 位签到码</p>
+        <input v-model.trim="activityCheckinCode" type="text" maxlength="8" placeholder="签到码">
+        <div class="activity-modal-actions">
+          <button type="button" class="text-link-btn" @click="activityCheckinOpen = false">取消</button>
+          <button type="button" class="primary-btn small" :disabled="activityCheckinSubmitting" @click="submitActivityCheckin">
+            {{ activityCheckinSubmitting ? '提交中…' : '确认签到' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="activityReviewOpen" class="activity-modal-overlay" @click.self="closeActivityReview">
+      <div class="activity-modal wide">
+        <h3>活动互评 · {{ activityReviewTarget?.title }}</h3>
+        <p v-if="activityReviewLoading" class="empty-inline">加载中…</p>
+        <ul v-else class="review-candidate-list">
+          <li v-for="c in activityReviewCandidates" :key="c.userId">
+            <img :src="c.avatarUrl || defaultAvatar" alt="">
+            <span>{{ c.nickname }}</span>
+            <template v-if="c.reviewed">
+              <em>已评价</em>
+            </template>
+            <template v-else>
+              <select v-model="activityReviewRatings[c.userId]">
+                <option v-for="n in 5" :key="n" :value="n">{{ n }} 分</option>
+              </select>
+              <button type="button" class="primary-btn small" @click="submitOneReview(c)">提交</button>
+            </template>
+          </li>
+        </ul>
+        <button type="button" class="text-link-btn" @click="closeActivityReview">关闭</button>
+      </div>
+    </div>
+
+    <GroupPostReportDialog
+      :open="reportDialogOpen"
+      :post-id="reportPostId"
+      :target-user-id="reportTargetUserId"
+      @close="reportDialogOpen = false"
+      @submitted="flashMessage('举报已提交')"
     />
   </section>
 </template>
@@ -946,8 +1056,15 @@ import {
   submitGroupPollVotes,
   revealGroupPollResults,
   fetchGroupSeasonRank,
-  fetchGroupSeasonRankings
+  fetchGroupSeasonRankings,
+  generateGroupActivityCheckinCode,
+  checkinGroupActivity,
+  fetchGroupActivityReviewCandidates,
+  submitGroupActivityReview,
+  fetchGroupWeeklyDigest,
+  sendGroupWeeklyDigest
 } from '@/api/groups.js'
+import { fetchEvents } from '@/api/platformContent.js'
 import {
   AUDIT_JOIN_MESSAGE_PROMPT,
   ERR_EMPTY_AUDIT_JOIN_MESSAGE,
@@ -961,6 +1078,10 @@ import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
+import GroupCapabilityBanner from '@/components/platform/groups/GroupCapabilityBanner.vue'
+import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
+import GroupSeasonPanel from '@/components/platform/groups/GroupSeasonPanel.vue'
+import GroupPostReportDialog from '@/components/platform/groups/GroupPostReportDialog.vue'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
@@ -1041,10 +1162,34 @@ const claimingTask = ref('')
 const activities = ref([])
 const upcomingActivities = ref([])
 const showCreateActivity = ref(false)
-const activityForm = reactive({ title: '', description: '', startTime: '', endTime: '', location: '', maxParticipants: 0 })
+const activityForm = reactive({
+  title: '',
+  description: '',
+  startTime: '',
+  endTime: '',
+  location: '',
+  maxParticipants: 0,
+  platformEventId: ''
+})
+const platformEvents = ref([])
 const creatingActivity = ref(false)
 const signingActivityId = ref(null)
 const cancellingActivityId = ref(null)
+const checkinCodeBusyId = ref(null)
+const activityCheckinOpen = ref(false)
+const activityCheckinCode = ref('')
+const activityCheckinTarget = ref(null)
+const activityCheckinSubmitting = ref(false)
+const activityReviewOpen = ref(false)
+const activityReviewTarget = ref(null)
+const activityReviewCandidates = ref([])
+const activityReviewLoading = ref(false)
+const activityReviewRatings = reactive({})
+const weeklyDigest = ref(null)
+const sendingDigest = ref(false)
+const reportDialogOpen = ref(false)
+const reportPostId = ref(null)
+const reportTargetUserId = ref(null)
 const polls = ref([])
 const seasonRank = ref(null)
 const seasonTop = ref([])
@@ -1118,10 +1263,14 @@ const joinModeKey = computed(() => {
   return g.joinModeKey || (g.joinMode === 'free' ? 'open' : g.joinMode === 'invite' ? 'invite' : 'audit')
 })
 
+const inviteCodeFromQuery = computed(() => String(route.query.invite || '').trim().toUpperCase())
+
+const pendingMemberCount = computed(() => Number(group.value?.pendingMemberCount || 0))
+
 const joinDisabled = computed(() => {
   if (!group.value) return true
   if (group.value.isMember || group.value.hasPendingRequest) return true
-  if (joinModeKey.value === 'invite') return true
+  if (joinModeKey.value === 'invite') return !inviteCodeFromQuery.value
   return false
 })
 
@@ -1129,7 +1278,9 @@ const joinButtonText = computed(() => {
   if (!userStore.isLoggedIn) return '登录后加入'
   if (group.value?.isMember) return '已加入'
   if (group.value?.hasPendingRequest) return '审核中'
-  if (joinModeKey.value === 'invite') return '仅限邀请'
+  if (joinModeKey.value === 'invite') {
+    return inviteCodeFromQuery.value ? '验证邀请并加入' : '需要邀请码'
+  }
   if (joinModeKey.value === 'open') return '加入团体'
   return '申请加入'
 })
@@ -1267,7 +1418,16 @@ async function loadNotices() {
 
 async function loadRelatedData() {
   if (!group.value?.id) return
-  await Promise.all([loadMembers(), loadPosts(), loadNotices(), loadActivitiesForHome(), loadCheckinSummary(), loadTodayTasks(), loadSeasonInfo()])
+  await Promise.all([
+    loadMembers(),
+    loadPosts(),
+    loadNotices(),
+    loadActivitiesForHome(),
+    loadCheckinSummary(),
+    loadTodayTasks(),
+    loadSeasonInfo(),
+    loadWeeklyDigest()
+  ])
 }
 
 async function loadSeasonInfo() {
@@ -1277,7 +1437,9 @@ async function loadSeasonInfo() {
       fetchGroupSeasonRank(group.value.id),
       fetchGroupSeasonRankings({ page: 1, size: 5 })
     ])
-    seasonRank.value = rankRes || null
+    seasonRank.value = rankRes
+      ? { ...rankRes, scoringRules: rankRes.scoringRules || topRes?.scoringRules }
+      : null
     seasonTop.value = Array.isArray(topRes?.items) ? topRes.items : []
   } catch {
     seasonRank.value = null
@@ -1504,6 +1666,117 @@ async function claimTask(task) {
   }
 }
 
+async function loadPlatformEvents() {
+  try {
+    const res = await fetchEvents({ status: 'published' })
+    platformEvents.value = Array.isArray(res) ? res.slice(0, 30) : []
+  } catch {
+    platformEvents.value = []
+  }
+}
+
+async function loadWeeklyDigest() {
+  if (!group.value?.managed || !isLegacyPlatformGroupId(group.value?.id)) {
+    weeklyDigest.value = null
+    return
+  }
+  try {
+    weeklyDigest.value = await fetchGroupWeeklyDigest(group.value.id)
+  } catch {
+    weeklyDigest.value = null
+  }
+}
+
+async function sendWeeklyDigestNow() {
+  if (sendingDigest.value || !group.value?.id) return
+  sendingDigest.value = true
+  try {
+    await sendGroupWeeklyDigest(group.value.id)
+    flashMessage('周报已发送至消息中心')
+  } catch (err) {
+    flashMessage(err.message || '发送失败', 'error')
+  } finally {
+    sendingDigest.value = false
+  }
+}
+
+function openPostReport(post) {
+  reportPostId.value = post.id
+  reportTargetUserId.value = post.userId || null
+  reportDialogOpen.value = true
+}
+
+function openActivityCheckin(act) {
+  activityCheckinTarget.value = act
+  activityCheckinCode.value = ''
+  activityCheckinOpen.value = true
+}
+
+async function submitActivityCheckin() {
+  if (!activityCheckinTarget.value || activityCheckinSubmitting.value) return
+  activityCheckinSubmitting.value = true
+  try {
+    await checkinGroupActivity(group.value.id, activityCheckinTarget.value.id, activityCheckinCode.value)
+    activityCheckinOpen.value = false
+    await loadActivities()
+    flashMessage('签到成功')
+  } catch (err) {
+    flashMessage(err.message || '签到失败', 'error')
+  } finally {
+    activityCheckinSubmitting.value = false
+  }
+}
+
+async function generateActivityCode(act) {
+  if (checkinCodeBusyId.value) return
+  checkinCodeBusyId.value = act.id
+  try {
+    const res = await generateGroupActivityCheckinCode(group.value.id, act.id)
+    flashMessage(`签到码：${res.checkinCode || '已生成'}（请告知到场成员）`)
+    await loadActivities()
+  } catch (err) {
+    flashMessage(err.message || '生成失败', 'error')
+  } finally {
+    checkinCodeBusyId.value = null
+  }
+}
+
+async function openActivityReview(act) {
+  activityReviewTarget.value = act
+  activityReviewOpen.value = true
+  activityReviewLoading.value = true
+  try {
+    activityReviewCandidates.value = await fetchGroupActivityReviewCandidates(group.value.id, act.id)
+  } catch (err) {
+    activityReviewCandidates.value = []
+    flashMessage(err.message || '加载失败', 'error')
+  } finally {
+    activityReviewLoading.value = false
+  }
+}
+
+function closeActivityReview() {
+  activityReviewOpen.value = false
+  activityReviewTarget.value = null
+  activityReviewCandidates.value = []
+}
+
+async function submitOneReview(candidate) {
+  const rating = activityReviewRatings[candidate.userId] || 5
+  try {
+    await submitGroupActivityReview(group.value.id, activityReviewTarget.value.id, {
+      targetUserId: candidate.userId,
+      rating,
+      comment: ''
+    })
+    candidate.reviewed = true
+    await loadActivities()
+    flashMessage('评价已提交')
+  } catch (err) {
+    flashMessage(err.message || '提交失败', 'error')
+  }
+}
+
 async function submitActivity() {
   if (creatingActivity.value) return
   creatingActivity.value = true
@@ -1516,9 +1789,20 @@ async function submitActivity() {
       location: activityForm.location,
       maxParticipants: activityForm.maxParticipants
     }
+    if (activityForm.platformEventId) {
+      payload.platformEventId = activityForm.platformEventId
+    }
     await createGroupActivity(group.value.id, payload)
     showCreateActivity.value = false
-    Object.assign(activityForm, { title: '', description: '', startTime: '', endTime: '', location: '', maxParticipants: 0 })
+    Object.assign(activityForm, {
+      title: '',
+      description: '',
+      startTime: '',
+      endTime: '',
+      location: '',
+      maxParticipants: 0,
+      platformEventId: ''
+    })
     await loadActivities()
     await loadActivitiesForHome()
     flashMessage('活动已发布')
@@ -1734,7 +2018,7 @@ async function applyJoin() {
     router.push('/login')
     return
   }
-  if (joinModeKey.value === 'invite') return
+  if (joinModeKey.value === 'invite' && !inviteCodeFromQuery.value) return
   const nameInput = window.prompt(JOIN_MEMBER_REAL_NAME_PROMPT, '')
   if (nameInput === null) return
   const memberRealName = String(nameInput).trim()
@@ -1754,7 +2038,11 @@ async function applyJoin() {
   }
   joining.value = true
   try {
-    const res = await joinGroup(group.value.id, { message: applyMessage, memberRealName })
+    const res = await joinGroup(group.value.id, {
+      message: applyMessage,
+      memberRealName,
+      inviteCode: inviteCodeFromQuery.value
+    })
     group.value.isMember = Boolean(res?.joined)
     group.value.hasPendingRequest = Boolean(res?.pending)
     await loadDetail()
@@ -2153,6 +2441,8 @@ function normalizeGroup(item) {
     canReviewJoins: Boolean(item.canReviewJoins),
     isOwner: Boolean(item.isOwner),
     hasPendingRequest: Boolean(item.hasPendingRequest),
+    pendingMemberCount: Number(item.pendingMemberCount || 0),
+    inviteJoinRequired: Boolean(item.inviteJoinRequired),
     createdDate: formatDate(item.createdAt),
     latestNotice: item.latestNotice ? normalizeNotice(item.latestNotice) : null,
     admins: item.admins || [],
@@ -2299,6 +2589,10 @@ const PostList = defineComponent({
 watch(() => route.params.id, async () => {
   await loadDetail()
   await loadRelatedData()
+})
+
+watch(showCreateActivity, (open) => {
+  if (open && !platformEvents.value.length) loadPlatformEvents()
 })
 
 watch(activeTab, async (tab) => {
@@ -4158,6 +4452,30 @@ onMounted(async () => {
   color: var(--lc-subtle);
 }
 
+.pending-audit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-size: 14px;
+  color: #9a3412;
+}
+
+.invite-join-hint {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  font-size: 13px;
+  color: #065f46;
+}
+
 .season-top-list {
   list-style: none;
   margin: var(--lc-space-3) 0 0;
@@ -4176,5 +4494,117 @@ onMounted(async () => {
 .season-top-list li strong {
   margin-left: auto;
   color: var(--lc-indigo);
+}
+
+.weekly-digest-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-3);
+  padding: var(--lc-space-3);
+  border-radius: var(--lc-radius-md);
+  background: var(--lc-surface-muted);
+  border: 1px solid var(--lc-border);
+  font-size: var(--lc-text-sm);
+}
+
+.activity-event-select {
+  width: 100%;
+  padding: var(--lc-space-2);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  font: inherit;
+}
+
+.activity-event-hint,
+.activity-platform-link {
+  font-size: var(--lc-text-sm);
+  color: var(--lc-text-muted);
+  margin: 0 0 var(--lc-space-2);
+}
+
+.report-post-btn {
+  border: none;
+  background: transparent;
+  color: var(--lc-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--lc-text-sm);
+}
+
+.activity-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--lc-z-modal, 1000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--lc-space-4);
+  background: rgb(0 0 0 / 40%);
+}
+
+.activity-modal {
+  width: min(400px, 100%);
+  padding: var(--lc-space-4);
+  border-radius: var(--lc-radius-lg);
+  background: var(--lc-surface);
+  box-shadow: var(--lc-shadow-lg);
+}
+
+.activity-modal.wide {
+  width: min(520px, 100%);
+}
+
+.activity-modal input,
+.activity-modal select {
+  width: 100%;
+  margin: var(--lc-space-2) 0;
+  padding: var(--lc-space-2);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  font: inherit;
+}
+
+.activity-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--lc-space-2);
+}
+
+.review-candidate-list {
+  list-style: none;
+  margin: 0 0 var(--lc-space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lc-space-2);
+}
+
+.review-candidate-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-2);
+  font-size: var(--lc-text-sm);
+}
+
+.review-candidate-list img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.review-candidate-list em {
+  margin-left: auto;
+  color: var(--lc-text-muted);
+  font-style: normal;
+}
+
+.primary-btn.small.outline {
+  background: transparent;
+  color: var(--lc-blue);
+  border: 1px solid var(--lc-blue-border);
 }
 </style>

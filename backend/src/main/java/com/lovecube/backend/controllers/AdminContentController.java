@@ -4,6 +4,7 @@ import com.lovecube.backend.entity.Announcement;
 import com.lovecube.backend.entity.Article;
 import com.lovecube.backend.entity.FellowshipProfile;
 import com.lovecube.backend.entity.FellowshipProfileMain;
+import com.lovecube.backend.entity.PlatGroupPost;
 import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.ReportRecord;
 import com.lovecube.backend.entity.UserFeedback;
@@ -16,6 +17,7 @@ import com.lovecube.backend.repository.AnnouncementRepository;
 import com.lovecube.backend.repository.ArticleRepository;
 import com.lovecube.backend.repository.FellowshipProfileMainRepository;
 import com.lovecube.backend.repository.FellowshipProfileRepository;
+import com.lovecube.backend.repository.PlatGroupPostRepository;
 import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.ReportRecordRepository;
 import com.lovecube.backend.repository.UserFeedbackRepository;
@@ -62,6 +64,7 @@ public class AdminContentController {
     private final VerificationRequestRepository verificationRequestRepository;
     private final UserVerificationRepository userVerificationRepository;
     private final ReportRecordRepository reportRecordRepository;
+    private final PlatGroupPostRepository platGroupPostRepository;
     private final UserFeedbackRepository userFeedbackRepository;
     private final UserPhotoRepository userPhotoRepository;
     private final FellowshipProfileMainRepository fellowshipProfileMainRepository;
@@ -82,6 +85,7 @@ public class AdminContentController {
             VerificationRequestRepository verificationRequestRepository,
             UserVerificationRepository userVerificationRepository,
             ReportRecordRepository reportRecordRepository,
+            PlatGroupPostRepository platGroupPostRepository,
             UserFeedbackRepository userFeedbackRepository,
             UserPhotoRepository userPhotoRepository,
             FellowshipProfileMainRepository fellowshipProfileMainRepository,
@@ -101,6 +105,7 @@ public class AdminContentController {
         this.verificationRequestRepository = verificationRequestRepository;
         this.userVerificationRepository = userVerificationRepository;
         this.reportRecordRepository = reportRecordRepository;
+        this.platGroupPostRepository = platGroupPostRepository;
         this.userFeedbackRepository = userFeedbackRepository;
         this.userPhotoRepository = userPhotoRepository;
         this.fellowshipProfileMainRepository = fellowshipProfileMainRepository;
@@ -434,7 +439,52 @@ public class AdminContentController {
     @GetMapping("/reports")
     public List<ReportRecord> listReports(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         adminAuthService.requirePermission(authHeader, PermissionConstants.REVIEW_MANAGE);
-        return reportRecordRepository.findAll();
+        List<ReportRecord> records = reportRecordRepository.findAll();
+        enrichGroupPostReports(records);
+        return records;
+    }
+
+    private void enrichGroupPostReports(List<ReportRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<Long> postIds = records.stream()
+                .filter(r -> "GROUP_POST".equalsIgnoreCase(
+                        r.getTargetType() != null ? r.getTargetType() : ""))
+                .map(r -> parseReportPostId(r.getTargetId()))
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (postIds.isEmpty()) {
+            return;
+        }
+        Map<Long, Long> postToGroup = new HashMap<>();
+        for (PlatGroupPost post : platGroupPostRepository.findAllById(postIds)) {
+            if (post.getGroupId() != null) {
+                postToGroup.put(post.getId(), post.getGroupId());
+            }
+        }
+        for (ReportRecord record : records) {
+            if (!"GROUP_POST".equalsIgnoreCase(
+                    record.getTargetType() != null ? record.getTargetType() : "")) {
+                continue;
+            }
+            Long postId = parseReportPostId(record.getTargetId());
+            if (postId != null) {
+                record.setGroupId(postToGroup.get(postId));
+            }
+        }
+    }
+
+    private Long parseReportPostId(String targetId) {
+        if (targetId == null || targetId.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(targetId.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @GetMapping("/feedbacks")
@@ -545,9 +595,14 @@ public class AdminContentController {
         String action = String.valueOf(payload.getOrDefault("action", "")).trim().toLowerCase();
         String note   = payload.containsKey("note") ? String.valueOf(payload.get("note")) : null;
 
+        Long hiddenGroupPostGroupId = null;
         switch (action) {
             case "reviewed" -> record.setStatus("REVIEWED");
             case "rejected" -> record.setStatus("REJECTED");
+            case "hide_post" -> {
+                hiddenGroupPostGroupId = hideReportedGroupPost(record);
+                record.setStatus("REVIEWED");
+            }
             case "banned" -> {
                 record.setStatus("BANNED");
                 if (record.getTargetUserId() != null) {
@@ -558,7 +613,7 @@ public class AdminContentController {
                 }
             }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "action 必须为 reviewed / rejected / banned");
+                "action 必须为 reviewed / rejected / banned / hide_post");
         }
 
         record.setReviewedAt(LocalDateTime.now());
@@ -568,8 +623,15 @@ public class AdminContentController {
 
         // 通知举报人处理结果
         if (record.getReporterId() != null) {
+            boolean groupPost = "GROUP_POST".equalsIgnoreCase(
+                    record.getTargetType() != null ? record.getTargetType() : "");
             String notifContent = switch (action) {
-                case "reviewed" -> "你举报的用户经核实已被处理，感谢你的反馈。";
+                case "hide_post" -> groupPost
+                        ? "你举报的团体动态已下架，感谢你的反馈。"
+                        : "你举报的内容已处理，感谢你的反馈。";
+                case "reviewed" -> groupPost
+                        ? "你举报的团体动态经核实已处理，感谢你的反馈。"
+                        : "你举报的用户经核实已被处理，感谢你的反馈。";
                 case "rejected" -> "你的举报经核实不符合规范，已予以驳回。";
                 case "banned"   -> "你举报的用户经核实已被封禁，感谢你维护社区环境。";
                 default         -> "你的举报已处理。";
@@ -595,12 +657,47 @@ public class AdminContentController {
         result.put("reviewedAt", record.getReviewedAt());
         result.put("reviewedBy", record.getReviewedBy());
         result.put("message", switch (action) {
+            case "hide_post" -> "团体动态已下架";
             case "reviewed" -> "举报已标记为已审核";
             case "rejected" -> "举报已驳回";
             case "banned"   -> "用户已封禁，举报已处理";
             default -> "处理完成";
         });
+        if (hiddenGroupPostGroupId != null) {
+            result.put("groupId", hiddenGroupPostGroupId);
+            result.put("postId", record.getTargetId());
+        }
         return result;
+    }
+
+    private Long hideReportedGroupPost(ReportRecord record) {
+        if (!"GROUP_POST".equalsIgnoreCase(record.getTargetType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "仅团体动态举报可下架");
+        }
+        if (record.getTargetId() == null || record.getTargetId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少动态 ID");
+        }
+        Long postId;
+        try {
+            postId = Long.parseLong(record.getTargetId().trim());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "动态 ID 格式不正确");
+        }
+        PlatGroupPost post = platGroupPostRepository.findById(postId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "团体动态不存在"));
+        post.setStatus("deleted");
+        platGroupPostRepository.save(post);
+        if (post.getUserId() != null) {
+            try {
+                notificationService.send(post.getUserId(), "CONTENT_MODERATION_REJECTED",
+                        "团体动态已下架",
+                        "你发布的团体动态因违反社区规范已被下架。",
+                        "platform_group",
+                        String.valueOf(post.getGroupId()));
+            } catch (Exception ignored) {
+            }
+        }
+        return post.getGroupId();
     }
 
     @PatchMapping("/feedbacks/{id}")

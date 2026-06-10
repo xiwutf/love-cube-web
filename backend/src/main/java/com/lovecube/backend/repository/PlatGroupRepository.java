@@ -15,4 +15,10 @@ public interface PlatGroupRepository extends JpaRepository<PlatGroup, Long> {
     List<PlatGroup> findTop5ByStatusOrderByMemberCountDesc(String status);
 
     Optional<PlatGroup> findBySlug(String slug);
+
+    Optional<PlatGroup> findByInviteCode(String inviteCode);
+
+    boolean existsByInviteCode(String inviteCode);
+
+    long countByStatus(String status);
 }

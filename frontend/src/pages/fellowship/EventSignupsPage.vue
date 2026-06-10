@@ -7,17 +7,42 @@
     </div>
 
     <section v-else class="content">
-      <article v-for="item in list" :key="item.eventId" class="event-item">
+      <div v-if="pendingReviewTotal > 0" class="review-banner">
+        <div>
+          <p class="review-banner-title">你有 {{ pendingReviewTotal }} 位活动伙伴待互评</p>
+          <p class="review-banner-sub">完成互评有助于后续活动匹配与信任建立</p>
+        </div>
+        <van-button size="small" type="warning" round @click="scrollToPendingReview">去互评</van-button>
+      </div>
+
+      <van-tabs v-model:active="activeTab" color="#ff5f84" shrink sticky offset-top="46">
+        <van-tab title="全部" name="all" />
+        <van-tab title="待参加" name="upcoming" :badge="tabCounts.upcoming || ''" />
+        <van-tab title="待互评" name="review_pending" :badge="tabCounts.review_pending || ''" />
+        <van-tab title="已完成" name="completed" />
+      </van-tabs>
+
+      <article
+        v-for="item in filteredList"
+        :key="item.eventId"
+        class="event-item"
+        :data-status="item.status"
+      >
         <div class="event-main" @click="goDetail(item.eventId)">
-          <p class="title">{{ item.title || '活动' }}</p>
+          <div class="title-row">
+            <p class="title">{{ item.title || '活动' }}</p>
+            <van-tag :type="statusTag(item.status).type" plain>{{ statusTag(item.status).label }}</van-tag>
+          </div>
           <p class="meta">{{ formatEventTime(item.eventTime) }} · {{ item.location || '线上/待定' }}</p>
           <p class="signup-time">报名时间：{{ formatTime(item.signupAt) }}</p>
-          <p v-if="item.checkedIn" class="checked-tag">已签到</p>
+          <p v-if="item.checkedInAt" class="checked-tag">签到于 {{ formatTime(item.checkedInAt) }}</p>
+          <p v-if="item.canReview && item.pendingReviewCount > 0" class="pending-tag">
+            还有 {{ item.pendingReviewCount }} 人待互评
+          </p>
         </div>
         <div class="event-actions">
-          <van-tag type="primary" plain>已报名</van-tag>
           <van-button
-            v-if="item.checkinEnabled && !item.checkedIn"
+            v-if="item.checkinEnabled && !item.checkedIn && !item.eventEnded"
             size="small"
             type="primary"
             plain
@@ -26,32 +51,52 @@
             签到
           </van-button>
           <van-button
-            v-if="item.canReview"
+            v-if="item.canReview && item.pendingReviewCount > 0"
             size="small"
             type="warning"
-            plain
             @click="openReview(item)"
           >
             互评
           </van-button>
+          <van-button
+            v-else-if="item.canReview && item.reviewCompleted"
+            size="small"
+            type="success"
+            plain
+            disabled
+          >
+            已互评
+          </van-button>
         </div>
       </article>
 
-      <van-empty v-if="!list.length" description="你还没有报名活动" />
+      <van-empty v-if="!filteredList.length" :description="emptyText" />
     </section>
 
     <van-dialog v-model:show="showCheckin" title="活动签到" show-cancel-button @confirm="submitCheckin">
       <van-field v-model="checkinCode" label="签到码" placeholder="输入现场 6 位签到码" maxlength="6" />
     </van-dialog>
 
-    <van-popup v-model:show="showReview" position="bottom" round :style="{ maxHeight: '80vh' }">
+    <van-popup v-model:show="showReview" position="bottom" round :style="{ maxHeight: '85vh' }">
       <div class="review-popup">
         <h3>活动互评</h3>
-        <p class="review-sub">为同行伙伴打个分吧（1-5 星）</p>
+        <p class="review-sub">为同行伙伴打个分并写一句简短感受（1-5 星）</p>
         <div v-if="reviewLoading" class="review-loading">加载中…</div>
         <div v-for="user in reviewCandidates" :key="user.userId" class="review-row">
-          <span>{{ user.nickname || '伙伴' }}</span>
-          <van-rate v-model="reviewDraft[user.userId].rating" :count="5" size="18" color="#ff5f84" />
+          <div class="review-user">
+            <span class="review-name">{{ user.nickname || '伙伴' }}</span>
+            <van-rate v-model="reviewDraft[user.userId].rating" :count="5" size="18" color="#ff5f84" />
+          </div>
+          <van-field
+            v-if="!user.reviewed"
+            v-model="reviewDraft[user.userId].comment"
+            rows="1"
+            autosize
+            type="textarea"
+            maxlength="100"
+            placeholder="可选：一句话评价"
+            class="review-comment"
+          />
           <van-tag v-if="user.reviewed" type="success" plain>已评</van-tag>
           <van-button v-else size="mini" type="primary" @click="submitReview(user.userId)">提交</van-button>
         </div>
@@ -62,7 +107,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
@@ -76,6 +121,7 @@ import {
 const router = useRouter()
 const loading = ref(false)
 const list = ref([])
+const activeTab = ref('all')
 const showCheckin = ref(false)
 const showReview = ref(false)
 const checkinCode = ref('')
@@ -83,6 +129,47 @@ const activeEventId = ref('')
 const reviewLoading = ref(false)
 const reviewCandidates = ref([])
 const reviewDraft = reactive({})
+
+const STATUS_MAP = {
+  upcoming: { label: '待参加', type: 'primary' },
+  checked_in: { label: '已签到', type: 'success' },
+  review_pending: { label: '待互评', type: 'warning' },
+  completed: { label: '已完成', type: 'default' },
+  missed: { label: '未签到', type: 'danger' }
+}
+
+const tabCounts = computed(() => {
+  const counts = { upcoming: 0, review_pending: 0, completed: 0 }
+  list.value.forEach((item) => {
+    if (item.status === 'upcoming' || item.status === 'checked_in') counts.upcoming += 1
+    if (item.status === 'review_pending') counts.review_pending += 1
+    if (item.status === 'completed') counts.completed += 1
+  })
+  return counts
+})
+
+const pendingReviewTotal = computed(() =>
+  list.value.reduce((sum, item) => sum + Number(item.pendingReviewCount || 0), 0)
+)
+
+const filteredList = computed(() => {
+  if (activeTab.value === 'all') return list.value
+  if (activeTab.value === 'upcoming') {
+    return list.value.filter((item) => item.status === 'upcoming' || item.status === 'checked_in')
+  }
+  return list.value.filter((item) => item.status === activeTab.value)
+})
+
+const emptyText = computed(() => {
+  if (activeTab.value === 'review_pending') return '暂无待互评活动'
+  if (activeTab.value === 'upcoming') return '暂无待参加活动'
+  if (activeTab.value === 'completed') return '暂无已完成活动'
+  return '你还没有报名活动'
+})
+
+function statusTag(status) {
+  return STATUS_MAP[status] || { label: '已报名', type: 'primary' }
+}
 
 async function loadList() {
   loading.value = true
@@ -114,7 +201,7 @@ async function submitCheckin() {
   }
   try {
     await checkinEvent(activeEventId.value, checkinCode.value.trim())
-    showToast({ type: 'success', message: '签到成功' })
+    showToast({ type: 'success', message: '签到成功，活动结束后可为伙伴互评' })
     showCheckin.value = false
     await loadList()
   } catch (e) {
@@ -155,11 +242,22 @@ async function submitReview(targetUserId) {
       comment: draft.comment || ''
     })
     showToast({ type: 'success', message: '评价已提交' })
+    await loadList()
     const rows = await fetchEventReviewCandidates(activeEventId.value)
     reviewCandidates.value = Array.isArray(rows) ? rows : []
+    if (reviewCandidates.value.every((u) => u.reviewed)) {
+      showReview.value = false
+    }
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '提交失败' })
   }
+}
+
+async function scrollToPendingReview() {
+  activeTab.value = 'review_pending'
+  await nextTick()
+  const el = document.querySelector('[data-status="review_pending"]')
+  el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
 }
 
 function formatEventTime(value) {
@@ -189,14 +287,39 @@ onMounted(loadList)
 }
 
 .content {
-  padding: 12px;
+  padding: 0 0 12px;
+}
+
+.review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border: 1px solid #fdba74;
+}
+
+.review-banner-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #9a3412;
+}
+
+.review-banner-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #c2410c;
 }
 
 .event-item {
   background: #fff;
   border-radius: 12px;
   padding: 12px;
-  margin-bottom: 10px;
+  margin: 10px 12px 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -207,11 +330,19 @@ onMounted(loadList)
   flex: 1;
 }
 
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .event-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .title {
@@ -240,8 +371,16 @@ onMounted(loadList)
   font-weight: 700;
 }
 
+.pending-tag {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #d97706;
+  font-weight: 600;
+}
+
 .review-popup {
   padding: 16px;
+  overflow-y: auto;
 }
 
 .review-popup h3 {
@@ -256,15 +395,27 @@ onMounted(loadList)
 
 .review-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f3f4f6;
   font-size: 13px;
 }
 
-.review-row span:first-child {
+.review-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-name {
   flex: 1;
+  font-weight: 600;
+}
+
+.review-comment {
+  padding: 0;
 }
 
 .review-loading {

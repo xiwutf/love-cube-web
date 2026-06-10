@@ -10,6 +10,7 @@ import com.lovecube.backend.entity.PlatGroupPost;
 import com.lovecube.backend.entity.PlatGroupPostComment;
 import com.lovecube.backend.entity.PlatGroupPostLike;
 import com.lovecube.backend.entity.PlatGroupTaskProgress;
+import com.lovecube.backend.entity.PlatformEvent;
 import com.lovecube.backend.entity.UserGrowth;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
@@ -25,14 +26,18 @@ import com.lovecube.backend.repository.PlatGroupRepository;
 import com.lovecube.backend.repository.PlatCheckinCommentRepository;
 import com.lovecube.backend.repository.PlatCheckinLikeRepository;
 import com.lovecube.backend.repository.PlatGroupTaskProgressRepository;
+import com.lovecube.backend.repository.PlatformEventRepository;
 import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.GroupActivityEngagementService;
+import com.lovecube.backend.services.GroupWeeklyDigestService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.GroupMemberRealNameSupport;
 import com.lovecube.backend.services.GroupSeasonService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PlatformGroupSupport;
+import com.lovecube.backend.services.PlatformGroupInviteSupport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -68,6 +73,9 @@ public class PlatformGroupController {
     private final PlatCheckinCommentRepository checkinCommentRepository;
     private final UserGrowthRepository userGrowthRepository;
     private final GroupSeasonService groupSeasonService;
+    private final GroupActivityEngagementService activityEngagementService;
+    private final GroupWeeklyDigestService weeklyDigestService;
+    private final PlatformEventRepository platformEventRepository;
 
     // 团体任务定义（code → 名称/EXP奖励/对应成长action）
     private static final Map<String, String> TASK_NAMES = Map.of(
@@ -105,7 +113,10 @@ public class PlatformGroupController {
             PlatCheckinLikeRepository checkinLikeRepository,
             PlatCheckinCommentRepository checkinCommentRepository,
             UserGrowthRepository userGrowthRepository,
-            GroupSeasonService groupSeasonService) {
+            GroupSeasonService groupSeasonService,
+            GroupActivityEngagementService activityEngagementService,
+            GroupWeeklyDigestService weeklyDigestService,
+            PlatformEventRepository platformEventRepository) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.postRepository = postRepository;
@@ -124,6 +135,9 @@ public class PlatformGroupController {
         this.checkinCommentRepository = checkinCommentRepository;
         this.userGrowthRepository = userGrowthRepository;
         this.groupSeasonService = groupSeasonService;
+        this.activityEngagementService = activityEngagementService;
+        this.weeklyDigestService = weeklyDigestService;
+        this.platformEventRepository = platformEventRepository;
     }
 
 
@@ -272,6 +286,30 @@ public class PlatformGroupController {
     }
 
 
+    /** 通过邀请码预览团体（公开） */
+    @GetMapping("/by-invite-code/{code}")
+    public Map<String, Object> previewGroupByInviteCode(@PathVariable String code) {
+        String normalized = PlatformGroupInviteSupport.normalizeInviteCode(code);
+        if (normalized.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "邀请码无效");
+        }
+        PlatGroup group = groupRepository.findByInviteCode(normalized)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "邀请码无效或已失效"));
+        if (!"published".equals(group.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该团体暂不可加入");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", group.getId());
+        out.put("name", group.getName());
+        out.put("coverUrl", group.getCoverUrl());
+        out.put("region", group.getRegion());
+        out.put("description", group.getDescription());
+        out.put("memberCount", group.getMemberCount() == null ? 0 : group.getMemberCount());
+        out.put("joinMode", group.getJoinMode());
+        out.put("joinModeKey", PlatformGroupSupport.joinModeToApiKey(group.getJoinMode()));
+        return out;
+    }
+
     @GetMapping("/{idOrSlug}")
     public Map<String, Object> getGroup(
             @PathVariable String idOrSlug,
@@ -323,7 +361,59 @@ public class PlatformGroupController {
                     .ifPresent(m -> result.put("myMemberRealName", m.getMemberRealName()));
         }
 
+        result.put("inviteJoinRequired", "invite".equals(group.getJoinMode()));
+        if (Boolean.TRUE.equals(result.get("managed"))) {
+            long pendingCount = memberRepository.countByGroupIdAndStatus(group.getId(), "pending");
+            result.put("pendingMemberCount", pendingCount);
+            if ("invite".equals(group.getJoinMode()) && group.getInviteCode() != null) {
+                result.put("inviteCode", group.getInviteCode());
+            }
+        }
+
         return result;
+    }
+
+    /** 团长/管理员获取邀请码与分享信息 */
+    @GetMapping("/{id}/invite-info")
+    public Map<String, Object> getGroupInviteInfo(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        requireManagerRole(id, authHeader);
+        PlatGroup group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        if (!"invite".equals(group.getJoinMode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该团体未开启邀请制");
+        }
+        String code = PlatformGroupInviteSupport.ensureInviteCode(group, groupRepository);
+        group.setUpdatedAt(LocalDateTime.now());
+        groupRepository.save(group);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("inviteCode", code);
+        out.put("groupId", id);
+        out.put("groupName", group.getName());
+        out.put("joinPath", "/platform/groups/" + id + "?invite=" + code);
+        out.put("joinByCodePath", "/platform/groups/join?code=" + code);
+        return out;
+    }
+
+    /** 重新生成邀请码 */
+    @PostMapping("/{id}/invite-code/refresh")
+    @Transactional
+    public Map<String, Object> refreshGroupInviteCode(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        requireManagerRole(id, authHeader);
+        PlatGroup group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
+        if (!"invite".equals(group.getJoinMode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该团体未开启邀请制");
+        }
+        group.setInviteCode(PlatformGroupInviteSupport.generateUniqueCode(groupRepository));
+        group.setUpdatedAt(LocalDateTime.now());
+        groupRepository.save(group);
+        return Map.of(
+                "inviteCode", group.getInviteCode(),
+                "message", "邀请码已更新，旧链接将失效");
     }
 
     /** 已通过成员自助补全或修改在本团的展示姓名 */
@@ -400,6 +490,11 @@ public class PlatformGroupController {
         owner.setUpdatedAt(LocalDateTime.now());
         memberRepository.save(owner);
 
+        if ("invite".equals(saved.getJoinMode())) {
+            PlatformGroupInviteSupport.ensureInviteCode(saved, groupRepository);
+            saved = groupRepository.save(saved);
+        }
+
         return Map.of("id", saved.getId(), "slug", saved.getSlug(), "message", "Created successfully");
     }
 
@@ -459,6 +554,11 @@ public class PlatformGroupController {
             } else {
                 group.setJoinMode("open".equals(String.valueOf(payload.get("joinType"))) ? "free" : "audit");
             }
+            if ("invite".equals(group.getJoinMode())) {
+                PlatformGroupInviteSupport.ensureInviteCode(group, groupRepository);
+            } else {
+                group.setInviteCode(null);
+            }
         }
 
         group.setUpdatedAt(LocalDateTime.now());
@@ -486,7 +586,10 @@ public class PlatformGroupController {
         }
 
         if ("invite".equals(group.getJoinMode())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该团体仅限邀请加入");
+            String inviteCode = payload != null ? String.valueOf(payload.getOrDefault("inviteCode", "")) : "";
+            if (!PlatformGroupInviteSupport.matchesInviteCode(group, inviteCode)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "邀请码不正确，请向团长索取有效邀请");
+            }
         }
 
         String reason = payload != null ? String.valueOf(payload.getOrDefault("message", "")).trim() : "";
@@ -509,7 +612,7 @@ public class PlatformGroupController {
             if ("pending".equals(m.getStatus())) {
                 return Map.of("joined", false, "pending", true, "message", "Request pending");
             }
-            if ("free".equals(group.getJoinMode())) {
+            if ("free".equals(group.getJoinMode()) || "invite".equals(group.getJoinMode())) {
                 m.setStatus("approved");
                 m.setJoinedAt(LocalDateTime.now());
                 m.setUpdatedAt(LocalDateTime.now());
@@ -536,7 +639,7 @@ public class PlatformGroupController {
         member.setCreatedAt(LocalDateTime.now());
         member.setUpdatedAt(LocalDateTime.now());
 
-        if ("free".equals(group.getJoinMode())) {
+        if ("free".equals(group.getJoinMode()) || "invite".equals(group.getJoinMode())) {
             member.setStatus("approved");
             member.setJoinedAt(LocalDateTime.now());
             memberRepository.save(member);
@@ -568,7 +671,7 @@ public class PlatformGroupController {
                                 NotificationCatalog.TYPE_GROUP_JOIN_REQUEST,
                                 applicantName + " 申请加入「" + groupName + "」",
                                 applicantName + " 申请加入你管理的团体「" + groupName + "」，请及时审核。",
-                                "/fellowship/groups",
+                                platformGroupMembersPath(groupId),
                                 "platform_group",
                                 String.valueOf(groupId));
                     } catch (Exception ignored) {
@@ -676,7 +779,7 @@ public class PlatformGroupController {
                 NotificationCatalog.TYPE_GROUP_APPLICATION_APPROVED,
                 "你的团体加入申请已通过",
                 "你加入「" + group.getName() + "」的申请已通过",
-                "/fellowship/groups",
+                platformGroupDetailPath(id),
                 "platform_group",
                 String.valueOf(id));
 
@@ -709,7 +812,7 @@ public class PlatformGroupController {
                 NotificationCatalog.TYPE_GROUP_APPLICATION_REJECTED,
                 "你的团体加入申请未通过",
                 "你加入「" + groupName + "」的申请未通过",
-                "/fellowship/groups",
+                platformGroupDetailPath(id),
                 "platform_group",
                 String.valueOf(id));
 
@@ -1268,6 +1371,14 @@ public class PlatformGroupController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "No permission"));
     }
 
+    private static String platformGroupDetailPath(Long groupId) {
+        return "/platform/groups/" + groupId;
+    }
+
+    private static String platformGroupMembersPath(Long groupId) {
+        return "/platform/groups/" + groupId + "/members";
+    }
+
     private boolean platViewerSeesInnerMemberNames(Long groupId, Long viewerId, User viewerUser) {
         if (viewerId == null) {
             return false;
@@ -1754,36 +1865,22 @@ public class PlatformGroupController {
         Map<Long, User> userMap = userIds.isEmpty() ? Collections.emptyMap()
                 : userRepository.findAllById(userIds).stream().collect(Collectors.toMap(User::getUserid, u -> u));
 
-        // 当前用户报名状态（精准查询，避免全表扫描）
-        Set<Long> signedUpIds = Collections.emptySet();
+        Map<Long, PlatGroupActivitySignup> mySignupMap = Collections.emptyMap();
         if (userId != null && !pageItems.isEmpty()) {
             List<Long> activityIds = pageItems.stream().map(PlatGroupActivity::getId).collect(Collectors.toList());
-            signedUpIds = activitySignupRepository
+            mySignupMap = activitySignupRepository
                     .findByActivityIdInAndUserIdAndStatus(activityIds, userId, "signed_up")
                     .stream()
-                    .map(PlatGroupActivitySignup::getActivityId)
-                    .collect(Collectors.toSet());
+                    .collect(Collectors.toMap(PlatGroupActivitySignup::getActivityId, s -> s, (a, b) -> a));
         }
-        final Set<Long> signedSet = signedUpIds;
+        final Map<Long, PlatGroupActivitySignup> signupMap = mySignupMap;
+        final Long currentUserId = userId;
 
         LocalDateTime now = LocalDateTime.now();
         List<Map<String, Object>> items = pageItems.stream().map(a -> {
             User creator = userMap.get(a.getCreatorUserId());
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", a.getId());
-            item.put("title", a.getTitle());
-            item.put("description", a.getDescription() != null ? a.getDescription() : "");
-            item.put("startTime", a.getStartTime());
-            item.put("endTime", a.getEndTime());
-            item.put("location", a.getLocation() != null ? a.getLocation() : "");
-            item.put("maxParticipants", a.getMaxParticipants());
-            item.put("participantCount", a.getParticipantCount());
-            item.put("status", a.getStatus());
-            item.put("isEnded", !a.getEndTime().isAfter(now));
-            item.put("signedUpByMe", signedSet.contains(a.getId()));
-            item.put("creatorName", creator != null ? creator.getUsername() : "");
-            item.put("createdAt", a.getCreatedAt());
-            return item;
+            PlatGroupActivitySignup mySignup = signupMap.get(a.getId());
+            return buildActivityItem(a, creator, mySignup, currentUserId, now);
         }).collect(Collectors.toList());
 
         return Map.of("items", items, "total", total, "page", safePage, "pageSize", safeSize);
@@ -1837,6 +1934,32 @@ public class PlatformGroupController {
         activity.setParticipantCount(0);
         activity.setCreatedAt(LocalDateTime.now());
         activity.setUpdatedAt(LocalDateTime.now());
+
+        Object platformEventIdObj = payload.get("platformEventId");
+        if (platformEventIdObj != null) {
+            String eventId = String.valueOf(platformEventIdObj).trim();
+            if (!eventId.isBlank()) {
+                PlatformEvent pe = platformEventRepository.findById(eventId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "关联的平台活动不存在"));
+                activity.setPlatformEventId(eventId);
+                if (title.isBlank() && pe.getTitle() != null) {
+                    activity.setTitle(pe.getTitle());
+                }
+                if ((activity.getDescription() == null || activity.getDescription().isBlank())
+                        && pe.getSummary() != null) {
+                    activity.setDescription(pe.getSummary());
+                }
+                if ((activity.getLocation() == null || activity.getLocation().isBlank())
+                        && pe.getLocation() != null) {
+                    activity.setLocation(pe.getLocation());
+                }
+                if (pe.getEventTime() != null) {
+                    activity.setStartTime(pe.getEventTime());
+                    activity.setEndTime(pe.getEventTime().plusHours(2));
+                }
+            }
+        }
+
         activityRepository.save(activity);
 
         // 通知团体成员
@@ -1864,31 +1987,15 @@ public class PlatformGroupController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found"));
 
         Long userId = resolveOptionalUserId(authHeader);
-        boolean signedUp = false;
+        PlatGroupActivitySignup mySignup = null;
         if (userId != null) {
-            signedUp = activitySignupRepository.findByActivityIdAndUserId(activityId, userId)
-                    .map(s -> "signed_up".equals(s.getStatus()))
-                    .orElse(false);
+            mySignup = activitySignupRepository.findByActivityIdAndUserId(activityId, userId)
+                    .filter(s -> "signed_up".equals(s.getStatus()))
+                    .orElse(null);
         }
 
         User creator = userRepository.findById(activity.getCreatorUserId()).orElse(null);
-        LocalDateTime now = LocalDateTime.now();
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", activity.getId());
-        result.put("groupId", activity.getGroupId());
-        result.put("title", activity.getTitle());
-        result.put("description", activity.getDescription() != null ? activity.getDescription() : "");
-        result.put("startTime", activity.getStartTime());
-        result.put("endTime", activity.getEndTime());
-        result.put("location", activity.getLocation() != null ? activity.getLocation() : "");
-        result.put("maxParticipants", activity.getMaxParticipants());
-        result.put("participantCount", activity.getParticipantCount());
-        result.put("status", activity.getStatus());
-        result.put("isEnded", !activity.getEndTime().isAfter(now));
-        result.put("signedUpByMe", signedUp);
-        result.put("creatorName", creator != null ? creator.getUsername() : "");
-        result.put("createdAt", activity.getCreatedAt());
-        return result;
+        return buildActivityItem(activity, creator, mySignup, userId, LocalDateTime.now());
     }
 
     @PostMapping("/{id}/activities/{activityId}/signup")
@@ -2040,9 +2147,118 @@ public class PlatformGroupController {
             }
         }
 
+        if (payload.containsKey("platformEventId")) {
+            String eventId = String.valueOf(payload.get("platformEventId")).trim();
+            activity.setPlatformEventId(eventId.isBlank() ? null : eventId);
+        }
+
         activity.setUpdatedAt(LocalDateTime.now());
         activityRepository.save(activity);
         return Map.of("updated", true, "message", "活动已更新");
+    }
+
+    @PostMapping("/{id}/activities/{activityId}/checkin-code")
+    @Transactional
+    public Map<String, Object> generateActivityCheckinCode(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader) {
+        requireManagerRole(id, authHeader);
+        return activityEngagementService.generateCheckinCode(id, activityId);
+    }
+
+    @PostMapping("/{id}/activities/{activityId}/checkin")
+    @Transactional
+    public Map<String, Object> checkinActivity(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+        User user = adminAuthService.requireUser(authHeader);
+        String code = body.get("code") != null ? String.valueOf(body.get("code")) : null;
+        return activityEngagementService.checkin(user, id, activityId, code);
+    }
+
+    @GetMapping("/{id}/activities/{activityId}/review-candidates")
+    public List<Map<String, Object>> activityReviewCandidates(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader) {
+        User user = adminAuthService.requireUser(authHeader);
+        return activityEngagementService.listReviewCandidates(user, id, activityId);
+    }
+
+    @PostMapping("/{id}/activities/{activityId}/reviews")
+    @Transactional
+    public Map<String, Object> submitActivityReview(
+            @PathVariable Long id,
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody Map<String, Object> body) {
+        User user = adminAuthService.requireUser(authHeader);
+        Long targetUserId = body.get("targetUserId") != null
+                ? Long.parseLong(String.valueOf(body.get("targetUserId"))) : null;
+        Integer rating = body.get("rating") != null
+                ? Integer.parseInt(String.valueOf(body.get("rating"))) : null;
+        String comment = body.get("comment") != null ? String.valueOf(body.get("comment")) : null;
+        return activityEngagementService.submitReview(user, id, activityId, targetUserId, rating, comment);
+    }
+
+    @GetMapping("/{id}/weekly-digest")
+    public Map<String, Object> previewWeeklyDigest(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        requireManagerRole(id, authHeader);
+        return weeklyDigestService.buildDigest(id);
+    }
+
+    @PostMapping("/{id}/weekly-digest/send")
+    @Transactional
+    public Map<String, Object> sendWeeklyDigest(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        requireManagerRole(id, authHeader);
+        return weeklyDigestService.sendDigestForGroup(id, true);
+    }
+
+    private Map<String, Object> buildActivityItem(
+            PlatGroupActivity a,
+            User creator,
+            PlatGroupActivitySignup mySignup,
+            Long userId,
+            LocalDateTime now
+    ) {
+        boolean isEnded = !a.getEndTime().isAfter(now);
+        boolean signedUp = mySignup != null;
+        boolean checkedIn = mySignup != null && Boolean.TRUE.equals(mySignup.getCheckedIn());
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", a.getId());
+        item.put("groupId", a.getGroupId());
+        item.put("title", a.getTitle());
+        item.put("description", a.getDescription() != null ? a.getDescription() : "");
+        item.put("startTime", a.getStartTime());
+        item.put("endTime", a.getEndTime());
+        item.put("location", a.getLocation() != null ? a.getLocation() : "");
+        item.put("maxParticipants", a.getMaxParticipants());
+        item.put("participantCount", a.getParticipantCount());
+        item.put("status", a.getStatus());
+        item.put("isEnded", isEnded);
+        item.put("signedUpByMe", signedUp);
+        item.put("checkedInByMe", checkedIn);
+        item.put("hasCheckinCode", a.getCheckinCode() != null && !a.getCheckinCode().isBlank());
+        item.put("creatorName", creator != null ? creator.getUsername() : "");
+        item.put("createdAt", a.getCreatedAt());
+        if (a.getPlatformEventId() != null && !a.getPlatformEventId().isBlank()) {
+            item.put("platformEventId", a.getPlatformEventId());
+            item.put("platformEventPath", "/events/" + a.getPlatformEventId());
+            platformEventRepository.findById(a.getPlatformEventId()).ifPresent(pe -> {
+                item.put("platformEventTitle", pe.getTitle());
+            });
+        }
+        if (userId != null) {
+            item.putAll(activityEngagementService.buildReviewSummary(userId, a.getId(), checkedIn, isEnded));
+        }
+        return item;
     }
 
     // ── 任务进度辅助（在现有发帖/评论/点赞逻辑中调用） ─────────────────────

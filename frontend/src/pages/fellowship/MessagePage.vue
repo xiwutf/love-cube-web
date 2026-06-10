@@ -5,6 +5,18 @@
       <van-badge v-if="msgStore.totalUnread" :content="msgStore.totalUnread" max="99" class="msg-header-badge" />
     </header>
 
+    <div
+      v-if="newcomerBannerVisible"
+      class="newcomer-banner"
+      @click="router.push(fellowshipPath('/tasks'))"
+    >
+      <div>
+        <p class="newcomer-title">新人 7 日任务进行中</p>
+        <p class="newcomer-sub">第 {{ newcomerPack.currentDay }} 天 · 还有 {{ newcomerPendingCount }} 项待完成</p>
+      </div>
+      <van-icon name="arrow" size="16" color="#7c3aed" />
+    </div>
+
     <van-tabs
       v-model:active="activeTab"
       color="#ff5f84"
@@ -86,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
@@ -102,6 +114,7 @@ import { useUserStore } from '@/stores/user.js'
 import { formatTime } from '@/utils/format.js'
 import { getAvatar } from '@/utils/image.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
+import { getMyGrowth } from '@/api/growth.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -129,6 +142,16 @@ const refreshingVisitor = ref(false)
 const notifList = ref([])
 const loadingNotif = ref(false)
 const refreshingNotif = ref(false)
+
+const newcomerPack = ref({ eligible: false, currentDay: 0 })
+const newcomerTasks = ref([])
+
+const newcomerPendingCount = computed(() =>
+  newcomerTasks.value.filter((t) => t.unlocked && (!t.completed || !t.claimed)).length
+)
+const newcomerBannerVisible = computed(
+  () => newcomerPack.value.eligible && newcomerPendingCount.value > 0
+)
 
 function normalizeListPayload(payload) {
   if (Array.isArray(payload)) return payload
@@ -291,6 +314,16 @@ watch(() => route.query.tab, (tab) => {
 })
 
 onMounted(async () => {
+  getMyGrowth()
+    .then((g) => {
+      const pack = g?.newcomerPack || {}
+      newcomerPack.value = {
+        eligible: Boolean(pack.eligible),
+        currentDay: Number(pack.currentDay ?? 0)
+      }
+      newcomerTasks.value = Array.isArray(pack.tasks) ? pack.tasks : []
+    })
+    .catch(() => {})
   await fetchUnread()
   if (activeTab.value === 0) loadChat()
   if (activeTab.value === 1) loadInteract()

@@ -111,6 +111,7 @@ const userInitial = computed(() => (userName.value || '?')[0])
 
 const benefits = [
   { icon: 'fire-o', title: '无限滑卡', desc: '每日滑卡不限次数' },
+  { icon: 'replay', title: '误滑撤回', desc: '每日可撤回 5 次跳过' },
   { icon: 'eye-o', title: '访客解锁', desc: '看见谁关注了你' },
   { icon: 'good-job-o', title: '喜欢我的人', desc: '查看完整喜欢名单' },
   { icon: 'gold-coin-o', title: '尊贵金标', desc: '身份更有辨识度' },

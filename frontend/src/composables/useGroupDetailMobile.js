@@ -28,6 +28,12 @@ import {
   fetchGroupPosts,
   fetchGroupSeasonRank,
   fetchGroupSeasonRankings,
+  generateGroupActivityCheckinCode,
+  checkinGroupActivity,
+  fetchGroupActivityReviewCandidates,
+  submitGroupActivityReview,
+  fetchGroupWeeklyDigest,
+  sendGroupWeeklyDigest,
   fetchPlatformCheckinComments,
   fetchTodayTasks,
   getAdminGroupJoinRequests,
@@ -46,6 +52,7 @@ import {
   unwrapGroupPostsList,
   updateGroupActivity
 } from '@/api/groups.js'
+import { fetchEvents } from '@/api/platformContent.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import {
   AUDIT_JOIN_MESSAGE_PROMPT,
@@ -121,8 +128,25 @@ export function useGroupDetailMobile() {
     startTime: '',
     endTime: '',
     location: '',
-    maxParticipants: 0
+    maxParticipants: 0,
+    platformEventId: ''
   })
+  const platformEvents = ref([])
+  const checkinCodeBusyId = ref(null)
+  const activityCheckinOpen = ref(false)
+  const activityCheckinCode = ref('')
+  const activityCheckinTarget = ref(null)
+  const activityCheckinSubmitting = ref(false)
+  const weeklyDigest = ref(null)
+  const sendingDigest = ref(false)
+  const reportDialogOpen = ref(false)
+  const reportPostId = ref(null)
+  const reportTargetUserId = ref(null)
+  const activityReviewOpen = ref(false)
+  const activityReviewTarget = ref(null)
+  const activityReviewCandidates = ref([])
+  const activityReviewLoading = ref(false)
+  const activityReviewRatings = reactive({})
 
   const expandedPollId = ref(null)
   const pollDetailCache = reactive({})
@@ -208,17 +232,24 @@ export function useGroupDetailMobile() {
     return g.joinModeKey || (g.joinMode === 'free' ? 'open' : g.joinMode === 'invite' ? 'invite' : 'audit')
   })
 
+  const inviteCodeFromQuery = computed(() => String(route.query.invite || '').trim().toUpperCase())
+
+  const pendingMemberCount = computed(() => Number(group.value?.pendingMemberCount || 0))
+
   const joinDisabled = computed(() => {
     if (!group.value) return true
     if (group.value.isMember || group.value.hasPendingRequest) return true
-    return joinModeKey.value === 'invite'
+    if (joinModeKey.value === 'invite') return !inviteCodeFromQuery.value
+    return false
   })
 
   const joinButtonText = computed(() => {
     if (!userStore.isLoggedIn) return '登录后加入'
     if (group.value?.isMember) return '已加入'
     if (group.value?.hasPendingRequest) return '审核中'
-    if (joinModeKey.value === 'invite') return '仅限邀请'
+    if (joinModeKey.value === 'invite') {
+      return inviteCodeFromQuery.value ? '验证邀请并加入' : '需要邀请码'
+    }
     if (joinModeKey.value === 'open') return '加入团体'
     return '申请加入'
   })
@@ -273,6 +304,7 @@ export function useGroupDetailMobile() {
       ownerUserId: item.ownerUserId ?? null,
       createdBy: item.createdBy ?? null,
       hasPendingRequest: Boolean(item.hasPendingRequest),
+      pendingMemberCount: Number(item.pendingMemberCount || 0),
       myMemberRealName: item.myMemberRealName || ''
     }
   }
@@ -552,7 +584,9 @@ export function useGroupDetailMobile() {
         fetchGroupSeasonRank(group.value.id),
         fetchGroupSeasonRankings({ page: 1, size: 5 })
       ])
-      seasonRank.value = rankRes || null
+      seasonRank.value = rankRes
+        ? { ...rankRes, scoringRules: rankRes.scoringRules || topRes?.scoringRules }
+        : null
       seasonTop.value = Array.isArray(topRes?.items) ? topRes.items : []
     } catch {
       seasonRank.value = null
@@ -955,18 +989,132 @@ export function useGroupDetailMobile() {
     }
   }
 
+  async function loadPlatformEvents() {
+    try {
+      const res = await fetchEvents({ status: 'published' })
+      platformEvents.value = Array.isArray(res) ? res.slice(0, 20) : []
+    } catch {
+      platformEvents.value = []
+    }
+  }
+
+  async function loadWeeklyDigest() {
+    if (!group.value?.managed || !isLegacyPlatformGroupId(group.value?.id)) {
+      weeklyDigest.value = null
+      return
+    }
+    try {
+      weeklyDigest.value = await fetchGroupWeeklyDigest(group.value.id)
+    } catch {
+      weeklyDigest.value = null
+    }
+  }
+
+  async function sendWeeklyDigestNow() {
+    if (sendingDigest.value || !group.value?.id) return
+    sendingDigest.value = true
+    try {
+      await sendGroupWeeklyDigest(group.value.id)
+      flash('周报已发送')
+    } catch (e) {
+      flash(e.message || '发送失败', 'error')
+    } finally {
+      sendingDigest.value = false
+    }
+  }
+
+  function openPostReport(post) {
+    reportPostId.value = post.id
+    reportTargetUserId.value = post.userId || null
+    reportDialogOpen.value = true
+  }
+
+  function openActivityCheckin(act) {
+    activityCheckinTarget.value = act
+    activityCheckinCode.value = ''
+    activityCheckinOpen.value = true
+  }
+
+  async function submitActivityCheckin() {
+    if (!activityCheckinTarget.value || activityCheckinSubmitting.value) return
+    activityCheckinSubmitting.value = true
+    try {
+      await checkinGroupActivity(group.value.id, activityCheckinTarget.value.id, activityCheckinCode.value)
+      activityCheckinOpen.value = false
+      await loadActivities()
+      flash('签到成功')
+    } catch (e) {
+      flash(e.message || '签到失败', 'error')
+    } finally {
+      activityCheckinSubmitting.value = false
+    }
+  }
+
+  async function generateActivityCode(act) {
+    if (checkinCodeBusyId.value) return
+    checkinCodeBusyId.value = act.id
+    try {
+      const res = await generateGroupActivityCheckinCode(group.value.id, act.id)
+      flash(`签到码：${res.checkinCode || '已生成'}`)
+      await loadActivities()
+    } catch (e) {
+      flash(e.message || '生成失败', 'error')
+    } finally {
+      checkinCodeBusyId.value = null
+    }
+  }
+
+  async function openActivityReview(act) {
+    activityReviewTarget.value = act
+    activityReviewOpen.value = true
+    activityReviewLoading.value = true
+    try {
+      activityReviewCandidates.value = await fetchGroupActivityReviewCandidates(group.value.id, act.id)
+    } catch (e) {
+      activityReviewCandidates.value = []
+      flash(e.message || '加载失败', 'error')
+      activityReviewOpen.value = false
+    } finally {
+      activityReviewLoading.value = false
+    }
+  }
+
+  function closeActivityReview() {
+    activityReviewOpen.value = false
+    activityReviewTarget.value = null
+    activityReviewCandidates.value = []
+  }
+
+  async function submitOneReview(candidate) {
+    const rating = activityReviewRatings[candidate.userId] || 5
+    try {
+      await submitGroupActivityReview(group.value.id, activityReviewTarget.value.id, {
+        targetUserId: candidate.userId,
+        rating,
+        comment: ''
+      })
+      candidate.reviewed = true
+      await loadActivities()
+      flash('评价已提交')
+    } catch (e) {
+      flash(e.message || '提交失败', 'error')
+    }
+  }
+
   async function submitActivity() {
     if (!group.value?.id || creatingActivity.value) return
     creatingActivity.value = true
     try {
-      await createGroupActivity(group.value.id, {
+      const payload = {
         title: activityForm.title,
         description: activityForm.description,
         startTime: activityForm.startTime ? `${activityForm.startTime}:00` : '',
         endTime: activityForm.endTime ? `${activityForm.endTime}:00` : '',
         location: activityForm.location,
         maxParticipants: activityForm.maxParticipants
-      })
+      }
+      if (activityForm.platformEventId) payload.platformEventId = activityForm.platformEventId
+      await createGroupActivity(group.value.id, payload)
       showCreateActivity.value = false
       Object.assign(activityForm, {
         title: '',
@@ -974,7 +1122,8 @@ export function useGroupDetailMobile() {
         startTime: '',
         endTime: '',
         location: '',
-        maxParticipants: 0
+        maxParticipants: 0,
+        platformEventId: ''
       })
       await loadActivities()
       await loadUpcomingActivities()
@@ -995,9 +1144,14 @@ export function useGroupDetailMobile() {
       loadCheckinSummary(),
       loadTodayTasks(),
       loadUpcomingActivities(),
-      loadSeasonInfo()
+      loadSeasonInfo(),
+      loadWeeklyDigest()
     ])
   }
+
+  watch(showCreateActivity, (open) => {
+    if (open && !platformEvents.value.length) loadPlatformEvents()
+  })
 
   async function applyJoin() {
     if (joinDisabled.value || joining.value) return
@@ -1013,6 +1167,10 @@ export function useGroupDetailMobile() {
       flash(ERR_EMPTY_MEMBER_REAL_NAME, 'error')
       return
     }
+    if (joinModeKey.value === 'invite' && !inviteCodeFromQuery.value) {
+      flash('请通过团长分享的邀请链接或邀请码加入', 'error')
+      return
+    }
     let applyMessage = ''
     if (joinModeKey.value === 'audit') {
       const input = window.prompt(AUDIT_JOIN_MESSAGE_PROMPT, '')
@@ -1025,7 +1183,11 @@ export function useGroupDetailMobile() {
     }
     joining.value = true
     try {
-      const res = await joinGroup(group.value.id, { message: applyMessage, memberRealName })
+      const res = await joinGroup(group.value.id, {
+        message: applyMessage,
+        memberRealName,
+        inviteCode: inviteCodeFromQuery.value
+      })
       group.value.isMember = Boolean(res?.joined)
       group.value.hasPendingRequest = Boolean(res?.pending)
       await loadDetail()
@@ -1228,6 +1390,9 @@ export function useGroupDetailMobile() {
     activeTab,
     groupTabPath,
     groupsPath,
+    joinModeKey,
+    inviteCodeFromQuery,
+    pendingMemberCount,
     joinDisabled,
     joinButtonText,
     joining,
@@ -1324,6 +1489,29 @@ export function useGroupDetailMobile() {
     submitPollVote,
     revealPollResults,
     submitPollCreate,
-    loadDetail
+    loadDetail,
+    platformEvents,
+    weeklyDigest,
+    sendingDigest,
+    sendWeeklyDigestNow,
+    reportDialogOpen,
+    reportPostId,
+    reportTargetUserId,
+    openPostReport,
+    activityCheckinOpen,
+    activityCheckinCode,
+    activityCheckinSubmitting,
+    openActivityCheckin,
+    submitActivityCheckin,
+    checkinCodeBusyId,
+    generateActivityCode,
+    activityReviewOpen,
+    activityReviewTarget,
+    activityReviewCandidates,
+    activityReviewLoading,
+    activityReviewRatings,
+    openActivityReview,
+    closeActivityReview,
+    submitOneReview
   }
 }

@@ -46,6 +46,12 @@ public class UserInteractionService {
     @Autowired
     private UnifiedProfileService unifiedProfileService;
 
+    @Autowired
+    private VerificationService verificationService;
+
+    @Autowired
+    private com.lovecube.backend.repository.FellowshipProfileMainRepository fellowshipProfileMainRepository;
+
     public UserInteraction createInteraction(Long fromUserId, Long toUserId,
                                              UserInteraction.InteractionType type,
                                              UserInteraction.TargetType targetType,
@@ -159,8 +165,19 @@ public class UserInteractionService {
     }
 
     public List<Map<String, Object>> getReceivedLikeUsers(Long userId) {
-        List<UserInteraction> likes = interactionRepository.findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
-            userId, UserInteraction.InteractionType.LIKE);
+        List<UserInteraction> likes = new ArrayList<>();
+        likes.addAll(interactionRepository.findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
+            userId, UserInteraction.InteractionType.LIKE));
+        likes.addAll(interactionRepository.findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
+            userId, UserInteraction.InteractionType.SUPER_LIKE));
+        likes.sort((a, b) -> {
+            LocalDateTime ta = a.getCreatedAt();
+            LocalDateTime tb = b.getCreatedAt();
+            if (ta == null && tb == null) return 0;
+            if (ta == null) return 1;
+            if (tb == null) return -1;
+            return tb.compareTo(ta);
+        });
         Map<Long, Map<String, Object>> users = new LinkedHashMap<>();
         for (UserInteraction interaction : likes) {
             Long fromUserId = interaction.getFromUserId();
@@ -176,9 +193,32 @@ public class UserInteractionService {
             row.put("location", fromUser.getLocation());
             row.put("occupation", fromUser.getOccupation());
             row.put("createdAt", interaction.getCreatedAt());
+            row.put("interactionType", interaction.getInteractionType().name().toLowerCase(Locale.ROOT));
+            row.put("lastActiveAt", resolveLastActiveAt(fromUser));
             users.put(fromUserId, row);
         }
+        enrichInterestListMeta(users.keySet(), users);
         return new ArrayList<>(users.values());
+    }
+
+    private LocalDateTime resolveLastActiveAt(User user) {
+        if (user == null) return null;
+        return fellowshipProfileMainRepository.findByUserId(user.getUserid())
+            .map(com.lovecube.backend.entity.FellowshipProfileMain::getLastActiveAt)
+            .filter(Objects::nonNull)
+            .orElse(user.getUpdatedAt());
+    }
+
+    private void enrichInterestListMeta(Set<Long> userIds, Map<Long, Map<String, Object>> rowsByUserId) {
+        if (userIds == null || userIds.isEmpty()) return;
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
+        for (Long uid : userIds) {
+            Map<String, Object> row = rowsByUserId.get(uid);
+            if (row == null) continue;
+            Map<String, Boolean> badges = verifyMap.getOrDefault(uid, Map.of());
+            row.put("photoVerified", Boolean.TRUE.equals(badges.get("photoVerified")));
+            row.put("realnameVerified", Boolean.TRUE.equals(badges.get("realnameVerified")));
+        }
     }
 
     public List<Map<String, Object>> getFollowingUsers(Long userId) {
@@ -245,8 +285,42 @@ public class UserInteractionService {
     }
 
     public boolean checkMutualLike(Long userId, Long targetUserId) {
-        return interactionRepository.existsByFromUserIdAndToUserIdAndInteractionTypeAndTargetId(
-            targetUserId, userId, UserInteraction.InteractionType.LIKE, userId);
+        return hasPositiveInterestFrom(targetUserId, userId);
+    }
+
+    /** 对方是否已对当前用户表达喜欢或超级喜欢 */
+    private boolean hasPositiveInterestFrom(Long fromUserId, Long toUserId) {
+        if (fromUserId == null || toUserId == null) {
+            return false;
+        }
+        return interactionRepository.existsByFromUserIdAndToUserIdAndInteractionType(
+                fromUserId, toUserId, UserInteraction.InteractionType.LIKE)
+                || interactionRepository.existsByFromUserIdAndToUserIdAndInteractionType(
+                fromUserId, toUserId, UserInteraction.InteractionType.SUPER_LIKE);
+    }
+
+    /**
+     * 撤回对某用户的「跳过」记录，使其重新进入推荐池。
+     */
+    public Map<String, Object> rewindSkip(Long fromUserId, Long targetUserId) {
+        if (fromUserId == null || targetUserId == null || fromUserId.equals(targetUserId)) {
+            throw new IllegalArgumentException("参数不合法");
+        }
+        boolean skipped = interactionRepository.existsByFromUserIdAndToUserIdAndInteractionType(
+                fromUserId, targetUserId, UserInteraction.InteractionType.SKIP);
+        if (!skipped) {
+            throw new IllegalArgumentException("未找到可撤回的跳过记录");
+        }
+        interactionRepository.deleteByFromUserIdAndToUserIdAndInteractionType(
+                fromUserId, targetUserId, UserInteraction.InteractionType.SKIP);
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("rewoundUserId", targetUserId);
+        result.put("success", true);
+        if (targetUser != null) {
+            result.put("user", unifiedProfileService.buildMatchCardPayload(targetUser, Map.of()));
+        }
+        return result;
     }
 
     public List<Long> getActedUserIds(Long userId) {

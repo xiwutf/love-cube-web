@@ -22,7 +22,7 @@
         <div class="tip-left">
           <div class="tip-icon">!</div>
           <div>
-            <p class="tip-title">完善资料可提升推荐效</p>
+            <p class="tip-title">完善资料可提升推荐效果</p>
             <p class="tip-desc">当前资料完成度 {{ completion.percent || 0 }}%，建议先补充关键信息</p>
           </div>
         </div>
@@ -42,6 +42,77 @@
         <van-button round size="small" plain color="#2563eb" @click="router.push(fellowshipPath('/verify'))">
           去认证
         </van-button>
+      </div>
+
+      <div v-if="!onboardingAllDone" class="onboard-card">
+        <div class="onboard-head">
+          <p class="onboard-title">新手引导 · {{ onboardingProgress }}%</p>
+          <span class="onboard-more" @click="router.push(fellowshipPath('/tasks'))">任务中心</span>
+        </div>
+        <div class="onboard-steps">
+          <button
+            v-for="step in onboardingSteps"
+            :key="step.key"
+            type="button"
+            class="onboard-step"
+            :class="{ done: step.done, current: !step.done && currentOnboardStep?.key === step.key }"
+            @click="router.push(fellowshipPath(step.to))"
+          >
+            <span class="step-dot">{{ step.done ? '✓' : '' }}</span>
+            <span class="step-label">{{ step.label }}</span>
+          </button>
+        </div>
+        <p v-if="currentOnboardStep" class="onboard-hint">下一步：{{ currentOnboardStep.label }}</p>
+      </div>
+
+      <div
+        v-if="newcomerPack.eligible && newcomerPendingCount > 0"
+        class="tip-card tip-card--purple"
+        @click="router.push(fellowshipPath('/tasks'))"
+      >
+        <div class="tip-left">
+          <div class="tip-icon tip-icon--purple">7</div>
+          <div>
+            <p class="tip-title">新人 7 日任务 · 第 {{ newcomerPack.currentDay }} 天</p>
+            <p class="tip-desc">还有 {{ newcomerPendingCount }} 项待完成，点我查看</p>
+          </div>
+        </div>
+        <van-icon name="arrow" size="16" color="#7c3aed" />
+      </div>
+
+      <div
+        v-if="pendingEventReviewCount > 0"
+        class="tip-card tip-card--amber"
+        @click="router.push(fellowshipPath('/event-signups'))"
+      >
+        <div class="tip-left">
+          <div class="tip-icon tip-icon--amber">★</div>
+          <div>
+            <p class="tip-title">活动互评待完成</p>
+            <p class="tip-desc">还有 {{ pendingEventReviewCount }} 位伙伴等你评价</p>
+          </div>
+        </div>
+        <van-icon name="arrow" size="16" color="#d97706" />
+      </div>
+
+      <div class="quick-grid">
+        <button type="button" class="quick-item" @click="router.push(fellowshipPath('/match'))">
+          <van-icon name="like-o" size="22" color="#ff5f84" />
+          <span>开始滑卡</span>
+        </button>
+        <button type="button" class="quick-item" @click="router.push('/m/platform/checkin')">
+          <van-icon name="calendar-o" size="22" color="#2563eb" />
+          <span>每日签到</span>
+        </button>
+        <button type="button" class="quick-item" @click="router.push(fellowshipPath('/tasks'))">
+          <van-icon name="todo-list-o" size="22" color="#059669" />
+          <span>今日任务</span>
+          <em v-if="dailyTaskSummary" class="quick-badge">{{ dailyTaskSummary }}</em>
+        </button>
+        <button type="button" class="quick-item" @click="router.push(fellowshipPath('/event-signups'))">
+          <van-icon name="flag-o" size="22" color="#d97706" />
+          <span>我的活动</span>
+        </button>
       </div>
 
       <div class="banner-wrap">
@@ -66,6 +137,28 @@
         </van-swipe>
       </div>
 
+      <div v-if="upcomingEvents.length" class="section-card">
+        <div class="section-head">
+          <span class="section-title">近期活动</span>
+          <span class="section-more" @click="router.push('/events')">全部活动</span>
+        </div>
+        <div class="event-list">
+          <div
+            v-for="ev in upcomingEvents"
+            :key="ev.id"
+            class="event-item"
+            @click="router.push(`/events/${ev.id}`)"
+          >
+            <div class="event-date">{{ formatEventDate(ev) }}</div>
+            <div class="event-body">
+              <p class="event-title">{{ ev.title || ev.name }}</p>
+              <p class="event-meta">{{ ev.location || '线上/线下' }}</p>
+            </div>
+            <van-icon name="arrow" size="14" color="#a0abbe" />
+          </div>
+        </div>
+      </div>
+
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">为你推荐</span>
@@ -79,6 +172,7 @@
             @click="router.push(fellowshipPath(`/user-profile/${user.userId || user.userid}`))"
           >
             <div class="rec-avatar-ring">
+              <span v-if="completionBadge(user)" class="rec-complete-badge">{{ completionBadge(user) }}</span>
               <van-image
                 round
                 width="60"
@@ -155,7 +249,10 @@ import { computed, onErrorCaptured, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { getHomeInit } from '@/api/home.js'
+import { getMyGrowth } from '@/api/growth.js'
+import { fetchEvents, getMyEventSignups } from '@/api/platformContent.js'
 import { useFellowshipProfileStore } from '@/stores/fellowshipProfile.js'
+import { useFellowshipOnboarding } from '@/composables/useFellowshipOnboarding.js'
 import banner1 from '@/assets/fellowship/home-banners/fellowship-home-banner-1.webp'
 import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.webp'
 import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.webp'
@@ -178,6 +275,38 @@ const completion = ref({ completed: false, percent: 0, missingFields: [] })
 const verificationStatus = ref('none')
 const renderFallback = ref(false)
 const loadingHome = ref(true)
+const upcomingEvents = ref([])
+const newcomerPack = ref({ eligible: false, currentDay: 0 })
+const newcomerTasks = ref([])
+const dailyTasks = ref([])
+const pendingEventReviewCount = ref(0)
+
+const isVerified = computed(() => {
+  const status = String(verificationStatus.value || '').toLowerCase()
+  return ['approved', 'verified'].includes(status)
+})
+
+const completionPercent = computed(() => Number(completion.value?.percent || 0))
+
+const {
+  steps: onboardingSteps,
+  allDone: onboardingAllDone,
+  currentStep: currentOnboardStep,
+  progressPercent: onboardingProgress
+} = useFellowshipOnboarding({
+  completionPercent,
+  verified: isVerified
+})
+
+const newcomerPendingCount = computed(() =>
+  newcomerTasks.value.filter((t) => t.unlocked && (!t.completed || !t.claimed)).length
+)
+
+const dailyTaskSummary = computed(() => {
+  if (!dailyTasks.value.length) return ''
+  const done = dailyTasks.value.filter((t) => t.completed).length
+  return `${done}/${dailyTasks.value.length}`
+})
 
 const localBanners = [
   { id: 'local-banner-1', imageUrl: banner1 },
@@ -227,8 +356,14 @@ onMounted(async () => {
   }
 
   try {
-    // 单次请求获取全部首页数据，避免 5 个串行 RTT
-    const res = await getHomeInit()
+    const [initRes, growthRes, eventsRes, signupsRes] = await Promise.allSettled([
+      getHomeInit(),
+      getMyGrowth().catch(() => null),
+      fetchEvents({ status: 'published' }).catch(() => []),
+      getMyEventSignups().catch(() => [])
+    ])
+
+    const res = initRes.status === 'fulfilled' ? initRes.value : null
 
     if (Array.isArray(res?.banners)) {
       _cache.banners = res.banners
@@ -252,6 +387,30 @@ onMounted(async () => {
       profileStore.profile = res.profile
       const raw = res.profile.reviewStatus || res.profile.verificationStatus || res.profile.verified
       verificationStatus.value = raw === true ? 'approved' : String(raw || 'none')
+    }
+
+    if (growthRes.status === 'fulfilled' && growthRes.value) {
+      const g = growthRes.value
+      dailyTasks.value = Array.isArray(g.dailyTasks) ? g.dailyTasks : []
+      const pack = g.newcomerPack || {}
+      newcomerPack.value = {
+        eligible: Boolean(pack.eligible),
+        currentDay: Number(pack.currentDay ?? 0)
+      }
+      newcomerTasks.value = Array.isArray(pack.tasks) ? pack.tasks : []
+    }
+
+    if (eventsRes.status === 'fulfilled') {
+      const list = Array.isArray(eventsRes.value) ? eventsRes.value : []
+      upcomingEvents.value = list.slice(0, 3)
+    }
+
+    if (signupsRes.status === 'fulfilled') {
+      const signups = Array.isArray(signupsRes.value) ? signupsRes.value : []
+      pendingEventReviewCount.value = signups.reduce(
+        (sum, item) => sum + Number(item.pendingReviewCount || 0),
+        0
+      )
     }
   } catch {
     // init 失败时缓存内容已展示，不阻塞页面
@@ -320,6 +479,25 @@ function onImgError(event, index) {
     return
   }
   img.style.display = 'none'
+}
+
+function completionBadge(user) {
+  const rate = Number(user?.completionRate ?? 0)
+  if (rate >= 80) return '完善'
+  if (rate >= 50) return '较完整'
+  return ''
+}
+
+function formatEventDate(ev) {
+  const raw = ev?.startTime || ev?.start_time || ev?.eventDate || ev?.date || ''
+  if (!raw) return '近期'
+  try {
+    const d = new Date(raw)
+    if (Number.isNaN(d.getTime())) return '近期'
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  } catch {
+    return '近期'
+  }
 }
 </script>
 
@@ -421,6 +599,217 @@ function onImgError(event, index) {
 .tip-card--blue {
   background: #f4f8ff;
   border-color: #dbeafe;
+}
+
+.tip-card--purple {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  cursor: pointer;
+}
+
+.tip-card--amber {
+  background: #fffbeb;
+  border-color: #fde68a;
+  cursor: pointer;
+}
+
+.tip-icon--purple {
+  background: #7c3aed;
+}
+
+.tip-icon--amber {
+  background: #d97706;
+}
+
+.onboard-card {
+  margin: 12px 12px 0;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+.onboard-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.onboard-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2236;
+}
+
+.onboard-more {
+  font-size: 12px;
+  color: #ff5f84;
+  font-weight: 600;
+}
+
+.onboard-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.onboard-step {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.onboard-step.done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.onboard-step.current {
+  border-color: #ffb3c4;
+  background: #fff5f8;
+}
+
+.step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboard-step.done .step-dot {
+  background: #10b981;
+}
+
+.onboard-step.current .step-dot {
+  background: #ff5f84;
+}
+
+.step-label {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.onboard-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 12px 0;
+}
+
+.quick-item {
+  position: relative;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  cursor: pointer;
+}
+
+.quick-item span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.quick-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: #ff5f84;
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+
+.event-list {
+  padding: 0 16px 4px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+.event-date {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #fff0f4;
+  color: #ff5f84;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a2236;
+}
+
+.event-meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8898aa;
+}
+
+.event-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rec-complete-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  z-index: 2;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: #10b981;
+  border-radius: 999px;
+  padding: 2px 5px;
 }
 
 .tip-left {
@@ -556,6 +945,7 @@ function onImgError(event, index) {
   padding: 2px;
   background: linear-gradient(135deg, #ff5f84, #ffb3c4);
   margin: 0 auto 6px;
+  position: relative;
 }
 
 .rec-name {

@@ -36,4 +36,10 @@ public interface PlatGroupCheckinRepository extends JpaRepository<PlatGroupCheck
             ) t ON c.user_id = t.user_id AND c.checkin_date = t.md AND c.group_id = :groupId
             """, nativeQuery = true)
     List<Object[]> findLatestStreakByUserForGroup(@Param("groupId") Long groupId);
+
+    @Query("""
+            SELECT COUNT(DISTINCT c.userId) FROM PlatGroupCheckin c
+            WHERE c.groupId = :groupId AND c.checkinDate >= :since
+            """)
+    long countDistinctUsersSince(@Param("groupId") Long groupId, @Param("since") LocalDate since);
 }

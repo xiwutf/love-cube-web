@@ -17,9 +17,9 @@ import java.util.*;
 @Service
 public class GroupSeasonService {
 
-    private static final int CHECKIN_POINTS = 2;
-    private static final int TASK_POINTS = 5;
-    private static final int ACTIVITY_POINTS = 10;
+    public static final int CHECKIN_POINTS = 2;
+    public static final int TASK_POINTS = 5;
+    public static final int ACTIVITY_POINTS = 10;
 
     private final PlatformGroupSeasonRepository seasonRepository;
     private final PlatformGroupSeasonScoreRepository scoreRepository;
@@ -107,7 +107,24 @@ public class GroupSeasonService {
         result.put("page", page);
         result.put("size", size);
         result.put("total", scores.getTotalElements());
+        result.put("scoringRules", scoringRules());
         return result;
+    }
+
+    public static List<Map<String, Object>> scoringRules() {
+        List<Map<String, Object>> rules = new ArrayList<>();
+        rules.add(rule("打卡", CHECKIN_POINTS, "成员完成每日打卡"));
+        rules.add(rule("任务", TASK_POINTS, "领取团体每日任务奖励"));
+        rules.add(rule("活动", ACTIVITY_POINTS, "成员报名团体活动"));
+        return rules;
+    }
+
+    private static Map<String, Object> rule(String label, int points, String desc) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("label", label);
+        row.put("points", points);
+        row.put("description", desc);
+        return row;
     }
 
     public Map<String, Object> getGroupSeasonRank(Long groupId) {
@@ -116,9 +133,15 @@ public class GroupSeasonService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("seasonCode", season.getSeasonCode());
         result.put("seasonTitle", season.getTitle());
+        result.put("startDate", season.getStartDate().toString());
+        result.put("endDate", season.getEndDate().toString());
+        result.put("scoringRules", scoringRules());
         if (scoreOpt.isEmpty()) {
             result.put("score", 0);
             result.put("rank", null);
+            result.put("checkinCount", 0);
+            result.put("taskCount", 0);
+            result.put("activityCount", 0);
             return result;
         }
         PlatformGroupSeasonScore score = scoreOpt.get();

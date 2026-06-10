@@ -39,6 +39,12 @@ public class UserVisitorService {
     private UnifiedProfileService unifiedProfileService;
 
     @Autowired
+    private VerificationService verificationService;
+
+    @Autowired
+    private com.lovecube.backend.repository.FellowshipProfileMainRepository fellowshipProfileMainRepository;
+
+    @Autowired
     private NotificationService notificationService;
     
     /**
@@ -123,8 +129,15 @@ public class UserVisitorService {
         Map<Long, User> usersById = userRepository.findAllById(visitorUserIds).stream()
                 .collect(Collectors.toMap(User::getUserid, u -> u, (a, b) -> a));
         Map<Long, Map<String, String>> senderSummaries = unifiedProfileService.buildInboxSenderSummaries(visitorUserIds);
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(visitorUserIds);
+        Map<Long, LocalDateTime> lastActiveMap = fellowshipProfileMainRepository.findByUserIdIn(visitorUserIds).stream()
+                .filter(p -> p.getLastActiveAt() != null)
+                .collect(Collectors.toMap(
+                        com.lovecube.backend.entity.FellowshipProfileMain::getUserId,
+                        com.lovecube.backend.entity.FellowshipProfileMain::getLastActiveAt,
+                        (a, b) -> a));
         return pagedVisitors.stream()
-                .map(v -> convertToVisitorDTO(v, usersById, senderSummaries))
+                .map(v -> convertToVisitorDTO(v, usersById, senderSummaries, verifyMap, lastActiveMap))
                 .collect(Collectors.toList());
     }
     
@@ -203,7 +216,9 @@ public class UserVisitorService {
      */
     private Map<String, Object> convertToVisitorDTO(UserVisitor visitor,
                                                     Map<Long, User> usersById,
-                                                    Map<Long, Map<String, String>> senderSummaries) {
+                                                    Map<Long, Map<String, String>> senderSummaries,
+                                                    Map<Long, Map<String, Boolean>> verifyMap,
+                                                    Map<Long, LocalDateTime> lastActiveMap) {
         Map<String, Object> dto = new HashMap<>();
         Long visitorUserId = visitor.getVisitorUserId();
         User visitorUser = usersById.get(visitorUserId);
@@ -244,11 +259,21 @@ public class UserVisitorService {
             dto.put("avatarUrl", avatar);
             dto.put("age", visitorUser.getAge());
             dto.put("location", visitorUser.getLocation());
+            Map<String, Boolean> badges = verifyMap != null
+                    ? verifyMap.getOrDefault(uid, Map.of())
+                    : Map.of();
+            dto.put("photoVerified", Boolean.TRUE.equals(badges.get("photoVerified")));
+            dto.put("realnameVerified", Boolean.TRUE.equals(badges.get("realnameVerified")));
+            LocalDateTime lastActive = lastActiveMap != null ? lastActiveMap.get(uid) : null;
+            dto.put("lastActiveAt", lastActive != null ? lastActive : visitorUser.getUpdatedAt());
 
             Map<String, Object> visitorMap = new LinkedHashMap<>();
             visitorMap.put("userId", uid);
             visitorMap.put("nickname", nickname);
             visitorMap.put("avatarUrl", avatar);
+            visitorMap.put("location", visitorUser.getLocation());
+            visitorMap.put("photoVerified", dto.get("photoVerified"));
+            visitorMap.put("realnameVerified", dto.get("realnameVerified"));
             dto.put("visitor", visitorMap);
 
             dto.put("tags", generateUserTags(visitorUser));

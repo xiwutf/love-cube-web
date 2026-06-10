@@ -23,6 +23,9 @@ export function normalizeUser(raw) {
     signature:   raw.signature ?? raw.bio ?? '',
     photos:      normalizedPhotos,
     completionRate: raw.completionRate ?? 0,
+    recommendReasons: Array.isArray(raw.recommendReasons) ? raw.recommendReasons : [],
+    photoVerified: Boolean(raw.photoVerified),
+    realnameVerified: Boolean(raw.realnameVerified),
     statistics:  raw.statistics ?? null,
 
     // Identity role — determines whether this is a self account or guardian

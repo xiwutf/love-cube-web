@@ -10,6 +10,33 @@
         <router-link to="/admin/platform/groups/create" class="admin-btn primary create-btn">新建团体</router-link>
       </div>
 
+      <div v-if="platformStats" class="stats-grid">
+        <article class="stat-card">
+          <strong>{{ platformStats.publishedGroups }}</strong>
+          <span>已发布团体</span>
+        </article>
+        <article class="stat-card">
+          <strong>{{ platformStats.membersTotal }}</strong>
+          <span>成员总数</span>
+        </article>
+        <article class="stat-card">
+          <strong>{{ platformStats.pendingMembers }}</strong>
+          <span>待审核入团</span>
+        </article>
+        <article class="stat-card">
+          <strong>{{ platformStats.postsToday }}</strong>
+          <span>今日动态</span>
+        </article>
+        <article class="stat-card">
+          <strong>{{ platformStats.weekActiveCheckinUsers }}</strong>
+          <span>7日打卡人次</span>
+        </article>
+        <article class="stat-card">
+          <strong>{{ platformStats.activitySignupsLast7d }}</strong>
+          <span>7日活动报名</span>
+        </article>
+      </div>
+
       <form class="filters" @submit.prevent="load(true)">
         <label class="search-box">
           <span>搜索</span>
@@ -79,7 +106,7 @@
               </div>
             </td>
             <td>{{ item.region || '-' }}</td>
-            <td>{{ item.category || '-' }}</td>
+            <td>{{ labelForGroupCategory(item.category) || '-' }}</td>
             <td><span class="admin-tag" :class="item.joinType">{{ joinTypeLabel(item.joinType) }}</span></td>
             <td>{{ item.memberCount }}</td>
             <td>
@@ -117,7 +144,8 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getAdminGroups } from '@/api/groups.js'
+import { fetchAdminPlatformGroupStats, getAdminGroups } from '@/api/groups.js'
+import { PLATFORM_GROUP_CATEGORY_OPTIONS, labelForGroupCategory } from '@/utils/groupCategories.js'
 
 let _cache = null
 let _cacheAt = 0
@@ -133,15 +161,9 @@ const region = ref('')
 const type = ref('')
 const status = ref('')
 const sort = ref('members')
+const platformStats = ref(null)
 
-const typeOptions = [
-  { label: '地区团体', value: 'region' },
-  { label: '社群团体', value: 'church' },
-  { label: '学习小组', value: 'study' },
-  { label: '兴趣团体', value: 'interest' },
-  { label: '生活小组', value: 'family' },
-  { label: '事工团队', value: 'service' }
-]
+const typeOptions = PLATFORM_GROUP_CATEGORY_OPTIONS
 
 const filteredItems = computed(() => {
   const kw = keyword.value.toLowerCase()
@@ -233,10 +255,47 @@ function flash(text, type = 'success') {
   }, 2200)
 }
 
-onMounted(load)
+async function loadStats() {
+  try {
+    platformStats.value = await fetchAdminPlatformGroupStats()
+  } catch {
+    platformStats.value = null
+  }
+}
+
+onMounted(() => {
+  load()
+  loadStats()
+})
 </script>
 
 <style scoped>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 14px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface-muted, #f8fafc);
+  text-align: center;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 1.35rem;
+  color: var(--lc-blue);
+}
+
+.stat-card span {
+  font-size: 12px;
+  color: var(--lc-subtle);
+}
+
 .page-head {
   display: flex;
   align-items: flex-start;
