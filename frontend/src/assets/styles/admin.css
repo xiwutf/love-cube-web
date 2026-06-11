@@ -167,6 +167,232 @@
   flex-wrap: wrap;
 }
 
+/* ── Operation console primitives: admin scoped ─────────────────────────── */
+
+.admin-page.operation-shell,
+.admin-page .operation-shell {
+  display: grid;
+  gap: var(--lc-space-5);
+}
+
+.admin-page .operation-hero,
+.admin-page .dashboard-section {
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
+  background: var(--lc-surface);
+  box-shadow: 0 12px 28px rgb(15 23 42 / 5%);
+}
+
+.admin-page .operation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 640px;
+  gap: var(--lc-space-6);
+  padding: var(--lc-space-6);
+}
+
+.admin-page .dashboard-section {
+  padding: var(--lc-space-5);
+}
+
+.admin-page .operation-section-head,
+.admin-page .metric-card-head,
+.admin-page .risk-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-3);
+}
+
+.admin-page .operation-section-head {
+  margin-bottom: var(--lc-space-4);
+}
+
+.admin-page .section-kicker {
+  margin: 0 0 4px;
+  color: var(--lc-subtle);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-page .operation-section-head h2 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.admin-page .metric-grid,
+.admin-page .risk-grid,
+.admin-page .action-grid {
+  display: grid;
+  gap: var(--lc-space-3);
+  margin-top: 0;
+}
+
+.admin-page .metric-grid,
+.admin-page .risk-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-page .action-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-page .metric-card,
+.admin-page .risk-card,
+.admin-page .action-card {
+  min-width: 0;
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  padding: var(--lc-space-4);
+}
+
+.admin-page .metric-card {
+  display: grid;
+  gap: var(--lc-space-2);
+  min-height: 136px;
+  border-top: 3px solid transparent;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+.admin-page .metric-card.accent {
+  border-top-color: var(--lc-blue);
+}
+
+.admin-page .metric-card.warn {
+  border-top-color: var(--lc-amber);
+  background: color-mix(in srgb, var(--lc-amber-light) 54%, var(--lc-surface));
+}
+
+.admin-page .metric-card.accent strong {
+  color: var(--lc-blue);
+}
+
+.admin-page .metric-card.warn strong {
+  color: var(--lc-amber);
+}
+
+.admin-page .metric-label {
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-page .metric-card strong {
+  overflow: hidden;
+  color: var(--lc-text);
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-page .metric-card p,
+.admin-page .risk-card p,
+.admin-page .action-card p {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.admin-page .metric-chip,
+.admin-page .status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-page .status-badge.info {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
+}
+
+.admin-page .status-badge.success {
+  background: var(--lc-green-light);
+  color: var(--lc-green);
+}
+
+.admin-page .status-badge.warning {
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
+}
+
+.admin-page .status-badge.danger {
+  background: var(--lc-red-light);
+  color: var(--lc-red);
+}
+
+.admin-page .risk-card,
+.admin-page .action-card {
+  display: grid;
+  align-content: start;
+  gap: var(--lc-space-3);
+}
+
+.admin-page .risk-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 30%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-amber-light) 58%, var(--lc-surface));
+}
+
+.admin-page .risk-card.danger {
+  border-color: color-mix(in srgb, var(--lc-red) 34%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-red-light) 64%, var(--lc-surface));
+}
+
+.admin-page .risk-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--lc-amber);
+}
+
+.admin-page .risk-dot.danger {
+  background: var(--lc-red);
+}
+
+.admin-page .action-card {
+  border-left: 3px solid var(--lc-blue);
+}
+
+.admin-page .action-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 28%, var(--lc-border));
+  border-left-color: var(--lc-amber);
+}
+
+.admin-page .empty-state,
+.admin-page .loading-state,
+.admin-page .error-state {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border: 1px dashed var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-bg);
+  color: var(--lc-muted);
+  font-weight: 800;
+  text-align: center;
+}
+
+.admin-page .error-state {
+  border-color: color-mix(in srgb, var(--lc-red) 32%, var(--lc-border));
+  background: var(--lc-red-light);
+  color: var(--lc-red);
+}
+
 /* ── List rows ───────────────────────────────────────────── */
 
 .admin-list {
@@ -376,6 +602,15 @@
   .admin-toolbar {
     gap: 8px;
   }
+
+  .admin-page .operation-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .metric-grid,
+  .admin-page .risk-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1360px) {
@@ -387,5 +622,27 @@
 @media (max-width: 1120px) {
   .admin-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page .operation-hero,
+  .admin-page .dashboard-section {
+    padding: var(--lc-space-4);
+  }
+
+  .admin-page .action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-page .metric-grid,
+  .admin-page .risk-grid,
+  .admin-page .action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page .operation-section-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

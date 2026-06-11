@@ -232,6 +232,263 @@
   margin-top: 16px;
 }
 
+/* ── Operation console primitives: platform / Space management ─────────── */
+
+.operation-shell {
+  display: grid;
+  gap: var(--lc-space-4);
+}
+
+.operation-hero,
+.dashboard-section,
+.section-card {
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
+  background: var(--lc-surface);
+  box-shadow: 0 12px 28px rgb(15 23 42 / 5%);
+}
+
+.operation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 430px;
+  gap: var(--lc-space-6);
+  padding: var(--lc-space-6);
+}
+
+.dashboard-section,
+.section-card {
+  padding: var(--lc-space-5);
+}
+
+.section-card-head,
+.operation-section-head,
+.metric-card-head,
+.action-card-head,
+.risk-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-3);
+}
+
+.operation-section-head {
+  margin-bottom: var(--lc-space-4);
+}
+
+.section-card-head h3,
+.operation-section-head h2 {
+  margin: 0;
+  color: var(--lc-text);
+}
+
+.operation-section-head h2 {
+  font-size: 20px;
+}
+
+.section-kicker {
+  margin: 0 0 4px;
+  color: var(--lc-subtle);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.metric-grid,
+.risk-grid,
+.action-grid {
+  display: grid;
+  gap: var(--lc-space-3);
+  margin-top: var(--lc-space-3);
+}
+
+.metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.risk-grid,
+.action-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric-card,
+.risk-card,
+.action-card {
+  min-width: 0;
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  padding: var(--lc-space-4);
+}
+
+.metric-card {
+  display: grid;
+  gap: var(--lc-space-2);
+  min-height: 128px;
+  border-top: 3px solid transparent;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+.metric-card.accent {
+  border-top-color: var(--lc-blue);
+}
+
+.metric-card.warn {
+  border-top-color: var(--lc-amber);
+  background: color-mix(in srgb, var(--lc-amber-light) 54%, var(--lc-surface));
+}
+
+.metric-card.accent strong {
+  color: var(--lc-blue);
+}
+
+.metric-card.warn strong {
+  color: var(--lc-amber);
+}
+
+.metric-label {
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.metric-chip,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.status-badge.info {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
+}
+
+.status-badge.success {
+  background: var(--lc-green-light);
+  color: var(--lc-green);
+}
+
+.status-badge.warning {
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
+}
+
+.status-badge.danger {
+  background: var(--lc-red-light);
+  color: var(--lc-red);
+}
+
+.status-badge.neutral {
+  background: var(--lc-soft);
+  color: var(--lc-muted);
+}
+
+.metric-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--lc-text);
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-card p,
+.risk-card p,
+.action-card p {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.risk-card,
+.action-card {
+  display: grid;
+  align-content: start;
+  gap: var(--lc-space-3);
+}
+
+.risk-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 30%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-amber-light) 58%, var(--lc-surface));
+}
+
+.risk-card.danger {
+  border-color: color-mix(in srgb, var(--lc-red) 34%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-red-light) 64%, var(--lc-surface));
+}
+
+.risk-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--lc-amber);
+}
+
+.risk-dot.danger {
+  background: var(--lc-red);
+}
+
+.action-card {
+  border-left: 3px solid var(--lc-blue);
+}
+
+.action-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 28%, var(--lc-border));
+  border-left-color: var(--lc-amber);
+}
+
+.action-card.danger {
+  border-color: color-mix(in srgb, var(--lc-red) 28%, var(--lc-border));
+  border-left-color: var(--lc-red);
+}
+
+.empty-state,
+.loading-state,
+.error-state,
+.inline-state {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border: 1px dashed var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-bg);
+  color: var(--lc-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+.loading-state::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--lc-blue-border);
+  border-top-color: var(--lc-blue);
+  border-radius: 999px;
+}
+
+.error-state {
+  border-color: color-mix(in srgb, var(--lc-red) 32%, var(--lc-border));
+  background: var(--lc-red-light);
+  color: var(--lc-red);
+}
+
 /* ── Module page layout ──────────────────────────────────── */
 
 .module-page {
@@ -456,6 +713,17 @@
   .detail-layout {
     grid-template-columns: 1fr;
   }
+
+  .operation-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid,
+  .metric-grid.compact,
+  .risk-grid,
+  .action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 767px) {
@@ -547,6 +815,25 @@
   }
 
   .account-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operation-hero,
+  .dashboard-section,
+  .section-card {
+    padding: var(--lc-space-4);
+  }
+
+  .section-card-head,
+  .operation-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metric-grid,
+  .metric-grid.compact,
+  .risk-grid,
+  .action-grid {
     grid-template-columns: 1fr;
   }
 }

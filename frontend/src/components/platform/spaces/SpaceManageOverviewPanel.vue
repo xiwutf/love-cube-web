@@ -34,7 +34,10 @@
             class="metric-card"
             :class="metric.tone"
           >
-            <span class="metric-label">{{ metric.label }}</span>
+            <div class="metric-card-head">
+              <span class="metric-label">{{ metric.label }}</span>
+              <span class="metric-chip">{{ metric.badge }}</span>
+            </div>
             <strong>{{ metric.value }}</strong>
             <p>{{ metric.hint }}</p>
           </article>
@@ -54,12 +57,22 @@
 
         <template v-if="camp.activeCampaignTitle">
           <div class="campaign-summary">
-            <div>
+            <div class="campaign-primary">
               <strong>{{ camp.activeCampaignTitle }}</strong>
               <p>参与 {{ camp.campaignParticipants ?? 0 }} 人，今日完成 {{ camp.campaignTodayCompleted ?? 0 }} 人</p>
+              <button type="button" class="btn secondary sm" @click="$emit('navigate', 'camp')">
+                查看打卡营
+              </button>
             </div>
-            <div class="completion-meter" aria-label="打卡完成率">
-              <span :style="{ width: `${safeRate(camp.campaignCompletionRate)}%` }"></span>
+            <div class="campaign-progress-panel">
+              <div class="progress-label">
+                <span>完成进度</span>
+                <strong>{{ camp.campaignCompletionRate ?? 0 }}%</strong>
+              </div>
+              <div class="completion-meter" aria-label="打卡完成率">
+                <span :style="{ width: `${safeRate(camp.campaignCompletionRate)}%` }"></span>
+              </div>
+              <p>{{ fallenBehindTotal > 0 ? `有 ${fallenBehindTotal} 位成员需要提醒` : '当前进度稳定，建议继续保持节奏' }}</p>
             </div>
           </div>
 
@@ -99,16 +112,17 @@
         </div>
 
         <div class="risk-grid">
-          <article class="risk-card">
+          <article class="risk-card warning">
             <header>
               <span class="risk-dot warning"></span>
               <h4>7 日未活跃</h4>
               <strong>{{ risks.inactiveMembers7d ?? 0 }} 人</strong>
             </header>
             <p class="hint">用于判断 Space 近期沉默风险。</p>
+            <button type="button" class="link-button" @click="$emit('navigate', 'members')">查看成员</button>
           </article>
 
-          <article class="risk-card">
+          <article class="risk-card warning">
             <header>
               <span class="risk-dot warning"></span>
               <h4>加入后无活动</h4>
@@ -122,6 +136,7 @@
             </ul>
             <p v-else class="hint">暂无成员进入该风险池。</p>
             <p v-if="noActivityTruncated" class="truncate-hint">仅展示前 20 个</p>
+            <button type="button" class="link-button" @click="$emit('navigate', 'members')">跟进成员</button>
           </article>
 
           <article class="risk-card danger">
@@ -138,6 +153,7 @@
             </ul>
             <p v-else class="hint">暂无掉队成员。</p>
             <p v-if="fallenBehindTruncated" class="truncate-hint">仅展示前 20 个</p>
+            <button type="button" class="link-button danger" @click="$emit('navigate', 'camp')">处理掉队</button>
           </article>
         </div>
       </section>
@@ -157,7 +173,10 @@
             class="action-card"
             :class="action.tone"
           >
-            <span class="status-badge" :class="action.badgeTone">{{ action.badge }}</span>
+            <div class="action-card-head">
+              <span class="todo-dot"></span>
+              <span class="status-badge" :class="action.badgeTone">{{ action.badge }}</span>
+            </div>
             <h4>{{ action.title }}</h4>
             <p>{{ action.desc }}</p>
             <button type="button" class="btn secondary sm" @click="$emit('navigate', action.target)">
@@ -217,6 +236,7 @@ const keyMetrics = computed(() => [
     label: '成员总数',
     value: mg.value.totalMembers ?? 0,
     hint: `近 7 日新增 ${mg.value.newMembers7d ?? 0} 人`,
+    badge: '规模',
     tone: ''
   },
   {
@@ -224,6 +244,7 @@ const keyMetrics = computed(() => [
     label: '7 日活跃',
     value: act.value.activeMembers7d ?? 0,
     hint: `活跃率 ${act.value.activeRate7d ?? 0}%`,
+    badge: '活跃',
     tone: 'accent'
   },
   {
@@ -231,6 +252,7 @@ const keyMetrics = computed(() => [
     label: '30 日活跃',
     value: act.value.activeMembers30d ?? act.value.activeMembers7d ?? 0,
     hint: '用于观察中周期留存',
+    badge: '留存',
     tone: ''
   },
   {
@@ -238,6 +260,7 @@ const keyMetrics = computed(() => [
     label: '打卡完成率',
     value: `${camp.value.campaignCompletionRate ?? 0}%`,
     hint: camp.value.activeCampaignTitle ? '当前营期完成进度' : '暂无进行中营期',
+    badge: '进度',
     tone: Number(camp.value.campaignCompletionRate || 0) >= 60 ? 'accent' : 'warn'
   }
 ])
@@ -328,21 +351,14 @@ function formatDate(v) {
 </script>
 
 <style scoped>
-.operation-shell {
-  display: grid;
-  gap: var(--lc-space-4);
-}
-
-.panel-head,
-.section-card-head {
+.panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--lc-space-3);
 }
 
-.panel-head h2,
-.section-card-head h3 {
+.panel-head h2 {
   margin: 0;
   color: var(--lc-text);
 }
@@ -355,68 +371,10 @@ function formatDate(v) {
   font-size: 16px;
 }
 
-.section-kicker {
-  margin: 0 0 4px;
-  color: var(--lc-subtle);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.section-card {
-  border: 1px solid var(--lc-border);
-  border-radius: 10px;
-  background: var(--lc-surface);
-  padding: var(--lc-space-4);
-  box-shadow: 0 6px 18px rgb(15 23 42 / 4%);
-}
-
-.metric-grid,
-.risk-grid,
-.action-grid {
-  display: grid;
-  gap: var(--lc-space-3);
-  margin-top: var(--lc-space-3);
-}
-
-.metric-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.metric-grid.compact {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.risk-grid,
-.action-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.metric-card,
-.risk-card,
-.action-card {
-  border: 1px solid var(--lc-border);
-  border-radius: 8px;
-  background: var(--lc-bg);
-  padding: var(--lc-space-3);
-}
-
-.metric-card {
-  display: grid;
-  gap: 6px;
-  min-height: 112px;
-}
-
 .metric-card strong {
-  color: var(--lc-text);
-  font-size: 28px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+  font-size: 32px;
 }
 
-.metric-card p,
-.action-card p,
 .hint,
 .empty-note {
   margin: 0;
@@ -425,33 +383,20 @@ function formatDate(v) {
   line-height: 1.55;
 }
 
-.metric-label {
-  color: var(--lc-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.metric-card.accent strong {
-  color: var(--lc-blue);
-}
-
-.metric-card.warn strong {
-  color: var(--lc-amber);
-}
-
 .campaign-summary {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: var(--lc-space-3);
   margin-top: var(--lc-space-3);
-  padding: var(--lc-space-3);
+  padding: var(--lc-space-4);
   border: 1px solid var(--lc-blue-border);
-  border-radius: 8px;
-  background: var(--lc-blue-light);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--lc-blue-light) 58%, var(--lc-surface));
 }
 
 .campaign-summary strong {
   color: var(--lc-text);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .campaign-summary p {
@@ -459,6 +404,36 @@ function formatDate(v) {
   color: var(--lc-muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.campaign-primary {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--lc-space-2);
+}
+
+.campaign-progress-panel {
+  display: grid;
+  align-content: center;
+  gap: var(--lc-space-2);
+  min-width: 0;
+}
+
+.progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-2);
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.progress-label strong {
+  color: var(--lc-blue);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
 }
 
 .completion-meter {
@@ -473,17 +448,6 @@ function formatDate(v) {
   height: 100%;
   border-radius: inherit;
   background: var(--lc-blue);
-}
-
-.risk-card {
-  display: grid;
-  align-content: start;
-  gap: var(--lc-space-3);
-}
-
-.risk-card.danger {
-  border-color: color-mix(in srgb, var(--lc-red) 28%, var(--lc-border));
-  background: color-mix(in srgb, var(--lc-red-light) 72%, var(--lc-surface));
 }
 
 .risk-card header {
@@ -508,17 +472,6 @@ function formatDate(v) {
 
 .risk-card.danger header strong {
   color: var(--lc-red);
-}
-
-.risk-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--lc-amber);
-}
-
-.risk-dot.danger {
-  background: var(--lc-red);
 }
 
 .member-list {
@@ -556,79 +509,32 @@ function formatDate(v) {
   white-space: nowrap;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 22px;
+.todo-dot {
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
-  padding: 2px 8px;
-  background: var(--lc-soft);
-  color: var(--lc-muted);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
+  background: var(--lc-blue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lc-blue-light) 72%, transparent);
 }
 
-.status-badge.info {
-  background: var(--lc-blue-light);
+.link-button {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--lc-blue);
+  cursor: pointer;
+  font-weight: 900;
 }
 
-.status-badge.success {
-  background: var(--lc-green-light);
-  color: var(--lc-green);
-}
-
-.status-badge.warning {
-  background: var(--lc-amber-light);
-  color: var(--lc-amber);
-}
-
-.status-badge.danger {
-  background: var(--lc-red-light);
+.link-button.danger {
   color: var(--lc-red);
-}
-
-.status-badge.neutral {
-  background: var(--lc-soft);
-  color: var(--lc-muted);
-}
-
-.action-card {
-  display: grid;
-  gap: var(--lc-space-2);
-  align-content: start;
-}
-
-.action-card.warning {
-  border-color: color-mix(in srgb, var(--lc-amber) 28%, var(--lc-border));
-}
-
-.action-card.danger {
-  border-color: color-mix(in srgb, var(--lc-red) 28%, var(--lc-border));
 }
 
 .truncate-hint {
   margin: 0;
   color: var(--lc-muted-light);
   font-size: 12px;
-}
-
-.inline-state {
-  border: 1px dashed var(--lc-border);
-  border-radius: 10px;
-  background: var(--lc-surface);
-  padding: var(--lc-space-6);
-  color: var(--lc-muted);
-  font-weight: 700;
-  text-align: center;
-}
-
-.error-state {
-  border-color: color-mix(in srgb, var(--lc-red) 32%, var(--lc-border));
-  background: var(--lc-red-light);
-  color: var(--lc-red);
 }
 
 .btn {
@@ -665,11 +571,8 @@ function formatDate(v) {
 }
 
 @media (max-width: 980px) {
-  .metric-grid,
-  .metric-grid.compact,
-  .risk-grid,
-  .action-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .campaign-summary {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -678,13 +581,6 @@ function formatDate(v) {
   .section-card-head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .metric-grid,
-  .metric-grid.compact,
-  .risk-grid,
-  .action-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

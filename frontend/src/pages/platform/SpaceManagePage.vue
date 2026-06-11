@@ -1,5 +1,5 @@
 <template>
-  <section class="space-manage-page">
+  <section class="space-manage-page operation-shell">
     <div v-if="redirecting" class="state-card loading-state">正在跳转兼容管理页…</div>
 
     <template v-else-if="loading">
@@ -78,36 +78,52 @@
 
       <header class="operation-hero">
         <div class="hero-main">
-          <router-link class="back-link" :to="groupsPath()">← 我的社区</router-link>
+          <div class="hero-topline">
+            <router-link class="back-link" :to="groupsPath()">← 我的社区</router-link>
+            <span class="status-badge info">Space 运营控制台</span>
+          </div>
           <div class="title-row">
             <img v-if="group.coverUrl" :src="group.coverUrl" :alt="group.name" class="cover-thumb">
             <div v-else class="cover-thumb cover-fallback">{{ group.name?.slice(0, 1) || 'S' }}</div>
             <div class="title-block">
               <div class="title-meta">
-                <span class="status-badge info">Space 运营控制台</span>
                 <span class="status-badge">{{ roleLabel }}</span>
                 <span class="status-badge" :class="groupStatusTone">{{ groupStatusLabel }}</span>
+                <span class="status-badge neutral">加入方式：{{ groupJoinModeLabel }}</span>
               </div>
               <h1>{{ group.name }}</h1>
               <p class="subtitle">面向成员增长、内容活跃、活动组织和打卡营的日常运营工作台。</p>
             </div>
           </div>
+          <div class="hero-actions-mobile">
+            <router-link class="btn ghost" :to="groupsPath(String(spaceId))">查看主页</router-link>
+            <button type="button" class="btn primary" @click="switchTab('overview')">看运营概览</button>
+          </div>
         </div>
 
         <div class="hero-side">
           <div class="hero-stats" aria-label="Space 摘要">
-            <article>
+            <article class="hero-stat-card primary">
               <span>成员数</span>
               <strong>{{ group.memberCount ?? 0 }}</strong>
+              <small>当前 Space 规模</small>
             </article>
-            <article>
+            <article class="hero-stat-card" :class="{ warning: pendingCount > 0 }">
               <span>待审核</span>
               <strong :class="{ warn: pendingCount > 0 }">{{ pendingCount }}</strong>
+              <small>{{ pendingCount > 0 ? '需要及时处理' : '暂无待处理' }}</small>
             </article>
-            <article>
-              <span>加入方式</span>
-              <strong>{{ groupJoinModeLabel }}</strong>
+            <article class="hero-stat-card">
+              <span>运营状态</span>
+              <strong>{{ groupStatusLabel }}</strong>
+              <small>{{ roleLabel }}权限</small>
             </article>
+          </div>
+          <div class="hero-task-strip" :class="{ urgent: pendingCount > 0 }">
+            <span>{{ pendingCount > 0 ? '当前有成员申请等待审核' : '当前无成员审核积压' }}</span>
+            <button type="button" class="link-button" @click="switchTab('members')">
+              {{ pendingCount > 0 ? '去审核' : '查看成员' }}
+            </button>
           </div>
           <div class="head-actions">
             <router-link class="btn ghost" :to="groupsPath(String(spaceId))">查看主页</router-link>
@@ -126,8 +142,11 @@
           :class="{ active: activeTab === tab.key, urgent: tab.key === 'members' && pendingCount }"
           @click="switchTab(tab.key)"
         >
-          {{ tab.label }}
-          <span v-if="tab.key === 'members' && pendingCount" class="badge">{{ pendingCount }}</span>
+          <span class="tab-label">
+            {{ tab.label }}
+            <span v-if="tab.key === 'members' && pendingCount" class="badge">{{ pendingCount }}</span>
+          </span>
+          <small>{{ tab.desc }}</small>
         </button>
       </nav>
 
@@ -144,8 +163,11 @@
 
       <!-- 成员 -->
       <section v-else-if="activeTab === 'members'" class="platform-card tab-panel">
-        <div class="section-head">
-          <h2>成员管理</h2>
+        <div class="section-head operation-section-head">
+          <div>
+            <p class="section-kicker">Members</p>
+            <h2>成员管理</h2>
+          </div>
           <div class="filter-row">
             <button
               v-for="opt in memberFilters"
@@ -158,19 +180,54 @@
             </button>
           </div>
         </div>
+
+        <div class="member-summary-grid">
+          <article class="metric-card">
+            <span class="metric-label">成员总数</span>
+            <strong>{{ memberTotalCount }}</strong>
+            <p>当前 Space 成员规模</p>
+          </article>
+          <article class="metric-card accent">
+            <span class="metric-label">活跃成员</span>
+            <strong>{{ activeMemberCount }}</strong>
+            <p>基于当前列表最近活跃记录</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">最近加入</span>
+            <strong>{{ latestJoinedMemberName }}</strong>
+            <p>{{ latestJoinedMemberTime }}</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">管理员数量</span>
+            <strong>{{ adminMemberCount }}</strong>
+            <p>负责人和管理员</p>
+          </article>
+        </div>
+
         <div v-if="loadingMembers" class="inline-state">加载中…</div>
-        <div v-else-if="members.length" class="member-list">
+        <div v-else-if="members.length" class="member-table">
+          <div class="member-table-head">
+            <span></span>
+            <span>成员</span>
+            <span>角色</span>
+            <span>加入时间</span>
+            <span>最近活跃</span>
+            <span>状态</span>
+            <span>操作</span>
+          </div>
           <article v-for="m in members" :key="m.id" class="member-row">
             <img :src="m.avatarUrl || defaultAvatar" :alt="m.username">
             <div class="member-main">
               <strong>{{ displayMemberName(m) }}</strong>
-              <p>{{ formatDate(m.joinedAt || m.requestedAt) }}</p>
+              <p>{{ m.username || `用户 ${m.userId}` }}</p>
               <p v-if="m.status === 'pending' && m.applyReason" class="apply-reason">申请说明：{{ m.applyReason }}</p>
             </div>
             <div class="member-tags">
               <span class="tag" :class="m.role">{{ roleTag(m.role) }}</span>
-              <span class="tag status">{{ memberStatusLabel(m.status) }}</span>
             </div>
+            <span class="member-meta">{{ formatDate(m.joinedAt || m.requestedAt) }}</span>
+            <span class="member-meta">{{ memberLastActive(m) }}</span>
+            <span class="status-badge" :class="memberStatusTone(m.status)">{{ memberStatusLabel(m.status) }}</span>
             <div class="member-actions">
               <template v-if="m.status === 'pending'">
                 <button type="button" class="btn primary sm" :disabled="saving" @click="approve(m)">通过</button>
@@ -189,6 +246,57 @@
           </article>
         </div>
         <p v-else class="inline-state">暂无成员记录</p>
+      </section>
+
+      <!-- 审核 -->
+      <section v-else-if="activeTab === 'review'" class="platform-card tab-panel review-panel">
+        <div class="section-head operation-section-head">
+          <div>
+            <p class="section-kicker">Review Center</p>
+            <h2>成员审核</h2>
+          </div>
+          <button type="button" class="btn secondary sm" :disabled="loadingMembers" @click="loadMembers('pending')">
+            刷新申请
+          </button>
+        </div>
+
+        <div class="member-summary-grid review-summary">
+          <article class="metric-card warn">
+            <span class="metric-label">待审核人数</span>
+            <strong>{{ pendingCount }}</strong>
+            <p>需要运营处理</p>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">今日新增申请</span>
+            <strong>{{ todayPendingCount }}</strong>
+            <p>按申请时间统计</p>
+          </article>
+          <article class="metric-card accent">
+            <span class="metric-label">已处理数量</span>
+            <strong>{{ reviewedCount }}</strong>
+            <p>本次打开页面后处理</p>
+          </article>
+        </div>
+
+        <div v-if="loadingMembers" class="inline-state">加载中…</div>
+        <div v-else-if="members.length" class="review-list">
+          <article v-for="m in members" :key="m.id" class="review-card risk-card warning">
+            <img :src="m.avatarUrl || defaultAvatar" :alt="m.username">
+            <div class="review-main">
+              <div class="review-title">
+                <strong>{{ displayMemberName(m) }}</strong>
+                <span class="status-badge warning">待处理</span>
+              </div>
+              <p class="member-meta">申请时间：{{ formatDate(m.requestedAt || m.joinedAt) }}</p>
+              <p class="apply-reason">{{ m.applyReason || '暂无申请原因' }}</p>
+            </div>
+            <div class="review-actions">
+              <button type="button" class="btn primary sm" :disabled="saving" @click="approve(m)">通过</button>
+              <button type="button" class="btn danger sm" :disabled="saving" @click="reject(m)">拒绝</button>
+            </div>
+          </article>
+        </div>
+        <p v-else class="inline-state empty-state">暂无待审核申请</p>
       </section>
 
       <!-- 公告 -->
@@ -387,6 +495,7 @@ const spaceStatsError = ref('')
 const members = ref([])
 const memberStatus = ref('approved')
 const loadingMembers = ref(false)
+const reviewedCount = ref(0)
 
 const notices = ref([])
 const loadingNotices = ref(false)
@@ -425,13 +534,14 @@ const onboardingHints = [
 ]
 
 const tabs = [
-  { key: 'overview', label: '概览' },
-  { key: 'members', label: '成员' },
-  { key: 'notices', label: '公告' },
-  { key: 'activities', label: '活动' },
-  { key: 'camp', label: '打卡营' },
-  { key: 'tasks', label: '任务' },
-  { key: 'settings', label: '设置' }
+  { key: 'overview', label: '运营概览', desc: '指标与风险' },
+  { key: 'members', label: '成员管理', desc: '角色与活跃' },
+  { key: 'review', label: '成员审核', desc: '准入待办' },
+  { key: 'notices', label: '公告触达', desc: '同步安排' },
+  { key: 'activities', label: '活动运营', desc: '线下/线上' },
+  { key: 'camp', label: '打卡营', desc: '进度跟进' },
+  { key: 'tasks', label: '任务管理', desc: '行动执行' },
+  { key: 'settings', label: 'Space 设置', desc: '资料与权限' }
 ]
 
 const memberFilters = [
@@ -469,6 +579,29 @@ const groupJoinModeLabel = computed(() => {
   return '审核'
 })
 
+const memberTotalCount = computed(() => group.value?.memberCount ?? members.value.length)
+const activeMemberCount = computed(() => members.value.filter((m) => hasRecentActivity(m)).length)
+const adminMemberCount = computed(() =>
+  members.value.filter((m) => ['owner', 'admin'].includes(String(m.role || '').toLowerCase())).length
+)
+const latestJoinedMember = computed(() => {
+  return [...members.value]
+    .filter((m) => m.joinedAt || m.requestedAt)
+    .sort((a, b) => new Date(b.joinedAt || b.requestedAt) - new Date(a.joinedAt || a.requestedAt))[0]
+})
+const latestJoinedMemberName = computed(() => latestJoinedMember.value ? displayMemberName(latestJoinedMember.value) : '—')
+const latestJoinedMemberTime = computed(() => latestJoinedMember.value ? formatDate(latestJoinedMember.value.joinedAt || latestJoinedMember.value.requestedAt) : '暂无加入记录')
+const todayPendingCount = computed(() => {
+  const today = new Date().toDateString()
+  return members.value.filter((m) => {
+    if (m.status !== 'pending') return false
+    const raw = m.requestedAt || m.joinedAt
+    if (!raw) return false
+    const d = new Date(raw)
+    return !Number.isNaN(d.getTime()) && d.toDateString() === today
+  }).length
+})
+
 const inviteShareUrl = computed(() => {
   const base = typeof window !== 'undefined' ? window.location.origin : ''
   const path = groupsPath(String(spaceId.value))
@@ -488,6 +621,7 @@ function switchTab(key) {
   router.replace({ query: { ...route.query, tab: key } })
   if (key === 'overview') loadSpaceStats()
   if (key === 'members') loadMembers(memberStatus.value)
+  if (key === 'review') loadMembers('pending')
   if (key === 'notices') loadNotices()
   if (key === 'activities') loadActivities()
 }
@@ -524,6 +658,26 @@ function memberStatusLabel(status) {
   if (status === 'approved') return '已加入'
   if (status === 'rejected') return '已拒绝'
   return status || '—'
+}
+
+function memberStatusTone(status) {
+  if (status === 'pending') return 'warning'
+  if (status === 'approved') return 'success'
+  if (status === 'rejected') return 'danger'
+  return 'neutral'
+}
+
+function memberLastActive(m) {
+  const raw = m.lastActiveAt || m.lastActivityAt || m.lastSeenAt || m.lastLoginAt || m.updatedAt
+  return raw ? formatDate(raw) : '暂无记录'
+}
+
+function hasRecentActivity(m) {
+  const raw = m.lastActiveAt || m.lastActivityAt || m.lastSeenAt || m.lastLoginAt
+  if (!raw) return false
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return false
+  return Date.now() - d.getTime() <= 30 * 24 * 60 * 60 * 1000
 }
 
 function fillSettingsFromGroup(g) {
@@ -582,6 +736,7 @@ async function bootstrap() {
 
     await loadSpaceStats()
     if (activeTab.value === 'members') await loadMembers(memberStatus.value)
+    if (activeTab.value === 'review') await loadMembers('pending')
     if (activeTab.value === 'notices') await loadNotices()
     if (activeTab.value === 'activities') await loadActivities()
   } catch (err) {
@@ -760,6 +915,7 @@ async function approve(member) {
     const detail = await fetchGroupDetail(spaceId.value)
     group.value = detail?.data ?? detail
     pendingCount.value = Number(group.value?.pendingMemberCount ?? pendingCount.value)
+    reviewedCount.value += 1
     showFlash('已通过入团申请')
   } catch (err) {
     showFlash(err?.message || '操作失败', 'error')
@@ -774,6 +930,7 @@ async function reject(member) {
     await rejectMember(spaceId.value, member.id)
     await loadMembers(memberStatus.value)
     pendingCount.value = Math.max(0, pendingCount.value - 1)
+    reviewedCount.value += 1
     showFlash('已拒绝入团申请')
   } catch (err) {
     showFlash(err?.message || '操作失败', 'error')
@@ -833,10 +990,12 @@ onMounted(() => {
 
 <style scoped>
 .space-manage-page {
-  width: min(100% - 48px, 1280px);
+  width: min(100% - 48px, 1360px);
   margin: var(--lc-space-4) auto var(--lc-space-8);
-  padding: var(--lc-space-4);
+  padding: var(--lc-space-5);
   color: var(--lc-text);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lc-bg) 74%, var(--lc-surface));
 }
 
 .state-card {
@@ -863,25 +1022,9 @@ onMounted(() => {
   color: var(--lc-text);
 }
 
-.loading-state::before {
-  content: '';
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--lc-blue-border);
-  border-top-color: var(--lc-blue);
-  border-radius: 999px;
-}
-
 .operation-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  gap: var(--lc-space-5);
-  margin-bottom: var(--lc-space-4);
-  padding: var(--lc-space-5);
-  border: 1px solid var(--lc-border);
-  border-radius: 10px;
-  background: var(--lc-surface);
-  box-shadow: 0 8px 22px rgb(15 23 42 / 5%);
+  margin-bottom: var(--lc-space-5);
+  box-shadow: 0 16px 36px rgb(15 23 42 / 7%);
 }
 
 .hero-main,
@@ -895,9 +1038,17 @@ onMounted(() => {
   gap: var(--lc-space-3);
 }
 
+.hero-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lc-space-3);
+  margin-bottom: var(--lc-space-4);
+}
+
 .back-link {
-  display: inline-block;
-  margin-bottom: var(--lc-space-3);
+  display: inline-flex;
+  align-items: center;
   color: var(--lc-blue);
   font-weight: 700;
   text-decoration: none;
@@ -910,13 +1061,14 @@ onMounted(() => {
 }
 
 .cover-thumb {
-  width: 68px;
-  height: 68px;
-  flex: 0 0 68px;
-  border-radius: 10px;
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  border-radius: 12px;
   object-fit: cover;
   border: 1px solid var(--lc-border);
   background: var(--lc-blue-light);
+  box-shadow: 0 8px 18px rgb(15 23 42 / 8%);
 }
 
 .cover-fallback {
@@ -941,33 +1093,10 @@ onMounted(() => {
 .operation-hero h1 {
   margin: 0;
   color: var(--lc-text);
-  font-size: 30px;
+  font-size: 34px;
   line-height: 1.18;
   letter-spacing: 0;
   overflow-wrap: anywhere;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  border-radius: 999px;
-  padding: 2px 8px;
-  background: var(--lc-soft);
-  color: var(--lc-muted);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.status-badge.info {
-  background: var(--lc-blue-light);
-  color: var(--lc-blue);
-}
-
-.status-badge.success {
-  background: var(--lc-green-light);
-  color: var(--lc-green);
 }
 
 .hero-stats {
@@ -980,8 +1109,19 @@ onMounted(() => {
   min-width: 0;
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
-  border-radius: 8px;
-  background: var(--lc-bg);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+.hero-stat-card.primary {
+  border-color: var(--lc-blue-border);
+  background: color-mix(in srgb, var(--lc-blue-light) 62%, var(--lc-surface));
+}
+
+.hero-stat-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 34%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-amber-light) 62%, var(--lc-surface));
 }
 
 .hero-stats span {
@@ -995,12 +1135,20 @@ onMounted(() => {
   display: block;
   margin-top: 6px;
   color: var(--lc-text);
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.hero-stats small {
+  display: block;
+  margin-top: 8px;
+  color: var(--lc-muted);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .hero-stats strong.warn {
@@ -1021,17 +1169,49 @@ onMounted(() => {
   gap: var(--lc-space-2);
 }
 
-.manage-tabs {
+.hero-actions-mobile {
+  display: none;
+}
+
+.hero-task-strip {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--lc-space-2);
-  overflow-x: auto;
-  gap: var(--lc-space-2);
-  margin-bottom: var(--lc-space-4);
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid var(--lc-border);
   border-radius: 10px;
+  background: var(--lc-bg);
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hero-task-strip.urgent {
+  border-color: color-mix(in srgb, var(--lc-amber) 36%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-amber-light) 68%, var(--lc-surface));
+  color: var(--lc-amber);
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--lc-blue);
+  cursor: pointer;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.manage-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-5);
+  padding: 10px;
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
   background: var(--lc-surface);
-  box-shadow: 0 6px 18px rgb(15 23 42 / 4%);
+  box-shadow: 0 10px 26px rgb(15 23 42 / 5%);
   scrollbar-width: none;
 }
 
@@ -1040,26 +1220,44 @@ onMounted(() => {
 }
 
 .manage-tabs button {
+  display: grid;
+  gap: 4px;
+  min-width: 132px;
   border: 1px solid var(--lc-border);
   background: var(--lc-surface);
   color: var(--lc-muted);
-  border-radius: 8px;
-  min-height: 36px;
-  padding: 0 14px;
+  border-radius: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
   font-weight: 800;
   cursor: pointer;
-  white-space: nowrap;
+  text-align: left;
   transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
 
 .manage-tabs button.active {
   border-color: var(--lc-blue);
   color: var(--lc-blue);
-  background: color-mix(in srgb, var(--lc-blue) 8%, var(--lc-surface));
+  background: color-mix(in srgb, var(--lc-blue) 9%, var(--lc-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc-blue) 16%, transparent);
 }
 
 .manage-tabs button.urgent:not(.active) {
   border-color: color-mix(in srgb, var(--lc-amber) 42%, var(--lc-border));
+}
+
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  font-size: 14px;
+}
+
+.manage-tabs small {
+  color: var(--lc-muted-light);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .badge {
@@ -1080,9 +1278,9 @@ onMounted(() => {
 .tab-panel {
   padding: var(--lc-space-5);
   border: 1px solid var(--lc-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--lc-surface);
-  box-shadow: 0 8px 22px rgb(15 23 42 / 5%);
+  box-shadow: 0 10px 26px rgb(15 23 42 / 5%);
 }
 
 .overview-tab-panel {
@@ -1169,27 +1367,57 @@ onMounted(() => {
   color: var(--lc-blue);
 }
 
-.member-list {
+.member-summary-grid {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--lc-space-3);
+  margin-bottom: var(--lc-space-4);
+}
+
+.member-table,
+.review-list {
+  display: grid;
+  gap: var(--lc-space-2);
+}
+
+.member-table-head {
+  display: grid;
+  grid-template-columns: 44px minmax(140px, 1.5fr) 110px 130px 130px 100px 130px;
+  gap: var(--lc-space-3);
+  padding: 0 var(--lc-space-3) var(--lc-space-2);
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .member-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto auto;
+  grid-template-columns: 44px minmax(140px, 1.5fr) 110px 130px 130px 100px 130px;
   gap: var(--lc-space-3);
   align-items: center;
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--lc-surface);
 }
 
 .member-row img {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.member-main {
+  min-width: 0;
+}
+
+.member-main strong {
+  display: block;
+  overflow: hidden;
+  color: var(--lc-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .member-main p {
@@ -1204,8 +1432,8 @@ onMounted(() => {
 
 .member-tags {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .tag {
@@ -1235,6 +1463,54 @@ onMounted(() => {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.member-meta {
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-panel {
+  border-color: color-mix(in srgb, var(--lc-amber) 18%, var(--lc-border));
+}
+
+.review-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.review-card {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: var(--lc-space-3);
+  align-items: center;
+}
+
+.review-card img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.review-main {
+  min-width: 0;
+}
+
+.review-title {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-2);
+  flex-wrap: wrap;
+}
+
+.review-title strong {
+  color: var(--lc-text);
+}
+
+.review-actions {
+  display: flex;
+  gap: var(--lc-space-2);
 }
 
 .inline-form,
@@ -1455,25 +1731,10 @@ onMounted(() => {
   border-top: 1px solid var(--lc-border);
 }
 
-.inline-state {
-  display: grid;
-  place-items: center;
-  min-height: 120px;
-  border: 1px dashed var(--lc-border);
-  border-radius: 8px;
-  background: var(--lc-bg);
-  color: var(--lc-muted);
-  font-weight: 700;
-}
-
 @media (max-width: 980px) {
   .space-manage-page {
     width: min(100% - 32px, 960px);
     padding: var(--lc-space-3);
-  }
-
-  .operation-hero {
-    grid-template-columns: 1fr;
   }
 
   .hero-side {
@@ -1515,16 +1776,50 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .head-actions .btn {
+  .hero-actions-mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lc-space-2);
+    margin-top: var(--lc-space-4);
+  }
+
+  .head-actions {
+    display: none;
+  }
+
+  .hero-actions-mobile .btn {
     width: 100%;
   }
 
+  .manage-tabs button {
+    min-width: 118px;
+  }
+
+  .member-summary-grid,
+  .review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .member-table-head {
+    display: none;
+  }
+
   .member-row {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 44px 1fr;
   }
 
   .member-tags,
-  .member-actions {
+  .member-actions,
+  .member-meta,
+  .member-row > .status-badge {
+    grid-column: 2;
+  }
+
+  .review-card {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .review-actions {
     grid-column: 2;
   }
 
