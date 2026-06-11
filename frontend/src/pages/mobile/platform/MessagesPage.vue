@@ -1,7 +1,7 @@
 <template>
   <div class="msg-m-wrap">
     <header class="msg-m-head">
-      <router-link to="/m/platform" class="msg-m-back">‹ 玩法</router-link>
+      <button type="button" class="msg-m-back" @click="goBack()">‹ 玩法</button>
       <h1>消息中心</h1>
     </header>
     <MessagesCenterPage class="msg-m-body" />
@@ -10,6 +10,9 @@
 
 <script setup>
 import MessagesCenterPage from '@/pages/platform/MessagesCenterPage.vue'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
+
+const { goBack } = useBackNavigation('/m/platform')
 </script>
 
 <style scoped>
@@ -28,6 +31,10 @@ import MessagesCenterPage from '@/pages/platform/MessagesCenterPage.vue'
   font-size: 14px;
   color: var(--lc-blue, #2563eb);
   text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .msg-m-head h1 {

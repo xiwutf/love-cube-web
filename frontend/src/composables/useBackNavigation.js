@@ -2,9 +2,29 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 function getLayerFallback(path) {
+  if (path.startsWith('/m/platform')) {
+    if (path === '/m/platform' || path === '/m/platform/') {
+      return '/fellowship/discover'
+    }
+    return '/m/platform'
+  }
+  if (path.startsWith('/pc/platform')) {
+    if (path === '/pc/platform/play' || path === '/pc/platform/play/') {
+      return '/pc/platform'
+    }
+    return '/pc/platform/play'
+  }
   if (path.startsWith('/fellowship')) return '/fellowship/discover'
   if (path.startsWith('/admin')) return '/admin'
   return '/'
+}
+
+function canNavigateBack() {
+  const back = window.history.state?.back
+  if (typeof back === 'string' && back.length > 0) {
+    return true
+  }
+  return window.history.length > 1
 }
 
 export function useBackNavigation(defaultTo = '') {
@@ -12,29 +32,27 @@ export function useBackNavigation(defaultTo = '') {
   const router = useRouter()
 
   const fallbackPath = computed(() => defaultTo || getLayerFallback(route.path))
-  const previousPath = computed(() => window.history.state?.back || '')
-  const hasPreviousRoute = computed(() => Boolean(previousPath.value))
 
-  function goBack(to = '') {
-    const target = to || defaultTo
-    if (target) {
-      router.push(target)
+  function goBack(explicitTo = '') {
+    if (explicitTo) {
+      router.push(explicitTo)
       return
     }
 
-    if (hasPreviousRoute.value) {
+    if (canNavigateBack()) {
       router.back()
       return
     }
 
-    if (route.path !== fallbackPath.value) {
-      router.push(fallbackPath.value)
+    const fallback = fallbackPath.value
+    if (fallback && route.path !== fallback) {
+      router.push(fallback)
     }
   }
 
   return {
     fallbackPath,
-    hasPreviousRoute,
+    canNavigateBack,
     goBack
   }
 }

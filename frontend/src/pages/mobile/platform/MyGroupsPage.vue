@@ -1,7 +1,7 @@
 <template>
   <div class="my-groups-m">
     <header class="head">
-      <router-link to="/m/platform" class="back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="back" aria-label="返回" @click="goBack()">‹</button>
       <h1>我的团体</h1>
     </header>
     <MyGroupsPage class="body" />
@@ -10,6 +10,9 @@
 
 <script setup>
 import MyGroupsPage from '@/pages/platform/MyGroupsPage.vue'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
+
+const { goBack } = useBackNavigation('/m/platform')
 </script>
 
 <style scoped>
@@ -38,6 +41,8 @@ import MyGroupsPage from '@/pages/platform/MyGroupsPage.vue'
   text-decoration: none;
   color: var(--lc-indigo, #4f46e5);
   font-size: 22px;
+  padding: 0;
+  cursor: pointer;
 }
 
 .head h1 {

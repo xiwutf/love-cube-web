@@ -92,9 +92,9 @@ public class GrowthService {
         this.verificationService = verificationService;
     }
 
-    /** 联谊资料里程碑后刷新徽章（含平台 + 联谊徽章）。 */
-    public void refreshUserBadges(Long userId) {
-        refreshBadges(userId);
+    /** 联谊资料里程碑后刷新徽章（含平台 + 联谊徽章）。返回本次新解锁数量。 */
+    public int refreshUserBadges(Long userId) {
+        return refreshBadges(userId);
     }
 
     /** 发放一次性奖励经验（bizId 去重，用于连续签到等里程碑）。 */
@@ -413,13 +413,14 @@ public class GrowthService {
         }
     }
 
-    private void refreshBadges(Long userId) {
+    private int refreshBadges(Long userId) {
         List<Badge> badges = badgeRepository.findAll();
         long loginCount = userGrowthLogRepository.countByUserIdAndActionType(userId, "LOGIN");
         long postCount = userGrowthLogRepository.countByUserIdAndActionType(userId, "POST_CONTENT");
         long joinGroupCount = userGrowthLogRepository.countByUserIdAndActionType(userId, "JOIN_GROUP");
         long completedTaskCount = userDailyTaskProgressRepository.countByUserIdAndCompleted(userId, 1);
         Map<String, Integer> fellowshipProgress = computeFellowshipBadgeProgress(userId);
+        int newlyUnlocked = 0;
 
         for (Badge badge : badges) {
             int progressValue = switch (badge.getCode()) {
@@ -443,12 +444,15 @@ public class GrowthService {
                         return init;
                     });
             userBadge.setProgress(Math.max(userBadge.getProgress(), progressValue));
-            if (safeInt(userBadge.getUnlocked()) == 0 && progressValue >= target) {
+            boolean wasLocked = safeInt(userBadge.getUnlocked()) == 0;
+            if (wasLocked && progressValue >= target) {
                 userBadge.setUnlocked(1);
                 userBadge.setUnlockedAt(LocalDateTime.now());
+                newlyUnlocked++;
             }
             userBadgeRepository.save(userBadge);
         }
+        return newlyUnlocked;
     }
 
     private Map<String, Integer> computeFellowshipBadgeProgress(Long userId) {

@@ -426,6 +426,70 @@ public class UnifiedProfileService {
                 resolveGrowthLevel(user.getUserid()));
     }
 
+    /**
+     * 首页/列表场景：仅基于 User 实体 + 批量预载的认证/照片/等级，零额外 profile 查询。
+     */
+    public int computeFellowshipCompletionRateLightweight(
+            User user,
+            Map<String, Boolean> verifyBadges,
+            int photoCount,
+            int growthLevel
+    ) {
+        if (user == null) {
+            return 0;
+        }
+        Map<String, Object> profile = buildCompletionProfileFromUser(user, verifyBadges);
+        Map<String, Object> completion = FellowshipProfileCompletion.build(user, profile, photoCount, growthLevel);
+        Object rate = completion.get("completionRate");
+        return rate instanceof Number n ? n.intValue() : 0;
+    }
+
+    public double computeRecommendRankLightweight(
+            User user,
+            Map<String, Boolean> verifyBadges,
+            int photoCount,
+            int growthLevel
+    ) {
+        if (user == null) {
+            return 0;
+        }
+        int completionRate = computeFellowshipCompletionRateLightweight(user, verifyBadges, photoCount, growthLevel);
+        boolean verified = verifyBadges != null && (
+                Boolean.TRUE.equals(verifyBadges.get("photoVerified"))
+                        || Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
+        return FellowshipProfileCompletion.computeRecommendRank(completionRate, verified, growthLevel);
+    }
+
+    public int computeExposureBoostLightweight(
+            User user,
+            Map<String, Boolean> verifyBadges,
+            int photoCount,
+            int growthLevel
+    ) {
+        if (user == null) {
+            return 0;
+        }
+        Map<String, Object> profile = buildCompletionProfileFromUser(user, verifyBadges);
+        Map<String, Object> completion = FellowshipProfileCompletion.build(user, profile, photoCount, growthLevel);
+        Object boost = completion.get("exposureBoostPercent");
+        return boost instanceof Number n ? n.intValue() : 0;
+    }
+
+    private Map<String, Object> buildCompletionProfileFromUser(User user, Map<String, Boolean> verifyBadges) {
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("avatarUrl", defaultText(user.getProfilePhoto(), ""));
+        profile.put("city", defaultText(user.getLocation(), ""));
+        profile.put("bio", defaultText(user.getBio(), ""));
+        if (user.getBirthDate() != null) {
+            profile.put("birthYear", user.getBirthDate().getYear());
+        } else if (user.getAge() > 0) {
+            profile.put("age", user.getAge());
+        }
+        profile.put("photoVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified")));
+        profile.put("realnameVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
+        return profile;
+    }
+
     private int resolveGrowthLevel(Long userId) {
         if (userId == null) {
             return 1;
@@ -526,6 +590,48 @@ public class UnifiedProfileService {
         }
         int completion = computeFellowshipCompletionRateForUser(candidate);
         if (completion >= 80) {
+            reasons.add("资料完善");
+        }
+        if (reasons.isEmpty()) {
+            reasons.add("今日推荐");
+        }
+        return reasons.stream().limit(3).collect(Collectors.toList());
+    }
+
+    public List<String> buildRecommendReasonsLightweight(
+            User viewer,
+            User candidate,
+            Map<String, Boolean> verifyBadges,
+            int completionRate
+    ) {
+        List<String> reasons = new ArrayList<>();
+        if (viewer == null || candidate == null) {
+            return reasons;
+        }
+        String vLoc = defaultText(viewer.getLocation(), "").trim();
+        String cLoc = defaultText(candidate.getLocation(), "").trim();
+        if (!vLoc.isEmpty() && vLoc.equals(cLoc)) {
+            reasons.add("同城");
+        } else if (vLoc.length() >= 2 && cLoc.length() >= 2
+                && vLoc.substring(0, 2).equals(cLoc.substring(0, 2))) {
+            reasons.add("同省");
+        }
+        String vOcc = defaultText(viewer.getOccupation(), "").trim();
+        String cOcc = defaultText(candidate.getOccupation(), "").trim();
+        if (!vOcc.isEmpty() && !cOcc.isEmpty() && vOcc.equals(cOcc)) {
+            reasons.add("职业相同");
+        }
+        int ageDiff = Math.abs(viewer.getAge() - candidate.getAge());
+        if (viewer.getAge() > 0 && candidate.getAge() > 0 && ageDiff <= 3) {
+            reasons.add("年龄相近");
+        }
+        if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"))) {
+            reasons.add("真人认证");
+        }
+        if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified"))) {
+            reasons.add("实名认证");
+        }
+        if (completionRate >= 80) {
             reasons.add("资料完善");
         }
         if (reasons.isEmpty()) {

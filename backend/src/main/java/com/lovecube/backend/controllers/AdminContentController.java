@@ -27,6 +27,9 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.AdminFellowshipUserInsightService;
+import com.lovecube.backend.services.AdminFellowshipUserInsightService.AdminUserListFilters;
+import com.lovecube.backend.services.AdminFellowshipUserInsightService.InsightBatchContext;
 import com.lovecube.backend.services.AdminDashboardStatsService;
 import com.lovecube.backend.services.FellowshipInviteService;
 import com.lovecube.backend.services.FellowshipProfileGrowthService;
@@ -79,6 +82,7 @@ public class AdminContentController {
     private final HomeConfigService homeConfigService;
     private final VerificationService verificationService;
     private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
+    private final AdminFellowshipUserInsightService adminFellowshipUserInsightService;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AdminContentController(
@@ -102,6 +106,7 @@ public class AdminContentController {
             HomeConfigService homeConfigService,
             VerificationService verificationService,
             FellowshipProfileGrowthService fellowshipProfileGrowthService,
+            AdminFellowshipUserInsightService adminFellowshipUserInsightService,
             BCryptPasswordEncoder passwordEncoder
     ) {
         this.announcementRepository = announcementRepository;
@@ -124,6 +129,7 @@ public class AdminContentController {
         this.homeConfigService = homeConfigService;
         this.verificationService = verificationService;
         this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
+        this.adminFellowshipUserInsightService = adminFellowshipUserInsightService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -252,7 +258,14 @@ public class AdminContentController {
     }
 
     @GetMapping("/users")
-    public List<Map<String, Object>> listUsers(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public List<Map<String, Object>> listUsers(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String completionBucket,
+            @RequestParam(required = false) String verificationFilter,
+            @RequestParam(required = false) String fellowshipFilter,
+            @RequestParam(required = false) Boolean lowActive,
+            @RequestParam(required = false) String missingItem
+    ) {
         User operator = adminAuthService.requirePermission(authHeader, PermissionConstants.USER_MANAGE);
         boolean hiddenSuperAdminOperator = adminAuthService.isHiddenSuperAdmin(operator);
         List<User> visibleUsers = userRepository.findAll().stream()
@@ -295,6 +308,21 @@ public class AdminContentController {
                 ? Map.of()
                 : buildLatestVerificationRequestByUserId(verificationRequestRepository.findByUserIdIn(userIds));
         Map<Long, Map<String, Boolean>> verifySummaryMap = verificationService.getBatchSummary(userIds);
+        InsightBatchContext insightContext = adminFellowshipUserInsightService.prepareContext(
+                visibleUsers,
+                uploadedPhotoCountMap,
+                verifySummaryMap,
+                mainProfileMap,
+                legacyProfileMap,
+                userProfileMap
+        );
+        AdminUserListFilters listFilters = new AdminUserListFilters(
+                completionBucket,
+                verificationFilter,
+                fellowshipFilter,
+                lowActive,
+                missingItem
+        );
 
         return visibleUsers.stream()
                 .map(user -> {
@@ -309,6 +337,7 @@ public class AdminContentController {
                     if (genderCode == null) {
                         genderCode = parseGenderCodeFromText(mainProfile == null ? null : mainProfile.getGender());
                     }
+                    LocalDateTime lastLoginAt = resolveAdminListLastLogin(user, mainProfile, userProfile);
                     Map<String, Object> item = new HashMap<>();
                     item.put("userId", user.getUserid());
                     item.put("username", user.getUsername() == null ? "" : user.getUsername());
@@ -326,7 +355,7 @@ public class AdminContentController {
                     item.put("photoVerified", photoVerified);
                     item.put("realnameVerified", realnameVerified);
                     item.put("location", resolveAdminListLocation(user, mainProfile, legacyProfile, userProfile));
-                    item.put("lastLoginAt", resolveAdminListLastLogin(user, mainProfile, userProfile));
+                    item.put("lastLoginAt", lastLoginAt);
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
                     item.put("createdAt", user.getCreatedAt());
@@ -336,8 +365,14 @@ public class AdminContentController {
                     item.put("canResetPassword", hiddenSuperAdminOperator
                             && !operator.getUserid().equals(user.getUserid())
                             && !adminAuthService.isHiddenSuperAdmin(user));
+                    item.putAll(adminFellowshipUserInsightService.buildInsightFields(user, insightContext));
+                    if (!adminFellowshipUserInsightService.matchesFilters(user, item, lastLoginAt, listFilters)) {
+                        return null;
+                    }
                     return item;
-                }).collect(Collectors.toList());
+                })
+                .filter(item -> item != null)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/users/{userId}/photos")

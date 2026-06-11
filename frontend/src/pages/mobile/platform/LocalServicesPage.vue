@@ -1,7 +1,7 @@
 <template>
   <div class="local-m">
     <header class="local-m-head">
-      <router-link to="/m/platform" class="back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="back" aria-label="返回" @click="goBack()">‹</button>
       <div>
         <h1>本地服务</h1>
         <p>招聘 · 二手 · 租房 · 同城资源</p>
@@ -48,7 +48,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { showToast } from 'vant'
 import { getLocalResources, markLocalResourceInterest } from '@/api/localResources.js'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 
+const { goBack } = useBackNavigation('/m/platform')
 const loading = ref(false)
 const activeType = ref('all')
 const items = ref([])
@@ -136,6 +138,8 @@ onMounted(load)
   font-size: 22px;
   line-height: 1;
   color: #334155;
+  padding: 0;
+  cursor: pointer;
 }
 
 .local-m-head h1 {

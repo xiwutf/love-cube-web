@@ -230,9 +230,9 @@
           </div>
         </div>
         <div v-else class="empty-guide">
-          <van-empty description="当前推荐较少，去完善资料试试" image-size="64" />
-          <van-button round type="primary" size="small" color="#ff5f84" @click="router.push(fellowshipPath('/profile/edit'))">
-            去完善资料
+          <van-empty description="暂无推荐用户，可去认识页浏览或邀请朋友加入" image-size="64" />
+          <van-button round type="primary" size="small" color="#ff5f84" @click="router.push(fellowshipPath('/match/all'))">
+            浏览全部异性
           </van-button>
         </div>
       </div>
@@ -297,6 +297,7 @@ import banner2 from '@/assets/fellowship/home-banners/fellowship-home-banner-2.w
 import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.webp'
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 import { getAvatar } from '@/utils/image.js'
+import { storage } from '@/utils/storage.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 import { pickDisplayBadges, formatBadgeLabel } from '@/utils/fellowshipBadges.js'
 
@@ -394,8 +395,14 @@ const remoteBanners = computed(() => {
 })
 
 const displayBanners = computed(() => (remoteBanners.value.length ? remoteBanners.value : localBanners))
-const safeRecommends = computed(() => (Array.isArray(recommends.value) ? recommends.value.slice(0, 3) : []))
-const safeNewcomers = computed(() => (Array.isArray(newcomers.value) ? newcomers.value.slice(0, 3) : []))
+const myUserId = storage.get('userId')
+function excludeSelf(users) {
+  const list = Array.isArray(users) ? users : []
+  if (!myUserId) return list
+  return list.filter((u) => String(u?.userId ?? u?.userid ?? '') !== String(myUserId))
+}
+const safeRecommends = computed(() => excludeSelf(recommends.value).slice(0, 3))
+const safeNewcomers = computed(() => excludeSelf(newcomers.value).slice(0, 3))
 
 const showProfileReminder = computed(() => {
   if (!completion.value) return false
@@ -424,40 +431,43 @@ onMounted(async () => {
     loadingHome.value = false
   }
 
+  // 骨架屏只等待首页核心数据；成长/活动任务后台加载，不阻塞首屏
   try {
-    const [initRes, growthRes, eventsRes, signupsRes] = await Promise.allSettled([
-      getHomeInit(),
-      getMyGrowth().catch(() => null),
-      fetchEvents({ status: 'published' }).catch(() => []),
-      getMyEventSignups().catch(() => [])
-    ])
-
-    const res = initRes.status === 'fulfilled' ? initRes.value : null
-
-    if (Array.isArray(res?.banners)) {
-      _cache.banners = res.banners
-      banners.value = res.banners
+    const initRes = await getHomeInit()
+    if (Array.isArray(initRes?.banners)) {
+      _cache.banners = initRes.banners
+      banners.value = initRes.banners
     }
-    if (Array.isArray(res?.recommends)) {
-      _cache.recommends = res.recommends
-      recommends.value = res.recommends
+    if (Array.isArray(initRes?.recommends)) {
+      _cache.recommends = initRes.recommends
+      recommends.value = initRes.recommends
     }
-    if (Array.isArray(res?.newcomers)) {
-      _cache.newcomers = res.newcomers
-      newcomers.value = res.newcomers
+    if (Array.isArray(initRes?.newcomers)) {
+      _cache.newcomers = initRes.newcomers
+      newcomers.value = initRes.newcomers
     }
     _cache.ts = Date.now()
 
-    if (res?.completion) {
-      completion.value = res.completion
-      profileStore.completion = res.completion
+    if (initRes?.completion) {
+      completion.value = initRes.completion
+      profileStore.completion = initRes.completion
     }
-    if (res?.profile) {
-      profileStore.profile = res.profile
-      const raw = res.profile.reviewStatus || res.profile.verificationStatus || res.profile.verified
+    if (initRes?.profile) {
+      profileStore.profile = initRes.profile
+      const raw = initRes.profile.reviewStatus || initRes.profile.verificationStatus || initRes.profile.verified
       verificationStatus.value = raw === true ? 'approved' : String(raw || 'none')
     }
+  } catch {
+    // init 失败时缓存内容已展示，不阻塞页面
+  } finally {
+    loadingHome.value = false
+  }
 
+  Promise.allSettled([
+    getMyGrowth().catch(() => null),
+    fetchEvents({ status: 'published' }).catch(() => []),
+    getMyEventSignups().catch(() => [])
+  ]).then(([growthRes, eventsRes, signupsRes]) => {
     if (growthRes.status === 'fulfilled' && growthRes.value) {
       const g = growthRes.value
       dailyTasks.value = Array.isArray(g.dailyTasks) ? g.dailyTasks : []
@@ -481,11 +491,7 @@ onMounted(async () => {
         0
       )
     }
-  } catch {
-    // init 失败时缓存内容已展示，不阻塞页面
-  } finally {
-    loadingHome.value = false
-  }
+  })
 })
 
 function resolveBannerImage(item) {

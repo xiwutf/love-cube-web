@@ -54,6 +54,10 @@ public class FellowshipGrowthSummaryService {
         return row;
     }
 
+    public String resolveGrowthTitleForLevel(int level) {
+        return resolveGrowthTitle(level);
+    }
+
     private static int safe(Integer value) {
         return value == null ? 0 : value;
     }

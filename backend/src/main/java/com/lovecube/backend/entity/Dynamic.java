@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Data
@@ -58,6 +59,14 @@ public class Dynamic {
 
     @Transient
     private List<String> images; // 图片URL列表
+
+    /** 卡片内展示的点赞用户预览（非数据库字段） */
+    @Transient
+    private List<Map<String, Object>> likePreview;
+
+    /** 卡片内展示的最新评论预览（非数据库字段） */
+    @Transient
+    private List<Map<String, Object>> commentPreview;
 
     @PrePersist
     protected void onCreate() {

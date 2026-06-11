@@ -1,7 +1,7 @@
 <template>
   <section class="sp-page">
     <header class="sp-head">
-      <router-link to="/m/platform" class="sp-back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="sp-back" aria-label="返回" @click="goBack()">‹</button>
       <h1 class="sp-title">今日任务</h1>
     </header>
     <MyTasksPanel />
@@ -10,6 +10,9 @@
 
 <script setup>
 import MyTasksPanel from '@/components/platform/MyTasksPanel.vue'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
+
+const { goBack } = useBackNavigation('/m/platform')
 </script>
 
 <style scoped>
@@ -37,6 +40,10 @@ import MyTasksPanel from '@/components/platform/MyTasksPanel.vue'
   font-size: 22px;
   color: var(--lc-indigo);
   text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 .sp-title {
   flex: 1;

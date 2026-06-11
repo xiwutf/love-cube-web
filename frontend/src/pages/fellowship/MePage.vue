@@ -37,7 +37,13 @@
                   <span class="verified-mark">V</span>
                   <span>{{ verificationLabel }}</span>
                 </button>
-                <button class="vip-medal" :class="{ active: vipActive }" type="button" @click="router.push('/fellowship/vip')">
+                <button
+                  v-if="showVipCommerce"
+                  class="vip-medal"
+                  :class="{ active: vipActive }"
+                  type="button"
+                  @click="router.push('/fellowship/vip')"
+                >
                   <span class="vip-crown">VIP</span>
                   <span>{{ vipActive ? '已开通' : '尊享' }}</span>
                 </button>
@@ -59,7 +65,7 @@
 
           <button class="edit-link" @click="router.push('/fellowship/profile/edit')">编辑资料</button>
           <button class="message-link" @click="router.push('/fellowship/messages')">消息</button>
-          <div class="premium-seal" @click="router.push('/fellowship/vip')">
+          <div v-if="showVipCommerce" class="premium-seal" @click="router.push('/fellowship/vip')">
             <span>LOVE</span>
             <strong>PREMIUM</strong>
           </div>
@@ -67,7 +73,12 @@
         </div>
       </section>
 
-      <section v-show="!loadingPage" v-if="swipeQuota && !swipeQuota.unlimited" class="swipe-quota-banner" @click="router.push('/fellowship/vip')">
+      <section
+        v-show="!loadingPage"
+        v-if="showVipCommerce && swipeQuota && !swipeQuota.unlimited"
+        class="swipe-quota-banner"
+        @click="router.push('/fellowship/vip')"
+      >
         <div>
           <p class="sq-title">今日滑卡 {{ swipeQuota.used }}/{{ swipeQuota.limit }}</p>
           <p class="sq-sub">开通 VIP 无限滑 · 解锁访客与喜欢名单</p>
@@ -113,6 +124,16 @@
           <p class="status-title">曝光增加</p>
           <p class="status-value">+{{ exposureBoost }}%</p>
         </div>
+      </section>
+
+      <section v-show="!loadingPage" class="menu-grid-card">
+        <button v-for="item in menuItems" :key="item.key" class="menu-item" @click="goTo(item.to)">
+          <div class="menu-icon" :class="`menu-${item.theme}`">
+            <van-icon :name="item.icon" size="22" />
+          </div>
+          <p class="menu-title">{{ item.title }}</p>
+          <p class="menu-sub">{{ item.sub }}</p>
+        </button>
       </section>
 
       <section v-show="!loadingPage && (missingItems.length || unlockedBenefits.length)" class="benefits-card">
@@ -166,16 +187,6 @@
         </div>
       </section>
 
-      <section v-show="!loadingPage" class="menu-grid-card">
-        <button v-for="item in menuItems" :key="item.key" class="menu-item" @click="goTo(item.to)">
-          <div class="menu-icon" :class="`menu-${item.theme}`">
-            <van-icon :name="item.icon" size="22" />
-          </div>
-          <p class="menu-title">{{ item.title }}</p>
-          <p class="menu-sub">{{ item.sub }}</p>
-        </button>
-      </section>
-
       <section v-show="!loadingPage" class="photos-card">
         <div class="block-header">
           <h3>我的照片</h3>
@@ -204,11 +215,24 @@
 
       <section v-show="!loadingPage" class="activity-card">
         <div class="block-header">
-          <h3>平台公告</h3>
-          <button class="block-link" @click="router.push('/fellowship/messages')">全部 ></button>
+          <h3>互动提醒</h3>
+          <button
+            v-if="activityHeaderLink"
+            class="block-link"
+            type="button"
+            @click="goTo(activityHeaderLink.to)"
+          >
+            {{ activityHeaderLink.label }} >
+          </button>
         </div>
-        <ul class="activity-list">
-          <li v-for="item in activityItems" :key="item.title" class="activity-item">
+        <ul v-if="activityItems.length" class="activity-list">
+          <li
+            v-for="item in activityItems"
+            :key="item.key"
+            class="activity-item"
+            :class="{ clickable: item.to }"
+            @click="item.to && goTo(item.to)"
+          >
             <div class="activity-dot" :class="`dot-${item.theme}`">
               <van-icon :name="item.icon" size="12" />
             </div>
@@ -216,12 +240,20 @@
               <p>{{ item.title }}</p>
               <span>{{ item.time }}</span>
             </div>
-            <button v-if="item.action" class="activity-action" @click="goTo(item.action.to)">{{ item.action.label }}</button>
+            <button
+              v-if="item.action"
+              class="activity-action"
+              type="button"
+              @click.stop="goTo(item.action.to)"
+            >
+              {{ item.action.label }}
+            </button>
           </li>
         </ul>
+        <p v-else class="activity-empty">暂无新的互动提醒</p>
       </section>
 
-      <section v-show="!loadingPage" class="vip-banner" @click="router.push('/fellowship/vip')">
+      <section v-show="!loadingPage && showVipCommerce" class="vip-banner" @click="router.push('/fellowship/vip')">
         <div class="vip-banner-main">
           <span class="vip-banner-kicker">Love Cube Premium</span>
           <p class="vip-title">开通会员 · 让优质身份被优先看见</p>
@@ -259,8 +291,10 @@ import { getMyGrowth } from '@/api/growth.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
 import { formatBadgeLabel } from '@/utils/fellowshipBadges.js'
+import { FELLOWSHIP_VIP_COMMERCE_ENABLED } from '@/constants/fellowshipCommerce.js'
 
 const router = useRouter()
+const showVipCommerce = FELLOWSHIP_VIP_COMMERCE_ENABLED
 const userStore = useUserStore()
 const avatarInput = ref(null)
 const photoInput = ref(null)
@@ -436,13 +470,40 @@ const menuItems = computed(() => {
 const activityItems = computed(() => {
   const s = fellowshipStats.value
   const items = []
-  if (s.todayVisitorCount > 0) {
-    items.push({ icon: 'eye-o', title: `今日有 ${s.todayVisitorCount} 人浏览了你`, time: '今日', theme: 'pink' })
-  }
   if (s.likesReceived > 0) {
-    items.push({ icon: 'good-job-o', title: `共有 ${s.likesReceived} 人对你感兴趣`, time: '累计', theme: 'yellow' })
+    items.push({
+      key: 'likes',
+      icon: 'good-job-o',
+      title: `共有 ${s.likesReceived} 人对你感兴趣`,
+      time: '累计',
+      theme: 'yellow',
+      to: '/fellowship/liked-me',
+      action: { label: '查看名单', to: '/fellowship/liked-me' }
+    })
+  }
+  if (s.todayVisitorCount > 0) {
+    items.push({
+      key: 'visitor',
+      icon: 'eye-o',
+      title: `今日有 ${s.todayVisitorCount} 人浏览了你`,
+      time: '今日',
+      theme: 'pink',
+      to: '/fellowship/messages?tab=visitor',
+      action: { label: '查看访客', to: '/fellowship/messages?tab=visitor' }
+    })
   }
   return items
+})
+
+const activityHeaderLink = computed(() => {
+  const s = fellowshipStats.value
+  if (s.likesReceived > 0) {
+    return { label: '喜欢我的人', to: '/fellowship/liked-me' }
+  }
+  if (s.todayVisitorCount > 0) {
+    return { label: '谁看过我', to: '/fellowship/messages?tab=visitor' }
+  }
+  return null
 })
 
 function normalizeProfile(data) {
@@ -1467,8 +1528,20 @@ onMounted(async () => {
 }
 
 .dot-pink { background: #ffe8f1; color: #ff5f98; }
+.dot-yellow { background: #fff8df; color: #e6a817; }
 .dot-orange { background: #fff3df; color: #f3aa2f; }
 .dot-purple { background: #f1ebff; color: #8256f7; }
+
+.activity-item.clickable {
+  cursor: pointer;
+}
+
+.activity-empty {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #9aa0b7;
+  text-align: center;
+}
 
 .activity-text {
   min-width: 0;

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -32,6 +33,8 @@ public interface DynamicLikeRepository extends JpaRepository<DynamicLike, Long> 
     List<DynamicLike> findByUserId(Long userId);
 
     Page<DynamicLike> findByDynamicIdOrderByCreatedAtDesc(Long dynamicId, Pageable pageable);
+
+    List<DynamicLike> findByDynamicIdInOrderByCreatedAtDesc(Collection<Long> dynamicIds);
 
     long countByUserId(Long userId);
 } 

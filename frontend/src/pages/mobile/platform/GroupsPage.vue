@@ -1,7 +1,7 @@
 <template>
   <div class="groups-m">
     <header class="groups-m-head">
-      <router-link to="/m/platform" class="back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="back" aria-label="返回" @click="goBack()">‹</button>
       <div>
         <h1>团体广场</h1>
         <p>发现团体 · 申请加入 · 创建属于你的小组</p>
@@ -74,6 +74,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchGroups, fetchHotGroups, joinGroup, unwrapPlatformGroupList } from '@/api/groups.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 import {
   AUDIT_JOIN_MESSAGE_PROMPT,
   ERR_EMPTY_AUDIT_JOIN_MESSAGE,
@@ -84,6 +85,7 @@ import { useUserStore } from '@/stores/user.js'
 import { labelForGroupCategory } from '@/utils/groupCategories.js'
 
 const PAGE_SIZE = 10
+const { goBack } = useBackNavigation('/m/platform')
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
 
 const router = useRouter()
@@ -271,6 +273,8 @@ onMounted(async () => {
   text-decoration: none;
   color: var(--lc-indigo, #4f46e5);
   font-size: 22px;
+  padding: 0;
+  cursor: pointer;
 }
 
 .groups-m-head h1 {

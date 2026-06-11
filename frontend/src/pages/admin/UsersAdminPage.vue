@@ -21,6 +21,51 @@
       </div>
     </section>
 
+    <section v-if="growthDashboard" class="platform-card growth-dashboard-card">
+      <h2 class="growth-dashboard-title">联谊成长概览</h2>
+      <div class="growth-dashboard-grid">
+        <article class="growth-dashboard-card">
+          <h3>资料完成度分布</h3>
+          <ul class="growth-dashboard-list">
+            <li><span>0–39%</span><strong>{{ growthDashboard.completionBuckets?.['0_39'] ?? 0 }}</strong></li>
+            <li><span>40–59%</span><strong>{{ growthDashboard.completionBuckets?.['40_59'] ?? 0 }}</strong></li>
+            <li><span>60–79%</span><strong>{{ growthDashboard.completionBuckets?.['60_79'] ?? 0 }}</strong></li>
+            <li><span>80–99%</span><strong>{{ growthDashboard.completionBuckets?.['80_99'] ?? 0 }}</strong></li>
+            <li><span>100%</span><strong>{{ growthDashboard.completionBuckets?.['100'] ?? 0 }}</strong></li>
+          </ul>
+        </article>
+        <article class="growth-dashboard-card">
+          <h3>认证状态</h3>
+          <ul class="growth-dashboard-list">
+            <li><span>未认证</span><strong>{{ growthDashboard.verificationStats?.none ?? 0 }}</strong></li>
+            <li><span>仅实名</span><strong>{{ growthDashboard.verificationStats?.realnameOnly ?? 0 }}</strong></li>
+            <li><span>仅真人</span><strong>{{ growthDashboard.verificationStats?.photoOnly ?? 0 }}</strong></li>
+            <li><span>双认证</span><strong>{{ growthDashboard.verificationStats?.both ?? 0 }}</strong></li>
+          </ul>
+        </article>
+        <article class="growth-dashboard-card">
+          <h3>联谊状态</h3>
+          <ul class="growth-dashboard-list">
+            <li><span>未开通</span><strong>{{ growthDashboard.fellowshipStats?.notEnabled ?? 0 }}</strong></li>
+            <li><span>已开通</span><strong>{{ growthDashboard.fellowshipStats?.enabled ?? 0 }}</strong></li>
+            <li><span>已进推荐池</span><strong>{{ growthDashboard.fellowshipStats?.matchVisible ?? 0 }}</strong></li>
+          </ul>
+        </article>
+        <article class="growth-dashboard-card">
+          <h3>主要缺失项</h3>
+          <ul class="growth-dashboard-list">
+            <li><span>缺头像</span><strong>{{ growthDashboard.missingItemStats?.avatar ?? 0 }}</strong></li>
+            <li><span>缺年龄</span><strong>{{ growthDashboard.missingItemStats?.age ?? 0 }}</strong></li>
+            <li><span>缺地区</span><strong>{{ growthDashboard.missingItemStats?.city ?? 0 }}</strong></li>
+            <li><span>缺认证</span><strong>{{ growthDashboard.missingItemStats?.verification ?? 0 }}</strong></li>
+            <li><span>缺照片</span><strong>{{ growthDashboard.missingItemStats?.photos ?? 0 }}</strong></li>
+            <li><span>缺简介</span><strong>{{ growthDashboard.missingItemStats?.bio ?? 0 }}</strong></li>
+            <li><span>未开通联谊</span><strong>{{ growthDashboard.missingItemStats?.fellowshipEnabled ?? 0 }}</strong></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <section class="platform-card admin-filter-card">
       <div class="admin-filter-bar">
         <input
@@ -55,6 +100,41 @@
           <option value="yes">已上传图片</option>
           <option value="no">未上传图片</option>
         </select>
+        <select v-model="filters.completionBucket" class="admin-select">
+          <option value="">完成度全部</option>
+          <option value="0_39">0–39%</option>
+          <option value="40_59">40–59%</option>
+          <option value="60_79">60–79%</option>
+          <option value="80_99">80–99%</option>
+          <option value="100">100%</option>
+        </select>
+        <select v-model="filters.verificationFilter" class="admin-select">
+          <option value="">认证全部</option>
+          <option value="none">未认证</option>
+          <option value="realnameOnly">实名</option>
+          <option value="photoOnly">真人</option>
+          <option value="both">双认证</option>
+        </select>
+        <select v-model="filters.fellowshipOpsFilter" class="admin-select">
+          <option value="">联谊运营全部</option>
+          <option value="notEnabled">未开通</option>
+          <option value="enabled">已开通</option>
+          <option value="matchVisible">已进推荐池</option>
+        </select>
+        <select v-model="filters.lowActive" class="admin-select">
+          <option value="">活跃全部</option>
+          <option value="yes">低活跃（近7天未登录）</option>
+        </select>
+        <select v-model="filters.missingItem" class="admin-select">
+          <option value="">缺失项全部</option>
+          <option value="avatar">缺头像</option>
+          <option value="age">缺年龄</option>
+          <option value="city">缺地区</option>
+          <option value="verification">缺认证</option>
+          <option value="photos">缺照片</option>
+          <option value="bio">缺简介</option>
+          <option value="fellowship">未开通联谊</option>
+        </select>
         <button class="admin-btn" type="button" @click="resetFilters">重置筛选</button>
       </div>
     </section>
@@ -67,9 +147,16 @@
           <col class="cg-phone">
           <col class="cg-tag">
           <col class="cg-age">
+          <col class="cg-completion">
+          <col class="cg-level">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-benefits">
+          <col class="cg-missing">
           <col class="cg-role">
-          <col class="cg-tag">
-          <col class="cg-tag">
           <col class="cg-tag">
           <col class="cg-location">
           <col class="cg-login">
@@ -83,10 +170,16 @@
             <th class="col-phone-head">手机</th>
             <th>性别</th>
             <th class="col-age">年龄</th>
-            <th class="col-role-head">角色</th>
+            <th>资料完成度</th>
+            <th>等级</th>
+            <th>徽章</th>
             <th>认证</th>
+            <th>联谊状态</th>
+            <th>曝光加成</th>
+            <th>已解锁权益</th>
+            <th>待补项</th>
+            <th class="col-role-head">角色</th>
             <th>状态</th>
-            <th>联谊</th>
             <th class="col-location">地区</th>
             <th class="col-login">最近登录</th>
             <th class="col-date">注册时间</th>
@@ -111,18 +204,30 @@
             <td class="col-phone" :title="item.phone || '无手机号'">{{ item.phone || '无手机号' }}</td>
             <td><span class="admin-tag" :class="genderTagClass(item.gender)">{{ genderLabel(item.gender) }}</span></td>
             <td class="col-age">{{ formatAdminAge(item.age) }}</td>
+            <td class="col-completion">
+              <div class="users-completion-cell">
+                <div class="users-completion-bar" role="progressbar" :aria-valuenow="item.profileCompletionRate" aria-valuemin="0" aria-valuemax="100">
+                  <span class="users-completion-fill" :style="{ width: `${item.profileCompletionRate}%` }" />
+                </div>
+                <span class="users-completion-text">{{ item.profileCompletionRate }}%</span>
+              </div>
+            </td>
+            <td class="col-level" :title="item.growthTitle || '-'">
+              Lv{{ item.growthLevel || 1 }}
+              <span v-if="item.growthTitle" class="users-level-title">{{ item.growthTitle }}</span>
+            </td>
+            <td>{{ item.badgeCount || 0 }}</td>
+            <td><span class="admin-tag" :class="verificationTierTagClass(item.verificationTier)">{{ verificationTierLabel(item) }}</span></td>
+            <td><span class="admin-tag" :class="fellowshipOpsTagClass(item)">{{ fellowshipOpsLabel(item) }}</span></td>
+            <td>{{ formatExposureBoost(item.exposureBoostPercent) }}</td>
+            <td class="col-benefits" :title="formatBenefitsFull(item.unlockedBenefits)">{{ formatBenefitsShort(item.unlockedBenefits) }}</td>
+            <td class="col-missing" :title="formatMissingFull(item.profileMissingItems)">{{ formatMissingShort(item.profileMissingItems) }}</td>
             <td class="col-role">
               <select v-model="item.role" class="admin-select" :disabled="!canEditRole(item)">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </td>
-            <td><span class="admin-tag" :class="verificationTagClass(item.verificationStatus)">{{ verificationLabel(item.verificationStatus) }}</span></td>
             <td><span class="admin-tag" :class="item.status || 'active'">{{ item.status || 'active' }}</span></td>
-            <td>
-              <span class="admin-tag" :class="item.fellowshipEnabled ? 'active' : 'disabled'">
-                {{ item.fellowshipEnabled ? '已开通' : '未开通' }}
-              </span>
-            </td>
             <td class="col-location" :title="item.location || '-'">{{ item.location || '-' }}</td>
             <td class="col-login" :title="formatDate(item.lastLoginAt)">{{ formatDate(item.lastLoginAt) }}</td>
             <td class="col-date" :title="formatDate(item.createdAt)">{{ formatDate(item.createdAt) }}</td>
@@ -160,7 +265,9 @@
         </div>
         <p class="admin-row-meta">{{ item.phone || '无手机号' }}</p>
         <p class="admin-row-meta">性别：{{ genderLabel(item.gender) }} · 年龄：{{ formatAdminAge(item.age) }}</p>
-        <p class="admin-row-meta">认证：{{ verificationLabel(item.verificationStatus) }} · 联谊：{{ item.fellowshipEnabled ? '已开通' : '未开通' }}</p>
+        <p class="admin-row-meta">完成度：{{ item.profileCompletionRate }}% · Lv{{ item.growthLevel || 1 }} · 徽章 {{ item.badgeCount || 0 }}</p>
+        <p class="admin-row-meta">认证：{{ verificationTierLabel(item) }} · 联谊：{{ fellowshipOpsLabel(item) }} · 曝光 {{ formatExposureBoost(item.exposureBoostPercent) }}</p>
+        <p class="admin-row-meta">待补：{{ formatMissingShort(item.profileMissingItems) }}</p>
         <p class="admin-row-meta">地区：{{ item.location || '-' }} · 登录：{{ formatDate(item.lastLoginAt) }}</p>
         <p class="admin-row-meta">注册：{{ formatDate(item.createdAt) }}</p>
         <div class="admin-toolbar">
@@ -198,6 +305,21 @@
             <p><strong>联谊：</strong>{{ detailDialog.user?.fellowshipEnabled ? '已开通' : '未开通' }}</p>
           </div>
         </div>
+        <section v-if="detailDialog.user" class="user-growth-insight">
+          <h4>联谊成长与权益</h4>
+          <div class="user-growth-grid">
+            <p><strong>资料完成度：</strong>{{ detailDialog.user.profileCompletionRate }}%</p>
+            <p><strong>曝光加成：</strong>{{ formatExposureBoost(detailDialog.user.exposureBoostPercent) }}</p>
+            <p><strong>当前等级：</strong>Lv{{ detailDialog.user.growthLevel || 1 }} {{ detailDialog.user.growthTitle || '' }}</p>
+            <p><strong>认证状态：</strong>{{ verificationTierLabel(detailDialog.user) }}</p>
+            <p><strong>联谊状态：</strong>{{ fellowshipOpsLabel(detailDialog.user) }}</p>
+            <p><strong>徽章数：</strong>{{ detailDialog.user.badgeCount || 0 }}</p>
+          </div>
+          <p><strong>待补项：</strong>{{ formatMissingFull(detailDialog.user.profileMissingItems) }}</p>
+          <p><strong>当前徽章：</strong>{{ formatBadgeList(detailDialog.user.badges, detailDialog.user.verifiedBadges) }}</p>
+          <p><strong>已解锁权益：</strong>{{ formatBenefitsFull(detailDialog.user.unlockedBenefits) }}</p>
+          <p><strong>下一步可解锁：</strong>{{ formatBenefitsFull(detailDialog.user.nextBenefits) }}</p>
+        </section>
         <div v-if="detailDialog.user" class="user-detail-actions">
           <div class="user-detail-action-card">
             <p class="user-detail-action-title">账号设置</p>
@@ -331,6 +453,7 @@ import { showConfirmDialog, showToast } from 'vant'
 import AdminDetailDialogShell from '@/components/admin/AdminDetailDialogShell.vue'
 import {
   forceDeleteAdminUser,
+  getAdminFellowshipGrowthDashboard,
   getAdminUserPhotos,
   getAdminUsers,
   resetAdminUserPassword,
@@ -343,6 +466,7 @@ import { useUserStore } from '@/stores/user.js'
 const route = useRoute()
 const loading = ref(false)
 const users = ref([])
+const growthDashboard = ref(null)
 const savingRoleUserId = ref(null)
 const userStore = useUserStore()
 const currentPage = ref(1)
@@ -354,7 +478,12 @@ const filters = reactive({
   status: '',
   fellowshipEnabled: '',
   gender: '',
-  hasPhotos: ''
+  hasPhotos: '',
+  completionBucket: '',
+  verificationFilter: '',
+  fellowshipOpsFilter: '',
+  lowActive: '',
+  missingItem: ''
 })
 const detailDialog = reactive({
   visible: false,
@@ -408,6 +537,17 @@ const filteredUsers = computed(() => {
     if (filters.gender && item.gender !== filters.gender) return false
     if (filters.hasPhotos === 'yes' && !item.hasUploadedPhotos) return false
     if (filters.hasPhotos === 'no' && item.hasUploadedPhotos) return false
+    if (filters.completionBucket && item.completionBucket !== filters.completionBucket) return false
+    if (filters.verificationFilter && item.verificationTier !== filters.verificationFilter) return false
+    if (filters.fellowshipOpsFilter) {
+      const ops = resolveFellowshipOpsKey(item)
+      if (ops !== filters.fellowshipOpsFilter) return false
+    }
+    if (filters.lowActive === 'yes' && isRecentLogin(item.lastLoginAt)) return false
+    if (filters.missingItem) {
+      const keys = (item.profileMissingItems || []).map((row) => row.key)
+      if (!keys.includes(filters.missingItem)) return false
+    }
     if (!keyword) return true
     const username = String(item.username || '').toLowerCase()
     const phone = String(item.phone || '').toLowerCase()
@@ -441,8 +581,22 @@ function normalizeUsers(rows) {
       photoVerified,
       realnameVerified,
       verificationStatus: resolveVerificationStatus(item, photoVerified, realnameVerified),
+      verificationTier: item.verificationTier || resolveVerificationTier(photoVerified, realnameVerified),
       status: item.status || 'active',
       fellowshipEnabled: Boolean(item.fellowshipEnabled),
+      fellowshipMatchVisible: Boolean(item.fellowshipMatchVisible),
+      fellowshipPoolEligible: Boolean(item.fellowshipPoolEligible),
+      profileCompletionRate: Number(item.profileCompletionRate ?? 0),
+      profileMissingItems: Array.isArray(item.profileMissingItems) ? item.profileMissingItems : [],
+      growthLevel: Number(item.growthLevel ?? 1),
+      growthTitle: item.growthTitle || '',
+      badgeCount: Number(item.badgeCount ?? 0),
+      badges: Array.isArray(item.badges) ? item.badges : [],
+      verifiedBadges: Array.isArray(item.verifiedBadges) ? item.verifiedBadges : [],
+      exposureBoostPercent: Number(item.exposureBoostPercent ?? 0),
+      unlockedBenefits: Array.isArray(item.unlockedBenefits) ? item.unlockedBenefits : [],
+      nextBenefits: Array.isArray(item.nextBenefits) ? item.nextBenefits : [],
+      completionBucket: item.completionBucket || resolveCompletionBucket(Number(item.profileCompletionRate ?? 0)),
       hasUploadedPhotos: Boolean(item.hasUploadedPhotos ?? Number(item.uploadedPhotoCount || 0) > 0),
       uploadedPhotoCount: Number(item.uploadedPhotoCount || 0),
       avatarUrl: String(item.avatarUrl || item.avatar || item.profilePhoto || '').trim(),
@@ -453,6 +607,105 @@ function normalizeUsers(rows) {
       canResetPassword: !!item.canResetPassword
     }})
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+}
+
+function resolveVerificationTier(photoVerified, realnameVerified) {
+  if (photoVerified && realnameVerified) return 'both'
+  if (realnameVerified) return 'realnameOnly'
+  if (photoVerified) return 'photoOnly'
+  return 'none'
+}
+
+function resolveCompletionBucket(rate) {
+  if (rate >= 100) return '100'
+  if (rate >= 80) return '80_99'
+  if (rate >= 60) return '60_79'
+  if (rate >= 40) return '40_59'
+  return '0_39'
+}
+
+function resolveFellowshipOpsKey(item) {
+  if (!item?.fellowshipEnabled) return 'notEnabled'
+  if (item.fellowshipPoolEligible) return 'matchVisible'
+  return 'enabled'
+}
+
+function verificationTierLabel(item) {
+  const tier = item?.verificationTier || resolveVerificationTier(item?.photoVerified, item?.realnameVerified)
+  if (tier === 'both') return '双认证'
+  if (tier === 'realnameOnly') return '实名'
+  if (tier === 'photoOnly') return '真人'
+  return '未认证'
+}
+
+function verificationTierTagClass(tierOrItem) {
+  const tier = typeof tierOrItem === 'string'
+    ? tierOrItem
+    : (tierOrItem?.verificationTier || resolveVerificationTier(tierOrItem?.photoVerified, tierOrItem?.realnameVerified))
+  if (tier === 'both') return 'active'
+  if (tier === 'realnameOnly' || tier === 'photoOnly') return 'pending'
+  return 'disabled'
+}
+
+function fellowshipOpsLabel(item) {
+  const key = resolveFellowshipOpsKey(item)
+  if (key === 'matchVisible') return '已进推荐池'
+  if (key === 'enabled') return '已开通'
+  return '未开通'
+}
+
+function fellowshipOpsTagClass(item) {
+  const key = resolveFellowshipOpsKey(item)
+  if (key === 'matchVisible') return 'active'
+  if (key === 'enabled') return 'pending'
+  return 'disabled'
+}
+
+function formatExposureBoost(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return '-'
+  return `+${n}%`
+}
+
+function benefitTitle(row) {
+  return row?.title || row?.label || row?.name || row?.benefitText || '权益'
+}
+
+function formatBenefitsShort(list) {
+  const rows = Array.isArray(list) ? list : []
+  if (!rows.length) return '-'
+  const labels = rows.map(benefitTitle)
+  if (labels.length <= 2) return labels.join('、')
+  return `${labels.slice(0, 2).join('、')} +${labels.length - 2}`
+}
+
+function formatBenefitsFull(list) {
+  const rows = Array.isArray(list) ? list : []
+  if (!rows.length) return '暂无'
+  return rows.map(benefitTitle).join('、')
+}
+
+function formatMissingShort(list) {
+  const rows = Array.isArray(list) ? list : []
+  if (!rows.length) return '-'
+  const labels = rows.map((row) => row.label || row.key)
+  if (labels.length <= 3) return labels.join('、')
+  return `${labels.slice(0, 3).join('、')} +${labels.length - 3}`
+}
+
+function formatMissingFull(list) {
+  const rows = Array.isArray(list) ? list : []
+  if (!rows.length) return '无'
+  return rows.map((row) => row.label || row.key).join('、')
+}
+
+function formatBadgeList(badges, verifiedBadges) {
+  const rows = [
+    ...(Array.isArray(verifiedBadges) ? verifiedBadges : []),
+    ...(Array.isArray(badges) ? badges : [])
+  ]
+  if (!rows.length) return '暂无'
+  return rows.map((row) => row.name || row.label || row.code || '徽章').join('、')
 }
 
 function resolveVerificationStatus(item, photoVerified, realnameVerified) {
@@ -547,6 +800,11 @@ function resetFilters() {
   filters.fellowshipEnabled = ''
   filters.gender = ''
   filters.hasPhotos = ''
+  filters.completionBucket = ''
+  filters.verificationFilter = ''
+  filters.fellowshipOpsFilter = ''
+  filters.lowActive = ''
+  filters.missingItem = ''
   currentPage.value = 1
 }
 
@@ -580,6 +838,14 @@ function goJumpPage() {
   if (n > max) n = max
   currentPage.value = n
   jumpPageDraft.value = n
+}
+
+async function loadGrowthDashboard() {
+  try {
+    growthDashboard.value = await getAdminFellowshipGrowthDashboard()
+  } catch {
+    growthDashboard.value = null
+  }
 }
 
 async function loadUsers() {
@@ -616,6 +882,7 @@ async function setFellowship(item, fellowshipEnabled) {
     const result = await updateAdminUserFellowshipStatus(item.userId, fellowshipEnabled)
     item.fellowshipEnabled = Boolean(result.fellowshipEnabled)
     showToast({ type: 'success', message: result.message || '联谊状态已更新' })
+    await loadUsers()
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '操作失败' })
   }
@@ -795,7 +1062,7 @@ function formatPhotoStatus(status) {
 }
 
 onMounted(async () => {
-  await loadUsers()
+  await Promise.all([loadUsers(), loadGrowthDashboard()])
   const userId = route.query.userId
   if (!userId) return
   const target = users.value.find((item) => String(item.userId) === String(userId))
@@ -807,7 +1074,19 @@ onMounted(async () => {
   currentPage.value = 1
 })
 
-watch([() => filters.keyword, () => filters.role, () => filters.status, () => filters.fellowshipEnabled, () => filters.gender, () => filters.hasPhotos], () => {
+watch([
+  () => filters.keyword,
+  () => filters.role,
+  () => filters.status,
+  () => filters.fellowshipEnabled,
+  () => filters.gender,
+  () => filters.hasPhotos,
+  () => filters.completionBucket,
+  () => filters.verificationFilter,
+  () => filters.fellowshipOpsFilter,
+  () => filters.lowActive,
+  () => filters.missingItem
+], () => {
   currentPage.value = 1
 })
 
@@ -828,6 +1107,126 @@ watch(totalPages, (pages) => {
   width: 100%;
 }
 
+.growth-dashboard-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: var(--lc-text);
+}
+
+.growth-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.growth-dashboard-card {
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--lc-surface);
+}
+
+.growth-dashboard-card h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--lc-muted-light);
+}
+
+.growth-dashboard-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.growth-dashboard-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--lc-slate);
+}
+
+.users-completion-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 88px;
+}
+
+.users-completion-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lc-border);
+  overflow: hidden;
+}
+
+.users-completion-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lc-blue), var(--lc-pink));
+}
+
+.users-completion-text {
+  font-size: 11px;
+  color: var(--lc-muted-light);
+  white-space: nowrap;
+}
+
+.users-level-title {
+  display: block;
+  font-size: 11px;
+  color: var(--lc-muted-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 72px;
+}
+
+.user-growth-insight {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.user-growth-insight h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--lc-text);
+}
+
+.user-growth-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.user-growth-insight p {
+  margin: 6px 0;
+  font-size: 13px;
+  color: var(--lc-slate);
+}
+
+.users-table col.cg-completion { width: 108px; }
+.users-table col.cg-level { width: 88px; }
+.users-table col.cg-benefits { width: 120px; }
+.users-table col.cg-missing { width: 120px; }
+
+.users-table .col-benefits,
+.users-table .col-missing {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
 .admin-select {
   min-width: 120px;
   height: 38px;
@@ -836,7 +1235,7 @@ watch(totalPages, (pages) => {
 /* 撑满容器宽度，固定列保手机号，其余列按比例分配剩余空间 */
 .admin-table.users-table {
   width: 100%;
-  min-width: 1200px;
+  min-width: 1800px;
   table-layout: fixed;
 }
 
@@ -1384,6 +1783,14 @@ watch(totalPages, (pages) => {
 }
 
 @media (max-width: 1023px) {
+  .growth-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-growth-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .user-detail-meta-fields {
     grid-template-columns: 1fr 1fr;
   }

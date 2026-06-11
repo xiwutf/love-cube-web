@@ -1,5 +1,6 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.config.FellowshipFeatureProperties;
 import com.lovecube.backend.models.ChatMessage;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.ChatMessageRepository;
@@ -37,6 +38,9 @@ public class MessageController {
 
     @Autowired
     private VipService vipService;
+
+    @Autowired
+    private FellowshipFeatureProperties fellowshipFeatureProperties;
 
     /**
      * 获取聊天列表
@@ -194,10 +198,11 @@ public class MessageController {
             
             List<Map<String, Object>> visitorList = visitorService.getVisitorList(userId, 0, 20);
             boolean vipActive = vipService.isActiveVip(currentUser);
+            boolean gatePremium = fellowshipFeatureProperties.isVipCommerceEnabled();
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("vipActive", vipActive);
             body.put("totalCount", visitorList.size());
-            if (vipActive) {
+            if (vipActive || !gatePremium) {
                 body.put("items", visitorList);
             } else {
                 body.put("items", visitorList.stream().map(this::maskVisitor).collect(Collectors.toList()));

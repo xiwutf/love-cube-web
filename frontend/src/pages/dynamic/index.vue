@@ -55,37 +55,41 @@
           </div>
 
           <div
-            v-if="Number(item.commentCount) > 0"
-            class="comment-preview"
+            v-if="showSocialBlock(item)"
+            class="social-block"
             @click="onComment(item)"
           >
-            <template v-if="item.commentPreview === undefined">
-              <p class="comment-preview-loading">评论加载中…</p>
-            </template>
-            <template v-else>
-              <p
-                v-for="c in item.commentPreview"
-                :key="c.id"
-                class="comment-preview-line"
-              >
-                <span class="preview-name">{{ c.authorName || '用户' }}</span><span class="preview-colon">：</span><span class="preview-text">{{ previewCommentBody(c.content) }}</span>
-              </p>
-              <p
-                v-if="!item.commentPreview.length && Number(item.commentCount) > 0"
-                class="comment-preview-more"
-              >
-                {{
-                  Number(item.commentCount) > PREVIEW_COMMENT_LIMIT
-                    ? `查看全部 ${item.commentCount} 条评论`
-                    : '轻触查看评论'
-                }}
-              </p>
-              <p
-                v-else-if="item.commentPreview.length && Number(item.commentCount) > PREVIEW_COMMENT_LIMIT"
-                class="comment-preview-more"
-              >
-                查看全部 {{ item.commentCount }} 条评论
-              </p>
+            <div v-if="getLikePreview(item).length" class="social-likes">
+              <van-icon name="like" class="social-like-icon" />
+              <span class="social-like-text">{{ formatLikeLine(item) }}</span>
+            </div>
+            <template v-if="Number(item.commentCount) > 0">
+              <template v-if="commentsLoading(item)">
+                <p class="comment-preview-loading">评论加载中…</p>
+              </template>
+              <template v-else>
+                <div v-if="getCommentPreview(item).length" class="social-comments">
+                  <p
+                    v-for="c in getCommentPreview(item)"
+                    :key="c.id"
+                    class="comment-preview-line"
+                  >
+                    <span class="preview-name">{{ c.authorName || '用户' }}</span><span class="preview-colon">：</span><span class="preview-text">{{ previewCommentBody(c.content) }}</span>
+                  </p>
+                </div>
+                <p
+                  v-if="!getCommentPreview(item).length"
+                  class="comment-preview-more"
+                >
+                  {{ Number(item.commentCount) > PREVIEW_COMMENT_LIMIT ? `查看全部 ${item.commentCount} 条评论` : '轻触查看评论' }}
+                </p>
+                <p
+                  v-else-if="Number(item.commentCount) > PREVIEW_COMMENT_LIMIT"
+                  class="comment-preview-more"
+                >
+                  查看全部 {{ item.commentCount }} 条评论
+                </p>
+              </template>
             </template>
           </div>
         </div>
@@ -111,7 +115,7 @@
           <div v-else-if="!commentList.length" class="comment-empty">暂无评论，来抢沙发吧</div>
           <div v-else class="comment-scroll">
             <div v-for="c in commentList" :key="c.id" class="comment-row">
-              <van-image round width="36" height="36" :src="toFullUrl(c.authorAvatarUrl)" fit="cover">
+              <van-image round width="36" height="36" :src="resolveUploadUrl(c.authorAvatarUrl)" fit="cover">
                 <template #error>
                   <div class="comment-avatar-fallback">{{ (c.authorName || '用').slice(0, 1) }}</div>
                 </template>
@@ -174,11 +178,12 @@ import {
   unlikeDynamic,
   deleteDynamic,
   getDynamicComments,
+  getDynamicLikes,
   postDynamicComment,
   deleteDynamicComment,
 } from '@/api/dynamic.js'
 import { formatTime } from '@/utils/format.js'
-import { getAvatar, toFullUrl } from '@/utils/image.js'
+import { getAvatar, resolveUploadUrl } from '@/utils/image.js'
 import { storage } from '@/utils/storage.js'
 import { useReport } from '@/composables/useReport.js'
 
@@ -203,18 +208,78 @@ let page = 1
 const PAGE_SIZE = 10
 /** 动态卡片内仅展示最新几条评论预览 */
 const PREVIEW_COMMENT_LIMIT = 3
+const PREVIEW_LIKE_LIMIT = 8
 const PREVIEW_BODY_MAX = 72
+
+function normalizeDynamicItem(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const id = raw.id ?? raw.dynamicId ?? raw.dynamic_id
+  if (!id) return null
+  const commentPreview = raw.commentPreview ?? raw.comment_preview
+  const likePreview = raw.likePreview ?? raw.like_preview
+  return {
+    ...raw,
+    id,
+    userId: raw.userId ?? raw.user_id,
+    commentCount: Number(raw.commentCount ?? raw.comment_count ?? 0),
+    likeCount: Number(raw.likeCount ?? raw.like_count ?? 0),
+    commentPreview: Array.isArray(commentPreview) ? commentPreview : undefined,
+    likePreview: Array.isArray(likePreview) ? likePreview : undefined,
+  }
+}
+
+function showSocialBlock(item) {
+  return Number(item?.likeCount) > 0
+    || Number(item?.commentCount) > 0
+    || getLikePreview(item).length > 0
+    || getCommentPreview(item).length > 0
+}
+
+function getLikePreview(item) {
+  return Array.isArray(item?.likePreview) ? item.likePreview : []
+}
+
+function getCommentPreview(item) {
+  return Array.isArray(item?.commentPreview) ? item.commentPreview : []
+}
+
+function commentsLoading(item) {
+  return Number(item?.commentCount) > 0 && item?.commentPreview === undefined
+}
+
+function formatLikeLine(item) {
+  const rows = getLikePreview(item)
+  const total = Number(item?.likeCount) || rows.length
+  if (!rows.length) {
+    return total > 0 ? `${total} 人赞了` : ''
+  }
+  const names = rows.map((r) => r.authorName || '用户')
+  const shown = names.join('、')
+  if (total > names.length) {
+    return `${shown} 等 ${total} 人`
+  }
+  return shown
+}
 
 async function load() {
   if (noMore.value) return
   loading.value = true
   try {
     const data = await getDynamics(page, PAGE_SIZE)
-    const items = Array.isArray(data) ? data : (data?.list || data?.items || data?.records || data?.content || [])
+    const rawItems = Array.isArray(data) ? data : (data?.list || data?.items || data?.records || data?.content || [])
+    const items = rawItems.map(normalizeDynamicItem).filter(Boolean)
     list.value.push(...items)
     items.forEach((it) => {
+      if (Array.isArray(it.commentPreview)) return
       if (Number(it.commentCount) > 0) {
         void refreshCommentPreview(it)
+      } else {
+        it.commentPreview = []
+      }
+      if (!Array.isArray(it.likePreview) && Number(it.likeCount) > 0) {
+        void refreshLikePreview(it)
+      } else if (!Array.isArray(it.likePreview)) {
+        it.likePreview = []
       }
     })
     if (items.length < PAGE_SIZE || data?.hasNext === false) noMore.value = true
@@ -249,6 +314,7 @@ async function toggleLike(item) {
       item.isLiked = true
       item.likeCount = (item.likeCount || 0) + 1
     }
+    await refreshLikePreview(item)
   } catch (e) {
     showToast({ message: e.message || '操作失败', type: 'fail' })
   } finally {
@@ -257,7 +323,7 @@ async function toggleLike(item) {
 }
 
 function previewImgs(imgs, startIndex) {
-  showImagePreview({ images: imgs.map(toFullUrl), startPosition: startIndex })
+  showImagePreview({ images: imgs.map(resolveUploadUrl), startPosition: startIndex })
 }
 
 function getDisplayName(item) {
@@ -301,7 +367,10 @@ function previewCommentBody(text) {
 }
 
 async function refreshCommentPreview(item) {
-  if (!item?.id) return
+  if (!item?.id) {
+    item.commentPreview = []
+    return
+  }
   if (Number(item.commentCount) <= 0) {
     item.commentPreview = []
     return
@@ -312,6 +381,24 @@ async function refreshCommentPreview(item) {
     item.commentPreview = Array.isArray(rows) ? rows : []
   } catch {
     item.commentPreview = []
+  }
+}
+
+async function refreshLikePreview(item) {
+  if (!item?.id) {
+    item.likePreview = []
+    return
+  }
+  if (Number(item.likeCount) <= 0) {
+    item.likePreview = []
+    return
+  }
+  try {
+    const data = await getDynamicLikes(item.id, 1, PREVIEW_LIKE_LIMIT)
+    const rows = data?.items || data?.list || []
+    item.likePreview = Array.isArray(rows) ? rows : []
+  } catch {
+    item.likePreview = []
   }
 }
 
@@ -398,7 +485,7 @@ function imageKey(item, img, index) {
 
 function getImageSrc(item, img, index) {
   const key = imageKey(item, img, index)
-  const full = toFullUrl(img)
+  const full = resolveUploadUrl(img)
   const seed = Number(imageRetrySeed[key] || 0)
   if (!seed) return full
   return `${full}${full.includes('?') ? '&' : '?'}_retry=${seed}`
@@ -493,6 +580,34 @@ async function showMenu(item) {
   border-radius: 8px;
   cursor: pointer;
 }
+.social-block {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f5f6f8;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.social-likes {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.social-likes:last-child { margin-bottom: 0; }
+.social-like-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #ff6b8a;
+  font-size: 14px;
+}
+.social-like-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #576b95;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+.social-comments .comment-preview-line:last-child { margin-bottom: 0; }
 .comment-preview-loading {
   margin: 0;
   font-size: 12px;

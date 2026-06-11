@@ -25,12 +25,15 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class DynamicService {
     private static final String SCENE_TYPE_FELLOWSHIP = "FELLOWSHIP";
+    private static final int PREVIEW_COMMENT_LIMIT = 3;
+    private static final int PREVIEW_LIKE_LIMIT = 8;
 
     @Autowired
     private DynamicRepository dynamicRepository;
@@ -56,6 +59,7 @@ public class DynamicService {
         List<Dynamic> dynamics = dynamicPage.getContent().stream()
             .map(dynamic -> enrichDynamicInfo(dynamic, currentUserId))
             .collect(Collectors.toList());
+        attachInteractionPreviews(dynamics);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", dynamics);
@@ -157,10 +161,7 @@ public class DynamicService {
     }
 
     public Map<String, Object> listDynamicComments(Long dynamicId, int pageNum, int pageSize, boolean newestFirst) {
-        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
-        if (dynamic == null) {
-            throw new RuntimeException("动态不存在");
-        }
+        requireVisibleDynamic(dynamicId);
         int safePage = Math.max(1, pageNum);
         int safeSize = Math.min(100, Math.max(1, pageSize));
         Page<DynamicComment> pageResult = newestFirst
@@ -185,6 +186,39 @@ public class DynamicService {
             item.put("createdAt", c.getCreatedAt());
             item.put("authorName", u != null && u.getUsername() != null ? u.getUsername() : "用户");
             item.put("authorAvatarUrl", u != null && u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
+            return item;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("total", pageResult.getTotalElements());
+        result.put("page", safePage);
+        result.put("pageSize", safeSize);
+        return result;
+    }
+
+    public Map<String, Object> listDynamicLikes(Long dynamicId, int pageNum, int pageSize) {
+        requireVisibleDynamic(dynamicId);
+        int safePage = Math.max(1, pageNum);
+        int safeSize = Math.min(100, Math.max(1, pageSize));
+        Page<DynamicLike> pageResult = dynamicLikeRepository.findByDynamicIdOrderByCreatedAtDesc(
+                dynamicId, PageRequest.of(safePage - 1, safeSize));
+        List<DynamicLike> likes = pageResult.getContent();
+        Set<Long> userIds = likes.stream()
+                .map(DynamicLike::getUserId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toSet());
+        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        List<Map<String, Object>> items = likes.stream().map(like -> {
+            User u = userMap.get(like.getUserId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", like.getId());
+            item.put("userId", like.getUserId());
+            item.put("authorName", resolveUserDisplayName(u, like.getUserId()));
+            item.put("authorAvatarUrl", u != null && u.getProfilePhoto() != null ? u.getProfilePhoto() : "");
+            item.put("createdAt", like.getCreatedAt());
             return item;
         }).collect(Collectors.toList());
 
@@ -275,6 +309,113 @@ public class DynamicService {
         dynamicCommentRepository.save(comment);
         dynamic.setCommentCount(Math.max(0, (dynamic.getCommentCount() == null ? 0 : dynamic.getCommentCount()) - 1));
         dynamicRepository.save(dynamic);
+    }
+
+    private Dynamic requireVisibleDynamic(Long dynamicId) {
+        Dynamic dynamic = dynamicRepository.findByIdAndIsDeletedFalseAndSceneType(dynamicId, SCENE_TYPE_FELLOWSHIP);
+        if (dynamic != null) {
+            return dynamic;
+        }
+        dynamic = dynamicRepository.findById(dynamicId).orElse(null);
+        if (dynamic == null || Boolean.TRUE.equals(dynamic.getIsDeleted())) {
+            throw new RuntimeException("动态不存在");
+        }
+        return dynamic;
+    }
+
+    private void attachInteractionPreviews(List<Dynamic> dynamics) {
+        if (dynamics == null || dynamics.isEmpty()) {
+            return;
+        }
+        List<Long> ids = dynamics.stream()
+                .map(Dynamic::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return;
+        }
+
+        List<DynamicComment> allComments = dynamicCommentRepository
+                .findByDynamicIdInAndStatusOrderByCreatedAtDesc(ids, "published");
+        Map<Long, List<DynamicComment>> commentsByDynamic = new HashMap<>();
+        for (DynamicComment comment : allComments) {
+            commentsByDynamic
+                    .computeIfAbsent(comment.getDynamicId(), key -> new ArrayList<>())
+                    .add(comment);
+        }
+
+        List<DynamicLike> allLikes = dynamicLikeRepository.findByDynamicIdInOrderByCreatedAtDesc(ids);
+        Map<Long, List<DynamicLike>> likesByDynamic = new HashMap<>();
+        for (DynamicLike like : allLikes) {
+            likesByDynamic
+                    .computeIfAbsent(like.getDynamicId(), key -> new ArrayList<>())
+                    .add(like);
+        }
+
+        Set<Long> userIds = new java.util.HashSet<>();
+        for (List<DynamicComment> comments : commentsByDynamic.values()) {
+            comments.stream().limit(PREVIEW_COMMENT_LIMIT).forEach(c -> userIds.add(c.getUserId()));
+        }
+        for (List<DynamicLike> likes : likesByDynamic.values()) {
+            likes.stream().limit(PREVIEW_LIKE_LIMIT).forEach(l -> userIds.add(l.getUserId()));
+        }
+        Map<Long, User> userMap = userIds.isEmpty()
+                ? Map.of()
+                : userRepository.findAllById(userIds).stream()
+                        .collect(Collectors.toMap(User::getUserid, u -> u));
+
+        for (Dynamic dynamic : dynamics) {
+            Long dynamicId = dynamic.getId();
+            if (dynamicId == null) {
+                dynamic.setCommentPreview(List.of());
+                dynamic.setLikePreview(List.of());
+                continue;
+            }
+
+            List<DynamicComment> commentRows = commentsByDynamic.getOrDefault(dynamicId, List.of());
+            List<Map<String, Object>> commentPreview = new ArrayList<>();
+            int commentTake = Math.min(PREVIEW_COMMENT_LIMIT, commentRows.size());
+            for (int i = commentTake - 1; i >= 0; i--) {
+                DynamicComment row = commentRows.get(i);
+                commentPreview.add(toCommentPreviewItem(row, userMap.get(row.getUserId())));
+            }
+            dynamic.setCommentPreview(commentPreview);
+
+            List<DynamicLike> likeRows = likesByDynamic.getOrDefault(dynamicId, List.of());
+            List<Map<String, Object>> likePreview = likeRows.stream()
+                    .limit(PREVIEW_LIKE_LIMIT)
+                    .map(like -> toLikePreviewItem(like, userMap.get(like.getUserId())))
+                    .collect(Collectors.toList());
+            dynamic.setLikePreview(likePreview);
+        }
+    }
+
+    private Map<String, Object> toCommentPreviewItem(DynamicComment comment, User user) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", comment.getId());
+        item.put("userId", comment.getUserId());
+        item.put("content", comment.getContent());
+        item.put("createdAt", comment.getCreatedAt());
+        item.put("authorName", resolveUserDisplayName(user, comment.getUserId()));
+        item.put("authorAvatarUrl", user != null && user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
+        return item;
+    }
+
+    private Map<String, Object> toLikePreviewItem(DynamicLike like, User user) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", like.getId());
+        item.put("userId", like.getUserId());
+        item.put("authorName", resolveUserDisplayName(user, like.getUserId()));
+        item.put("authorAvatarUrl", user != null && user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
+        item.put("createdAt", like.getCreatedAt());
+        return item;
+    }
+
+    private String resolveUserDisplayName(User user, Long userId) {
+        if (user != null && user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername();
+        }
+        return userId == null ? "用户" : ("用户" + userId);
     }
 
     private Dynamic enrichDynamicInfo(Dynamic dynamic, Long currentUserId) {

@@ -1,7 +1,7 @@
 <template>
   <div class="help-m">
     <header class="help-m-head">
-      <router-link to="/m/platform" class="help-m-back">‹ 玩法</router-link>
+      <button type="button" class="help-m-back" @click="goBack()">‹ 玩法</button>
       <h1>互助广场</h1>
       <p>发布需求 · 回应互助 · 达人榜</p>
       <div class="help-m-actions">
@@ -71,9 +71,11 @@
 import { onMounted, ref } from 'vue'
 import { fetchHelpLeaderboard, fetchHelpRequests } from '@/api/help.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 import { useUserStore } from '@/stores/user.js'
 
 const { helpPath } = usePlatformPath()
+const { goBack } = useBackNavigation('/m/platform')
 const userStore = useUserStore()
 const loading = ref(true)
 const error = ref('')
@@ -165,6 +167,10 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--lc-blue, #2563eb);
   text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .help-m-head h1 {

@@ -1,7 +1,7 @@
 <template>
   <div class="topics-m">
     <header class="topics-head">
-      <router-link to="/m/platform" class="back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="back" aria-label="返回" @click="goBack()">‹</button>
       <div>
         <h1>话题广场</h1>
         <p>按兴趣交流，发现同好</p>
@@ -57,7 +57,9 @@
 import { onMounted, ref } from 'vue'
 import { showToast } from 'vant'
 import { createInterestTopicPost, fetchInterestTopicDetail, fetchInterestTopics } from '@/api/interestTopics.js'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 
+const { goBack } = useBackNavigation('/m/platform')
 const loading = ref(false)
 const topics = ref([])
 const showDetail = ref(false)
@@ -139,7 +141,9 @@ onMounted(loadTopics)
   font-size: 22px;
   text-decoration: none;
   color: var(--lc-indigo, #4f46e5);
-  border: 1px solid #e8ecf4;
+  border: 1px solid var(--lc-soft, #e8ecf4);
+  padding: 0;
+  cursor: pointer;
 }
 
 .topics-head h1 {

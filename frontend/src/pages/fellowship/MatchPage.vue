@@ -25,7 +25,14 @@
     <!-- Swipe quota -->
     <div v-if="swipeQuota && !swipeQuota.unlimited" class="quota-bar">
       <span>今日滑卡 {{ swipeQuota.used }}/{{ swipeQuota.limit }}</span>
-      <button type="button" class="quota-vip-link" @click="router.push(fellowshipPath('/vip'))">开通 VIP 无限滑</button>
+      <button
+        v-if="showVipCommerce"
+        type="button"
+        class="quota-vip-link"
+        @click="router.push(fellowshipPath('/vip'))"
+      >
+        开通 VIP 无限滑
+      </button>
     </div>
 
     <!-- Card area -->
@@ -180,6 +187,9 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 import { markFellowshipFirstSwipe } from '@/composables/useFellowshipOnboarding.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 import { buildPreferenceBiasHints, isMatchFilterStrict } from '@/utils/fellowshipPreferenceHints.js'
+import { FELLOWSHIP_VIP_COMMERCE_ENABLED } from '@/constants/fellowshipCommerce.js'
+
+const showVipCommerce = FELLOWSHIP_VIP_COMMERCE_ENABLED
 
 const router = useRouter()
 const { fellowshipPath } = useFellowshipNavBase()
@@ -322,7 +332,9 @@ async function onAction(action) {
     cardStack.value.unshift(top)
     if (err?.data?.code === 'SWIPE_DAILY_LIMIT' || err?.status === 429) {
       showToast({ message: err?.message || '今日滑卡次数已用完', type: 'fail' })
-      router.push(fellowshipPath('/vip'))
+      if (showVipCommerce) {
+        router.push(fellowshipPath('/vip'))
+      }
       return
     }
     if (isFellowshipPhotosGateError(err)) {
@@ -433,7 +445,9 @@ async function handleRewind() {
   } catch (err) {
     if (err?.data?.code === 'REWIND_DAILY_LIMIT' || err?.status === 429) {
       showToast({ message: err?.message || '今日撤回次数已用完', type: 'fail' })
-      router.push(fellowshipPath('/vip'))
+      if (showVipCommerce) {
+        router.push(fellowshipPath('/vip'))
+      }
       return
     }
     showToast({ message: err?.message || '撤回失败', type: 'fail' })

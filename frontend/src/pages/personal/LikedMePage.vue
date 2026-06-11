@@ -3,7 +3,7 @@
     <NavBar title="喜欢我的人" />
     <div v-if="loading" class="loading-wrap"><van-loading size="20" /></div>
     <template v-else>
-      <div v-if="locked" class="vip-banner" @click="router.push(fellowshipPath('/vip'))">
+      <div v-if="locked && showVipCommerce" class="vip-banner" @click="router.push(fellowshipPath('/vip'))">
         <p>有 {{ totalCount }} 人喜欢你</p>
         <span>开通 VIP 查看完整名单</span>
       </div>
@@ -43,7 +43,9 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 import { useFellowshipInterestFilter, INTEREST_FILTER_OPTIONS } from '@/composables/useFellowshipInterestFilter.js'
 import { useUserStore } from '@/stores/user.js'
+import { FELLOWSHIP_VIP_COMMERCE_ENABLED } from '@/constants/fellowshipCommerce.js'
 
+const showVipCommerce = FELLOWSHIP_VIP_COMMERCE_ENABLED
 const router = useRouter()
 const userStore = useUserStore()
 const { fellowshipPath } = useFellowshipNavBase()
@@ -74,7 +76,7 @@ async function loadList() {
       totalCount.value = list.value.length
       return
     }
-    locked.value = Boolean(data?.locked && !data?.vipActive)
+    locked.value = showVipCommerce && Boolean(data?.locked && !data?.vipActive)
     totalCount.value = Number(data?.totalCount || 0)
     const items = Array.isArray(data?.items) ? data.items : []
     list.value = items.map((item) => normalizeUser(item)).filter(Boolean)
@@ -87,8 +89,12 @@ async function loadList() {
 
 function onProfile(user) {
   if (user?.locked || !user?.userId) {
-    showToast('开通 VIP 后可查看资料')
-    router.push(fellowshipPath('/vip'))
+    if (showVipCommerce) {
+      showToast('开通 VIP 后可查看资料')
+      router.push(fellowshipPath('/vip'))
+    } else {
+      showToast('暂无法查看该用户资料')
+    }
     return
   }
   goProfile(user.userId)

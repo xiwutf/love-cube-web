@@ -1,7 +1,7 @@
 <template>
   <div class="member-m">
     <header class="head">
-      <router-link to="/m/platform" class="back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="back" aria-label="返回" @click="goBack()">‹</button>
       <h1>平台会员</h1>
     </header>
 
@@ -27,7 +27,9 @@
 import { onMounted, ref } from 'vue'
 import { showToast } from 'vant'
 import { fetchPlatformMemberStatus, subscribePlatformMember } from '@/api/platformMember.js'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 
+const { goBack } = useBackNavigation('/m/platform')
 const status = ref({ perks: [], monthlyPrice: 19 })
 const paying = ref(false)
 
@@ -76,6 +78,8 @@ onMounted(load)
   height: 36px;
   border-radius: 10px;
   font-size: 22px;
+  padding: 0;
+  cursor: pointer;
 }
 
 .head h1 {

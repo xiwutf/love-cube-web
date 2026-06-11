@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface GrowthUserGrowthRepository extends JpaRepository<UserGrowth, Long> {
     Optional<UserGrowth> findByUserId(Long userId);
 
+    List<UserGrowth> findByUserIdIn(Iterable<Long> userIds);
+
     long countByTotalContributionGreaterThan(int totalContribution);
 
     @Query("SELECT g.level, COUNT(g) FROM GrowthUserGrowth g GROUP BY g.level ORDER BY g.level ASC")

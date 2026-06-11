@@ -72,7 +72,7 @@ public class MatchController {
             int safePage = page == null || page < 1 ? 1 : page;
             int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 50);
 
-            Page<User> pageResult = matchService.getAllUsersPage(
+            MatchService.MatchListPageResult pageResult = matchService.getAllUsersPageWithContext(
                     currentUserId,
                     gender,
                     minAge,
@@ -82,16 +82,12 @@ public class MatchController {
                     Boolean.TRUE.equals(verifiedOnly),
                     safePage - 1,
                     safeSize);
-            List<User> pageUsers = pageResult.getContent();
-            long total = pageResult.getTotalElements();
-            List<Long> userIds = pageUsers.stream().map(User::getUserid).collect(Collectors.toList());
-            Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
+            List<User> pageUsers = pageResult.page().getContent();
+            long total = pageResult.page().getTotalElements();
             User currentUser = userRepository.findById(currentUserId).orElse(null);
 
-            List<Map<String, Object>> enriched = pageUsers.stream().map(u ->
-                unifiedProfileService.buildMatchCardPayload(
-                    u, verifyMap.getOrDefault(u.getUserid(), Map.of()), currentUser)
-            ).collect(Collectors.toList());
+            List<Map<String, Object>> enriched = matchService.buildMatchListCards(
+                    pageUsers, currentUser, pageResult.context());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -99,10 +95,11 @@ public class MatchController {
             response.put("page", safePage);
             response.put("size", safeSize);
             response.put("total", total);
-            response.put("hasMore", pageResult.hasNext());
+            response.put("hasMore", pageResult.page().hasNext());
             if (currentUser != null) {
                 response.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
-                Map<String, Object> viewerCompletion = unifiedProfileService.buildFellowshipCompletion(currentUser);
+                Map<String, Object> viewerCompletion = matchService.buildViewerCompletionLightweight(
+                        currentUser, pageResult.context());
                 response.put("viewerCompletion", viewerCompletion);
                 response.put("exposureBoostPercent", viewerCompletion.get("exposureBoostPercent"));
             }

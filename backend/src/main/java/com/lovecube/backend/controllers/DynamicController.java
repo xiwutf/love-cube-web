@@ -185,6 +185,28 @@ public class DynamicController {
     }
 
     /**
+     * 动态点赞用户列表
+     */
+    @GetMapping("/dynamics/{id}/likes")
+    public ResponseEntity<?> listDynamicLikes(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (getCurrentUserId(authHeader) == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+            }
+            Map<String, Object> result = dynamicService.listDynamicLikes(id, pageNum, pageSize);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", e.getMessage() != null ? e.getMessage() : "加载点赞列表失败"));
+        }
+    }
+
+    /**
      * 动态评论列表
      */
     @GetMapping("/dynamics/{id}/comments")

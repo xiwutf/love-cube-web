@@ -115,6 +115,9 @@ import { formatTime } from '@/utils/format.js'
 import { getAvatar } from '@/utils/image.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 import { getMyGrowth } from '@/api/growth.js'
+import { FELLOWSHIP_VIP_COMMERCE_ENABLED } from '@/constants/fellowshipCommerce.js'
+
+const showVipCommerce = FELLOWSHIP_VIP_COMMERCE_ENABLED
 
 const route = useRoute()
 const router = useRouter()
@@ -216,7 +219,7 @@ async function loadVisitor() {
   loadingVisitor.value = true
   try {
     const payload = await getVisitorList()
-    visitorLocked.value = Boolean(payload?.locked && !payload?.vipActive)
+    visitorLocked.value = showVipCommerce && Boolean(payload?.locked && !payload?.vipActive)
     const data = normalizeListPayload(payload)
     visitorList.value = data.map((item) => ({
       ...item,

@@ -105,3 +105,9 @@ lovecube:
   admin:
     # 工作台 /api/admin/stats 聚合结果内存缓存秒数；0 表示不缓存（多实例各自 JVM 内生效）
     dashboard-stats-cache-seconds: 45
+  fellowship:
+    # 暂关 VIP 付费能力时，喜欢/访客名单不对非 VIP 用户隐藏
+    vip-commerce-enabled: false
+    growth-backfill:
+      # 设为 true 时应用启动后自动执行一次历史用户成长/徽章补偿
+      on-startup: false

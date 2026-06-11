@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class FellowshipUserBadgeService {
     private final BadgeRepository badgeRepository;
     private final UserBadgeRepository userBadgeRepository;
+    private volatile Map<String, Badge> badgeCatalogCache;
 
     public FellowshipUserBadgeService(BadgeRepository badgeRepository, UserBadgeRepository userBadgeRepository) {
         this.badgeRepository = badgeRepository;
@@ -32,15 +33,22 @@ public class FellowshipUserBadgeService {
             Map<String, Boolean> verifyBadges,
             int profileCompletionRate
     ) {
-        boolean photoVerified = verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"));
-        boolean realnameVerified = verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified"));
-
-        Map<String, Badge> badgeCatalog = badgeRepository.findAll().stream()
-                .collect(Collectors.toMap(Badge::getCode, b -> b, (a, b) -> a));
         Map<String, UserBadge> unlockedMap = userBadgeRepository.findByUserIdOrderByCreatedAtAsc(user.getUserid())
                 .stream()
                 .filter(ub -> ub.getUnlocked() != null && ub.getUnlocked() == 1)
                 .collect(Collectors.toMap(UserBadge::getBadgeCode, ub -> ub, (a, b) -> a));
+        return buildCardBadgePayloadCached(verifyBadges, profileCompletionRate, unlockedMap);
+    }
+
+    public Map<String, Object> buildCardBadgePayloadCached(
+            Map<String, Boolean> verifyBadges,
+            int profileCompletionRate,
+            Map<String, UserBadge> unlockedMap
+    ) {
+        boolean photoVerified = verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"));
+        boolean realnameVerified = verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified"));
+        Map<String, Badge> badgeCatalog = badgeCatalog();
+        Map<String, UserBadge> unlocked = unlockedMap != null ? unlockedMap : Map.of();
 
         List<Map<String, Object>> verifiedBadges = new ArrayList<>();
         if (realnameVerified) {
@@ -51,12 +59,12 @@ public class FellowshipUserBadgeService {
         }
 
         List<Candidate> candidates = new ArrayList<>();
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_PROFILE_MASTER", 80);
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_PHOTO_MASTER", 70);
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_TRUST", 65);
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_CITY", 50);
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_JOIN", 45);
-        addIfUnlocked(candidates, unlockedMap, badgeCatalog, "FELLOW_NEWCOMER", 40);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_PROFILE_MASTER", 80);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_PHOTO_MASTER", 70);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_TRUST", 65);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_CITY", 50);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_JOIN", 45);
+        addIfUnlocked(candidates, unlocked, badgeCatalog, "FELLOW_NEWCOMER", 40);
 
         candidates.sort(Comparator.comparingInt(Candidate::priority).reversed());
 
@@ -74,8 +82,7 @@ public class FellowshipUserBadgeService {
     }
 
     public List<Map<String, Object>> buildRecentlyUnlockedBadges(Long userId, int limit) {
-        Map<String, Badge> badgeCatalog = badgeRepository.findAll().stream()
-                .collect(Collectors.toMap(Badge::getCode, b -> b, (a, b) -> a));
+        Map<String, Badge> badgeCatalog = badgeCatalog();
         return userBadgeRepository.findByUserIdOrderByCreatedAtAsc(userId).stream()
                 .filter(ub -> ub.getUnlocked() != null && ub.getUnlocked() == 1 && ub.getUnlockedAt() != null)
                 .sorted(Comparator.comparing(UserBadge::getUnlockedAt).reversed())
@@ -91,6 +98,22 @@ public class FellowshipUserBadgeService {
                     return row;
                 })
                 .toList();
+    }
+
+    private Map<String, Badge> badgeCatalog() {
+        Map<String, Badge> cache = badgeCatalogCache;
+        if (cache != null) {
+            return cache;
+        }
+        synchronized (this) {
+            cache = badgeCatalogCache;
+            if (cache == null) {
+                cache = badgeRepository.findAll().stream()
+                        .collect(Collectors.toMap(Badge::getCode, b -> b, (a, b) -> a));
+                badgeCatalogCache = cache;
+            }
+            return cache;
+        }
     }
 
     private static void addIfUnlocked(

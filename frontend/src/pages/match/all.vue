@@ -4,7 +4,7 @@
     <van-list
       v-model:loading="loading"
       :finished="finished"
-      finished-text="No more users"
+      finished-text="没有更多了"
       @load="loadMore"
     >
       <UserCard
@@ -14,10 +14,10 @@
         @click="goProfile(user.userId)"
       >
         <template #action>
-          <van-tag plain type="primary" @click.stop="goProfile(user.userId)">View</van-tag>
+          <van-tag plain type="primary" @click.stop="goProfile(user.userId)">查看</van-tag>
         </template>
       </UserCard>
-      <van-empty v-if="!loading && !users.length" description="No users available" />
+      <van-empty v-if="!loading && !users.length" description="暂无异性用户" />
     </van-list>
   </div>
 </template>

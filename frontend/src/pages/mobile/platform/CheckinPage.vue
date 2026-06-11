@@ -1,7 +1,7 @@
 <template>
   <section class="ck-page">
     <header class="ck-head">
-      <router-link to="/m/platform" class="ck-back" aria-label="返回玩法中心">‹</router-link>
+      <button type="button" class="ck-back" aria-label="返回" @click="goBack()">‹</button>
       <h1 class="ck-title">每日签到</h1>
     </header>
     <CheckinPanel />
@@ -10,6 +10,9 @@
 
 <script setup>
 import CheckinPanel from '@/components/platform/CheckinPanel.vue'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
+
+const { goBack } = useBackNavigation('/m/platform')
 </script>
 
 <style scoped>
@@ -37,6 +40,10 @@ import CheckinPanel from '@/components/platform/CheckinPanel.vue'
   font-size: 22px;
   color: var(--lc-indigo);
   text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 .ck-title {
   flex: 1;

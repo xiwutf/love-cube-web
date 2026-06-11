@@ -1,8 +1,12 @@
 import request from './request.js'
 
 // Users
-export function getAdminUsers() {
-  return request.get('/admin/users')
+export function getAdminUsers(params = {}) {
+  return request.get('/admin/users', { params })
+}
+
+export function getAdminFellowshipGrowthDashboard() {
+  return request.get('/admin/fellowship/growth/dashboard')
 }
 
 export function updateAdminUserRole(userId, role) {

@@ -1,7 +1,7 @@
 ﻿<template>
   <van-pull-refresh v-model="refreshingLocal" @refresh="emit('refresh')">
     <div class="tab-content">
-      <div v-if="locked" class="vip-lock-banner" @click="router.push(fellowshipPath('/vip'))">
+      <div v-if="locked && showVipCommerce" class="vip-lock-banner" @click="router.push(fellowshipPath('/vip'))">
         <p>访客信息已隐藏</p>
         <span>开通 VIP 查看谁看过你</span>
       </div>
@@ -53,6 +53,9 @@ import { showToast } from 'vant'
 import FellowshipInterestFilterBar from '@/components/fellowship/FellowshipInterestFilterBar.vue'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
 import { useFellowshipInterestFilter, INTEREST_FILTER_OPTIONS } from '@/composables/useFellowshipInterestFilter.js'
+import { FELLOWSHIP_VIP_COMMERCE_ENABLED } from '@/constants/fellowshipCommerce.js'
+
+const showVipCommerce = FELLOWSHIP_VIP_COMMERCE_ENABLED
 
 const props = defineProps({
   list: { type: Array, default: () => [] },
@@ -78,8 +81,12 @@ const refreshingLocal = computed({ get: () => props.refreshing, set: (value) => 
 
 function onProfile(item) {
   if (props.locked || item.locked) {
-    showToast('开通 VIP 后可查看访客资料')
-    router.push(fellowshipPath('/vip'))
+    if (showVipCommerce) {
+      showToast('开通 VIP 后可查看访客资料')
+      router.push(fellowshipPath('/vip'))
+    } else {
+      showToast('暂无法查看访客资料')
+    }
     return
   }
   emit('profile', item)

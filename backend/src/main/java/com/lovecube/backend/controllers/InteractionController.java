@@ -1,5 +1,6 @@
 package com.lovecube.backend.controllers;
 
+import com.lovecube.backend.config.FellowshipFeatureProperties;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.notification.NotificationCatalog;
 import com.lovecube.backend.repository.UserRepository;
@@ -48,6 +49,9 @@ public class InteractionController {
 
     @Autowired
     private MatchService matchService;
+
+    @Autowired
+    private FellowshipFeatureProperties fellowshipFeatureProperties;
 
     private ResponseEntity<?> forbiddenIfNeedsFellowshipPhotos(User u) {
         if (u != null && unifiedProfileService.isFellowshipActiveButMissingLifePhotos(u)) {
@@ -434,10 +438,11 @@ public class InteractionController {
         }
         List<Map<String, Object>> list = interactionService.getReceivedLikeUsers(currentUser.getUserid());
         boolean vipActive = vipService.isActiveVip(currentUser);
+        boolean gatePremium = fellowshipFeatureProperties.isVipCommerceEnabled();
         Map<String, Object> body = new HashMap<>();
         body.put("vipActive", vipActive);
         body.put("totalCount", list.size());
-        if (vipActive) {
+        if (vipActive || !gatePremium) {
             body.put("items", list);
         } else {
             body.put("items", list.stream().map(this::maskLikeUser).toList());

@@ -1,10 +1,13 @@
 package com.lovecube.backend.services;
 
+import com.lovecube.backend.entity.UserBadge;
 import com.lovecube.backend.models.MatchRecord;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.repository.FellowshipProfileRepository;
 import com.lovecube.backend.repository.MatchRecordRepository;
+import com.lovecube.backend.repository.UserBadgeRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
+import com.lovecube.backend.repository.UserPhotoRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.utils.JwtUtil;
@@ -18,14 +21,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class MatchService
@@ -55,6 +62,18 @@ public class MatchService
 
     @Autowired
     private UserGrowthRepository userGrowthRepository;
+
+    @Autowired
+    private UserPhotoRepository userPhotoRepository;
+
+    @Autowired
+    private UserBadgeRepository userBadgeRepository;
+
+    @Autowired
+    private FellowshipUserBadgeService fellowshipUserBadgeService;
+
+    @Autowired
+    private FellowshipGrowthSummaryService fellowshipGrowthSummaryService;
 
     @Transactional
     public List<User> findMatches(Long userId, Integer minAge, Integer maxAge, Integer gender, String location) {
@@ -230,7 +249,163 @@ public class MatchService
     /**
      * 匹配列表（数据库分页 + 排序）：避免先拉全量再在内存分页。
      */
-    public Page<User> getAllUsersPage(
+    public MatchListPageResult getAllUsersPageWithContext(
+            Long currentUserId,
+            Integer gender,
+            Integer minAge,
+            Integer maxAge,
+            String location,
+            Boolean includeActed,
+            boolean verifiedOnly,
+            int pageIndex,
+            int pageSize) {
+        Page<User> rawPage = queryMatchCandidatesPage(
+                currentUserId, gender, minAge, maxAge, location, includeActed, verifiedOnly, pageIndex, pageSize);
+        List<User> content = rawPage.getContent();
+        if (content.isEmpty()) {
+            return new MatchListPageResult(rawPage, prepareMatchListCardContext(List.of(), currentUserId));
+        }
+        List<Long> userIds = content.stream().map(User::getUserid).collect(Collectors.toList());
+        MatchListCardContext ctx = prepareMatchListCardContext(userIds, currentUserId);
+        List<User> sorted = content.stream()
+                .sorted(Comparator.comparingDouble((User u) -> rankCandidateLightweight(u, ctx)).reversed())
+                .collect(Collectors.toList());
+        return new MatchListPageResult(
+                new PageImpl<>(sorted, rawPage.getPageable(), rawPage.getTotalElements()),
+                ctx);
+    }
+
+    public MatchListCardContext prepareMatchListCardContext(List<Long> userIds, Long viewerUserId) {
+        List<Long> ids = Stream.concat(
+                        userIds == null ? Stream.empty() : userIds.stream(),
+                        viewerUserId == null ? Stream.empty() : Stream.of(viewerUserId))
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, Map<String, Boolean>> verifyByUser = ids.isEmpty()
+                ? Map.of()
+                : verificationService.getBatchSummary(ids);
+
+        Map<Long, Long> photoCountByUser = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (Object[] row : userPhotoRepository.countGroupedByUserIds(ids)) {
+                if (row == null || row.length < 2) {
+                    continue;
+                }
+                Long uid = row[0] instanceof Number ? ((Number) row[0]).longValue() : null;
+                Long count = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+                if (uid != null) {
+                    photoCountByUser.put(uid, count);
+                }
+            }
+        }
+
+        Map<Long, Integer> growthLevelByUser = new HashMap<>();
+        if (!ids.isEmpty()) {
+            userGrowthRepository.findByUserIdIn(ids).forEach(growth -> {
+                if (growth.getUserId() == null) {
+                    return;
+                }
+                int level = growth.getLevel() == null || growth.getLevel() <= 0 ? 1 : growth.getLevel();
+                growthLevelByUser.put(growth.getUserId(), level);
+            });
+        }
+
+        Map<Long, Map<String, UserBadge>> unlockedBadgesByUser = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (UserBadge badge : userBadgeRepository.findByUserIdInAndUnlocked(ids, 1)) {
+                if (badge.getUserId() == null || badge.getBadgeCode() == null) {
+                    continue;
+                }
+                unlockedBadgesByUser
+                        .computeIfAbsent(badge.getUserId(), id -> new LinkedHashMap<>())
+                        .putIfAbsent(badge.getBadgeCode(), badge);
+            }
+        }
+
+        return new MatchListCardContext(verifyByUser, photoCountByUser, growthLevelByUser, unlockedBadgesByUser);
+    }
+
+    public List<Map<String, Object>> buildMatchListCards(List<User> users, User viewer, MatchListCardContext ctx) {
+        if (users == null || users.isEmpty()) {
+            return List.of();
+        }
+        return users.stream()
+                .map(user -> buildMatchListCard(user, viewer, ctx))
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> buildViewerCompletionLightweight(User viewer, MatchListCardContext ctx) {
+        if (viewer == null || ctx == null) {
+            return Map.of();
+        }
+        Long userId = viewer.getUserid();
+        Map<String, Boolean> verify = ctx.verifyByUser().getOrDefault(userId, Map.of());
+        int photoCount = ctx.photoCountByUser().getOrDefault(userId, 0L).intValue();
+        int growthLevel = ctx.growthLevelByUser().getOrDefault(userId, 1);
+        int completionRate = unifiedProfileService.computeFellowshipCompletionRateLightweight(
+                viewer, verify, photoCount, growthLevel);
+        int exposureBoost = unifiedProfileService.computeExposureBoostLightweight(
+                viewer, verify, photoCount, growthLevel);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("completionRate", completionRate);
+        result.put("exposureBoostPercent", exposureBoost);
+        return result;
+    }
+
+    private Map<String, Object> buildMatchListCard(User user, User viewer, MatchListCardContext ctx) {
+        Long userId = user.getUserid();
+        Map<String, Boolean> verify = ctx.verifyByUser().getOrDefault(userId, Map.of());
+        int photoCount = ctx.photoCountByUser().getOrDefault(userId, 0L).intValue();
+        int growthLevel = ctx.growthLevelByUser().getOrDefault(userId, 1);
+        int completionRate = unifiedProfileService.computeFellowshipCompletionRateLightweight(
+                user, verify, photoCount, growthLevel);
+        int exposureBoost = unifiedProfileService.computeExposureBoostLightweight(
+                user, verify, photoCount, growthLevel);
+
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("userId", userId);
+        card.put("userid", userId);
+        card.put("id", userId);
+        card.put("nickname", defaultText(user.getUsername()));
+        card.put("username", defaultText(user.getUsername()));
+        String photo = defaultText(user.getProfilePhoto());
+        card.put("avatarUrl", photo);
+        card.put("profilePhoto", photo);
+        card.put("age", user.getAge());
+        card.put("location", defaultText(user.getLocation()));
+        card.put("occupation", defaultText(user.getOccupation()));
+        card.put("height", user.getHeight());
+        card.put("bio", defaultText(user.getBio()));
+        card.put("signature", defaultText(user.getBio()));
+        card.put("gender", user.getGender() == null ? "" : (user.getGender() == 1 ? "male" : user.getGender() == 2 ? "female" : ""));
+        String bday = user.getBirthDate() == null ? "" : user.getBirthDate().toLocalDate().toString();
+        card.put("birthday", bday);
+        card.put("birthDate", user.getBirthDate());
+        card.put("constellation", "");
+        card.put("photos", photo.isBlank() ? List.of() : List.of(photo));
+        card.put("completionRate", completionRate);
+        card.put("profileCompletionRate", completionRate);
+        card.put("exposureBoostPercent", exposureBoost);
+        card.put("identityRole", "self");
+        card.put("guardianRole", "");
+        card.put("photoVerified", Boolean.TRUE.equals(verify.get("photoVerified")));
+        card.put("realnameVerified", Boolean.TRUE.equals(verify.get("realnameVerified")));
+        card.put("growthLevel", growthLevel);
+        card.put("growthTitle", fellowshipGrowthSummaryService.resolveGrowthTitleForLevel(growthLevel));
+        card.put("recommendReasons", viewer != null
+                ? unifiedProfileService.buildRecommendReasonsLightweight(viewer, user, verify, completionRate)
+                : List.of());
+
+        Map<String, UserBadge> unlocked = ctx.unlockedBadgesByUser().getOrDefault(userId, Map.of());
+        Map<String, Object> badgePayload = fellowshipUserBadgeService.buildCardBadgePayloadCached(
+                verify, completionRate, unlocked);
+        card.put("verifiedBadges", badgePayload.get("verifiedBadges"));
+        card.put("badges", badgePayload.get("badges"));
+        return card;
+    }
+
+    private Page<User> queryMatchCandidatesPage(
             Long currentUserId,
             Integer gender,
             Integer minAge,
@@ -258,7 +433,7 @@ public class MatchService
         int includeActedInt = Boolean.TRUE.equals(includeActed) ? 1 : 0;
         int verifiedOnlyInt = verifiedOnly ? 1 : 0;
         Pageable pageable = PageRequest.of(Math.max(pageIndex, 0), pageSize);
-        Page<User> rawPage = userRepository.findMatchCandidatesPage(
+        return userRepository.findMatchCandidatesPage(
                 currentUserId,
                 genderFilter,
                 minAgeFilter,
@@ -267,21 +442,33 @@ public class MatchService
                 includeActedInt,
                 verifiedOnlyInt,
                 pageable);
-        List<User> content = rawPage.getContent();
-        if (content.isEmpty()) {
-            return rawPage;
+    }
+
+    private double rankCandidateLightweight(User user, MatchListCardContext ctx) {
+        Long userId = user.getUserid();
+        Map<String, Boolean> badges = ctx.verifyByUser().getOrDefault(userId, Map.of());
+        int photoCount = ctx.photoCountByUser().getOrDefault(userId, 0L).intValue();
+        int growthLevel = ctx.growthLevelByUser().getOrDefault(userId, 1);
+        double score = unifiedProfileService.computeRecommendRankLightweight(user, badges, photoCount, growthLevel);
+        if (user.getProfilePhoto() != null && !user.getProfilePhoto().isBlank()) {
+            score += 5;
         }
-        List<Long> userIds = content.stream().map(User::getUserid).collect(Collectors.toList());
-        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
-        Map<Long, Integer> levelMap = userGrowthRepository.findByUserIdIn(userIds).stream()
-                .collect(Collectors.toMap(
-                        g -> g.getUserId(),
-                        g -> g.getLevel() == null ? 1 : g.getLevel(),
-                        (a, b) -> a));
-        List<User> sorted = content.stream()
-                .sorted(Comparator.comparingDouble((User u) -> rankCandidate(u, verifyMap, levelMap)).reversed())
-                .collect(Collectors.toList());
-        return new PageImpl<>(sorted, pageable, rawPage.getTotalElements());
+        return score;
+    }
+
+    private static String defaultText(String value) {
+        return value == null ? "" : value;
+    }
+
+    public record MatchListCardContext(
+            Map<Long, Map<String, Boolean>> verifyByUser,
+            Map<Long, Long> photoCountByUser,
+            Map<Long, Integer> growthLevelByUser,
+            Map<Long, Map<String, UserBadge>> unlockedBadgesByUser
+    ) {
+    }
+
+    public record MatchListPageResult(Page<User> page, MatchListCardContext context) {
     }
 
     private double rankCandidate(User user, Map<Long, Map<String, Boolean>> verifyMap, Map<Long, Integer> levelMap) {

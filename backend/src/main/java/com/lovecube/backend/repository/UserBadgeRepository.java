@@ -10,4 +10,6 @@ public interface UserBadgeRepository extends JpaRepository<UserBadge, Long> {
     List<UserBadge> findByUserIdOrderByCreatedAtAsc(Long userId);
 
     Optional<UserBadge> findByUserIdAndBadgeCode(Long userId, String badgeCode);
+
+    List<UserBadge> findByUserIdInAndUnlocked(Iterable<Long> userIds, int unlocked);
 }

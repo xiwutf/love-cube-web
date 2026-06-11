@@ -1,7 +1,7 @@
 <template>
   <div class="ps-m">
     <header class="ps-m-head">
-      <router-link to="/m/platform" class="ps-m-back">‹ 玩法</router-link>
+      <button type="button" class="ps-m-back" @click="goBack()">‹ 玩法</button>
       <h1>每日心声</h1>
       <p>记录温暖与成长，连续分享有 streak 奖励</p>
     </header>
@@ -126,6 +126,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useBackNavigation } from '@/composables/useBackNavigation.js'
 import {
   bookmarkPositiveShare,
   commentPositiveShare,
@@ -141,6 +142,8 @@ import {
 } from '@/api/positiveShare.js'
 import PositiveShareEditor from '@/components/platform/positive/PositiveShareEditor.vue'
 import PositiveShareCard from '@/components/platform/positive/PositiveShareCard.vue'
+
+const { goBack } = useBackNavigation('/m/platform')
 
 const mainTabs = [
   { label: '最新', value: 'latest' },
@@ -340,6 +343,10 @@ onMounted(() => {
   font-size: 14px;
   color: var(--lc-blue, #3b82f6);
   text-decoration: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .ps-m-topic {
