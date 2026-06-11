@@ -30,24 +30,21 @@
               {{ joining ? '处理中...' : joinButtonText }}
             </button>
             <router-link
-              v-if="group.managed || group.canReviewJoins"
+              v-if="showSpaceManageLink"
               class="manage-link"
-              :to="groupsPath(String(group.id), 'members')"
-            >团体管理</router-link>
-            <router-link
-              v-if="showAdminStewardLink"
-              class="manage-link manage-link-admin"
-              :to="{ path: `/admin/my-groups/${group.id}`, query: { tab: 'members' } }"
-            >入团审核（后台）</router-link>
+              :to="spaceManageEntry"
+            >进入运营台</router-link>
           </div>
         </div>
       </section>
 
       <GroupCapabilityBanner :group-id="group.id" />
 
+      <SpaceCampaignMemberPanel :group-id="group.id" :is-member="group.isMember" />
+
       <div v-if="group.managed && pendingMemberCount > 0" class="pending-audit-banner">
         <p>有 <strong>{{ pendingMemberCount }}</strong> 条入团申请待审核</p>
-        <button type="button" class="text-link-btn" @click="goToTab('members')">去审核</button>
+        <router-link class="text-link-btn" :to="spaceManageMembersEntry">去审核</router-link>
       </div>
 
       <GroupInvitePanel
@@ -1062,7 +1059,8 @@ import {
   fetchGroupActivityReviewCandidates,
   submitGroupActivityReview,
   fetchGroupWeeklyDigest,
-  sendGroupWeeklyDigest
+  sendGroupWeeklyDigest,
+  resolveSpaceManageEntry
 } from '@/api/groups.js'
 import { fetchEvents } from '@/api/platformContent.js'
 import {
@@ -1079,6 +1077,7 @@ import { useUserStore } from '@/stores/user.js'
 import { useContentCheck } from '@/composables/useContentCheck.js'
 import ContentCheckDialog from '@/components/common/ContentCheckDialog.vue'
 import GroupCapabilityBanner from '@/components/platform/groups/GroupCapabilityBanner.vue'
+import SpaceCampaignMemberPanel from '@/components/platform/spaces/SpaceCampaignMemberPanel.vue'
 import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
 import GroupSeasonPanel from '@/components/platform/groups/GroupSeasonPanel.vue'
 import GroupPostReportDialog from '@/components/platform/groups/GroupPostReportDialog.vue'
@@ -1115,11 +1114,23 @@ function groupTabPath(segment) {
   return segment && segment !== 'home' ? groupsPath(id, segment) : groupsPath(id)
 }
 
-const showAdminStewardLink = computed(() => {
+const showSpaceManageLink = computed(() => {
   const g = group.value
   if (!g || !userStore.isLoggedIn) return false
-  if (!(g.managed || g.canReviewJoins)) return false
-  return userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all')
+  if (g.managed || g.canReviewJoins) return true
+  return userStore.hasPermission('group.manage.all')
+})
+
+const spaceManageEntry = computed(() => {
+  const id = group.value?.id
+  if (!id) return groupsPath()
+  return resolveSpaceManageEntry(String(id))
+})
+
+const spaceManageMembersEntry = computed(() => {
+  const id = group.value?.id
+  if (!id) return groupsPath()
+  return resolveSpaceManageEntry(String(id), { tab: 'members' })
 })
 const rawMembers = ref([])
 const rawPosts = ref([])

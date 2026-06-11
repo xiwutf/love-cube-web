@@ -11,14 +11,6 @@
       </div>
     </header>
 
-    <div v-if="stewardHubVisible" class="steward-hub-banner" role="region" aria-label="团体管理入口">
-      <div class="steward-hub-text">
-        <strong>入团审核与团体设置</strong>
-        <p>处理待审申请、编辑团体资料、发布公告等，请前往「我的团体」管理页。</p>
-      </div>
-      <router-link to="/admin/my-groups" class="steward-hub-btn">打开管理</router-link>
-    </div>
-
     <nav class="tabs" aria-label="分类">
       <button type="button" :class="{ active: tab === 'created' }" @click="tab = 'created'">
         我创建的 <span class="count">{{ created.length }}</span>
@@ -80,10 +72,10 @@
               <span class="status-tag">{{ group.statusLabel }}</span>
               <div class="card-foot-actions">
                 <router-link
-                  v-if="stewardHubVisible && group.managed"
-                  class="enter-btn enter-btn-admin"
-                  :to="{ path: `/admin/my-groups/${group.id}`, query: { tab: 'members' } }"
-                >入团审核</router-link>
+                  v-if="group.managed && manageLink(group)"
+                  class="enter-btn enter-btn-manage"
+                  :to="manageLink(group)"
+                >进入运营台</router-link>
                 <router-link class="enter-btn" :to="groupsPath(String(group.id))">{{ group.enterLabel }}</router-link>
               </div>
             </div>
@@ -104,7 +96,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchMeGroupsBuckets, patchMyGroupMemberRealName } from '@/api/groups.js'
+import {
+  fetchMeGroupsBuckets,
+  patchMyGroupMemberRealName,
+  resolveSpaceManageEntry
+} from '@/api/groups.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import {
   ERR_EMPTY_DISPLAY_NAME_PATCH,
@@ -117,12 +113,6 @@ const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b
 
 const userStore = useUserStore()
 const { groupsPath } = usePlatformPath()
-
-const stewardHubVisible = computed(
-  () =>
-    userStore.isLoggedIn &&
-    (userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all'))
-)
 
 const loading = ref(false)
 const error = ref('')
@@ -154,6 +144,11 @@ const emptyText = computed(() => {
   if (tab.value === 'pending') return '在团体大厅申请加入需要审核的团体后，会显示在这里。'
   return '去团体大厅搜索感兴趣的团体并加入。'
 })
+
+function manageLink(group) {
+  if (!group?.managed || !group.id) return null
+  return resolveSpaceManageEntry(group.id)
+}
 
 function normalize(item, tabKey) {
   const joinKey = item.joinModeKey || (item.joinMode === 'free' ? 'open' : item.joinMode === 'invite' ? 'invite' : 'audit')
@@ -287,56 +282,6 @@ onMounted(load)
 .head-actions {
   display: flex;
   gap: var(--lc-space-3);
-}
-
-.steward-hub-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--lc-space-4);
-  margin-top: var(--lc-space-5);
-  padding: var(--lc-space-4) var(--lc-space-5);
-  border: 1px solid var(--lc-blue-border);
-  border-radius: var(--lc-radius-sm);
-  background: var(--lc-blue-light);
-  flex-wrap: wrap;
-}
-
-.steward-hub-text {
-  flex: 1;
-  min-width: min(100%, 220px);
-}
-
-.steward-hub-text strong {
-  display: block;
-  margin: 0 0 var(--lc-space-1);
-  color: var(--lc-text);
-  font-size: var(--lc-text-base);
-}
-
-.steward-hub-text p {
-  margin: 0;
-  color: var(--lc-muted);
-  font-size: var(--lc-text-sm);
-  font-weight: 600;
-  line-height: 1.55;
-}
-
-.steward-hub-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  padding: 0 var(--lc-space-5);
-  border-radius: var(--lc-radius-xs);
-  border: 0;
-  color: var(--lc-surface);
-  background: linear-gradient(135deg, var(--lc-pink), var(--lc-blue));
-  box-shadow: var(--lc-shadow-blue);
-  font-weight: 900;
-  text-decoration: none;
-  white-space: nowrap;
 }
 
 .btn-secondary,
@@ -566,7 +511,7 @@ onMounted(load)
   text-decoration: none;
 }
 
-.enter-btn-admin {
+.enter-btn-manage {
   border-color: var(--lc-pink);
   color: var(--lc-pink);
 }

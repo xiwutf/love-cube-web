@@ -463,11 +463,11 @@ const mobileGridItems = computed(() => {
   ]
   if (userStore.hasPermission('group.manage.own') || userStore.hasPermission('group.manage.all')) {
     items.splice(2, 0, {
-      title: '团体后台',
+      title: '进入运营台',
       icon: '📋',
       tone: 'green',
-      to: '/admin/my-groups',
-      tip: '入团审核、公告与资料'
+      to: '/platform/me/groups',
+      tip: '管理你负责的社区空间'
     })
   }
   if (userStore.isAdmin) {

@@ -8,4 +8,6 @@ import java.util.List;
 public interface PlatGroupNoticeRepository extends JpaRepository<PlatGroupNotice, Long> {
 
     List<PlatGroupNotice> findByGroupIdAndStatusOrderByCreatedAtDesc(Long groupId, String status);
+
+    long countByGroupIdAndStatus(Long groupId, String status);
 }

@@ -62,6 +62,11 @@ export default {
     { path: 'platform/groups/season', component: () => import('@/pages/platform/GroupSeasonRankingsPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/join', component: () => import('@/pages/platform/GroupJoinByInvitePage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/create', component: () => import('@/pages/platform/GroupCreatePage.vue'), meta: { module: 'platform', requiresAuth: true } },
+    {
+      path: 'platform/spaces/:id/manage',
+      component: () => import('@/pages/platform/SpaceManagePage.vue'),
+      meta: { module: 'platform', requiresAuth: true }
+    },
     { path: 'platform/me/groups', component: () => import('@/pages/platform/MyGroupsPage.vue'), meta: { module: 'platform', requiresAuth: true } },
     { path: 'platform/groups/my', redirect: '/platform/me/groups', meta: { module: 'platform' } },
     { path: 'platform/groups/:id', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },

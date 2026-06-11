@@ -14,22 +14,31 @@
           <h1>{{ group.name }}</h1>
           <p class="gd-meta">{{ group.region }} · {{ group.memberCount }} 人 · {{ group.joinLabel }}</p>
           <p class="gd-desc">{{ group.description }}</p>
-          <button
-            type="button"
-            class="gd-join"
-            :disabled="joinDisabled || joining"
-            @click="applyJoin"
-          >
-            {{ joining ? '处理中…' : joinButtonText }}
-          </button>
+          <div class="gd-hero-actions">
+            <button
+              type="button"
+              class="gd-join"
+              :disabled="joinDisabled || joining"
+              @click="applyJoin"
+            >
+              {{ joining ? '处理中…' : joinButtonText }}
+            </button>
+            <router-link
+              v-if="showSpaceManageLink"
+              class="gd-manage"
+              :to="spaceManageEntry"
+            >进入运营台</router-link>
+          </div>
         </div>
       </header>
 
       <GroupCapabilityBanner :group-id="group.id" class="gd-capability-banner" />
 
+      <SpaceCampaignMemberPanel :group-id="group.id" :is-member="group.isMember" class="gd-camp-panel" />
+
       <div v-if="group.managed && pendingMemberCount > 0" class="gd-pending-banner">
         <span>有 {{ pendingMemberCount }} 条入团申请待审核</span>
-        <router-link :to="groupTabPath('members')">去审核</router-link>
+        <router-link :to="spaceManageMembersEntry">去审核</router-link>
       </div>
 
       <GroupInvitePanel
@@ -615,6 +624,7 @@
 
 <script setup>
 import GroupCapabilityBanner from '@/components/platform/groups/GroupCapabilityBanner.vue'
+import SpaceCampaignMemberPanel from '@/components/platform/spaces/SpaceCampaignMemberPanel.vue'
 import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
 import GroupSeasonPanel from '@/components/platform/groups/GroupSeasonPanel.vue'
 import GroupPostReportDialog from '@/components/platform/groups/GroupPostReportDialog.vue'
@@ -635,6 +645,9 @@ const {
   joinModeKey,
   inviteCodeFromQuery,
   pendingMemberCount,
+  showSpaceManageLink,
+  spaceManageEntry,
+  spaceManageMembersEntry,
   joinDisabled,
   joinButtonText,
   joining,
@@ -841,8 +854,17 @@ const {
   color: var(--lc-text, #334155);
 }
 
-.gd-join {
+.gd-camp-panel {
+  margin: 0 12px 12px;
+}
+
+.gd-hero-actions {
+  display: grid;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.gd-join {
   width: 100%;
   height: 42px;
   border: none;
@@ -855,6 +877,21 @@ const {
 
 .gd-join:disabled {
   opacity: 0.55;
+}
+
+.gd-manage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--lc-indigo, #4f46e5);
+  border-radius: 12px;
+  color: var(--lc-indigo, #4f46e5);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  background: #fff;
 }
 
 .gd-tabs-sticky {

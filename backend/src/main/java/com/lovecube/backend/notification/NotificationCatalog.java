@@ -42,6 +42,7 @@ public final class NotificationCatalog {
     public static final String TYPE_MUTUAL_MATCH = "MUTUAL_MATCH";
     public static final String TYPE_GROUP_WEEKLY_DIGEST = "GROUP_WEEKLY_DIGEST";
     public static final String TYPE_GROWTH_OPERATOR_REMINDER = "GROWTH_OPERATOR_REMINDER";
+    public static final String TYPE_SPACE_CAMPAIGN_REMINDER = "SPACE_CAMPAIGN_REMINDER";
 
     public static final String RELATED_GROWTH_CAMPAIGN_DELIVERY = "GROWTH_CAMPAIGN_DELIVERY";
 
@@ -78,7 +79,8 @@ public final class NotificationCatalog {
                  TYPE_MATCH_PROFILE_REVIEW_PASSED,
                  TYPE_MATCH_PROFILE_REVIEW_REJECTED -> LEVEL_IMPORTANT;
             case TYPE_PLATFORM_ANNOUNCEMENT,
-                 TYPE_GROWTH_OPERATOR_REMINDER -> LEVEL_ANNOUNCEMENT;
+                 TYPE_GROWTH_OPERATOR_REMINDER,
+                 TYPE_SPACE_CAMPAIGN_REMINDER -> LEVEL_ANNOUNCEMENT;
             case TYPE_PROFILE_LIKED,
                  TYPE_PROFILE_VIEWED,
                  TYPE_CONTENT_LIKED,
@@ -130,7 +132,8 @@ public final class NotificationCatalog {
                 || t.startsWith("GROUP_CHECKIN")
                 || t.startsWith("GROUP_TASK")
                 || t.startsWith("GROUP_ACTIVITY")
-                || TYPE_GROUP_WEEKLY_DIGEST.equals(t);
+                || TYPE_GROUP_WEEKLY_DIGEST.equals(t)
+                || TYPE_SPACE_CAMPAIGN_REMINDER.equals(t);
             case "REVIEW" -> t.contains("MODERATION")
                 || t.contains("MATCH_PROFILE_REVIEW")
                 || TYPE_GROUP_APPLICATION_REJECTED.equals(t);
@@ -144,7 +147,8 @@ public final class NotificationCatalog {
                 || "LIKE".equals(t)
                 || TYPE_MUTUAL_MATCH.equals(t);
             case "ANNOUNCEMENT" -> TYPE_PLATFORM_ANNOUNCEMENT.equals(t)
-                || TYPE_GROWTH_OPERATOR_REMINDER.equals(t);
+                || TYPE_GROWTH_OPERATOR_REMINDER.equals(t)
+                || TYPE_SPACE_CAMPAIGN_REMINDER.equals(t);
             case "SYSTEM" -> LEVEL_SYSTEM.equals(resolveLevel(type))
                 || "REPORT_HANDLED".equals(t)
                 || "BANNED".equals(t)

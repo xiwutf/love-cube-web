@@ -27,4 +27,6 @@ public interface PlatGroupActivityRepository extends JpaRepository<PlatGroupActi
     @Modifying
     @Query(value = "UPDATE platform_group_activity SET participant_count = GREATEST(0, participant_count - 1) WHERE id = :id", nativeQuery = true)
     void decrementParticipantCount(@Param("id") Long id);
+
+    long countByGroupIdAndStatus(Long groupId, String status);
 }

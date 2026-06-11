@@ -77,7 +77,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { createGroup } from '@/api/groups.js'
+import { createPlatGroup, spaceManagePath } from '@/api/groups.js'
 import { uploadImage } from '@/api/upload.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
@@ -150,10 +150,10 @@ async function submit() {
       tags: form.tags || undefined,
       coverUrl: form.coverUrl || undefined
     }
-    const res = await createGroup(payload)
+    const res = await createPlatGroup(payload)
     const id = res?.id ?? res?.data?.id
     if (id) {
-      router.replace(groupsPath(String(id)))
+      router.replace(spaceManagePath(String(id), { onboarding: '1' }))
     } else {
       errorMsg.value = '创建成功但未返回团体 ID'
     }

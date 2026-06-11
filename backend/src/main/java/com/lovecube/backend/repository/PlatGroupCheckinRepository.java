@@ -42,4 +42,23 @@ public interface PlatGroupCheckinRepository extends JpaRepository<PlatGroupCheck
             WHERE c.groupId = :groupId AND c.checkinDate >= :since
             """)
     long countDistinctUsersSince(@Param("groupId") Long groupId, @Param("since") LocalDate since);
+
+    @Query("""
+            SELECT DISTINCT c.userId FROM PlatGroupCheckin c
+            WHERE c.groupId = :groupId AND c.checkinDate >= :since
+            """)
+    List<Long> findDistinctUserIdsSinceDate(
+            @Param("groupId") Long groupId,
+            @Param("since") LocalDate since);
+
+    @Query("""
+            SELECT DISTINCT c.userId FROM PlatGroupCheckin c
+            WHERE c.groupId = :groupId AND c.checkinDate = :day
+            """)
+    List<Long> findDistinctUserIdsOnDate(
+            @Param("groupId") Long groupId,
+            @Param("day") LocalDate day);
+
+    @Query("SELECT DISTINCT c.userId FROM PlatGroupCheckin c WHERE c.groupId = :groupId")
+    List<Long> findDistinctUserIdsAllTime(@Param("groupId") Long groupId);
 }

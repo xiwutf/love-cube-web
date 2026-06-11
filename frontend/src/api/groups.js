@@ -186,6 +186,31 @@ export function createGroup(payload) {
   return request.post('/groups', payload)
 }
 
+/** 登录用户创建 platform_group（数字 ID，Space 主干） */
+export function createPlatGroup(payload) {
+  return request.post('/platform/groups', payload)
+}
+
+/** 是否支持前台 Space 运营台（数字 ID / platform_group 表） */
+export function isSpaceManageSupported(id) {
+  return isLegacyPlatformGroupId(id)
+}
+
+/** Space 运营台路径 */
+export function spaceManagePath(id, query = {}) {
+  return { path: `/platform/spaces/${id}/manage`, query }
+}
+
+/** 前台运营台入口：数字 ID → Space 运营台；字符串 ID → 兼容 admin */
+export function resolveSpaceManageEntry(id, query = {}) {
+  if (id === null || id === undefined || String(id).trim() === '') return null
+  const sid = String(id)
+  if (isSpaceManageSupported(sid)) {
+    return spaceManagePath(sid, query)
+  }
+  return { path: `/admin/my-groups/${sid}`, query }
+}
+
 export function updateGroup(id, payload) {
   return request.put(`/platform/groups/${id}`, payload)
 }

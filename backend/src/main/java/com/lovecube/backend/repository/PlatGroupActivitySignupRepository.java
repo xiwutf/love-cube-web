@@ -30,4 +30,30 @@ public interface PlatGroupActivitySignupRepository extends JpaRepository<PlatGro
     long countDistinctActiveSignupsSince(
             @org.springframework.data.repository.query.Param("groupId") Long groupId,
             @org.springframework.data.repository.query.Param("since") LocalDateTime since);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT DISTINCT s.userId FROM PlatGroupActivitySignup s
+            WHERE s.groupId = :groupId
+            AND (s.createdAt >= :since OR (s.checkedInAt IS NOT NULL AND s.checkedInAt >= :since))
+            """)
+    List<Long> findDistinctUserIdsSince(
+            @org.springframework.data.repository.query.Param("groupId") Long groupId,
+            @org.springframework.data.repository.query.Param("since") LocalDateTime since);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT DISTINCT s.userId FROM PlatGroupActivitySignup s WHERE s.groupId = :groupId
+            """)
+    List<Long> findDistinctUserIdsAllTime(
+            @org.springframework.data.repository.query.Param("groupId") Long groupId);
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT DISTINCT s.userId FROM PlatGroupActivitySignup s
+            WHERE s.groupId = :groupId
+            AND ((s.createdAt >= :start AND s.createdAt < :end)
+                OR (s.checkedInAt IS NOT NULL AND s.checkedInAt >= :start AND s.checkedInAt < :end))
+            """)
+    List<Long> findDistinctUserIdsActiveBetween(
+            @org.springframework.data.repository.query.Param("groupId") Long groupId,
+            @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") LocalDateTime end);
 }

@@ -44,6 +44,7 @@ import {
   rejectAdminGroupRequest,
   rejectMember,
   removeGroupMember,
+  resolveSpaceManageEntry,
   revealGroupPollResults,
   signUpGroupActivity,
   submitGroupPollVotes,
@@ -235,6 +236,25 @@ export function useGroupDetailMobile() {
   const inviteCodeFromQuery = computed(() => String(route.query.invite || '').trim().toUpperCase())
 
   const pendingMemberCount = computed(() => Number(group.value?.pendingMemberCount || 0))
+
+  const showSpaceManageLink = computed(() => {
+    const g = group.value
+    if (!g || !userStore.isLoggedIn) return false
+    if (g.managed || g.canReviewJoins) return true
+    return userStore.hasPermission('group.manage.all')
+  })
+
+  const spaceManageEntry = computed(() => {
+    const id = group.value?.id
+    if (!id) return groupsPath()
+    return resolveSpaceManageEntry(String(id))
+  })
+
+  const spaceManageMembersEntry = computed(() => {
+    const id = group.value?.id
+    if (!id) return groupsPath()
+    return resolveSpaceManageEntry(String(id), { tab: 'members' })
+  })
 
   const joinDisabled = computed(() => {
     if (!group.value) return true
@@ -1393,6 +1413,9 @@ export function useGroupDetailMobile() {
     joinModeKey,
     inviteCodeFromQuery,
     pendingMemberCount,
+    showSpaceManageLink,
+    spaceManageEntry,
+    spaceManageMembersEntry,
     joinDisabled,
     joinButtonText,
     joining,
