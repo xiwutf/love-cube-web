@@ -60,6 +60,7 @@ public class GrowthService {
     private final UserPhotoRepository userPhotoRepository;
     private final PlatGroupMemberRepository platGroupMemberRepository;
     private final ExtendedTaskService extendedTaskService;
+    private final VerificationService verificationService;
 
     public GrowthService(
             UserGrowthRepository userGrowthRepository,
@@ -73,7 +74,8 @@ public class GrowthService {
             UserRepository userRepository,
             UserPhotoRepository userPhotoRepository,
             PlatGroupMemberRepository platGroupMemberRepository,
-            @Lazy ExtendedTaskService extendedTaskService
+            @Lazy ExtendedTaskService extendedTaskService,
+            VerificationService verificationService
     ) {
         this.userGrowthRepository = userGrowthRepository;
         this.userGrowthLogRepository = userGrowthLogRepository;
@@ -87,6 +89,12 @@ public class GrowthService {
         this.userPhotoRepository = userPhotoRepository;
         this.platGroupMemberRepository = platGroupMemberRepository;
         this.extendedTaskService = extendedTaskService;
+        this.verificationService = verificationService;
+    }
+
+    /** 联谊资料里程碑后刷新徽章（含平台 + 联谊徽章）。 */
+    public void refreshUserBadges(Long userId) {
+        refreshBadges(userId);
     }
 
     /** 发放一次性奖励经验（bizId 去重，用于连续签到等里程碑）。 */
@@ -411,6 +419,7 @@ public class GrowthService {
         long postCount = userGrowthLogRepository.countByUserIdAndActionType(userId, "POST_CONTENT");
         long joinGroupCount = userGrowthLogRepository.countByUserIdAndActionType(userId, "JOIN_GROUP");
         long completedTaskCount = userDailyTaskProgressRepository.countByUserIdAndCompleted(userId, 1);
+        Map<String, Integer> fellowshipProgress = computeFellowshipBadgeProgress(userId);
 
         for (Badge badge : badges) {
             int progressValue = switch (badge.getCode()) {
@@ -418,6 +427,9 @@ public class GrowthService {
                 case "FIRST_POST" -> (int) postCount;
                 case "JOIN_GROUP" -> (int) joinGroupCount;
                 case "DAILY_CHECK_3" -> (int) completedTaskCount;
+                case "FELLOW_NEWCOMER", "FELLOW_PROFILE_MASTER", "FELLOW_REALNAME",
+                        "FELLOW_PHOTO_VERIFY", "FELLOW_PHOTO_MASTER", "FELLOW_CITY",
+                        "FELLOW_TRUST", "FELLOW_JOIN" -> fellowshipProgress.getOrDefault(badge.getCode(), 0);
                 default -> 0;
             };
             int target = Math.max(1, safeInt(badge.getConditionValue()));
@@ -437,6 +449,50 @@ public class GrowthService {
             }
             userBadgeRepository.save(userBadge);
         }
+    }
+
+    private Map<String, Integer> computeFellowshipBadgeProgress(Long userId) {
+        Map<String, Integer> progress = new HashMap<>();
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return progress;
+        }
+        progress.put("FELLOW_NEWCOMER", 1);
+
+        Map<String, Boolean> verify = verificationService.getBatchSummary(List.of(userId))
+                .getOrDefault(userId, Map.of());
+        boolean photoVerified = Boolean.TRUE.equals(verify.get("photoVerified"));
+        boolean realnameVerified = Boolean.TRUE.equals(verify.get("realnameVerified"));
+        long photoCount = userPhotoRepository.countByUserId(userId);
+
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("avatarUrl", user.getProfilePhoto());
+        profile.put("city", user.getLocation());
+        profile.put("bio", user.getBio());
+        profile.put("photoVerified", photoVerified);
+        profile.put("realnameVerified", realnameVerified);
+        if (user.getBirthDate() != null) {
+            profile.put("birthYear", user.getBirthDate().getYear());
+        } else if (user.getAge() > 0) {
+            profile.put("age", user.getAge());
+        }
+
+        Map<String, Object> completion = FellowshipProfileCompletion.build(
+                user, profile, (int) photoCount, 1);
+        int completionRate = completion.get("completionRate") instanceof Number n ? n.intValue() : 0;
+
+        progress.put("FELLOW_PROFILE_MASTER", completionRate >= 100 ? 1 : 0);
+        progress.put("FELLOW_REALNAME", realnameVerified ? 1 : 0);
+        progress.put("FELLOW_PHOTO_VERIFY", photoVerified ? 1 : 0);
+        progress.put("FELLOW_PHOTO_MASTER", photoCount >= 3 ? 1 : 0);
+        progress.put("FELLOW_CITY", hasText(user.getLocation()) ? 1 : 0);
+        progress.put("FELLOW_TRUST", photoVerified && realnameVerified ? 1 : 0);
+        progress.put("FELLOW_JOIN", Boolean.TRUE.equals(user.getFellowshipEnabled()) ? 1 : 0);
+        return progress;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private List<Map<String, Object>> buildBadgeRows(Long userId) {

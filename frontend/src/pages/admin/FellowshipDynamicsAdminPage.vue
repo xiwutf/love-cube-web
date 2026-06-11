@@ -11,7 +11,13 @@
     <div v-else-if="error" class="admin-error">{{ error }}</div>
 
     <section v-else class="admin-list">
-      <article v-for="item in items" :key="item.id" class="admin-row">
+      <article
+        v-for="item in items"
+        :id="`dynamic-${rowValue(item, ['fellowshipDynamicId', 'id'], item.id)}`"
+        :key="item.id"
+        class="admin-row"
+        :class="{ 'admin-row--focus': isFocusedDynamic(item) }"
+      >
         <div class="admin-row-head">
           <strong>{{ rowValue(item, ['authorName', 'username'], '-') }}</strong>
           <span class="admin-tag">ID {{ rowValue(item, ['fellowshipDynamicId', 'id'], '-') }}</span>
@@ -57,11 +63,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { getAdminFellowshipDynamicLikes, getAdminFellowshipDynamics } from '@/api/adminFellowshipDynamics.js'
 import { toFullUrl } from '@/utils/image.js'
 
+const route = useRoute()
 const items = ref([])
 const loading = ref(true)
 const error = ref('')
@@ -94,6 +102,25 @@ function formatDate(value) {
 
 function fullImageUrl(path) {
   return toFullUrl(path)
+}
+
+function dynamicPublicId(item) {
+  return String(rowValue(item, ['fellowshipDynamicId', 'id'], item?.id ?? ''))
+}
+
+function isFocusedDynamic(item) {
+  const focusId = String(route.query.dynamicId || '').trim()
+  if (!focusId) return false
+  return dynamicPublicId(item) === focusId
+}
+
+async function focusDynamicFromQuery() {
+  const focusId = String(route.query.dynamicId || '').trim()
+  if (!focusId) return
+  const target = items.value.find((item) => dynamicPublicId(item) === focusId)
+  if (!target) return
+  await nextTick()
+  document.getElementById(`dynamic-${dynamicPublicId(target)}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 async function load() {
@@ -151,7 +178,10 @@ function nextPage() {
   load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  await focusDynamicFromQuery()
+})
 </script>
 
 <style scoped>
@@ -229,5 +259,10 @@ onMounted(load)
   white-space: pre-wrap;
   line-height: 1.7;
   color: var(--lc-slate);
+}
+
+.admin-row--focus {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 </style>

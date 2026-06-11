@@ -1,8 +1,8 @@
 ﻿<template>
   <section class="admin-page">
     <section class="platform-card">
-      <h1 class="platform-title">邀请管理</h1>
-      <p class="platform-subtitle">按邀请人、被邀请人、邀请码和时间筛选邀请注册记录</p>
+      <h1 class="platform-title">邀请记录</h1>
+      <p class="platform-subtitle">按邀请人、被邀请人、邀请码和时间查询邀请注册记录</p>
     </section>
 
     <section class="platform-card filter-card" style="margin-top: 12px;">

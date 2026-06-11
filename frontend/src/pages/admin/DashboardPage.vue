@@ -6,7 +6,6 @@
         <div class="date-pill">
           <span>{{ todayDateText }}</span>
           <span>{{ todayWeekText }}</span>
-          <span class="date-icon">日</span>
         </div>
       </div>
 
@@ -151,13 +150,27 @@
             <span v-else>更多 ›</span>
           </header>
           <ul>
-            <li v-for="item in column.items" :key="`${column.key}-${item.title}`">
-              <span class="recent-avatar" :class="column.key">{{ item.avatar }}</span>
-              <div>
-                <strong>{{ item.title }}</strong>
-                <p>{{ item.desc }}</p>
+            <li v-for="item in column.items" :key="`${column.key}-${item.title}-${item.time}`">
+              <router-link
+                v-if="resolveRecentLink(column, item)"
+                :to="resolveRecentLink(column, item)"
+                class="recent-row recent-row--link"
+              >
+                <span class="recent-avatar" :class="column.key">{{ item.avatar }}</span>
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.desc }}</p>
+                </div>
+                <time>{{ item.time }}</time>
+              </router-link>
+              <div v-else class="recent-row">
+                <span class="recent-avatar" :class="column.key">{{ item.avatar }}</span>
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.desc }}</p>
+                </div>
+                <time>{{ item.time }}</time>
               </div>
-              <time>{{ item.time }}</time>
             </li>
           </ul>
         </article>
@@ -308,7 +321,7 @@ function mergeDashboardData(apiData = {}) {
 }
 
 const todayDateText = computed(() =>
-  new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replaceAll('/', '-')
+  new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 )
 const todayWeekText = computed(() =>
   new Date().toLocaleDateString('zh-CN', { weekday: 'long' })
@@ -463,11 +476,11 @@ const shortcutGroups = [
     ]
   },
   {
-    title: '找对象运营',
+    title: '审核与用户',
     items: [
       { label: '资料审核', icon: '资', tone: 'green', to: '/admin/verifications' },
       { label: '动态审核', icon: '审', tone: 'green', to: '/admin/fellowship-dynamics' },
-      { label: '匹配数据', icon: '配', tone: 'purple', to: '/admin/analytics' },
+      { label: '邀请记录', icon: '邀', tone: 'purple', to: '/admin/invites' },
       { label: '举报处理', icon: '举', tone: 'red', to: '/admin/reports' }
     ]
   },
@@ -484,8 +497,8 @@ const shortcutGroups = [
     title: '系统管理',
     items: [
       { label: '用户管理', icon: '用', tone: 'blue', to: '/admin/users' },
+      { label: '访客分析', icon: '数', tone: 'blue', to: '/admin/analytics' },
       { label: '角色权限', icon: '权', tone: 'blue', to: '/admin/users' },
-      { label: '通知管理', icon: '通', tone: 'blue' },
       { label: '系统配置', icon: '设', tone: 'blue', to: '/admin/modules' }
     ]
   }
@@ -498,9 +511,24 @@ const recentColumns = computed(() => {
     { key: 'contents', title: '最新发布内容', to: '/admin/fellowship-dynamics', items: recent.contents || [] },
     { key: 'reports', title: '最新举报', to: '/admin/reports', items: recent.reports || [] },
     { key: 'feedbacks', title: '最新问卷', to: '/admin/feedbacks', items: recent.feedbacks || [] },
-    { key: 'notices', title: '系统提醒', items: recent.notices || [] }
+    { key: 'notices', title: '系统提醒', to: '/admin/analytics', items: recent.notices || [] }
   ]
 })
+
+const recentLinkFallback = {
+  users: '/admin/users',
+  contents: '/admin/fellowship-dynamics',
+  reports: '/admin/reports?status=PENDING',
+  feedbacks: '/admin/feedbacks',
+  notices: ''
+}
+
+function resolveRecentLink(column, item) {
+  const direct = String(item?.to || '').trim()
+  if (direct) return direct
+  const fallback = recentLinkFallback[column?.key]
+  return fallback || column?.to || ''
+}
 
 async function load(forceRefresh = false) {
   loading.value = true
@@ -564,11 +592,6 @@ onMounted(() => {
   color: var(--lc-muted);
   font-size: 13px;
   font-weight: 700;
-}
-
-.date-icon {
-  color: var(--lc-text);
-  font-weight: 900;
 }
 
 .overview-grid {
@@ -1069,10 +1092,29 @@ onMounted(() => {
 }
 
 .recent-card li {
+  margin: 0;
+}
+
+.recent-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.recent-row--link {
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.recent-row--link:hover {
+  background: rgba(37, 99, 235, 0.05);
+  border-color: rgba(37, 99, 235, 0.12);
 }
 
 .recent-avatar {

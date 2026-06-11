@@ -564,7 +564,8 @@ public class AdminDashboardStatsService {
                         initial(user.getUsername(), "用"),
                         safeText(user.getUsername(), "用户" + user.getUserid()),
                         "手机号：" + safeText(maskPhone(user.getPhoneNumber()), "未填写"),
-                        user.getCreatedAt()))
+                        user.getCreatedAt(),
+                        "/admin/users?userId=" + user.getUserid()))
                 .toList();
     }
 
@@ -589,7 +590,8 @@ public class AdminDashboardStatsService {
                         "用户：" + safeText(
                                 idToUsername.getOrDefault(dynamic.getUserId(), ""),
                                 "用户" + dynamic.getUserId()),
-                        dynamic.getCreatedAt()))
+                        dynamic.getCreatedAt(),
+                        "/admin/fellowship-dynamics?dynamicId=" + dynamic.getId()))
                 .toList();
     }
 
@@ -599,7 +601,8 @@ public class AdminDashboardStatsService {
                         "举",
                         safeText(report.getReasonType(), "用户举报"),
                         "被举报用户：" + safeText(String.valueOf(report.getTargetUserId()), "-"),
-                        report.getCreatedAt()))
+                        report.getCreatedAt(),
+                        "/admin/reports?status=PENDING"))
                 .toList();
     }
 
@@ -609,37 +612,52 @@ public class AdminDashboardStatsService {
                         "反",
                         truncate(safeText(feedback.getContent(), "用户体验问卷"), 18),
                         "用户：" + safeText(feedback.getUsername(), "匿名用户"),
-                        feedback.getCreatedAt()))
+                        feedback.getCreatedAt(),
+                        "/admin/feedbacks"))
                 .toList();
     }
 
     private List<Map<String, Object>> buildSystemNotices(
             long pendingReports, long pendingFeedbacks, long pendingLocalResources) {
         List<Map<String, Object>> rows = new ArrayList<>();
-        rows.add(systemNotice("服务器统计接口正常", "green"));
-        rows.add(systemNotice("待处理举报 " + pendingReports + " 条", "red"));
-        rows.add(systemNotice("用户体验问卷 " + pendingFeedbacks + " 份", "green"));
-        rows.add(systemNotice("待审核本地资源 " + pendingLocalResources + " 条", "amber"));
+        rows.add(systemNotice("服务器统计接口正常", "green", "/admin/analytics"));
+        rows.add(systemNotice("待处理举报 " + pendingReports + " 条", "red", "/admin/reports?status=PENDING"));
+        rows.add(systemNotice("用户体验问卷 " + pendingFeedbacks + " 份", "green", "/admin/feedbacks"));
+        rows.add(systemNotice("待审核本地资源 " + pendingLocalResources + " 条", "amber", "/admin/local-resources"));
         return rows;
     }
 
     private Map<String, Object> recentItem(String avatar, String title, String desc, LocalDateTime time) {
+        return recentItem(avatar, title, desc, time, null);
+    }
+
+    private Map<String, Object> recentItem(String avatar, String title, String desc, LocalDateTime time, String to) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("avatar", avatar);
         item.put("title", title);
         item.put("desc", desc);
         item.put("time", relativeTime(time));
+        if (to != null && !to.isBlank()) {
+            item.put("to", to);
+        }
         return item;
     }
 
-    private Map<String, Object> systemNotice(String title, String level) {
+    private Map<String, Object> systemNotice(String title, String level, String to) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("avatar", "●");
         item.put("title", title);
         item.put("desc", "");
         item.put("time", "刚刚");
         item.put("level", level);
+        if (to != null && !to.isBlank()) {
+            item.put("to", to);
+        }
         return item;
+    }
+
+    private Map<String, Object> systemNotice(String title, String level) {
+        return systemNotice(title, level, null);
     }
 
     private String relativeTime(LocalDateTime time) {

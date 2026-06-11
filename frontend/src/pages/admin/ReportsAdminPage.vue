@@ -131,9 +131,11 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { getReports, reviewReport } from '@/api/adminContent.js'
 
+const route = useRoute()
 const loading = ref(true)
 const reviewing = ref(false)
 const error = ref('')
@@ -238,7 +240,11 @@ function formatDate(value) {
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
 }
 
-onMounted(load)
+onMounted(() => {
+  const status = String(route.query.status || '').trim().toUpperCase()
+  if (status) filterStatus.value = status
+  load()
+})
 </script>
 
 <style scoped>

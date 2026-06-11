@@ -2,7 +2,7 @@
   <div class="me-page">
     <header class="page-header">
       <h1 class="page-title">个人中心</h1>
-      <p class="header-tip">完善资料提升匹配率</p>
+      <p class="header-tip">完善资料，获得更多曝光与推荐</p>
       <div class="header-actions">
         <button class="header-icon-btn" @click="router.push('/fellowship/settings')">
           <van-icon name="setting-o" size="20" />
@@ -96,8 +96,8 @@
           <div class="metric-icon metric-trend">
             <van-icon name="chart-trending-o" size="22" />
           </div>
-          <p class="status-title">推荐指数</p>
-          <p class="status-value">B+</p>
+          <p class="status-title">推荐力</p>
+          <p class="status-value">{{ completionPercent }}%</p>
         </div>
         <div class="status-cell">
           <div class="metric-icon metric-fire">
@@ -112,6 +112,57 @@
           </div>
           <p class="status-title">曝光增加</p>
           <p class="status-value">+{{ exposureBoost }}%</p>
+        </div>
+      </section>
+
+      <section v-show="!loadingPage && (missingItems.length || unlockedBenefits.length)" class="benefits-card">
+        <div v-if="missingItems.length" class="benefits-block">
+          <div class="block-header">
+            <h3>待补项 · 补了就有收益</h3>
+            <button class="block-link" @click="router.push('/fellowship/profile/edit')">去完善</button>
+          </div>
+          <ul class="missing-list">
+            <li v-for="item in missingItems" :key="item.key" class="missing-item" @click="goTo(item.route || '/fellowship/profile/edit')">
+              <span class="missing-dot" />
+              <span class="missing-text">{{ item.benefitText || item.label }}</span>
+              <van-icon name="arrow" size="14" color="#c4c9d8" />
+            </li>
+          </ul>
+        </div>
+        <div v-if="unlockedBenefits.length" class="benefits-block">
+          <div class="block-header">
+            <h3>已解锁权益</h3>
+          </div>
+          <ul class="unlocked-list">
+            <li v-for="item in unlockedBenefits" :key="item.key" class="unlocked-item">
+              <van-icon name="passed" size="14" color="#10b981" />
+              <div>
+                <p class="unlocked-title">{{ item.title }}</p>
+                <p class="unlocked-desc">{{ item.description }}</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section v-show="!loadingPage" class="growth-badges-card">
+        <div class="block-header">
+          <h3>成长等级 Lv.{{ displayGrowthLevel }}</h3>
+          <button class="block-link" @click="router.push('/fellowship/tasks')">去升级</button>
+        </div>
+        <p class="growth-title">{{ displayGrowthTitle }}</p>
+        <div class="growth-exp-row">
+          <div class="progress-track">
+            <div class="progress-bar" :style="{ width: `${growthProgressPercent}%` }" />
+          </div>
+          <span class="growth-exp-text">{{ displayCurrentExp }}/{{ displayNextLevelExp }}</span>
+        </div>
+        <p class="growth-hint">{{ growthUpgradeHint }}</p>
+        <div v-if="recentBadges.length" class="recent-badges">
+          <p class="recent-badges-title">最近获得</p>
+          <div class="recent-badge-list">
+            <span v-for="badge in recentBadges" :key="badge.code" class="recent-badge-chip">{{ formatBadgeLabel(badge) }}</span>
+          </div>
         </div>
       </section>
 
@@ -207,6 +258,7 @@ import { getFellowshipMeStatsCached } from '@/api/fellowship.js'
 import { getMyGrowth } from '@/api/growth.js'
 import { getNotifUnreadCountCached } from '@/api/notification.js'
 import { userHasVerificationBadge } from '@/utils/displayFields.js'
+import { formatBadgeLabel } from '@/utils/fellowshipBadges.js'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -238,16 +290,57 @@ const fellowshipStats = ref({
   blacklistCount: 0,
   eventSignupCount: 0,
   vipActive: false,
-  swipeQuota: null
+  swipeQuota: null,
+  growthLevel: 1,
+  growthTitle: '新手用户',
+  currentExp: 0,
+  nextLevelExp: 50,
+  expToNextLevel: 50,
+  recentlyUnlockedBadges: []
 })
-const growthLevel = ref(1)
-const growthTitle = ref('新手用户')
 const dailyTaskDone = ref(0)
 const dailyTaskTotal = ref(0)
 
 const vipActive = computed(() => Boolean(fellowshipStats.value.vipActive))
 const swipeQuota = computed(() => fellowshipStats.value.swipeQuota || null)
-const exposureBoost = computed(() => Math.min(50, 10 + growthLevel.value * 4))
+const exposureBoost = computed(() => {
+  const fromCompletion = completion.value?.exposureBoostPercent
+  if (Number.isFinite(Number(fromCompletion))) return Number(fromCompletion)
+  const fromStats = fellowshipStats.value?.exposureBoostPercent
+  if (Number.isFinite(Number(fromStats))) return Number(fromStats)
+  return 0
+})
+const missingItems = computed(() =>
+  Array.isArray(completion.value?.missingItems) ? completion.value.missingItems : []
+)
+const unlockedBenefits = computed(() =>
+  Array.isArray(completion.value?.unlockedBenefits) ? completion.value.unlockedBenefits : []
+)
+const nextBenefits = computed(() =>
+  Array.isArray(completion.value?.nextBenefits) ? completion.value.nextBenefits : []
+)
+const growthLevel = computed(() => Number(fellowshipStats.value.growthLevel ?? 1))
+const growthTitle = computed(() => fellowshipStats.value.growthTitle || '新手用户')
+const displayGrowthLevel = computed(() => growthLevel.value)
+const displayGrowthTitle = computed(() => growthTitle.value)
+const displayCurrentExp = computed(() => Number(fellowshipStats.value.currentExp ?? 0))
+const displayNextLevelExp = computed(() => Number(fellowshipStats.value.nextLevelExp ?? 50))
+const growthProgressPercent = computed(() => {
+  const next = displayNextLevelExp.value
+  if (next <= 0) return 100
+  return Math.min(100, Math.round((displayCurrentExp.value / next) * 100))
+})
+const growthUpgradeHint = computed(() => {
+  const need = Number(fellowshipStats.value.expToNextLevel ?? 0)
+  if (need <= 0) return '等级已满，继续保持活跃'
+  if (missingItems.value.length > 0) return `再获得 ${need} 经验升级 · 完善资料可继续升级`
+  return `距离下一级还差 ${need} 经验`
+})
+const recentBadges = computed(() =>
+  Array.isArray(fellowshipStats.value.recentlyUnlockedBadges)
+    ? fellowshipStats.value.recentlyUnlockedBadges
+    : []
+)
 const dailyTaskSub = computed(() => {
   if (!dailyTaskTotal.value) return ''
   return `今日 ${dailyTaskDone.value}/${dailyTaskTotal.value} · ${growthTitle.value}`
@@ -270,21 +363,17 @@ const completionPercent = computed(() => {
   const percent = numeric > 0 && numeric <= 1 ? numeric * 100 : numeric
   return Math.min(100, Math.max(0, Math.round(percent)))
 })
-const completionMissingCount = computed(() => {
-  const raw = completion.value || {}
-  if (Array.isArray(raw.missingFields) && raw.missingFields.length > 0) return raw.missingFields.length
-  if (Array.isArray(raw.unfinishedFields) && raw.unfinishedFields.length > 0) return raw.unfinishedFields.length
-  const total = Number(raw.totalFields ?? raw.totalCount ?? raw.totalItems ?? 0)
-  if (total > 0) {
-    const completed = Number(raw.completedFields ?? raw.completedCount ?? raw.completedItems ?? 0)
-    return Math.max(0, total - completed)
-  }
-  return completionPercent.value >= 100 ? 0 : null
-})
+
 const completionHint = computed(() => {
-  if (completionMissingCount.value === 0) return '资料已完善，匹配展示更充分'
-  if (completionMissingCount.value && completionMissingCount.value > 0) return `再完善 ${completionMissingCount.value} 项，匹配率可继续提升`
-  return '完善更多资料，可提升匹配率'
+  if (completionPercent.value >= 100) return '资料已完善，曝光加成已拉满'
+  const hint = nextBenefits.value.find((item) => item.key === 'missing_hint')
+  if (hint?.title) {
+    return `${hint.title}${hint.description ? `，${hint.description}` : ''}`
+  }
+  if (missingItems.value.length > 0) {
+    return `再补 ${missingItems.value.length} 项，推荐曝光继续提升`
+  }
+  return '完善资料，获得更多曝光与推荐'
 })
 const effectiveVerificationRow = computed(() => ({
   verificationStatus:
@@ -366,6 +455,24 @@ function normalizeProfile(data) {
   }
 }
 
+async function refreshCompletion() {
+  try {
+    const c = await getFellowshipProfileCompletion()
+    if (c) completion.value = c
+  } catch {
+    // ignore
+  }
+}
+
+async function refreshStats() {
+  try {
+    const stats = await getFellowshipMeStatsCached()
+    if (stats) fellowshipStats.value = { ...fellowshipStats.value, ...stats }
+  } catch {
+    // ignore
+  }
+}
+
 async function loadPageData() {
   try {
     const [p, c, photosRes] = await Promise.allSettled([
@@ -417,6 +524,8 @@ async function onAvatarSelected(event) {
     if (!url) throw new Error('头像上传返回为空')
     await updateMyFellowshipProfile({ avatarUrl: url })
     profile.value.avatarUrl = url
+    await refreshCompletion()
+    await refreshStats()
     showToast({ type: 'success', message: '头像已更新' })
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '头像上传失败' })
@@ -437,6 +546,8 @@ async function onPhotoSelected(event) {
     const next = [...uploadedUrls, ...photoList.value.map((item) => item.url)].slice(0, 9)
     await saveFellowshipPhotos(next)
     photoList.value = next.map((item, idx) => ({ id: `${idx}-${item}`, url: item }))
+    await refreshCompletion()
+    await refreshStats()
     showToast({ type: 'success', message: `成功上传 ${uploadedUrls.length} 张照片` })
   } catch (err) {
     showToast({ type: 'fail', message: err.message || '照片上传失败' })
@@ -495,10 +606,11 @@ onMounted(async () => {
     }
     if (statsRes.status === 'fulfilled' && statsRes.value) {
       fellowshipStats.value = statsRes.value
+      if (!completion.value?.completionRate && statsRes.value.completionRate != null) {
+        completion.value = { ...completion.value, ...statsRes.value }
+      }
     }
     if (growthRes.status === 'fulfilled' && growthRes.value) {
-      growthLevel.value = Number(growthRes.value.level ?? 1)
-      growthTitle.value = growthRes.value.title || '新手用户'
       const daily = Array.isArray(growthRes.value.dailyTasks) ? growthRes.value.dailyTasks : []
       dailyTaskTotal.value = daily.length
       dailyTaskDone.value = daily.filter((t) => t.completed).length
@@ -609,8 +721,141 @@ onMounted(async () => {
   animation: skeleton-slide 1.2s ease infinite;
 }
 
+.benefits-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 8px rgba(45, 57, 98, 0.05);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.benefits-block .block-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #23253b;
+}
+
+.missing-list,
+.unlocked-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.missing-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f3fa;
+  cursor: pointer;
+}
+
+.missing-item:last-child {
+  border-bottom: none;
+}
+
+.missing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5f98;
+  flex-shrink: 0;
+}
+
+.missing-text {
+  flex: 1;
+  font-size: 13px;
+  color: #3a3f58;
+  line-height: 1.4;
+}
+
+.unlocked-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.unlocked-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2a2d42;
+}
+
+.unlocked-desc {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #8a8ea3;
+}
+
+.growth-badges-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 8px rgba(45, 57, 98, 0.05);
+  padding: 12px;
+}
+
+.growth-title {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #6e738c;
+}
+
+.growth-exp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.growth-exp-row .progress-track {
+  flex: 1;
+  margin-top: 0;
+}
+
+.growth-exp-text {
+  font-size: 11px;
+  color: #8a8ea3;
+  white-space: nowrap;
+}
+
+.growth-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #ff5f84;
+}
+
+.recent-badges {
+  margin-top: 10px;
+}
+
+.recent-badges-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #8a8ea3;
+}
+
+.recent-badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recent-badge-chip {
+  font-size: 11px;
+  color: #2a2d42;
+  background: #f3f5ff;
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 .profile-card,
 .status-panel,
+.benefits-card,
+.growth-badges-card,
 .menu-grid-card,
 .photos-card,
 .activity-card {

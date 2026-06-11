@@ -61,12 +61,26 @@
 
     <section class="admin-table-wrap admin-desktop-only">
       <table class="admin-table users-table">
+        <colgroup>
+          <col class="cg-avatar">
+          <col class="cg-user">
+          <col class="cg-phone">
+          <col class="cg-tag">
+          <col class="cg-age">
+          <col class="cg-role">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-tag">
+          <col class="cg-location">
+          <col class="cg-login">
+          <col class="cg-date">
+          <col class="cg-actions">
+        </colgroup>
         <thead>
           <tr>
             <th class="col-avatar-head">头像</th>
             <th class="col-user-head">用户</th>
-            <th class="col-actions-head">操作</th>
-            <th class="col-phone">手机</th>
+            <th class="col-phone-head">手机</th>
             <th>性别</th>
             <th class="col-age">年龄</th>
             <th class="col-role-head">角色</th>
@@ -76,6 +90,7 @@
             <th class="col-location">地区</th>
             <th class="col-login">最近登录</th>
             <th class="col-date">注册时间</th>
+            <th class="col-actions-head">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -92,16 +107,6 @@
             </td>
             <td class="col-user" :title="item.username || `用户${item.userId}`">
               {{ item.username || `用户${item.userId}` }}
-            </td>
-            <td class="col-actions">
-              <button
-                class="admin-btn primary users-table-detail-btn"
-                type="button"
-                :title="`用户详情：${item.username || item.userId}`"
-                @click="openDetailDialog(item)"
-              >
-                详情
-              </button>
             </td>
             <td class="col-phone" :title="item.phone || '无手机号'">{{ item.phone || '无手机号' }}</td>
             <td><span class="admin-tag" :class="genderTagClass(item.gender)">{{ genderLabel(item.gender) }}</span></td>
@@ -121,6 +126,16 @@
             <td class="col-location" :title="item.location || '-'">{{ item.location || '-' }}</td>
             <td class="col-login" :title="formatDate(item.lastLoginAt)">{{ formatDate(item.lastLoginAt) }}</td>
             <td class="col-date" :title="formatDate(item.createdAt)">{{ formatDate(item.createdAt) }}</td>
+            <td class="col-actions">
+              <button
+                class="admin-btn primary users-table-detail-btn"
+                type="button"
+                :title="`用户详情：${item.username || item.userId}`"
+                @click="openDetailDialog(item)"
+              >
+                详情
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -311,6 +326,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import AdminDetailDialogShell from '@/components/admin/AdminDetailDialogShell.vue'
 import {
@@ -324,6 +340,7 @@ import {
 } from '@/api/adminContent.js'
 import { useUserStore } from '@/stores/user.js'
 
+const route = useRoute()
 const loading = ref(false)
 const users = ref([])
 const savingRoleUserId = ref(null)
@@ -370,7 +387,7 @@ const stats = computed(() => {
   let hasPhotosCount = 0
   let recentLoginCount = 0
   for (const item of users.value) {
-    if (isVerified(item.verificationStatus)) verifiedCount += 1
+    if (isUserCertified(item)) verifiedCount += 1
     if (item.fellowshipEnabled) fellowshipEnabledCount += 1
     if (item.hasUploadedPhotos) hasPhotosCount += 1
     if (item.gender === 'male') maleCount += 1
@@ -411,14 +428,19 @@ watch(currentPage, (p) => {
 
 function normalizeUsers(rows) {
   return (Array.isArray(rows) ? rows : [])
-    .map((item) => ({
+    .map((item) => {
+      const photoVerified = Boolean(item.photoVerified)
+      const realnameVerified = Boolean(item.realnameVerified)
+      return {
       userId: item.userId ?? item.id ?? null,
       username: item.username || '',
       phone: item.phone || '',
       gender: normalizeGender(item.gender ?? item.sex ?? item.userGender),
       age: normalizeAdminAge(item.age),
       role: normalizeRole(item.role || 'user'),
-      verificationStatus: item.verificationStatus || 'none',
+      photoVerified,
+      realnameVerified,
+      verificationStatus: resolveVerificationStatus(item, photoVerified, realnameVerified),
       status: item.status || 'active',
       fellowshipEnabled: Boolean(item.fellowshipEnabled),
       hasUploadedPhotos: Boolean(item.hasUploadedPhotos ?? Number(item.uploadedPhotoCount || 0) > 0),
@@ -429,8 +451,18 @@ function normalizeUsers(rows) {
       createdAt: item.createdAt || null,
       canForceDelete: !!item.canForceDelete,
       canResetPassword: !!item.canResetPassword
-    }))
+    }})
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+}
+
+function resolveVerificationStatus(item, photoVerified, realnameVerified) {
+  if (photoVerified || realnameVerified) return 'approved'
+  return item.verificationStatus || 'none'
+}
+
+function isUserCertified(item) {
+  if (item?.photoVerified || item?.realnameVerified) return true
+  return isVerified(item?.verificationStatus)
 }
 
 function normalizeGender(value) {
@@ -762,7 +794,18 @@ function formatPhotoStatus(status) {
   return raw || '未知'
 }
 
-onMounted(loadUsers)
+onMounted(async () => {
+  await loadUsers()
+  const userId = route.query.userId
+  if (!userId) return
+  const target = users.value.find((item) => String(item.userId) === String(userId))
+  if (target) {
+    openDetailDialog(target)
+    return
+  }
+  filters.keyword = String(userId)
+  currentPage.value = 1
+})
 
 watch([() => filters.keyword, () => filters.role, () => filters.status, () => filters.fellowshipEnabled, () => filters.gender, () => filters.hasPhotos], () => {
   currentPage.value = 1
@@ -790,12 +833,23 @@ watch(totalPages, (pages) => {
   height: 38px;
 }
 
-/* 整表自适应容器宽度，避免操作列被挤到横向滚动条外 */
+/* 撑满容器宽度，固定列保手机号，其余列按比例分配剩余空间 */
 .admin-table.users-table {
-  min-width: 0;
   width: 100%;
+  min-width: 1200px;
   table-layout: fixed;
 }
+
+.users-table col.cg-avatar { width: 56px; }
+.users-table col.cg-phone { width: 132px; }
+.users-table col.cg-age { width: 52px; }
+.users-table col.cg-role { width: 96px; }
+.users-table col.cg-tag { width: 72px; }
+.users-table col.cg-actions { width: 76px; }
+.users-table col.cg-user { width: 10%; }
+.users-table col.cg-location { width: 14%; }
+.users-table col.cg-login { width: 14%; }
+.users-table col.cg-date { width: 14%; }
 
 .users-table :is(th, td) {
   padding: 10px 8px;
@@ -809,60 +863,11 @@ watch(totalPages, (pages) => {
   vertical-align: middle;
 }
 
-.users-table .col-actions-head,
-.users-table .col-actions {
-  width: 76px;
-  min-width: 76px;
-  max-width: 76px;
-  text-align: center;
-}
-
-/* 极窄管理区仍横向滚动时，固定前三列便于点「详情」 */
-.users-table thead th.col-avatar-head,
-.users-table tbody td.col-avatar {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--lc-surface);
-}
-
-.users-table thead th.col-avatar-head {
-  z-index: 5;
-  background: var(--lc-soft);
-}
-
-.users-table thead th.col-user-head,
-.users-table tbody td.col-user {
-  position: sticky;
-  left: 72px;
-  z-index: 2;
-  background: var(--lc-surface);
-  box-shadow: 3px 0 8px rgba(15, 23, 42, 0.06);
-}
-
-.users-table thead th.col-user-head {
-  z-index: 5;
-  background: var(--lc-soft);
-}
-
 .users-table thead th.col-actions-head,
 .users-table tbody td.col-actions {
-  position: sticky;
-  left: calc(72px + 14%);
-  z-index: 2;
-  background: var(--lc-surface);
-  box-shadow: 3px 0 8px rgba(15, 23, 42, 0.06);
-}
-
-.users-table thead th.col-actions-head {
-  z-index: 5;
-  background: var(--lc-soft);
-}
-
-.users-table tbody tr:hover td.col-avatar,
-.users-table tbody tr:hover td.col-user,
-.users-table tbody tr:hover td.col-actions {
-  background: rgba(37, 99, 235, 0.03);
+  width: 76px;
+  min-width: 76px;
+  text-align: center;
 }
 
 .users-table-detail-btn {
@@ -874,12 +879,24 @@ watch(totalPages, (pages) => {
 
 .users-table .col-user-head,
 .users-table .col-user {
-  width: 14%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.users-table .col-phone-head,
+.users-table .col-phone {
+  width: 132px;
+  min-width: 132px;
+  padding-left: 10px;
+  padding-right: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 .users-table .col-role-head,
 .users-table .col-role {
   width: 92px;
@@ -1012,18 +1029,6 @@ watch(totalPages, (pages) => {
   font-weight: 600;
 }
 
-.users-table .col-phone,
-.users-table .col-location {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.users-table .col-phone {
-  width: 10%;
-}
-
 .users-table .col-age {
   width: 52px;
   min-width: 52px;
@@ -1052,27 +1057,24 @@ watch(totalPages, (pages) => {
 }
 
 .users-table .col-date {
-  width: 15%;
-  min-width: 12.5rem;
+  min-width: 10.5rem;
   color: var(--lc-muted);
   font-size: 12px;
-  overflow: visible;
-  text-overflow: clip;
   white-space: nowrap;
 }
 
 .users-table .col-location {
-  width: 8%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--lc-muted);
 }
 
 .users-table .col-login {
-  width: 12%;
-  min-width: 12rem;
+  min-width: 10.5rem;
   color: var(--lc-muted);
   font-size: 12px;
-  overflow: visible;
-  text-overflow: clip;
   white-space: nowrap;
 }
 

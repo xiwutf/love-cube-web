@@ -7,7 +7,7 @@
     </div>
 
     <div v-else class="verify-content">
-      <p class="verify-intro">通过认证可提升个人信任度，获得认证标识展示在资料页和推荐卡片上</p>
+      <p class="verify-intro">认证后获得专属标识，推荐权重提升，优先展示给更多用户</p>
 
       <!-- 真人头像认证 -->
       <div class="verify-card">
@@ -15,7 +15,7 @@
           <span class="verify-icon">📷</span>
           <div class="verify-card-info">
             <p class="verify-name">真人头像认证</p>
-            <p class="verify-desc">上传一张本人正脸照片，确认真实身份</p>
+            <p class="verify-desc">上传本人正脸照，获得认证标识并在推荐中优先展示</p>
           </div>
           <span class="verify-status-badge" :class="photoStatus">{{ statusLabel(photoStatus) }}</span>
         </div>
@@ -55,7 +55,7 @@
           <span class="verify-icon">🪪</span>
           <div class="verify-card-info">
             <p class="verify-name">实名认证</p>
-            <p class="verify-desc">填写姓名与身份证后四位，平台严格保密</p>
+            <p class="verify-desc">完成实名认证，提升资料可信度与推荐权重</p>
           </div>
           <span class="verify-status-badge" :class="realnameStatus">{{ statusLabel(realnameStatus) }}</span>
         </div>

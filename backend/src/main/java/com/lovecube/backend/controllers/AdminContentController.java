@@ -29,9 +29,11 @@ import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.AdminDashboardStatsService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.FellowshipProfileGrowthService;
 import com.lovecube.backend.services.HomeConfigService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.PermissionConstants;
+import com.lovecube.backend.services.VerificationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -75,6 +77,8 @@ public class AdminContentController {
     private final FellowshipInviteService fellowshipInviteService;
     private final NotificationService notificationService;
     private final HomeConfigService homeConfigService;
+    private final VerificationService verificationService;
+    private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AdminContentController(
@@ -96,6 +100,8 @@ public class AdminContentController {
             FellowshipInviteService fellowshipInviteService,
             NotificationService notificationService,
             HomeConfigService homeConfigService,
+            VerificationService verificationService,
+            FellowshipProfileGrowthService fellowshipProfileGrowthService,
             BCryptPasswordEncoder passwordEncoder
     ) {
         this.announcementRepository = announcementRepository;
@@ -116,6 +122,8 @@ public class AdminContentController {
         this.fellowshipInviteService = fellowshipInviteService;
         this.notificationService = notificationService;
         this.homeConfigService = homeConfigService;
+        this.verificationService = verificationService;
+        this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -286,12 +294,16 @@ public class AdminContentController {
         Map<Long, VerificationRequest> latestVrByUser = userIds.isEmpty()
                 ? Map.of()
                 : buildLatestVerificationRequestByUserId(verificationRequestRepository.findByUserIdIn(userIds));
+        Map<Long, Map<String, Boolean>> verifySummaryMap = verificationService.getBatchSummary(userIds);
 
         return visibleUsers.stream()
                 .map(user -> {
                     FellowshipProfileMain mainProfile = mainProfileMap.get(user.getUserid());
                     FellowshipProfile legacyProfile = legacyProfileMap.get(user.getUserid());
                     UserProfile userProfile = userProfileMap.get(user.getUserid());
+                    Map<String, Boolean> verifyBadges = verifySummaryMap.getOrDefault(user.getUserid(), Map.of());
+                    boolean photoVerified = Boolean.TRUE.equals(verifyBadges.get("photoVerified"));
+                    boolean realnameVerified = Boolean.TRUE.equals(verifyBadges.get("realnameVerified"));
                     long uploadedPhotoCount = uploadedPhotoCountMap.getOrDefault(user.getUserid(), 0L);
                     Integer genderCode = user.getGender();
                     if (genderCode == null) {
@@ -310,7 +322,11 @@ public class AdminContentController {
                     item.put("uploadedPhotoCount", uploadedPhotoCount);
                     item.put("hasUploadedPhotos", uploadedPhotoCount > 0);
                     item.put("verificationStatus", resolveAdminListVerificationStatus(
-                            user.getUserid(), latestUvByUser, latestVrByUser));
+                            user.getUserid(), photoVerified, realnameVerified, latestUvByUser, latestVrByUser));
+                    item.put("photoVerified", photoVerified);
+                    item.put("realnameVerified", realnameVerified);
+                    item.put("location", resolveAdminListLocation(user, mainProfile, legacyProfile, userProfile));
+                    item.put("lastLoginAt", resolveAdminListLastLogin(user, mainProfile, userProfile));
                     item.put("inviteCode", user.getInviteCode() == null ? "" : user.getInviteCode());
                     item.put("invitedByUserId", user.getInvitedByUserId());
                     item.put("createdAt", user.getCreatedAt());
@@ -802,6 +818,9 @@ public class AdminContentController {
                         "USER", String.valueOf(record.getUserId()));
                 }
             } catch (Exception ignored) {}
+            if ("approve".equals(action)) {
+                userRepository.findById(record.getUserId()).ifPresent(fellowshipProfileGrowthService::syncProfileMilestones);
+            }
         }
         return record;
     }
@@ -1172,9 +1191,14 @@ public class AdminContentController {
 
     private static String resolveAdminListVerificationStatus(
             Long userId,
+            boolean photoVerified,
+            boolean realnameVerified,
             Map<Long, UserVerification> latestUv,
             Map<Long, VerificationRequest> latestVr
     ) {
+        if (photoVerified || realnameVerified) {
+            return "approved";
+        }
         UserVerification uv = latestUv.get(userId);
         if (uv != null && uv.getStatus() != null && !uv.getStatus().isBlank()) {
             return uv.getStatus();
@@ -1184,6 +1208,41 @@ public class AdminContentController {
             return vr.getStatus();
         }
         return "none";
+    }
+
+    private static String resolveAdminListLocation(
+            User user,
+            FellowshipProfileMain mainProfile,
+            FellowshipProfile legacyProfile,
+            UserProfile userProfile
+    ) {
+        if (user.getLocation() != null && !user.getLocation().isBlank()) {
+            return user.getLocation().trim();
+        }
+        if (mainProfile != null && mainProfile.getCity() != null && !mainProfile.getCity().isBlank()) {
+            return mainProfile.getCity().trim();
+        }
+        if (legacyProfile != null && legacyProfile.getCity() != null && !legacyProfile.getCity().isBlank()) {
+            return legacyProfile.getCity().trim();
+        }
+        if (userProfile != null && userProfile.getCity() != null && !userProfile.getCity().isBlank()) {
+            return userProfile.getCity().trim();
+        }
+        return "";
+    }
+
+    private static LocalDateTime resolveAdminListLastLogin(
+            User user,
+            FellowshipProfileMain mainProfile,
+            UserProfile userProfile
+    ) {
+        if (userProfile != null && userProfile.getLastActiveTime() != null) {
+            return userProfile.getLastActiveTime();
+        }
+        if (mainProfile != null && mainProfile.getLastActiveAt() != null) {
+            return mainProfile.getLastActiveAt();
+        }
+        return user.getUpdatedAt();
     }
 
     private Map<String, Object> toAdminUserPhotoView(UserPhoto photo) {

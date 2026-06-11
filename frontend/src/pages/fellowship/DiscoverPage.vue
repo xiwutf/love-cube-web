@@ -18,12 +18,39 @@
       </div>
 
       <template v-else>
+      <div v-if="showRecommendPowerCard" class="recommend-power-card">
+        <div class="rp-head">
+          <p class="rp-title">匹配推荐力</p>
+          <span class="rp-boost">曝光 +{{ exposureBoostPercent }}%</span>
+        </div>
+        <div class="rp-bars">
+          <div class="rp-row">
+            <span class="rp-label">当前推荐力</span>
+            <div class="rp-track">
+              <div class="rp-fill rp-fill-current" :style="{ width: `${completionRate}%` }" />
+            </div>
+            <span class="rp-value">{{ completionRate }}%</span>
+          </div>
+          <div class="rp-row">
+            <span class="rp-label">补全后预计</span>
+            <div class="rp-track">
+              <div class="rp-fill rp-fill-potential" :style="{ width: `${potentialRate}%` }" />
+            </div>
+            <span class="rp-value">{{ potentialRate }}%</span>
+          </div>
+        </div>
+        <p class="rp-hint">{{ recommendPowerHint }}</p>
+        <button type="button" class="rp-action" @click="router.push(fellowshipPath('/profile/edit'))">
+          去完善资料
+        </button>
+      </div>
+
       <div v-if="showProfileReminder" class="tip-card">
         <div class="tip-left">
           <div class="tip-icon">!</div>
           <div>
-            <p class="tip-title">完善资料可提升推荐效果</p>
-            <p class="tip-desc">当前资料完成度 {{ completion.percent || 0 }}%，建议先补充关键信息</p>
+            <p class="tip-title">完善资料，推荐曝光更高</p>
+            <p class="tip-desc">当前推荐力 {{ completionRate }}%，补全后可达 {{ potentialRate }}%</p>
           </div>
         </div>
         <van-button round size="small" color="#ff5f84" @click="router.push(fellowshipPath('/profile/edit'))">
@@ -35,8 +62,8 @@
         <div class="tip-left">
           <div class="tip-icon tip-icon--blue">✓</div>
           <div>
-            <p class="tip-title">完成真人认证，提高信任度</p>
-            <p class="tip-desc">认证后更容易获得回应与推荐</p>
+            <p class="tip-title">完成认证，优先被更多人看到</p>
+            <p class="tip-desc">认证后获得专属标识，推荐权重提升</p>
           </div>
         </div>
         <van-button round size="small" plain color="#2563eb" @click="router.push(fellowshipPath('/verify'))">
@@ -187,6 +214,18 @@
               </van-image>
             </div>
             <p class="rec-name">{{ user.nickname || user.username }}</p>
+            <div v-if="cardBadges(user).identityBadges.length || cardBadges(user).normalBadges.length" class="rec-badges">
+              <span
+                v-for="badge in cardBadges(user).identityBadges"
+                :key="`id-${badge.code}`"
+                class="rec-badge rec-badge--identity"
+              >{{ formatBadgeLabel(badge) }}</span>
+              <span
+                v-for="badge in cardBadges(user).normalBadges"
+                :key="`n-${badge.code}`"
+                class="rec-badge"
+              >{{ formatBadgeLabel(badge) }}</span>
+            </div>
             <p class="rec-meta">{{ user.age || '--' }} 岁</p>
           </div>
         </div>
@@ -259,6 +298,7 @@ import banner3 from '@/assets/fellowship/home-banners/fellowship-home-banner-3.w
 import loveCubeIcon from '@/assets/brand/love-cube-icon.svg'
 import { getAvatar } from '@/utils/image.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
+import { pickDisplayBadges, formatBadgeLabel } from '@/utils/fellowshipBadges.js'
 
 const router = useRouter()
 const { fellowshipPath } = useFellowshipNavBase()
@@ -286,7 +326,36 @@ const isVerified = computed(() => {
   return ['approved', 'verified'].includes(status)
 })
 
-const completionPercent = computed(() => Number(completion.value?.percent || 0))
+const completionRate = computed(() =>
+  Number(completion.value?.completionRate ?? completion.value?.percent ?? 0)
+)
+const potentialRate = computed(() => Number(completion.value?.potentialRate ?? 100))
+const exposureBoostPercent = computed(() => Number(completion.value?.exposureBoostPercent ?? 0))
+const missingItemCount = computed(() => {
+  if (Array.isArray(completion.value?.missingItems)) return completion.value.missingItems.length
+  if (Array.isArray(completion.value?.missingFields)) return completion.value.missingFields.length
+  return 0
+})
+const recommendPowerHint = computed(() => {
+  const next = completion.value?.nextBenefits
+  if (Array.isArray(next) && next.length) {
+    const hint = next.find((item) => item.key === 'missing_hint')
+    const tier = next.find((item) => String(item.key || '').startsWith('tier'))
+    const verify = next.find((item) => item.key === 'verify_next')
+    const parts = []
+    if (tier?.description) parts.push(tier.description.replace(/^解锁/, ''))
+    if (verify) parts.push('认证推荐加成')
+    if (hint?.title && parts.length) return `${hint.title}，解锁${parts.join('、')}`
+    if (hint?.title) return `${hint.title}，解锁推荐加权与更多滑卡次数`
+  }
+  if (missingItemCount.value > 0) {
+    return `再补 ${missingItemCount.value} 项，解锁推荐加权与更多滑卡次数`
+  }
+  return '完善资料，提升匹配推荐力'
+})
+const showRecommendPowerCard = computed(() => completionRate.value < 100 || missingItemCount.value > 0)
+
+const completionPercent = computed(() => completionRate.value)
 
 const {
   steps: onboardingSteps,
@@ -331,7 +400,7 @@ const safeNewcomers = computed(() => (Array.isArray(newcomers.value) ? newcomers
 const showProfileReminder = computed(() => {
   if (!completion.value) return false
   if (completion.value.completed) return false
-  return Number(completion.value.percent || 0) < 80
+  return completionRate.value < 80
 })
 
 const showVerifyReminder = computed(() => {
@@ -481,6 +550,10 @@ function onImgError(event, index) {
   img.style.display = 'none'
 }
 
+function cardBadges(user) {
+  return pickDisplayBadges(user)
+}
+
 function completionBadge(user) {
   const rate = Number(user?.completionRate ?? 0)
   if (rate >= 80) return '完善'
@@ -582,6 +655,100 @@ function formatEventDate(ev) {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.recommend-power-card {
+  margin: 12px 12px 0;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #fff5f8 0%, #f4f8ff 100%);
+  border: 1px solid #ffd8e4;
+  border-radius: 14px;
+}
+
+.rp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rp-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2236;
+}
+
+.rp-boost {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff5f84;
+  background: rgba(255, 95, 132, 0.12);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.rp-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.rp-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+}
+
+.rp-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.rp-track {
+  height: 6px;
+  border-radius: 6px;
+  background: #e8edf7;
+  overflow: hidden;
+}
+
+.rp-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.rp-fill-current {
+  background: linear-gradient(90deg, #ff5f84, #ff8fab);
+}
+
+.rp-fill-potential {
+  background: linear-gradient(90deg, #6ea8ff, #9ac1ff);
+}
+
+.rp-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+}
+
+.rp-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.rp-action {
+  margin-top: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: #ff5f84;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 12px;
 }
 
 .tip-card {
@@ -955,6 +1122,30 @@ function formatEventDate(ev) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.rec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 4px;
+  max-width: 72px;
+}
+
+.rec-badge {
+  font-size: 9px;
+  line-height: 1.2;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+
+.rec-badge--identity {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  font-weight: 600;
 }
 
 .rec-meta {

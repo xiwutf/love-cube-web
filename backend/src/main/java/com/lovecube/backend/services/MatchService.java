@@ -6,16 +6,19 @@ import com.lovecube.backend.repository.FellowshipProfileRepository;
 import com.lovecube.backend.repository.MatchRecordRepository;
 import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,6 +46,15 @@ public class MatchService
 
     @Autowired
     private BlacklistService blacklistService;
+
+    @Autowired
+    private UnifiedProfileService unifiedProfileService;
+
+    @Autowired
+    private VerificationService verificationService;
+
+    @Autowired
+    private UserGrowthRepository userGrowthRepository;
 
     @Transactional
     public List<User> findMatches(Long userId, Integer minAge, Integer maxAge, Integer gender, String location) {
@@ -113,32 +125,46 @@ public class MatchService
             logger.warn("保存匹配记录部分失败（忽略，不影响返回结果）: {}", e.getMessage());
         }
 
-        return potentialMatches;
+        List<Long> candidateIds = potentialMatches.stream().map(User::getUserid).collect(Collectors.toList());
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(candidateIds);
+        Map<Long, Integer> levelMap = userGrowthRepository.findByUserIdIn(candidateIds).stream()
+                .collect(Collectors.toMap(
+                        g -> g.getUserId(),
+                        g -> g.getLevel() == null ? 1 : g.getLevel(),
+                        (a, b) -> a));
+
+        return potentialMatches.stream()
+                .sorted(Comparator.comparingDouble((User u) -> rankCandidate(u, verifyMap, levelMap)).reversed())
+                .collect(Collectors.toList());
     }
 
     private double calculateMatchScore(User user1, User user2) {
         double score = 0.0;
-        
-        // 年龄差异评分（年龄差越小分数越高）
+
         int ageDiff = Math.abs(user1.getAge() - user2.getAge());
-        score += Math.max(0, 10 - ageDiff) * 2; // 最高20分
-        
-        // 地理位置评分
+        score += Math.max(0, 10 - ageDiff) * 2;
+
         if (user1.getLocation() != null && user2.getLocation() != null) {
             if (user1.getLocation().equals(user2.getLocation())) {
-                score += 30; // 同一地区加30分
+                score += 30;
             } else if (user1.getLocation().length() >= 2 && user2.getLocation().length() >= 2 &&
                      user1.getLocation().substring(0, 2).equals(user2.getLocation().substring(0, 2))) {
-                score += 15; // 同一省份加15分
+                score += 15;
             }
         }
-        
-        // 职业评分
+
         if (user1.getOccupation() != null && user2.getOccupation() != null &&
             user1.getOccupation().equals(user2.getOccupation())) {
-            score += 15; // 相同职业加15分
+            score += 15;
         }
-        
+
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(
+                List.of(user1.getUserid(), user2.getUserid()));
+        score += unifiedProfileService.computeRecommendRankForUser(
+                user1, verifyMap.getOrDefault(user1.getUserid(), Map.of()));
+        score += unifiedProfileService.computeRecommendRankForUser(
+                user2, verifyMap.getOrDefault(user2.getUserid(), Map.of()));
+
         return score;
     }
 
@@ -232,7 +258,7 @@ public class MatchService
         int includeActedInt = Boolean.TRUE.equals(includeActed) ? 1 : 0;
         int verifiedOnlyInt = verifiedOnly ? 1 : 0;
         Pageable pageable = PageRequest.of(Math.max(pageIndex, 0), pageSize);
-        return userRepository.findMatchCandidatesPage(
+        Page<User> rawPage = userRepository.findMatchCandidatesPage(
                 currentUserId,
                 genderFilter,
                 minAgeFilter,
@@ -241,6 +267,34 @@ public class MatchService
                 includeActedInt,
                 verifiedOnlyInt,
                 pageable);
+        List<User> content = rawPage.getContent();
+        if (content.isEmpty()) {
+            return rawPage;
+        }
+        List<Long> userIds = content.stream().map(User::getUserid).collect(Collectors.toList());
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
+        Map<Long, Integer> levelMap = userGrowthRepository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(
+                        g -> g.getUserId(),
+                        g -> g.getLevel() == null ? 1 : g.getLevel(),
+                        (a, b) -> a));
+        List<User> sorted = content.stream()
+                .sorted(Comparator.comparingDouble((User u) -> rankCandidate(u, verifyMap, levelMap)).reversed())
+                .collect(Collectors.toList());
+        return new PageImpl<>(sorted, pageable, rawPage.getTotalElements());
+    }
+
+    private double rankCandidate(User user, Map<Long, Map<String, Boolean>> verifyMap, Map<Long, Integer> levelMap) {
+        Map<String, Boolean> badges = verifyMap.getOrDefault(user.getUserid(), Map.of());
+        int completionRate = unifiedProfileService.computeFellowshipCompletionRateForUser(user);
+        boolean verified = Boolean.TRUE.equals(badges.get("photoVerified"))
+                || Boolean.TRUE.equals(badges.get("realnameVerified"));
+        int growthLevel = levelMap.getOrDefault(user.getUserid(), 1);
+        double score = FellowshipProfileCompletion.computeRecommendRank(completionRate, verified, growthLevel);
+        if (user.getProfilePhoto() != null && !user.getProfilePhoto().isBlank()) {
+            score += 5;
+        }
+        return score;
     }
 
     private Integer getOppositeGender(Integer gender) {

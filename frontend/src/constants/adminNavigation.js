@@ -21,7 +21,7 @@ export const ADMIN_NAV_GROUPS = [
   },
   {
     id: 'platform',
-    label: '平台管理',
+    label: '平台运营',
     icon: '平',
     items: [
       {
@@ -51,13 +51,20 @@ export const ADMIN_NAV_GROUPS = [
         icon: '配',
         permission: 'system.manage',
         blurb: '首页区块与推荐内容'
+      },
+      {
+        to: '/admin/local-resources',
+        label: '本地资源',
+        icon: '源',
+        permission: 'content.manage',
+        blurb: '维护本地资源并控制发布状态'
       }
     ]
   },
   {
-    id: 'dating',
-    label: '找对象管理',
-    icon: '找',
+    id: 'review',
+    label: '审核中心',
+    icon: '审',
     items: [
       {
         to: '/admin/verifications',
@@ -74,11 +81,18 @@ export const ADMIN_NAV_GROUPS = [
         blurb: '联谊用户动态与点赞明细'
       },
       {
-        to: '/admin/invites',
-        label: '匹配数据',
-        icon: '配',
-        permission: 'user.manage',
-        blurb: '邀请记录与拉新数据'
+        to: '/admin/positive-shares',
+        label: '心声审核',
+        icon: '心',
+        permission: 'review.manage',
+        blurb: '审核用户发布的心声内容'
+      },
+      {
+        to: '/admin/help-requests',
+        label: '互助审核',
+        icon: '助',
+        permission: 'review.manage',
+        blurb: '审核互助广场需求'
       },
       {
         to: '/admin/reports',
@@ -90,10 +104,24 @@ export const ADMIN_NAV_GROUPS = [
     ]
   },
   {
-    id: 'groups',
-    label: '团体管理',
-    icon: '团',
+    id: 'users',
+    label: '用户与团体',
+    icon: '用',
     items: [
+      {
+        to: '/admin/users',
+        label: '用户管理',
+        icon: '用',
+        permission: 'user.manage',
+        blurb: '查询、封禁与账号状态'
+      },
+      {
+        to: '/admin/invites',
+        label: '邀请记录',
+        icon: '邀',
+        permission: 'user.manage',
+        blurb: '查看邀请发放与注册使用情况'
+      },
       {
         to: '/admin/platform/groups',
         label: '全站团体',
@@ -109,69 +137,6 @@ export const ADMIN_NAV_GROUPS = [
         blurb: '我负责的团体维护'
       }
     ]
-  },
-  {
-    id: 'users',
-    label: '用户管理',
-    icon: '用',
-    items: [
-      {
-        to: '/admin/users',
-        label: '用户管理',
-        icon: '用',
-        permission: 'user.manage',
-        blurb: '查询、封禁与账号状态'
-      }
-    ]
-  },
-  {
-    id: 'content',
-    label: '内容管理',
-    icon: '内',
-    items: [
-      {
-        to: '/admin/positive-shares',
-        label: '心声审核',
-        icon: '心',
-        permission: 'review.manage',
-        blurb: '审核用户发布的心声内容'
-      }
-    ]
-  },
-  {
-    id: 'help',
-    label: '互助管理',
-    icon: '助',
-    items: [
-      {
-        to: '/admin/help-requests',
-        label: '互助审核',
-        icon: '助',
-        permission: 'review.manage',
-        blurb: '审核互助广场需求'
-      }
-    ]
-  },
-  {
-    id: 'local',
-    label: '本地资源',
-    icon: '源',
-    items: [
-      {
-        to: '/admin/local-resources',
-        label: '本地资源',
-        icon: '源',
-        permission: 'content.manage',
-        blurb: '维护本地资源并控制发布状态'
-      }
-    ]
-  },
-  {
-    id: 'shop',
-    label: '商城管理',
-    icon: '商',
-    disabled: true,
-    items: []
   },
   {
     id: 'data',
@@ -220,7 +185,7 @@ export function filterAdminNavGroups(groups, hasPermission, options = {}) {
         return item.permission == null || hasPermission(item.permission)
       })
     }))
-    .filter(group => group.disabled || group.items.length > 0)
+    .filter(group => group.items.length > 0)
 }
 
 const SECTION_TITLES = {
@@ -260,7 +225,7 @@ const PAGE_SUBTITLES = {
   '/admin/reports': '查看举报详情，记录处理结果。',
   '/admin/fellowship-dynamics': '浏览联谊动态正文，展开查看点赞用户与时间。',
   '/admin/users': '搜索用户、查看状态，必要时限制账号行为。',
-  '/admin/invites': '查看邀请发放与使用情况。',
+  '/admin/invites': '按邀请人、被邀请人、邀请码和时间查询邀请注册记录。',
   '/admin/platform/groups': '浏览全站团体，可新建或进入某一团体编辑页。',
   '/admin/platform/groups/create': '填写团体资料并创建；保存后可在列表中继续维护。',
   '/admin/my-groups': '管理您作为负责人的团体列表。',

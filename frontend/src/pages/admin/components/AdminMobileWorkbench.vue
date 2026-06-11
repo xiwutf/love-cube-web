@@ -155,38 +155,39 @@ const totalTodo = computed(() =>
 
 const moduleGroups = [
   {
-    title: '内容管理',
+    title: '平台运营',
     items: [
       { label: '平台公告', hint: '发布与下架', to: '/admin/announcements', icon: '告' },
       { label: '本地资源', hint: '资源维护', to: '/admin/local-resources', icon: '资' },
-      { label: '心声投稿', hint: '内容审核', to: '/admin/positive-shares', icon: '动' },
-      { label: '联谊动态', hint: '点赞明细', to: '/admin/fellowship-dynamics', icon: '谊' },
-      { label: '敏感词管理', hint: '举报检查', to: '/admin/reports', icon: '敏' }
+      { label: '活动管理', hint: '报名签到', to: '/admin/events', icon: '活' },
+      { label: '首页配置', hint: '区块推荐', to: '/admin/home-config', icon: '配' }
     ]
   },
   {
-    title: '用户运营',
+    title: '审核中心',
+    items: [
+      { label: '资料审核', hint: '认证申请', to: '/admin/verifications', icon: '资' },
+      { label: '动态审核', hint: '点赞明细', to: '/admin/fellowship-dynamics', icon: '动' },
+      { label: '心声审核', hint: '内容审核', to: '/admin/positive-shares', icon: '心' },
+      { label: '互助审核', hint: '求助审核', to: '/admin/help-requests', icon: '助' },
+      { label: '举报处理', hint: '违规处置', to: '/admin/reports', icon: '举' }
+    ]
+  },
+  {
+    title: '用户与团体',
     items: [
       { label: '用户管理', hint: '账号状态', to: '/admin/users', icon: '用' },
-      { label: '反馈管理', hint: '跟进处理', to: '/admin/feedbacks', icon: '馈' },
-      { label: '成长体系', hint: '邀请记录', to: '/admin/invites', icon: '长' },
-      { label: '消息通知', hint: '通知数据', to: '/admin/analytics', icon: '信' }
-    ]
-  },
-  {
-    title: '平台模块',
-    items: [
-      { label: '团体管理', hint: '全站团体', to: '/admin/platform/groups', icon: '团' },
-      { label: '互助管理', hint: '求助审核', to: '/admin/help-requests', icon: '助' },
-      { label: '联谊管理', hint: '资料审核', to: '/admin/verifications', icon: '联' }
+      { label: '邀请记录', hint: '拉新数据', to: '/admin/invites', icon: '邀' },
+      { label: '全站团体', hint: '团体列表', to: '/admin/platform/groups', icon: '团' },
+      { label: '我的团体', hint: '负责维护', to: '/admin/my-groups', icon: '我' }
     ]
   },
   {
     title: '系统设置',
     items: [
-      { label: '权限管理', hint: '后台用户', to: '/admin/users', icon: '权' },
-      { label: '配置管理', hint: '模块开关', to: '/admin/modules', icon: '配' },
-      { label: '数据统计', hint: '访问分析', to: '/admin/analytics', icon: '数' }
+      { label: '访客分析', hint: '访问数据', to: '/admin/analytics', icon: '数' },
+      { label: '用户调研', hint: '问卷反馈', to: '/admin/feedbacks', icon: '卷' },
+      { label: '模块管理', hint: '功能开关', to: '/admin/modules', icon: '模' }
     ]
   }
 ]

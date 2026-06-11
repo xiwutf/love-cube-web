@@ -14,7 +14,14 @@ public class GrowthRuleCatalog {
 
     public GrowthRuleCatalog() {
         register(GrowthEventType.USER_REGISTERED, 5, ContributionDimension.SPREAD, 1, false, false, SettleStatus.SETTLED, "immediate");
-        register(GrowthEventType.USER_PROFILE_COMPLETED, 10, ContributionDimension.CONTENT, 1, true, true, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.USER_PROFILE_COMPLETED, 50, ContributionDimension.CONTENT, 1, true, true, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_AVATAR_SET, 20, ContributionDimension.CONTENT, 1, false, false, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_AGE_SET, 20, ContributionDimension.CONTENT, 1, false, false, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_CITY_SET, 20, ContributionDimension.CITY, 1, false, false, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_BIO_SET, 20, ContributionDimension.CONTENT, 1, false, false, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_PHOTOS_UPLOADED, 30, ContributionDimension.CONTENT, 1, false, false, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.PROFILE_VERIFIED, 100, ContributionDimension.CONTENT, 1, true, true, SettleStatus.SETTLED, "immediate");
+        register(GrowthEventType.FELLOWSHIP_ENABLED, 50, ContributionDimension.ORG, 1, true, true, SettleStatus.SETTLED, "immediate");
         register(GrowthEventType.USER_DAILY_ACTIVE, 2, ContributionDimension.ORG, 1, false, false, SettleStatus.SETTLED, "immediate");
         register(GrowthEventType.POST_CREATED, 5, ContributionDimension.CONTENT, 3, false, false, SettleStatus.SETTLED, "immediate");
         register(GrowthEventType.POST_LIKED, 1, ContributionDimension.CONTENT, 3, false, false, SettleStatus.SETTLED, "immediate");

@@ -44,7 +44,7 @@ class FellowshipProfileServiceTest {
         private final AtomicBoolean updated = new AtomicBoolean(false);
 
         FakeUnifiedProfileService() {
-            super(null, null, null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null, null, null);
         }
 
         @Override

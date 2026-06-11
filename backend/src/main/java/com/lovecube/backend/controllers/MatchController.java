@@ -102,6 +102,9 @@ public class MatchController {
             response.put("hasMore", pageResult.hasNext());
             if (currentUser != null) {
                 response.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
+                Map<String, Object> viewerCompletion = unifiedProfileService.buildFellowshipCompletion(currentUser);
+                response.put("viewerCompletion", viewerCompletion);
+                response.put("exposureBoostPercent", viewerCompletion.get("exposureBoostPercent"));
             }
             return ResponseEntity.ok(response);
 

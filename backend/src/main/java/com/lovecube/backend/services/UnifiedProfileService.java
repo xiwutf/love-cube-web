@@ -13,6 +13,7 @@ import com.lovecube.backend.repository.FellowshipProfileRepository;
 import com.lovecube.backend.repository.UserPhotoRepository;
 import com.lovecube.backend.repository.UserProfileRepository;
 import com.lovecube.backend.repository.UserRepository;
+import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.utils.JwtUtil;
@@ -46,6 +47,8 @@ public class UnifiedProfileService {
     private final UserVerificationRepository userVerificationRepository;
     private final VerificationRequestRepository verificationRequestRepository;
     private final VerificationService verificationService;
+    private final UserGrowthRepository userGrowthRepository;
+    private final FellowshipCardEnrichmentService fellowshipCardEnrichmentService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public UnifiedProfileService(
@@ -56,7 +59,9 @@ public class UnifiedProfileService {
             UserPhotoRepository userPhotoRepository,
             UserVerificationRepository userVerificationRepository,
             VerificationRequestRepository verificationRequestRepository,
-            VerificationService verificationService
+            VerificationService verificationService,
+            UserGrowthRepository userGrowthRepository,
+            FellowshipCardEnrichmentService fellowshipCardEnrichmentService
     ) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
@@ -66,6 +71,8 @@ public class UnifiedProfileService {
         this.userVerificationRepository = userVerificationRepository;
         this.verificationRequestRepository = verificationRequestRepository;
         this.verificationService = verificationService;
+        this.userGrowthRepository = userGrowthRepository;
+        this.fellowshipCardEnrichmentService = fellowshipCardEnrichmentService;
     }
 
     public User requireCurrentUser(String authHeader) {
@@ -86,7 +93,13 @@ public class UnifiedProfileService {
 
     public Map<String, Object> buildPublicProfile(Long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        return buildUnifiedProfile(user);
+        Map<String, Object> profile = buildUnifiedProfile(user);
+        Map<String, Boolean> verify = Map.of(
+                "photoVerified", Boolean.TRUE.equals(profile.get("photoVerified")),
+                "realnameVerified", Boolean.TRUE.equals(profile.get("realnameVerified")));
+        fellowshipCardEnrichmentService.enrichUserCard(
+                profile, user, verify, computeFellowshipCompletionRateForUser(user));
+        return profile;
     }
 
     public Map<String, Object> buildCurrentProfile(User user) {
@@ -367,11 +380,59 @@ public class UnifiedProfileService {
         result.put("verificationRejectReason", merged.getOrDefault("verificationRejectReason", ""));
         result.put("photoVerified", merged.getOrDefault("photoVerified", false));
         result.put("realnameVerified", merged.getOrDefault("realnameVerified", false));
+        result.put("photoCount", getUserPhotos(user.getUserid()).size());
         return result;
     }
 
     public Map<String, Object> buildFellowshipCompletion(User user) {
-        return extractCompletion(buildFellowshipPayload(user));
+        Map<String, Object> profile = buildFellowshipPayload(user);
+        int growthLevel = resolveGrowthLevel(user.getUserid());
+        return FellowshipProfileCompletion.build(user, profile, (Integer) profile.getOrDefault("photoCount", 0), growthLevel);
+    }
+
+    public int computeFellowshipCompletionRateForUser(User user) {
+        if (user == null) {
+            return 0;
+        }
+        Map<String, Object> profile = buildFellowshipPayload(user);
+        int photoCount = profile.get("photoCount") instanceof Number n ? n.intValue() : getUserPhotos(user.getUserid()).size();
+        Map<String, Object> completion = FellowshipProfileCompletion.build(user, profile, photoCount, resolveGrowthLevel(user.getUserid()));
+        Object rate = completion.get("completionRate");
+        return rate instanceof Number n ? n.intValue() : 0;
+    }
+
+    public int computeExposureBoostForUser(User user) {
+        if (user == null) {
+            return 0;
+        }
+        Map<String, Object> profile = buildFellowshipPayload(user);
+        int photoCount = profile.get("photoCount") instanceof Number n ? n.intValue() : getUserPhotos(user.getUserid()).size();
+        Map<String, Object> completion = FellowshipProfileCompletion.build(user, profile, photoCount, resolveGrowthLevel(user.getUserid()));
+        Object boost = completion.get("exposureBoostPercent");
+        return boost instanceof Number n ? n.intValue() : 0;
+    }
+
+    public double computeRecommendRankForUser(User user, Map<String, Boolean> verifyBadges) {
+        if (user == null) {
+            return 0;
+        }
+        int completionRate = computeFellowshipCompletionRateForUser(user);
+        boolean verified = verifyBadges != null && (
+                Boolean.TRUE.equals(verifyBadges.get("photoVerified"))
+                        || Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
+        return FellowshipProfileCompletion.computeRecommendRank(
+                completionRate,
+                verified,
+                resolveGrowthLevel(user.getUserid()));
+    }
+
+    private int resolveGrowthLevel(Long userId) {
+        if (userId == null) {
+            return 1;
+        }
+        return userGrowthRepository.findByUserId(userId)
+                .map(g -> g.getLevel() == null ? 1 : g.getLevel())
+                .orElse(1);
     }
 
     /**
@@ -411,33 +472,25 @@ public class UnifiedProfileService {
         } else {
             card.put("photos", List.of());
         }
-        card.put("completionRate", estimateProfileCompletion(user));
+        card.put("completionRate", computeFellowshipCompletionRateForUser(user));
+        card.put("exposureBoostPercent", computeExposureBoostForUser(user));
         card.put("identityRole", "self");
         card.put("guardianRole", "");
         card.put("photoVerified",    verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified")));
         card.put("realnameVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
         card.put("recommendReasons", viewer != null ? buildRecommendReasons(viewer, user, verifyBadges) : List.of());
+        fellowshipCardEnrichmentService.enrichUserCard(
+                card, user, verifyBadges, computeFellowshipCompletionRateForUser(user));
         return card;
     }
 
-    /** 基于 User 字段估算资料完整度（0–100），用于推荐卡片展示。 */
+    /** 基于 User 字段估算资料完整度（0–100），用于非联谊场景兜底。 */
     public int estimateProfileCompletionForUser(User user) {
-        return estimateProfileCompletion(user);
+        return computeFellowshipCompletionRateForUser(user);
     }
 
     private int estimateProfileCompletion(User user) {
-        if (user == null) {
-            return 0;
-        }
-        int score = 0;
-        if (!defaultText(user.getUsername(), "").isBlank()) score += 15;
-        if (user.getGender() != null) score += 10;
-        if (user.getAge() > 0) score += 10;
-        if (!defaultText(user.getLocation(), "").isBlank()) score += 15;
-        if (!defaultText(user.getOccupation(), "").isBlank()) score += 15;
-        if (!defaultText(user.getBio(), "").isBlank()) score += 15;
-        if (!defaultText(user.getProfilePhoto(), "").isBlank()) score += 10;
-        return Math.min(100, score);
+        return computeFellowshipCompletionRateForUser(user);
     }
 
     /**
@@ -471,7 +524,7 @@ public class UnifiedProfileService {
         if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified"))) {
             reasons.add("实名认证");
         }
-        int completion = estimateProfileCompletion(candidate);
+        int completion = computeFellowshipCompletionRateForUser(candidate);
         if (completion >= 80) {
             reasons.add("资料完善");
         }
@@ -481,27 +534,21 @@ public class UnifiedProfileService {
         return reasons.stream().limit(3).collect(Collectors.toList());
     }
 
-    /** 从已有的 fellowshipPayload 中提取完整度，避免重复调用 buildUnifiedProfile。 */
+    /** 联谊资料完成度：权重清单、权益与曝光加成（迭代 1）。 */
     public Map<String, Object> extractCompletion(Map<String, Object> p) {
-        List<String> missing = new ArrayList<>();
-        checkMissing(missing, "nickname", p.get("nickname"));
-        checkMissing(missing, "gender", p.get("gender"));
-        if (p.get("birthYear") == null) missing.add("birthYear");
-        checkMissing(missing, "city", p.get("city"));
-        checkMissing(missing, "occupation", p.get("occupation"));
-        checkMissing(missing, "education", p.get("education"));
-        if (p.get("height") == null) missing.add("height");
-        checkMissing(missing, "bio", p.get("bio"));
-        checkMissing(missing, "intention", p.get("intention"));
-        checkMissing(missing, "avatarUrl", p.get("avatarUrl"));
-        int total = 10;
-        int percent = Math.max(0, Math.min(100, (int) Math.round((total - missing.size()) * 100.0 / total)));
-        return Map.of(
-                "completed", missing.isEmpty(),
-                "percent", percent,
-                "missingFields", missing,
-                "identityRole", p.getOrDefault("identityRole", "self")
-        );
+        if (p == null || p.isEmpty()) {
+            return FellowshipProfileCompletion.build(null, Map.of(), 0, 1);
+        }
+        User user = null;
+        Object userIdObj = p.get("userId");
+        if (userIdObj instanceof Number n) {
+            user = userRepository.findById(n.longValue()).orElse(null);
+        }
+        int photoCount = p.get("photoCount") instanceof Number n
+                ? n.intValue()
+                : (user != null ? getUserPhotos(user.getUserid()).size() : 0);
+        int growthLevel = user != null ? resolveGrowthLevel(user.getUserid()) : 1;
+        return FellowshipProfileCompletion.build(user, p, photoCount, growthLevel);
     }
 
     public List<String> getUserPhotos(Long userId) {

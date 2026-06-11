@@ -3,6 +3,7 @@ package com.lovecube.backend.controllers;
 import com.lovecube.backend.config.AppProperties;
 import com.lovecube.backend.models.User;
 import com.lovecube.backend.services.FileStorageService;
+import com.lovecube.backend.services.FellowshipProfileGrowthService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,15 +19,18 @@ public class UploadController {
     private final AppProperties appProperties;
     private final FileStorageService fileStorageService;
     private final UnifiedProfileService unifiedProfileService;
+    private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
 
     public UploadController(
             AppProperties appProperties,
             FileStorageService fileStorageService,
-            UnifiedProfileService unifiedProfileService
+            UnifiedProfileService unifiedProfileService,
+            FellowshipProfileGrowthService fellowshipProfileGrowthService
     ) {
         this.appProperties = appProperties;
         this.fileStorageService = fileStorageService;
         this.unifiedProfileService = unifiedProfileService;
+        this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
     }
 
     @PostMapping("/image")
@@ -184,6 +188,7 @@ public class UploadController {
                 }
             }
             unifiedProfileService.replaceUserPhotos(user.getUserid(), photoUrls);
+            fellowshipProfileGrowthService.syncProfileMilestones(user);
             return ResponseEntity.ok(Map.of("message", "生活照片保存成功", "photosCount", photoUrls.size()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());

@@ -19,9 +19,11 @@
         </van-image>
         <div class="header-info">
           <h2 class="nickname">{{ user.nickname }}</h2>
-          <div class="verify-badges" v-if="verifyBadges.photoVerified || verifyBadges.realnameVerified">
-            <span v-if="verifyBadges.photoVerified" class="vbadge photo">📷 真人</span>
-            <span v-if="verifyBadges.realnameVerified" class="vbadge realname">🪪 实名</span>
+          <div class="verify-badges" v-if="displayBadges.identityBadges.length || displayBadges.normalBadges.length || verifyBadges.photoVerified || verifyBadges.realnameVerified">
+            <span v-for="badge in displayBadges.identityBadges" :key="badge.code" class="vbadge identity">{{ formatBadgeLabel(badge) }}</span>
+            <span v-for="badge in displayBadges.normalBadges" :key="badge.code" class="vbadge normal">{{ formatBadgeLabel(badge) }}</span>
+            <span v-if="!displayBadges.identityBadges.length && verifyBadges.photoVerified" class="vbadge photo">真人认证</span>
+            <span v-if="!displayBadges.identityBadges.length && verifyBadges.realnameVerified" class="vbadge realname">实名认证</span>
           </div>
           <div class="tags">
             <van-tag v-if="user.gender" plain type="primary">{{ user.gender }}</van-tag>
@@ -100,6 +102,7 @@ import { normalizeUser } from '@/utils/normalizeUser.js'
 import { storage } from '@/utils/storage.js'
 import { useReport } from '@/composables/useReport.js'
 import { useFellowshipNavBase } from '@/composables/useFellowshipNavBase.js'
+import { pickDisplayBadges, formatBadgeLabel } from '@/utils/fellowshipBadges.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -113,6 +116,7 @@ const verifyBadges = ref({ photoVerified: false, realnameVerified: false })
 const { openReport } = useReport()
 
 const profileAvatarDisplay = computed(() => getAvatar(user.value))
+const displayBadges = computed(() => pickDisplayBadges(user.value || {}))
 
 onMounted(async () => {
   try {
@@ -229,6 +233,8 @@ async function showMoreMenu() {
 }
 .vbadge.photo    { background: #e8f4ff; color: #1989fa; }
 .vbadge.realname { background: #e8f8f0; color: #07c160; }
+.vbadge.identity { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; }
+.vbadge.normal   { background: #f1f5f9; color: #475569; }
 .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .signature { font-size: 13px; color: #999; line-height: 1.5; }
 .info-group { margin-bottom: 8px; }

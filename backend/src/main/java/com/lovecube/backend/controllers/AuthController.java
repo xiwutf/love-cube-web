@@ -8,6 +8,7 @@ import com.lovecube.backend.growth.service.GrowthEventService;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.FellowshipProfileGrowthService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.InviteEffectiveSettleService;
 import com.lovecube.backend.services.LoginStreakService;
@@ -48,6 +49,7 @@ public class AuthController {
     private final com.lovecube.backend.growth.service.GrowthRewardService growthRewardService;
     private final LoginStreakService loginStreakService;
     private final InviteEffectiveSettleService inviteEffectiveSettleService;
+    private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
 
     public AuthController(
             UserRepository userRepository,
@@ -58,7 +60,8 @@ public class AuthController {
             GrowthEventService growthEventService,
             com.lovecube.backend.growth.service.GrowthRewardService growthRewardService,
             LoginStreakService loginStreakService,
-            InviteEffectiveSettleService inviteEffectiveSettleService
+            InviteEffectiveSettleService inviteEffectiveSettleService,
+            FellowshipProfileGrowthService fellowshipProfileGrowthService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -69,6 +72,7 @@ public class AuthController {
         this.growthRewardService = growthRewardService;
         this.loginStreakService = loginStreakService;
         this.inviteEffectiveSettleService = inviteEffectiveSettleService;
+        this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
     }
 
     @PostMapping("/login")
@@ -217,6 +221,7 @@ public class AuthController {
                     "growth:user_registered:user:" + saved.getUserid(),
                     SourcePlatform.API
             );
+            fellowshipProfileGrowthService.syncAfterRegistration(saved.getUserid());
             if (inviter != null) {
                 publishGrowthEventSafely(
                         GrowthEventType.USER_INVITED_REGISTERED,

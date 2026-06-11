@@ -11,6 +11,7 @@ import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.FellowshipInviteService;
+import com.lovecube.backend.services.FellowshipProfileGrowthService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.UserService;
 import com.lovecube.backend.utils.JwtUtil;
@@ -36,6 +37,7 @@ public class UserController {
     private final PositiveShareLikeRepository positiveShareLikeRepository;
     private final UserInteractionRepository userInteractionRepository;
     private final FellowshipInviteService fellowshipInviteService;
+    private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
 
     public UserController(
             UserService userService,
@@ -48,7 +50,8 @@ public class UserController {
             PositiveShareBookmarkRepository positiveShareBookmarkRepository,
             PositiveShareLikeRepository positiveShareLikeRepository,
             UserInteractionRepository userInteractionRepository,
-            FellowshipInviteService fellowshipInviteService
+            FellowshipInviteService fellowshipInviteService,
+            FellowshipProfileGrowthService fellowshipProfileGrowthService
     ) {
         this.userService = userService;
         this.userRepository = userRepository;
@@ -61,6 +64,7 @@ public class UserController {
         this.positiveShareLikeRepository = positiveShareLikeRepository;
         this.userInteractionRepository = userInteractionRepository;
         this.fellowshipInviteService = fellowshipInviteService;
+        this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
     }
 
     @GetMapping("/users/{userId}")
@@ -219,6 +223,7 @@ public class UserController {
             currentUser.setFellowshipEnabled(true);
             currentUser.setFellowshipMatchVisible(true);
             userRepository.save(currentUser);
+            fellowshipProfileGrowthService.syncProfileMilestones(currentUser);
             Map<String, Object> result = unifiedProfileService.buildLegacyUserPayload(currentUser);
             result.put("role", adminAuthService.isAdmin(currentUser) ? "admin" : "user");
             return ResponseEntity.ok(result);

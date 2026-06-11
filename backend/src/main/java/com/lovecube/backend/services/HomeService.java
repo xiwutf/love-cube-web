@@ -8,7 +8,7 @@ import com.lovecube.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,15 +19,21 @@ public class HomeService {
     private final BannerRepository bannerRepository;
     private final UserRepository userRepository;
     private final UnifiedProfileService unifiedProfileService;
+    private final VerificationService verificationService;
+    private final FellowshipCardEnrichmentService fellowshipCardEnrichmentService;
 
     public HomeService(
             BannerRepository bannerRepository,
             UserRepository userRepository,
-            UnifiedProfileService unifiedProfileService
+            UnifiedProfileService unifiedProfileService,
+            VerificationService verificationService,
+            FellowshipCardEnrichmentService fellowshipCardEnrichmentService
     ) {
         this.bannerRepository = bannerRepository;
         this.userRepository = userRepository;
         this.unifiedProfileService = unifiedProfileService;
+        this.verificationService = verificationService;
+        this.fellowshipCardEnrichmentService = fellowshipCardEnrichmentService;
     }
 
     public List<Banner> getBanners() {
@@ -36,8 +42,11 @@ public class HomeService {
 
     public List<Map<String, Object>> getRecommends() {
         List<User> pool = new ArrayList<>(userRepository.findVisibleFellowshipUserPool(50));
-        Collections.shuffle(pool);
+        List<Long> userIds = pool.stream().map(User::getUserid).collect(Collectors.toList());
+        Map<Long, Map<String, Boolean>> verifyMap = verificationService.getBatchSummary(userIds);
         return pool.stream()
+                .sorted(Comparator.comparingDouble((User u) -> unifiedProfileService.computeRecommendRankForUser(
+                        u, verifyMap.getOrDefault(u.getUserid(), Map.of()))).reversed())
                 .limit(5)
                 .map(this::convertUserToCard)
                 .collect(Collectors.toList());
@@ -64,7 +73,7 @@ public class HomeService {
                 User user = unifiedProfileService.requireCurrentUser(authHeader);
                 Map<String, Object> profile = unifiedProfileService.buildFellowshipPayload(user);
                 result.put("profile", profile);
-                result.put("completion", unifiedProfileService.extractCompletion(profile));
+                result.put("completion", unifiedProfileService.buildFellowshipCompletion(user));
             } catch (Exception ignored) {
                 // 未登录或 token 失效 — 公开内容仍正常返回
             }
@@ -102,7 +111,12 @@ public class HomeService {
         card.put("avatarUrl", user.getProfilePhoto());
         card.put("age", user.getAge());
         card.put("location", user.getLocation());
-        card.put("completionRate", unifiedProfileService.estimateProfileCompletionForUser(user));
+        Map<String, Boolean> verify = verificationService.getBatchSummary(List.of(user.getUserid()))
+                .getOrDefault(user.getUserid(), Map.of());
+        card.put("photoVerified", Boolean.TRUE.equals(verify.get("photoVerified")));
+        card.put("realnameVerified", Boolean.TRUE.equals(verify.get("realnameVerified")));
+        int completionRate = unifiedProfileService.computeFellowshipCompletionRateForUser(user);
+        fellowshipCardEnrichmentService.enrichUserCard(card, user, verify, completionRate);
         return card;
     }
 }

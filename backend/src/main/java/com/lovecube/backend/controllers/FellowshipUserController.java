@@ -9,6 +9,7 @@ import com.lovecube.backend.repository.UserInteractionRepository;
 import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVisitorRepository;
 import com.lovecube.backend.services.BlacklistService;
+import com.lovecube.backend.services.FellowshipGrowthSummaryService;
 import com.lovecube.backend.services.SwipeQuotaService;
 import com.lovecube.backend.services.UnifiedProfileService;
 import com.lovecube.backend.services.UserVisitorService;
@@ -39,6 +40,7 @@ public class FellowshipUserController {
     private final EventSignupRepository eventSignupRepository;
     private final VipService vipService;
     private final SwipeQuotaService swipeQuotaService;
+    private final FellowshipGrowthSummaryService fellowshipGrowthSummaryService;
 
     public FellowshipUserController(UnifiedProfileService unifiedProfileService,
                                     UserRepository userRepository,
@@ -50,7 +52,8 @@ public class FellowshipUserController {
                                     UserBlacklistRepository userBlacklistRepository,
                                     EventSignupRepository eventSignupRepository,
                                     VipService vipService,
-                                    SwipeQuotaService swipeQuotaService) {
+                                    SwipeQuotaService swipeQuotaService,
+                                    FellowshipGrowthSummaryService fellowshipGrowthSummaryService) {
         this.unifiedProfileService = unifiedProfileService;
         this.userRepository = userRepository;
         this.blacklistService = blacklistService;
@@ -62,6 +65,7 @@ public class FellowshipUserController {
         this.eventSignupRepository = eventSignupRepository;
         this.vipService = vipService;
         this.swipeQuotaService = swipeQuotaService;
+        this.fellowshipGrowthSummaryService = fellowshipGrowthSummaryService;
     }
 
     @GetMapping("/me/stats")
@@ -92,6 +96,8 @@ public class FellowshipUserController {
             body.put("eventSignupCount", eventSignupCount);
             body.putAll(vipService.buildVipStatus(currentUser));
             body.put("swipeQuota", swipeQuotaService.getStatus(currentUser));
+            body.putAll(unifiedProfileService.buildFellowshipCompletion(currentUser));
+            body.putAll(fellowshipGrowthSummaryService.buildMeGrowthSummary(userId));
             return ResponseEntity.ok(body);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));

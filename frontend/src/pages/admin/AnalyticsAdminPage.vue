@@ -41,11 +41,12 @@
 
     <section class="analytics-main-grid">
       <article class="platform-card analytics-panel">
-        <h3>访问趋势（PV / UV）</h3>
+        <h3>访问趋势</h3>
+        <p class="panel-hint">浏览量 = 页面被打开的总次数；访客数 = 去重后的访问人数（同一人多次访问只计 1 人）</p>
         <div class="trend-list">
           <div v-for="point in trend.points" :key="point.date" class="trend-item">
             <span>{{ point.date }}</span>
-            <strong>PV {{ point.pv }} / UV {{ point.uv }}</strong>
+            <strong>浏览 {{ point.pv }} · 访客 {{ point.uv }}</strong>
           </div>
           <p v-if="!trend.points.length" class="empty-text">暂无趋势数据</p>
         </div>
@@ -57,7 +58,7 @@
           <div v-for="(item, idx) in paginatedTopPages" :key="`${item.url}-${idx}`" class="rank-item">
             <span class="rank-index">{{ (topPagesPage - 1) * topPagesPageSize + idx + 1 }}</span>
             <span class="rank-title">{{ item.url || '/' }}</span>
-            <strong>PV {{ item.pv }} · UV {{ item.uv }}</strong>
+            <strong>浏览 {{ item.pv }} · 访客 {{ item.uv }}</strong>
           </div>
           <p v-if="!topPages.items.length" class="empty-text">暂无页面数据</p>
         </div>
@@ -85,7 +86,7 @@
         <div class="simple-list">
           <p class="subheading">设备</p>
           <div v-for="item in client.devices" :key="`d-${item.name}`" class="simple-item">
-            <span>{{ item.name }}</span><strong>{{ item.count }}</strong>
+            <span>{{ deviceLabel(item.name) }}</span><strong>{{ item.count }}</strong>
           </div>
           <p class="subheading">浏览器</p>
           <div v-for="item in client.browsers" :key="`b-${item.name}`" class="simple-item">
@@ -244,6 +245,14 @@ function formatAccount(item) {
   return [uid, username, phone].filter(Boolean).join(' / ')
 }
 
+function deviceLabel(name) {
+  const raw = String(name || '').trim().toLowerCase()
+  if (raw === 'mobile') return '手机'
+  if (raw === 'desktop') return '电脑'
+  if (raw === 'tablet') return '平板'
+  return name || '其他'
+}
+
 watch(range, () => {
   visitors.page = 1
   topPagesPage.value = 1
@@ -273,7 +282,13 @@ onMounted(loadAll)
 .kpi-meta { margin: 0; color: var(--lc-muted); font-size: 12px; }
 .analytics-main-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .analytics-panel { padding: 16px; }
-.analytics-panel h3 { margin: 0 0 12px; font-size: 18px; color: var(--lc-text); }
+.analytics-panel h3 { margin: 0 0 8px; font-size: 18px; color: var(--lc-text); }
+.panel-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lc-subtle);
+}
 .trend-list, .rank-list, .simple-list { display: grid; gap: 8px; }
 .trend-item, .rank-item, .simple-item {
   display: flex; justify-content: space-between; align-items: center; gap: 8px;
