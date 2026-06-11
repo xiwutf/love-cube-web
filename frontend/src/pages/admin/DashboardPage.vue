@@ -1,96 +1,52 @@
 <template>
-  <section class="admin-page operation-shell dashboard-page">
-    <header class="operation-hero admin-operation-hero">
-      <div class="hero-main">
-        <div class="hero-kicker-row">
-          <span class="status-badge info">Admin Operations</span>
-          <div class="date-pill">
-            <span>{{ todayDateText }}</span>
-            <span>{{ todayWeekText }}</span>
-          </div>
-        </div>
-        <h1>平台运营控制台</h1>
-        <p>统一查看平台增长、内容供给、Space 运营和风险待办，优先处理影响用户体验的事项。</p>
-      </div>
-      <div class="hero-summary-grid">
-        <article v-for="item in platformSummaryCards" :key="item.key" class="summary-card" :class="item.tone">
-          <span>{{ item.label }}</span>
-          <strong>{{ formatNumber(item.value) }}</strong>
-          <small>{{ item.hint }}</small>
-        </article>
-      </div>
-    </header>
-
-    <section class="dashboard-section">
-      <div class="section-title-row operation-section-head">
-        <div>
-          <p class="section-kicker">Core Metrics</p>
-          <h2>核心指标</h2>
+  <section class="admin-page dashboard-page">
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>今日概览</h2>
+        <div class="date-pill">
+          <span>{{ todayDateText }}</span>
+          <span>{{ todayWeekText }}</span>
         </div>
       </div>
 
-      <div class="metric-grid">
-        <article v-for="item in coreMetricCards" :key="item.key" class="metric-card" :class="item.tone">
-          <div class="metric-card-head">
-            <span class="metric-label">{{ item.label }}</span>
-            <span class="metric-chip">{{ item.badge }}</span>
+      <div class="overview-grid">
+        <article v-for="item in overviewCards" :key="item.key" class="overview-card">
+          <div class="stat-icon" :class="`stat-${item.tone}`">{{ item.icon }}</div>
+          <div class="stat-content">
+            <p>{{ item.label }}</p>
+            <strong>{{ formatNumber(item.value) }}</strong>
+            <span>{{ item.meta || '较昨日' }} <em :class="item.delta >= 0 ? 'up' : 'down'">{{ formatDelta(item.delta) }}</em></span>
+            <small v-if="item.detail" class="stat-detail">{{ item.detail }}</small>
           </div>
-          <strong>{{ formatNumber(item.value) }}</strong>
-          <p>{{ item.hint }}</p>
-          <div class="metric-trend">
-            <span>{{ item.meta || '趋势' }}</span>
-            <em :class="item.delta >= 0 ? 'up' : 'down'">{{ formatDelta(item.delta) }}</em>
-          </div>
+          <svg class="sparkline" viewBox="0 0 92 36" aria-hidden="true">
+            <polyline :class="`spark-${item.tone}`" :points="item.spark"></polyline>
+          </svg>
         </article>
       </div>
     </section>
 
-    <section class="dashboard-section risk-section">
-      <div class="section-title-row operation-section-head">
-        <div>
-          <p class="section-kicker">Risks</p>
-          <h2>风险待办</h2>
-        </div>
-        <span class="status-badge warning">{{ formatNumber(totalRiskCount) }} 项需关注</span>
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>待办工作台</h2>
       </div>
 
-      <div class="risk-grid">
-        <article v-for="item in riskCards" :key="item.key" class="risk-card" :class="item.tone">
-          <div class="risk-card-head">
-            <span class="risk-dot" :class="item.tone"></span>
+      <div class="todo-grid">
+        <article v-for="item in todoItems" :key="item.key" class="todo-card">
+          <router-link class="todo-more" :to="item.to" aria-label="进入处理">›</router-link>
+          <div class="todo-icon" :class="`todo-${item.tone}`">{{ item.icon }}</div>
+          <div>
             <h3>{{ item.title }}</h3>
             <strong>{{ formatNumber(item.count) }}</strong>
+            <p>{{ item.desc }}</p>
           </div>
-          <p>{{ item.desc }}</p>
-          <router-link class="card-link" :to="item.to">{{ item.actionLabel }}</router-link>
+          <router-link class="todo-action" :to="item.to">{{ item.actionLabel || '立即处理' }}</router-link>
         </article>
       </div>
     </section>
 
-    <section class="dashboard-section">
-      <div class="section-title-row operation-section-head">
-        <div>
-          <p class="section-kicker">Next Actions</p>
-          <h2>运营建议</h2>
-        </div>
-      </div>
-
-      <div class="action-grid">
-        <article v-for="item in actionCards" :key="item.key" class="action-card" :class="item.tone">
-          <span class="status-badge" :class="item.badgeTone">{{ item.badge }}</span>
-          <h3>{{ item.title }}</h3>
-          <p>{{ item.desc }}</p>
-          <router-link class="card-link" :to="item.to">{{ item.actionLabel }}</router-link>
-        </article>
-      </div>
-    </section>
-
-    <section class="dashboard-section">
-      <div class="section-title-row operation-section-head">
-        <div>
-          <p class="section-kicker">Trends</p>
-          <h2>运营数据</h2>
-        </div>
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>运营数据</h2>
       </div>
 
       <div class="ops-grid">
@@ -146,23 +102,52 @@
             </div>
           </div>
         </article>
+
+        <article class="ops-card completion-card">
+          <h3>找对象资料完善率</h3>
+          <div class="progress-ring" :style="profileRingStyle">
+          <div class="progress-ring__inner">{{ profileCompletionRate }}%</div>
+          </div>
+          <p>已完善 {{ formatNumber(profileCompletedCount) }} / {{ formatNumber(profileTotalCount) }}</p>
+        </article>
       </div>
     </section>
 
-    <section class="dashboard-section">
-      <div class="section-title-row operation-section-head">
-        <div>
-          <p class="section-kicker">Recent Events</p>
-          <h2>最近动态</h2>
-        </div>
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>快捷入口</h2>
+      </div>
+
+      <div class="shortcut-grid">
+        <article v-for="group in shortcutGroups" :key="group.title" class="shortcut-group">
+          <h3>{{ group.title }}</h3>
+          <div class="shortcut-items">
+            <template v-for="item in group.items" :key="item.label">
+              <router-link v-if="item.to" class="shortcut-item" :to="item.to">
+                <span :class="`shortcut-icon ${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.label }}</strong>
+              </router-link>
+              <span v-else class="shortcut-item shortcut-item--disabled">
+                <span :class="`shortcut-icon ${item.tone}`">{{ item.icon }}</span>
+                <strong>{{ item.label }}</strong>
+              </span>
+            </template>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="dash-section">
+      <div class="section-title-row">
+        <h2>最近动态</h2>
       </div>
 
       <div class="recent-grid">
         <article v-for="column in recentColumns" :key="column.key" class="recent-card">
           <header>
             <h3>{{ column.title }}</h3>
-            <router-link v-if="column.to" :to="column.to">更多 →</router-link>
-            <span v-else>更多 →</span>
+            <router-link v-if="column.to" :to="column.to">更多 ›</router-link>
+            <span v-else>更多 ›</span>
           </header>
           <ul>
             <li v-for="item in column.items" :key="`${column.key}-${item.title}-${item.time}`">
@@ -316,11 +301,6 @@ function linePoints(values) {
     .join(' ')
 }
 
-function lastValue(values) {
-  const rows = toNumberArray(values)
-  return rows.length ? rows[rows.length - 1] : 0
-}
-
 function mergeDashboardData(apiData = {}) {
   return {
     ...emptyDashboardData,
@@ -364,192 +344,6 @@ const pendingReviewBreakdown = computed(() => ({
   helps: pick('helpAndShareData', 'helpRequestsPending'),
   resources: pick('localResourceData', 'pendingLocalResources')
 }))
-
-const totalContentCount = computed(() =>
-  Number(pick('contentData', 'totalAnnouncements')) +
-  Number(pick('contentData', 'totalArticles')) +
-  Number(pick('contentData', 'totalEvents')) +
-  Number(pick('engagementData', 'dynamicsTotal')) +
-  Number(pick('helpAndShareData', 'positiveSharesPublished')) +
-  Number(pick('helpAndShareData', 'helpRequestsActive'))
-)
-
-const todayNewTotal = computed(() =>
-  Number(pick('userData', 'todayNewUsers')) +
-  Number(pick('contentData', 'todayNewDynamics')) +
-  Number(pick('communityData', 'groupPostsToday')) +
-  Number(pick('helpAndShareData', 'positiveSharesToday')) +
-  Number(pick('helpAndShareData', 'helpRequestsToday'))
-)
-
-const activeSituationCount = computed(() =>
-  lastValue(trends.value.activeUsers) ||
-  Number(pick('engagementData', 'dynamicsSevenDays')) +
-  Number(pick('communityData', 'activeGroups'))
-)
-
-const totalRiskCount = computed(() =>
-  Number(pick('contentData', 'pendingContent')) +
-  Number(pick('communityData', 'pendingGroupJoinRequests')) +
-  Number(pick('governanceData', 'pendingReports')) +
-  Number(pick('feedbackData', 'pendingFeedbacks'))
-)
-
-const platformSummaryCards = computed(() => [
-  {
-    key: 'users-total',
-    label: '用户总量',
-    value: pick('userData', 'totalUsers'),
-    hint: `今日新增 ${formatNumber(pick('userData', 'todayNewUsers'))}`,
-    tone: 'info'
-  },
-  {
-    key: 'content-total',
-    label: '内容总量',
-    value: totalContentCount.value,
-    hint: `近 7 日发布 ${formatNumber(pick('contentData', 'contentPublishedLast7d'))}`,
-    tone: 'success'
-  },
-  {
-    key: 'space-total',
-    label: 'Space 数量',
-    value: pick('communityData', 'totalGroups'),
-    hint: `活跃 ${formatNumber(pick('communityData', 'activeGroups'))}`,
-    tone: 'info'
-  },
-  {
-    key: 'active',
-    label: '活跃情况',
-    value: activeSituationCount.value,
-    hint: '活跃用户 / 活跃 Space',
-    tone: 'success'
-  },
-  {
-    key: 'today-new',
-    label: '今日新增',
-    value: todayNewTotal.value,
-    hint: '用户、内容与互助合计',
-    tone: 'info'
-  },
-  {
-    key: 'risks',
-    label: '风险事项',
-    value: totalRiskCount.value,
-    hint: '审核、举报、反馈待处理',
-    tone: totalRiskCount.value > 0 ? 'warning' : 'success'
-  }
-])
-
-const coreMetricCards = computed(() => [
-  {
-    key: 'users',
-    label: '用户',
-    badge: '增长',
-    value: pick('userData', 'totalUsers'),
-    hint: `近 7 日新增 ${formatNumber(pick('userData', 'sevenDayNewUsers'))}`,
-    delta: trendDelta(trends.value.newUsers),
-    tone: 'accent'
-  },
-  {
-    key: 'content',
-    label: '内容',
-    badge: '供给',
-    value: totalContentCount.value,
-    hint: `今日新增动态 ${formatNumber(pick('contentData', 'todayNewDynamics'))}`,
-    delta: trendDelta(trends.value.dynamics),
-    tone: ''
-  },
-  {
-    key: 'groups',
-    label: '团体 / Space',
-    badge: '运营',
-    value: pick('communityData', 'totalGroups'),
-    hint: `30 日新建 ${formatNumber(pick('communityData', 'groupsCreatedLast30d'))}`,
-    delta: trendDelta(trends.value.contentPublish),
-    tone: ''
-  },
-  {
-    key: 'growth',
-    label: '增长',
-    badge: '转化',
-    value: profileCompletionRate.value,
-    hint: `资料完善 ${formatNumber(profileCompletedCount.value)} / ${formatNumber(profileTotalCount.value)}`,
-    delta: profileCompletionRate.value,
-    tone: profileCompletionRate.value >= 60 ? 'accent' : 'warn'
-  }
-])
-
-const riskCards = computed(() => [
-  {
-    key: 'pending-content',
-    title: '待审核内容',
-    count: pick('contentData', 'pendingContent'),
-    desc: `分享 ${formatNumber(pendingReviewBreakdown.value.shares)}，互助 ${formatNumber(pendingReviewBreakdown.value.helps)}，资源 ${formatNumber(pendingReviewBreakdown.value.resources)}`,
-    tone: 'warning',
-    to: '/admin/fellowship-dynamics',
-    actionLabel: '处理内容'
-  },
-  {
-    key: 'pending-members',
-    title: '待审核成员',
-    count: pick('communityData', 'pendingGroupJoinRequests'),
-    desc: `今日新增申请 ${formatNumber(pick('communityData', 'groupJoinRequestsToday'))}`,
-    tone: 'warning',
-    to: '/admin/my-groups',
-    actionLabel: '查看 Space'
-  },
-  {
-    key: 'reports',
-    title: '举报处理',
-    count: pick('governanceData', 'pendingReports'),
-    desc: `今日新增举报 ${formatNumber(pick('governanceData', 'todayReports'))}`,
-    tone: 'danger',
-    to: '/admin/reports',
-    actionLabel: '处理举报'
-  },
-  {
-    key: 'growth-risk',
-    title: '异常增长',
-    count: pick('userData', 'bannedUsers'),
-    desc: `封禁账号 ${formatNumber(pick('userData', 'bannedUsers'))}，待处理反馈 ${formatNumber(pick('feedbackData', 'pendingFeedbacks'))}`,
-    tone: 'danger',
-    to: '/admin/users',
-    actionLabel: '查看用户'
-  }
-])
-
-const actionCards = computed(() => [
-  {
-    key: 'new-users',
-    badge: '增长',
-    badgeTone: 'info',
-    title: '查看新增用户',
-    desc: `今日新增 ${formatNumber(pick('userData', 'todayNewUsers'))} 位用户，关注注册后资料完善和首日行为。`,
-    to: '/admin/users',
-    actionLabel: '进入用户管理',
-    tone: ''
-  },
-  {
-    key: 'growth-activity',
-    badge: '活动',
-    badgeTone: 'success',
-    title: '查看增长活动',
-    desc: `近 7 日动态 ${formatNumber(pick('engagementData', 'dynamicsSevenDays'))}，可结合活跃趋势判断内容供给。`,
-    to: '/admin/analytics',
-    actionLabel: '查看数据',
-    tone: ''
-  },
-  {
-    key: 'pending-content',
-    badge: '审核',
-    badgeTone: totalRiskCount.value > 0 ? 'warning' : 'success',
-    title: '查看待审核内容',
-    desc: `当前风险事项 ${formatNumber(totalRiskCount.value)} 项，建议先清理内容和举报队列。`,
-    to: '/admin/fellowship-dynamics',
-    actionLabel: '去审核',
-    tone: totalRiskCount.value > 0 ? 'warning' : ''
-  }
-])
 
 const overviewCards = computed(() => [
   {
@@ -760,6 +554,14 @@ onMounted(() => {
   display: grid;
   gap: 14px;
   color: var(--lc-text);
+}
+
+.dash-section {
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-surface);
+  padding: 16px 18px;
+  box-shadow: var(--lc-shadow-sm);
 }
 
 .section-title-row {
@@ -1425,6 +1227,10 @@ onMounted(() => {
 }
 
 @media (max-width: 520px) {
+  .dash-section {
+    padding: 14px 12px;
+  }
+
   .overview-card {
     padding: 12px;
   }
@@ -1440,155 +1246,6 @@ onMounted(() => {
 
   .recent-card time {
     grid-column: 2;
-  }
-}
-
-.dashboard-page {
-  gap: var(--lc-space-5);
-  max-width: 1440px;
-}
-
-.hero-main {
-  min-width: 0;
-}
-
-.hero-kicker-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--lc-space-3);
-}
-
-.hero-kicker-row {
-  margin-bottom: var(--lc-space-4);
-}
-
-.admin-operation-hero h1 {
-  margin: 0;
-  color: var(--lc-text);
-  font-size: 34px;
-  line-height: 1.16;
-}
-
-.admin-operation-hero p {
-  max-width: 680px;
-  margin: var(--lc-space-3) 0 0;
-  color: var(--lc-muted);
-  font-weight: 700;
-  line-height: 1.7;
-}
-
-.hero-summary-grid,
-.summary-card {
-  display: grid;
-  gap: var(--lc-space-3);
-}
-
-.hero-summary-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.summary-card {
-  display: grid;
-  gap: 8px;
-  background: var(--lc-bg);
-  border: 1px solid var(--lc-border);
-  border-radius: 10px;
-  padding: var(--lc-space-4);
-}
-
-.summary-card.info {
-  border-color: var(--lc-blue-border);
-  background: color-mix(in srgb, var(--lc-blue-light) 54%, var(--lc-surface));
-}
-
-.summary-card.success {
-  border-color: color-mix(in srgb, var(--lc-green) 24%, var(--lc-border));
-  background: color-mix(in srgb, var(--lc-green-light) 54%, var(--lc-surface));
-}
-
-.summary-card.warning {
-  border-color: color-mix(in srgb, var(--lc-amber) 34%, var(--lc-border));
-  background: color-mix(in srgb, var(--lc-amber-light) 62%, var(--lc-surface));
-}
-
-.summary-card span {
-  color: var(--lc-muted);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.summary-card strong {
-  overflow: hidden;
-  color: var(--lc-text);
-  font-size: 30px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.summary-card small {
-  margin: 0;
-  color: var(--lc-muted);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.55;
-}
-
-.metric-trend {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--lc-space-2);
-  color: var(--lc-muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.risk-section {
-  border-color: color-mix(in srgb, var(--lc-amber) 18%, var(--lc-border));
-}
-
-.risk-card h3,
-.action-card h3 {
-  margin: 0;
-  color: var(--lc-text);
-  font-size: 15px;
-}
-
-.risk-card-head strong {
-  color: var(--lc-text);
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-}
-
-.card-link {
-  justify-self: start;
-  color: var(--lc-blue);
-  font-size: 13px;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.ops-grid {
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) 360px;
-}
-
-.ops-card {
-  border-radius: 10px;
-  padding: var(--lc-space-4);
-}
-
-@media (max-width: 1280px) {
-  .ops-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .hero-summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

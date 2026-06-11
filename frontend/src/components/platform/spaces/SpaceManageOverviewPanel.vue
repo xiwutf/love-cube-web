@@ -361,9 +361,6 @@ function formatDate(v) {
 .panel-head h2 {
   margin: 0;
   color: var(--lc-text);
-}
-
-.panel-head h2 {
   font-size: 22px;
 }
 
