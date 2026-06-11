@@ -243,7 +243,7 @@ onMounted(load)
 
 .day-chip.done {
   border-color: var(--lc-green);
-  background: color-mix(in srgb, var(--lc-green) 10%, white);
+  background: color-mix(in srgb, var(--lc-green) 10%, var(--lc-surface));
 }
 
 .day-chip.makeup {

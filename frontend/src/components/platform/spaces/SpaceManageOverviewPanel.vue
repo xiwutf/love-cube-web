@@ -1,138 +1,173 @@
 <template>
-  <section class="overview-panel">
+  <section class="overview-panel operation-shell">
     <div class="panel-head">
-      <h2>数据概览</h2>
+      <div>
+        <p class="section-kicker">Space Operations</p>
+        <h2>运营概览</h2>
+      </div>
       <button
         type="button"
         class="btn secondary sm"
         :disabled="loading"
         @click="$emit('refresh')"
       >
-        {{ loading ? '刷新中…' : '刷新' }}
+        {{ loading ? '刷新中…' : '刷新数据' }}
       </button>
     </div>
 
-    <div v-if="loading && !stats" class="inline-state">加载数据中…</div>
-    <div v-else-if="error" class="inline-state err">{{ error }}</div>
+    <div v-if="loading && !stats" class="inline-state loading-state">加载数据中…</div>
+    <div v-else-if="error" class="inline-state error-state">{{ error }}</div>
     <template v-else-if="stats">
-      <!-- 核心指标 -->
-      <div class="stat-grid">
-        <article class="stat-card">
-          <strong>{{ mg.totalMembers ?? 0 }}</strong>
-          <span>总成员</span>
-        </article>
-        <article class="stat-card">
-          <strong>+{{ mg.newMembers7d ?? 0 }}</strong>
-          <span>7 日新增</span>
-        </article>
-        <article class="stat-card accent">
-          <strong>{{ act.activeMembers7d ?? 0 }}</strong>
-          <span>7 日活跃</span>
-        </article>
-        <article class="stat-card accent">
-          <strong>{{ act.activeRate7d ?? 0 }}%</strong>
-          <span>活跃率</span>
-        </article>
-        <article class="stat-card warn">
-          <strong>{{ mg.pendingMembers ?? 0 }}</strong>
-          <span>待审核</span>
-        </article>
-      </div>
+      <section class="section-card">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Metrics</p>
+            <h3>关键指标</h3>
+          </div>
+          <span class="status-badge info">近 7 日 / 30 日</span>
+        </div>
 
-      <!-- 打卡营表现 -->
-      <div class="block">
-        <h3>当前打卡营</h3>
+        <div class="metric-grid">
+          <article
+            v-for="metric in keyMetrics"
+            :key="metric.key"
+            class="metric-card"
+            :class="metric.tone"
+          >
+            <span class="metric-label">{{ metric.label }}</span>
+            <strong>{{ metric.value }}</strong>
+            <p>{{ metric.hint }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-card campaign-card">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Campaign</p>
+            <h3>当前打卡营 / 活动状态</h3>
+          </div>
+          <span class="status-badge" :class="camp.activeCampaignTitle ? 'success' : 'neutral'">
+            {{ camp.activeCampaignTitle ? '进行中' : '未开启' }}
+          </span>
+        </div>
+
         <template v-if="camp.activeCampaignTitle">
-          <p class="camp-title">{{ camp.activeCampaignTitle }}</p>
-          <div class="stat-grid compact">
-            <article class="stat-card">
+          <div class="campaign-summary">
+            <div>
+              <strong>{{ camp.activeCampaignTitle }}</strong>
+              <p>参与 {{ camp.campaignParticipants ?? 0 }} 人，今日完成 {{ camp.campaignTodayCompleted ?? 0 }} 人</p>
+            </div>
+            <div class="completion-meter" aria-label="打卡完成率">
+              <span :style="{ width: `${safeRate(camp.campaignCompletionRate)}%` }"></span>
+            </div>
+          </div>
+
+          <div class="metric-grid compact">
+            <article class="metric-card">
+              <span class="metric-label">参与人数</span>
               <strong>{{ camp.campaignParticipants ?? 0 }}</strong>
-              <span>参与人数</span>
+              <p>当前营期成员参与规模</p>
             </article>
-            <article class="stat-card">
-              <strong>{{ camp.campaignTodayCompleted ?? 0 }}</strong>
-              <span>今日完成</span>
-            </article>
-            <article class="stat-card">
+            <article class="metric-card accent">
+              <span class="metric-label">完成进度</span>
               <strong>{{ camp.campaignCompletionRate ?? 0 }}%</strong>
-              <span>总完成率</span>
+              <p>总完成率</p>
             </article>
-            <article class="stat-card warn">
-              <strong>{{ camp.fallenBehindCount ?? 0 }}</strong>
-              <span>掉队人数</span>
+            <article class="metric-card">
+              <span class="metric-label">今日状态</span>
+              <strong>{{ camp.campaignTodayCompleted ?? 0 }}</strong>
+              <p>今日已完成打卡人数</p>
+            </article>
+            <article class="metric-card warn">
+              <span class="metric-label">掉队成员</span>
+              <strong>{{ fallenBehindTotal }}</strong>
+              <p>需要运营提醒</p>
             </article>
           </div>
         </template>
-        <p v-else class="hint">暂无进行中的打卡营</p>
-      </div>
+        <p v-else class="empty-note">暂无进行中的打卡营，可从行动建议进入打卡营配置。</p>
+      </section>
 
-      <!-- 内容数据 -->
-      <div class="block">
-        <h3>内容概况</h3>
-        <div class="stat-grid compact">
-          <article class="stat-card">
-            <strong>{{ content.posts7d ?? 0 }}</strong>
-            <span>7 日动态</span>
+      <section class="section-card risk-section">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Risks</p>
+            <h3>风险成员</h3>
+          </div>
+          <span class="status-badge warning">{{ riskTotal }} 项需关注</span>
+        </div>
+
+        <div class="risk-grid">
+          <article class="risk-card">
+            <header>
+              <span class="risk-dot warning"></span>
+              <h4>7 日未活跃</h4>
+              <strong>{{ risks.inactiveMembers7d ?? 0 }} 人</strong>
+            </header>
+            <p class="hint">用于判断 Space 近期沉默风险。</p>
           </article>
-          <article class="stat-card">
-            <strong>{{ content.noticesCount ?? 0 }}</strong>
-            <span>公告数</span>
+
+          <article class="risk-card">
+            <header>
+              <span class="risk-dot warning"></span>
+              <h4>加入后无活动</h4>
+              <strong>{{ noActivityTotal }} 人</strong>
+            </header>
+            <ul v-if="noActivityList.length" class="member-list">
+              <li v-for="m in noActivityList" :key="`na-${m.userId}`">
+                <strong>{{ m.username || `成员 ${m.userId}` }}</strong>
+                <span class="meta">{{ formatDate(m.joinedAt) }}</span>
+              </li>
+            </ul>
+            <p v-else class="hint">暂无成员进入该风险池。</p>
+            <p v-if="noActivityTruncated" class="truncate-hint">仅展示前 20 个</p>
           </article>
-          <article class="stat-card">
-            <strong>{{ content.activitiesCount ?? 0 }}</strong>
-            <span>活动数</span>
+
+          <article class="risk-card danger">
+            <header>
+              <span class="risk-dot danger"></span>
+              <h4>打卡营掉队</h4>
+              <strong>{{ fallenBehindTotal }} 人</strong>
+            </header>
+            <ul v-if="fallenBehindList.length" class="member-list">
+              <li v-for="m in fallenBehindList" :key="`fb-${m.userId}`">
+                <strong>{{ m.username || `成员 ${m.userId}` }}</strong>
+                <span class="status-badge warning">缺 {{ m.missedCount ?? 0 }} 天</span>
+              </li>
+            </ul>
+            <p v-else class="hint">暂无掉队成员。</p>
+            <p v-if="fallenBehindTruncated" class="truncate-hint">仅展示前 20 个</p>
           </article>
         </div>
-      </div>
+      </section>
 
-      <!-- 风险成员 -->
-      <div class="block">
-        <h3>风险成员</h3>
+      <section class="section-card action-section">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Next Actions</p>
+            <h3>行动建议</h3>
+          </div>
+        </div>
 
-        <article class="risk-block">
-          <h4>7 日未活跃 <span class="count">{{ risks.inactiveMembers7d ?? 0 }} 人</span></h4>
-          <p v-if="!(risks.inactiveMembers7d > 0)" class="hint">暂无</p>
-        </article>
-
-        <article class="risk-block">
-          <h4>
-            加入后无活动
-            <span class="count">{{ noActivityTotal }} 人</span>
-          </h4>
-          <ul v-if="noActivityList.length" class="member-list">
-            <li v-for="m in noActivityList" :key="`na-${m.userId}`">
-              <strong>{{ m.username || `成员 ${m.userId}` }}</strong>
-              <span class="meta">{{ formatDate(m.joinedAt) }}</span>
-            </li>
-          </ul>
-          <p v-else class="hint">暂无</p>
-          <p v-if="noActivityTruncated" class="truncate-hint">仅展示前 20 个</p>
-        </article>
-
-        <article class="risk-block">
-          <h4>
-            打卡营掉队
-            <span class="count">{{ fallenBehindTotal }} 人</span>
-          </h4>
-          <ul v-if="fallenBehindList.length" class="member-list">
-            <li v-for="m in fallenBehindList" :key="`fb-${m.userId}`">
-              <strong>{{ m.username || `成员 ${m.userId}` }}</strong>
-              <span class="tag warn">缺 {{ m.missedCount ?? 0 }} 天</span>
-            </li>
-          </ul>
-          <p v-else class="hint">暂无</p>
-          <p v-if="fallenBehindTruncated" class="truncate-hint">仅展示前 20 个</p>
-        </article>
-      </div>
-
-      <div class="quick-actions">
-        <button type="button" class="btn secondary" @click="$emit('navigate', 'members')">审核成员</button>
-        <button type="button" class="btn secondary" @click="$emit('navigate', 'notices')">发公告</button>
-        <button type="button" class="btn secondary" @click="$emit('navigate', 'activities')">建活动</button>
-        <button type="button" class="btn secondary" @click="$emit('navigate', 'camp')">打卡营</button>
-      </div>
+        <div class="action-grid">
+          <article
+            v-for="action in operationActions"
+            :key="action.key"
+            class="action-card"
+            :class="action.tone"
+          >
+            <span class="status-badge" :class="action.badgeTone">{{ action.badge }}</span>
+            <h4>{{ action.title }}</h4>
+            <p>{{ action.desc }}</p>
+            <button type="button" class="btn secondary sm" @click="$emit('navigate', action.target)">
+              {{ action.label }}
+            </button>
+          </article>
+        </div>
+      </section>
     </template>
-    <p v-else class="hint">暂无统计数据</p>
+    <p v-else class="inline-state empty-state">暂无统计数据</p>
   </section>
 </template>
 
@@ -170,6 +205,120 @@ const fallenBehindTruncated = computed(() =>
   fallenBehindTotal.value > fallenBehindList.value.length
 )
 
+const riskTotal = computed(() =>
+  Number(risks.value.inactiveMembers7d || 0) +
+  Number(noActivityTotal.value || 0) +
+  Number(fallenBehindTotal.value || 0)
+)
+
+const keyMetrics = computed(() => [
+  {
+    key: 'members',
+    label: '成员总数',
+    value: mg.value.totalMembers ?? 0,
+    hint: `近 7 日新增 ${mg.value.newMembers7d ?? 0} 人`,
+    tone: ''
+  },
+  {
+    key: 'active7d',
+    label: '7 日活跃',
+    value: act.value.activeMembers7d ?? 0,
+    hint: `活跃率 ${act.value.activeRate7d ?? 0}%`,
+    tone: 'accent'
+  },
+  {
+    key: 'active30d',
+    label: '30 日活跃',
+    value: act.value.activeMembers30d ?? act.value.activeMembers7d ?? 0,
+    hint: '用于观察中周期留存',
+    tone: ''
+  },
+  {
+    key: 'completion',
+    label: '打卡完成率',
+    value: `${camp.value.campaignCompletionRate ?? 0}%`,
+    hint: camp.value.activeCampaignTitle ? '当前营期完成进度' : '暂无进行中营期',
+    tone: Number(camp.value.campaignCompletionRate || 0) >= 60 ? 'accent' : 'warn'
+  }
+])
+
+const operationActions = computed(() => {
+  const actions = []
+
+  if (Number(mg.value.pendingMembers || 0) > 0) {
+    actions.push({
+      key: 'pending-members',
+      badge: `${mg.value.pendingMembers} 待审核`,
+      badgeTone: 'warning',
+      title: '先处理成员审核',
+      desc: '待审核成员会影响加入体验，建议优先确认是否通过。',
+      label: '去审核成员',
+      target: 'members',
+      tone: 'warning'
+    })
+  }
+
+  if (noActivityTotal.value > 0 || Number(risks.value.inactiveMembers7d || 0) > 0) {
+    actions.push({
+      key: 'inactive-members',
+      badge: '活跃风险',
+      badgeTone: 'warning',
+      title: '提醒未活跃成员',
+      desc: '可通过公告、活动或打卡任务重新唤起成员参与。',
+      label: '发公告',
+      target: 'notices',
+      tone: 'warning'
+    })
+  }
+
+  if (fallenBehindTotal.value > 0 || camp.value.activeCampaignTitle) {
+    actions.push({
+      key: 'campaign',
+      badge: camp.value.activeCampaignTitle ? '营期进行中' : '建议开启',
+      badgeTone: fallenBehindTotal.value > 0 ? 'danger' : 'info',
+      title: fallenBehindTotal.value > 0 ? '查看打卡营掉队情况' : '维护当前打卡营',
+      desc: fallenBehindTotal.value > 0
+        ? '已有成员掉队，建议进入打卡营查看并提醒。'
+        : '持续跟踪参与人数和完成率，必要时发布提醒。',
+      label: '查看打卡营',
+      target: 'camp',
+      tone: fallenBehindTotal.value > 0 ? 'danger' : ''
+    })
+  }
+
+  if (!actions.length) {
+    actions.push(
+      {
+        key: 'create-activity',
+        badge: '增长动作',
+        badgeTone: 'info',
+        title: '策划一次 Space 活动',
+        desc: '当前风险较低，可以通过活动稳定成员参与节奏。',
+        label: '建活动',
+        target: 'activities',
+        tone: ''
+      },
+      {
+        key: 'publish-notice',
+        badge: '内容维护',
+        badgeTone: 'success',
+        title: '发布阶段公告',
+        desc: '同步近期安排，让成员知道下一步可以参与什么。',
+        label: '发公告',
+        target: 'notices',
+        tone: ''
+      }
+    )
+  }
+
+  return actions.slice(0, 3)
+})
+
+function safeRate(value) {
+  const n = Number(value) || 0
+  return Math.max(0, Math.min(100, n))
+}
+
 function formatDate(v) {
   if (!v) return '—'
   const d = new Date(v)
@@ -179,94 +328,197 @@ function formatDate(v) {
 </script>
 
 <style scoped>
-.overview-panel {
+.operation-shell {
   display: grid;
   gap: var(--lc-space-4);
 }
 
-.panel-head {
+.panel-head,
+.section-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--lc-space-3);
 }
 
-.panel-head h2 {
+.panel-head h2,
+.section-card-head h3 {
   margin: 0;
+  color: var(--lc-text);
 }
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: var(--lc-space-3);
+.panel-head h2 {
+  font-size: 22px;
 }
 
-.stat-grid.compact {
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+.section-card-head h3 {
+  font-size: 16px;
 }
 
-.stat-card {
-  padding: var(--lc-space-4);
-  border-radius: 12px;
+.section-kicker {
+  margin: 0 0 4px;
+  color: var(--lc-subtle);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.section-card {
   border: 1px solid var(--lc-border);
-  background: var(--lc-bg);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  padding: var(--lc-space-4);
+  box-shadow: 0 6px 18px rgb(15 23 42 / 4%);
+}
+
+.metric-grid,
+.risk-grid,
+.action-grid {
   display: grid;
-  gap: 4px;
+  gap: var(--lc-space-3);
+  margin-top: var(--lc-space-3);
 }
 
-.stat-card strong {
-  font-size: 1.5rem;
-  line-height: 1.1;
+.metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.stat-card span {
+.metric-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.risk-grid,
+.action-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric-card,
+.risk-card,
+.action-card {
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-bg);
+  padding: var(--lc-space-3);
+}
+
+.metric-card {
+  display: grid;
+  gap: 6px;
+  min-height: 112px;
+}
+
+.metric-card strong {
+  color: var(--lc-text);
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-card p,
+.action-card p,
+.hint,
+.empty-note {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.metric-label {
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metric-card.accent strong {
+  color: var(--lc-blue);
+}
+
+.metric-card.warn strong {
+  color: var(--lc-amber);
+}
+
+.campaign-summary {
+  display: grid;
+  gap: var(--lc-space-3);
+  margin-top: var(--lc-space-3);
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-blue-border);
+  border-radius: 8px;
+  background: var(--lc-blue-light);
+}
+
+.campaign-summary strong {
+  color: var(--lc-text);
+  font-size: 16px;
+}
+
+.campaign-summary p {
+  margin: 5px 0 0;
   color: var(--lc-muted);
   font-size: 13px;
   font-weight: 700;
 }
 
-.stat-card.warn strong {
-  color: var(--lc-warning, #d97706);
+.completion-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lc-blue-border) 48%, var(--lc-surface));
 }
 
-.stat-card.accent strong {
-  color: var(--lc-blue);
+.completion-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lc-blue);
 }
 
-.block {
-  padding-top: var(--lc-space-2);
-  border-top: 1px solid var(--lc-border);
+.risk-card {
+  display: grid;
+  align-content: start;
+  gap: var(--lc-space-3);
 }
 
-.block h3 {
-  margin: 0 0 var(--lc-space-3);
-  font-size: 1rem;
+.risk-card.danger {
+  border-color: color-mix(in srgb, var(--lc-red) 28%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-red-light) 72%, var(--lc-surface));
 }
 
-.hint {
+.risk-card header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.risk-card h4,
+.action-card h4 {
   margin: 0;
-  color: var(--lc-muted);
+  color: var(--lc-text);
   font-size: 14px;
 }
 
-.camp-title {
-  margin: 0 0 var(--lc-space-3);
-  font-weight: 800;
+.risk-card header strong {
+  color: var(--lc-amber);
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-.risk-block {
-  margin-bottom: var(--lc-space-4);
+.risk-card.danger header strong {
+  color: var(--lc-red);
 }
 
-.risk-block h4 {
-  margin: 0 0 var(--lc-space-2);
-  font-size: 14px;
-  font-weight: 800;
+.risk-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--lc-amber);
 }
 
-.risk-block .count {
-  color: var(--lc-muted);
-  font-weight: 700;
+.risk-dot.danger {
+  background: var(--lc-red);
 }
 
 .member-list {
@@ -282,59 +534,128 @@ function formatDate(v) {
   align-items: center;
   justify-content: space-between;
   gap: var(--lc-space-2);
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
   border: 1px solid var(--lc-border);
-  background: var(--lc-bg);
+  background: var(--lc-surface);
 }
 
-.meta {
-  font-size: 12px;
-  color: var(--lc-muted);
-  font-weight: 700;
-}
-
-.tag {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
+.member-list strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--lc-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tag.warn {
-  background: color-mix(in srgb, #d97706 15%, white);
-  color: #b45309;
+.meta {
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.truncate-hint {
-  margin: var(--lc-space-2) 0 0;
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
   font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge.info {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
+}
+
+.status-badge.success {
+  background: var(--lc-green-light);
+  color: var(--lc-green);
+}
+
+.status-badge.warning {
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
+}
+
+.status-badge.danger {
+  background: var(--lc-red-light);
+  color: var(--lc-red);
+}
+
+.status-badge.neutral {
+  background: var(--lc-soft);
   color: var(--lc-muted);
 }
 
-.quick-actions {
-  display: flex;
-  flex-wrap: wrap;
+.action-card {
+  display: grid;
   gap: var(--lc-space-2);
-  padding-top: var(--lc-space-2);
+  align-content: start;
+}
+
+.action-card.warning {
+  border-color: color-mix(in srgb, var(--lc-amber) 28%, var(--lc-border));
+}
+
+.action-card.danger {
+  border-color: color-mix(in srgb, var(--lc-red) 28%, var(--lc-border));
+}
+
+.truncate-hint {
+  margin: 0;
+  color: var(--lc-muted-light);
+  font-size: 12px;
+}
+
+.inline-state {
+  border: 1px dashed var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  padding: var(--lc-space-6);
+  color: var(--lc-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+.error-state {
+  border-color: color-mix(in srgb, var(--lc-red) 32%, var(--lc-border));
+  background: var(--lc-red-light);
+  color: var(--lc-red);
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--lc-border);
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-weight: 700;
+  border-radius: 8px;
+  background: var(--lc-surface);
+  color: var(--lc-text);
   cursor: pointer;
-  background: white;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .btn.secondary {
-  background: var(--lc-bg);
+  background: var(--lc-surface);
+}
+
+.btn.secondary:hover:not(:disabled) {
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue);
 }
 
 .btn.sm {
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 0 12px;
   font-size: 13px;
 }
 
@@ -343,12 +664,27 @@ function formatDate(v) {
   cursor: not-allowed;
 }
 
-.inline-state {
-  color: var(--lc-muted);
-  font-weight: 700;
+@media (max-width: 980px) {
+  .metric-grid,
+  .metric-grid.compact,
+  .risk-grid,
+  .action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.inline-state.err {
-  color: #b91c1c;
+@media (max-width: 640px) {
+  .panel-head,
+  .section-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metric-grid,
+  .metric-grid.compact,
+  .risk-grid,
+  .action-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

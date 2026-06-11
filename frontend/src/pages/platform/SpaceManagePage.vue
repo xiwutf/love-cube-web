@@ -1,9 +1,9 @@
 <template>
   <section class="space-manage-page">
-    <div v-if="redirecting" class="state-card">正在跳转兼容管理页…</div>
+    <div v-if="redirecting" class="state-card loading-state">正在跳转兼容管理页…</div>
 
     <template v-else-if="loading">
-      <div class="state-card">加载社区空间中…</div>
+      <div class="state-card loading-state">加载社区空间中…</div>
     </template>
 
     <template v-else-if="forbidden">
@@ -76,19 +76,43 @@
         </div>
       </div>
 
-      <header class="page-head">
-        <div class="title-block">
+      <header class="operation-hero">
+        <div class="hero-main">
           <router-link class="back-link" :to="groupsPath()">← 我的社区</router-link>
           <div class="title-row">
             <img v-if="group.coverUrl" :src="group.coverUrl" :alt="group.name" class="cover-thumb">
-            <div>
+            <div v-else class="cover-thumb cover-fallback">{{ group.name?.slice(0, 1) || 'S' }}</div>
+            <div class="title-block">
+              <div class="title-meta">
+                <span class="status-badge info">Space 运营控制台</span>
+                <span class="status-badge">{{ roleLabel }}</span>
+                <span class="status-badge" :class="groupStatusTone">{{ groupStatusLabel }}</span>
+              </div>
               <h1>{{ group.name }}</h1>
-              <p class="subtitle">社区运营台 · {{ roleLabel }} · {{ group.memberCount ?? 0 }} 位成员</p>
+              <p class="subtitle">面向成员增长、内容活跃、活动组织和打卡营的日常运营工作台。</p>
             </div>
           </div>
         </div>
-        <div class="head-actions">
-          <router-link class="btn ghost" :to="groupsPath(String(spaceId))">查看主页</router-link>
+
+        <div class="hero-side">
+          <div class="hero-stats" aria-label="Space 摘要">
+            <article>
+              <span>成员数</span>
+              <strong>{{ group.memberCount ?? 0 }}</strong>
+            </article>
+            <article>
+              <span>待审核</span>
+              <strong :class="{ warn: pendingCount > 0 }">{{ pendingCount }}</strong>
+            </article>
+            <article>
+              <span>加入方式</span>
+              <strong>{{ groupJoinModeLabel }}</strong>
+            </article>
+          </div>
+          <div class="head-actions">
+            <router-link class="btn ghost" :to="groupsPath(String(spaceId))">查看主页</router-link>
+            <button type="button" class="btn primary" @click="switchTab('overview')">看运营概览</button>
+          </div>
         </div>
       </header>
 
@@ -99,7 +123,7 @@
           v-for="tab in tabs"
           :key="tab.key"
           type="button"
-          :class="{ active: activeTab === tab.key }"
+          :class="{ active: activeTab === tab.key, urgent: tab.key === 'members' && pendingCount }"
           @click="switchTab(tab.key)"
         >
           {{ tab.label }}
@@ -108,7 +132,7 @@
       </nav>
 
       <!-- 概览 -->
-      <section v-if="activeTab === 'overview'" class="platform-card tab-panel">
+      <section v-if="activeTab === 'overview'" class="tab-panel overview-tab-panel">
         <SpaceManageOverviewPanel
           :stats="spaceStats"
           :loading="loadingSpaceStats"
@@ -421,6 +445,28 @@ const roleLabel = computed(() => {
   if (r === 'owner') return '负责人'
   if (r === 'admin') return '管理员'
   return '运营者'
+})
+
+const groupStatusLabel = computed(() => {
+  const status = String(group.value?.status || '').toLowerCase()
+  if (status === 'inactive' || status === 'offline') return '已停用'
+  if (status === 'pending') return '待审核'
+  if (status === 'rejected') return '未通过'
+  return '运行中'
+})
+
+const groupStatusTone = computed(() => {
+  const status = String(group.value?.status || '').toLowerCase()
+  if (status === 'inactive' || status === 'offline' || status === 'rejected') return 'danger'
+  if (status === 'pending') return 'warning'
+  return 'success'
+})
+
+const groupJoinModeLabel = computed(() => {
+  const mode = group.value?.joinModeKey || group.value?.joinMode || settingsForm.joinMode
+  if (mode === 'open') return '公开'
+  if (mode === 'invite') return '邀请'
+  return '审核'
 })
 
 const inviteShareUrl = computed(() => {
@@ -787,19 +833,29 @@ onMounted(() => {
 
 <style scoped>
 .space-manage-page {
-  width: calc(100% - var(--lc-space-8));
-  max-width: 960px;
+  width: min(100% - 48px, 1280px);
   margin: var(--lc-space-4) auto var(--lc-space-8);
-  padding: var(--lc-space-6);
+  padding: var(--lc-space-4);
+  color: var(--lc-text);
 }
 
 .state-card {
+  display: grid;
+  justify-items: center;
+  gap: var(--lc-space-3);
+  min-height: 220px;
   padding: var(--lc-space-8);
   border: 1px solid var(--lc-border);
-  border-radius: var(--lc-radius);
+  border-radius: 10px;
   background: var(--lc-surface);
   text-align: center;
   color: var(--lc-muted);
+  box-shadow: 0 8px 22px rgb(15 23 42 / 5%);
+}
+
+.state-card.err {
+  border-color: color-mix(in srgb, var(--lc-red) 30%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-red-light) 72%, var(--lc-surface));
 }
 
 .state-card.err h2 {
@@ -807,17 +863,41 @@ onMounted(() => {
   color: var(--lc-text);
 }
 
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--lc-space-4);
-  flex-wrap: wrap;
+.loading-state::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--lc-blue-border);
+  border-top-color: var(--lc-blue);
+  border-radius: 999px;
+}
+
+.operation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: var(--lc-space-5);
   margin-bottom: var(--lc-space-4);
+  padding: var(--lc-space-5);
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  box-shadow: 0 8px 22px rgb(15 23 42 / 5%);
+}
+
+.hero-main,
+.hero-side {
+  min-width: 0;
+}
+
+.hero-side {
+  display: grid;
+  align-content: space-between;
+  gap: var(--lc-space-3);
 }
 
 .back-link {
   display: inline-block;
-  margin-bottom: var(--lc-space-2);
+  margin-bottom: var(--lc-space-3);
   color: var(--lc-blue);
   font-weight: 700;
   text-decoration: none;
@@ -830,64 +910,186 @@ onMounted(() => {
 }
 
 .cover-thumb {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
+  border-radius: 10px;
   object-fit: cover;
   border: 1px solid var(--lc-border);
+  background: var(--lc-blue-light);
 }
 
-.page-head h1 {
+.cover-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--lc-blue);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.title-block {
+  min-width: 0;
+}
+
+.title-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  margin-bottom: var(--lc-space-2);
+}
+
+.operation-hero h1 {
   margin: 0;
-  font-size: 26px;
   color: var(--lc-text);
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--lc-soft);
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge.info {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
+}
+
+.status-badge.success {
+  background: var(--lc-green-light);
+  color: var(--lc-green);
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lc-space-2);
+}
+
+.hero-stats article {
+  min-width: 0;
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-bg);
+}
+
+.hero-stats span {
+  display: block;
+  color: var(--lc-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hero-stats strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--lc-text);
+  font-size: 20px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-stats strong.warn {
+  color: var(--lc-amber);
 }
 
 .subtitle {
-  margin: var(--lc-space-1) 0 0;
+  margin: var(--lc-space-2) 0 0;
   color: var(--lc-muted);
   font-weight: 600;
+  line-height: 1.6;
+}
+
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--lc-space-2);
 }
 
 .manage-tabs {
   display: flex;
-  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  overflow-x: auto;
   gap: var(--lc-space-2);
   margin-bottom: var(--lc-space-4);
+  padding: 8px;
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  box-shadow: 0 6px 18px rgb(15 23 42 / 4%);
+  scrollbar-width: none;
+}
+
+.manage-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .manage-tabs button {
   border: 1px solid var(--lc-border);
   background: var(--lc-surface);
   color: var(--lc-muted);
-  border-radius: 999px;
-  padding: 8px 14px;
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 0 14px;
   font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
 
 .manage-tabs button.active {
   border-color: var(--lc-blue);
   color: var(--lc-blue);
-  background: color-mix(in srgb, var(--lc-blue) 8%, white);
+  background: color-mix(in srgb, var(--lc-blue) 8%, var(--lc-surface));
+}
+
+.manage-tabs button.urgent:not(.active) {
+  border-color: color-mix(in srgb, var(--lc-amber) 42%, var(--lc-border));
 }
 
 .badge {
   display: inline-flex;
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   margin-left: 6px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--lc-red);
+  background: var(--lc-amber);
   color: #fff;
   font-size: 11px;
   align-items: center;
   justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .tab-panel {
   padding: var(--lc-space-5);
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+  box-shadow: 0 8px 22px rgb(15 23 42 / 5%);
+}
+
+.overview-tab-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .tab-panel h2 {
@@ -904,7 +1106,7 @@ onMounted(() => {
 
 .stat-card {
   padding: var(--lc-space-4);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--lc-border);
   background: var(--lc-bg);
   display: grid;
@@ -943,6 +1145,7 @@ onMounted(() => {
 
 .section-head h2 {
   margin: 0;
+  font-size: 18px;
 }
 
 .filter-row {
@@ -953,9 +1156,10 @@ onMounted(() => {
 
 .filter-row button {
   border: 1px solid var(--lc-border);
-  background: #fff;
+  background: var(--lc-surface);
   border-radius: 8px;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 0 10px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -977,7 +1181,8 @@ onMounted(() => {
   align-items: center;
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
-  border-radius: 12px;
+  border-radius: 8px;
+  background: var(--lc-surface);
 }
 
 .member-row img {
@@ -1011,6 +1216,11 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 700;
   color: var(--lc-muted);
+}
+
+.tag.status {
+  background: var(--lc-blue-light);
+  color: var(--lc-blue);
 }
 
 .tag.owner {
@@ -1057,9 +1267,19 @@ onMounted(() => {
 .field select {
   width: 100%;
   border: 1px solid var(--lc-border);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 10px 12px;
   font: inherit;
+  background: var(--lc-surface);
+  color: var(--lc-text);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--lc-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lc-blue) 12%, transparent);
 }
 
 .content-list {
@@ -1070,7 +1290,8 @@ onMounted(() => {
 .content-row {
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
-  border-radius: 12px;
+  border-radius: 8px;
+  background: var(--lc-surface);
 }
 
 .content-row header {
@@ -1100,7 +1321,8 @@ onMounted(() => {
   align-items: center;
   padding: var(--lc-space-3);
   border: 1px solid var(--lc-border);
-  border-radius: 12px;
+  border-radius: 8px;
+  background: var(--lc-surface);
 }
 
 .hint,
@@ -1115,13 +1337,13 @@ onMounted(() => {
   margin: 0 0 var(--lc-space-3);
   padding: 10px 12px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--lc-green) 12%, white);
+  background: color-mix(in srgb, var(--lc-green) 12%, var(--lc-surface));
   color: var(--lc-green);
   font-weight: 700;
 }
 
 .flash.err {
-  background: color-mix(in srgb, var(--lc-red) 10%, white);
+  background: color-mix(in srgb, var(--lc-red) 10%, var(--lc-surface));
   color: var(--lc-red);
 }
 
@@ -1129,12 +1351,14 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  padding: 10px 14px;
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0 14px;
   font-weight: 800;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
 
 .btn.primary {
@@ -1143,21 +1367,27 @@ onMounted(() => {
 }
 
 .btn.secondary {
-  background: #fff;
+  background: var(--lc-surface);
   border-color: var(--lc-border);
   color: var(--lc-text);
 }
 
 .btn.ghost {
-  background: #fff;
+  background: var(--lc-surface);
   border-color: var(--lc-border);
   color: var(--lc-muted);
 }
 
 .btn.danger {
-  background: #fff;
-  border-color: color-mix(in srgb, var(--lc-red) 40%, white);
+  background: var(--lc-surface);
+  border-color: color-mix(in srgb, var(--lc-red) 40%, var(--lc-surface));
   color: var(--lc-red);
+}
+
+.btn.secondary:hover:not(:disabled),
+.btn.ghost:hover:not(:disabled) {
+  border-color: var(--lc-blue-border);
+  color: var(--lc-blue);
 }
 
 .btn.sm {
@@ -1173,8 +1403,9 @@ onMounted(() => {
 .onboarding-panel {
   margin-bottom: var(--lc-space-4);
   padding: var(--lc-space-5);
-  border: 1px solid color-mix(in srgb, var(--lc-blue) 25%, white);
-  background: color-mix(in srgb, var(--lc-blue) 4%, white);
+  border: 1px solid color-mix(in srgb, var(--lc-blue) 25%, var(--lc-surface));
+  background: color-mix(in srgb, var(--lc-blue) 4%, var(--lc-surface));
+  border-radius: 10px;
 }
 
 .onboarding-head {
@@ -1225,11 +1456,69 @@ onMounted(() => {
 }
 
 .inline-state {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  border: 1px dashed var(--lc-border);
+  border-radius: 8px;
+  background: var(--lc-bg);
   color: var(--lc-muted);
   font-weight: 700;
 }
 
+@media (max-width: 980px) {
+  .space-manage-page {
+    width: min(100% - 32px, 960px);
+    padding: var(--lc-space-3);
+  }
+
+  .operation-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-side {
+    align-content: start;
+  }
+
+  .head-actions {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 720px) {
+  .space-manage-page {
+    width: min(100% - 24px, 480px);
+    margin-top: var(--lc-space-3);
+    padding: 0;
+  }
+
+  .operation-hero,
+  .tab-panel {
+    padding: var(--lc-space-4);
+  }
+
+  .title-row {
+    align-items: flex-start;
+  }
+
+  .cover-thumb {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+  }
+
+  .operation-hero h1 {
+    font-size: 22px;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .head-actions .btn {
+    width: 100%;
+  }
+
   .member-row {
     grid-template-columns: 40px 1fr;
   }
