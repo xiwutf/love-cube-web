@@ -41,6 +41,9 @@ public final class NotificationCatalog {
     public static final String TYPE_USER_FOLLOWED = "USER_FOLLOWED";
     public static final String TYPE_MUTUAL_MATCH = "MUTUAL_MATCH";
     public static final String TYPE_GROUP_WEEKLY_DIGEST = "GROUP_WEEKLY_DIGEST";
+    public static final String TYPE_GROWTH_OPERATOR_REMINDER = "GROWTH_OPERATOR_REMINDER";
+
+    public static final String RELATED_GROWTH_CAMPAIGN_DELIVERY = "GROWTH_CAMPAIGN_DELIVERY";
 
     /** 设置面板与默认行：覆盖所有可配置类型 */
     public static List<String> allConfigurableTypes() {
@@ -74,7 +77,8 @@ public final class NotificationCatalog {
                  TYPE_CONTENT_MODERATION_REJECTED,
                  TYPE_MATCH_PROFILE_REVIEW_PASSED,
                  TYPE_MATCH_PROFILE_REVIEW_REJECTED -> LEVEL_IMPORTANT;
-            case TYPE_PLATFORM_ANNOUNCEMENT -> LEVEL_ANNOUNCEMENT;
+            case TYPE_PLATFORM_ANNOUNCEMENT,
+                 TYPE_GROWTH_OPERATOR_REMINDER -> LEVEL_ANNOUNCEMENT;
             case TYPE_PROFILE_LIKED,
                  TYPE_PROFILE_VIEWED,
                  TYPE_CONTENT_LIKED,
@@ -139,7 +143,8 @@ public final class NotificationCatalog {
                 || "GROUP_POST_COMMENTED".equals(t)
                 || "LIKE".equals(t)
                 || TYPE_MUTUAL_MATCH.equals(t);
-            case "ANNOUNCEMENT" -> TYPE_PLATFORM_ANNOUNCEMENT.equals(t);
+            case "ANNOUNCEMENT" -> TYPE_PLATFORM_ANNOUNCEMENT.equals(t)
+                || TYPE_GROWTH_OPERATOR_REMINDER.equals(t);
             case "SYSTEM" -> LEVEL_SYSTEM.equals(resolveLevel(type))
                 || "REPORT_HANDLED".equals(t)
                 || "BANNED".equals(t)

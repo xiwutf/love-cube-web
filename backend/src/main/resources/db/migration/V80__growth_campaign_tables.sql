@@ -1,0 +1,43 @@
+CREATE TABLE growth_campaign (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(200) NOT NULL,
+    segment VARCHAR(64) NOT NULL,
+    template_code VARCHAR(64) NOT NULL,
+    channel VARCHAR(32) NOT NULL DEFAULT 'IN_APP',
+    target_count INT NOT NULL DEFAULT 0,
+    sent_count INT NOT NULL DEFAULT 0,
+    opened_count INT NOT NULL DEFAULT 0,
+    clicked_count INT NOT NULL DEFAULT 0,
+    completed_count INT NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'SENT',
+    created_by BIGINT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_growth_campaign_created_at (created_at DESC),
+    KEY idx_growth_campaign_segment (segment)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE growth_campaign_delivery (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    campaign_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    channel VARCHAR(32) NOT NULL,
+    template_code VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    sent_at DATETIME NULL,
+    opened_at DATETIME NULL,
+    clicked_at DATETIME NULL,
+    completed_at DATETIME NULL,
+    completion_snapshot_before TEXT NULL,
+    completion_snapshot_after TEXT NULL,
+    error_message VARCHAR(500) NULL,
+    notification_id BIGINT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_gcd_campaign_user (campaign_id, user_id),
+    KEY idx_gcd_campaign (campaign_id),
+    KEY idx_gcd_user (user_id),
+    KEY idx_gcd_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

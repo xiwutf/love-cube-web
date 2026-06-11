@@ -199,6 +199,37 @@ public class AdminFellowshipUserInsightService {
         return result;
     }
 
+    public boolean matchesSegment(
+            User user,
+            Map<String, Object> insight,
+            LocalDateTime lastLoginAt,
+            String segment
+    ) {
+        if (segment == null || segment.isBlank() || user == null || insight == null) {
+            return false;
+        }
+        if ("DISABLED".equalsIgnoreCase(user.getUserStatus())) {
+            return false;
+        }
+        String normalized = segment.trim().toUpperCase();
+        return switch (normalized) {
+            case "LOW_COMPLETION" -> "0_39".equals(String.valueOf(insight.getOrDefault("completionBucket", "")));
+            case "MEDIUM_COMPLETION" -> {
+                String bucket = String.valueOf(insight.getOrDefault("completionBucket", ""));
+                yield "40_59".equals(bucket) || "60_79".equals(bucket);
+            }
+            case "NEARLY_COMPLETE" -> "80_99".equals(String.valueOf(insight.getOrDefault("completionBucket", "")));
+            case "UNVERIFIED" -> "none".equals(String.valueOf(insight.getOrDefault("verificationTier", "none")));
+            case "MISSING_CITY" -> hasMissingItem(insight, "city");
+            case "MISSING_AVATAR" -> hasMissingItem(insight, "avatar");
+            case "MISSING_PHOTOS" -> hasMissingItem(insight, "photos");
+            case "MISSING_BIO" -> hasMissingItem(insight, "bio");
+            case "NOT_ENABLE_FELLOWSHIP" -> !Boolean.TRUE.equals(user.getFellowshipEnabled());
+            case "LOW_ACTIVITY" -> !isRecentLogin(lastLoginAt);
+            default -> false;
+        };
+    }
+
     public boolean matchesFilters(
             User user,
             Map<String, Object> insight,
@@ -344,6 +375,14 @@ public class AdminFellowshipUserInsightService {
             return "40_59";
         }
         return "0_39";
+    }
+
+    private static boolean hasMissingItem(Map<String, Object> insight, String key) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> missing = (List<Map<String, Object>>) insight.getOrDefault(
+                "profileMissingItems", List.of());
+        return missing.stream()
+                .anyMatch(m -> key.equals(String.valueOf(m.getOrDefault("key", ""))));
     }
 
     private static boolean isRecentLogin(LocalDateTime lastLoginAt) {

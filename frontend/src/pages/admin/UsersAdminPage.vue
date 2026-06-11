@@ -139,6 +139,71 @@
       </div>
     </section>
 
+    <section class="platform-card outreach-card">
+      <h2 class="outreach-title">运营触达</h2>
+      <p class="platform-text">
+        当前筛选命中 <strong>{{ filteredUsers.length }}</strong> 人
+        <span v-if="suggestedOutreachSegment">，推荐动作：{{ suggestedOutreachLabel }}</span>
+      </p>
+      <div class="outreach-actions">
+        <button class="admin-btn" type="button" :disabled="outreachLoading" @click="openOutreachDialog(false)">
+          预览触达用户
+        </button>
+        <button class="admin-btn primary" type="button" :disabled="outreachLoading" @click="openOutreachDialog(true)">
+          发送运营提醒
+        </button>
+      </div>
+    </section>
+
+    <section v-if="growthCampaigns.length" class="platform-card campaign-history-card">
+      <h2 class="outreach-title">运营活动记录</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>活动名称</th>
+              <th>分群</th>
+              <th>模板</th>
+              <th>发送</th>
+              <th>打开</th>
+              <th>点击</th>
+              <th>完成</th>
+              <th>打开率</th>
+              <th>点击率</th>
+              <th>完成率</th>
+              <th>点击→完成</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in growthCampaigns" :key="item.id">
+              <td>{{ item.name }}</td>
+              <td>{{ segmentLabel(item.segment) }}</td>
+              <td>{{ templateLabel(item.templateCode) }}</td>
+              <td>{{ item.sentCount }}</td>
+              <td>{{ item.openedCount }}</td>
+              <td>{{ item.clickedCount }}</td>
+              <td>{{ item.completedCount }}</td>
+              <td>{{ formatFunnelRate(item.openRate) }}</td>
+              <td>{{ formatFunnelRate(item.clickRate) }}</td>
+              <td>{{ formatFunnelRate(item.completeRate) }}</td>
+              <td>{{ formatFunnelRate(item.clickToCompleteRate) }}</td>
+              <td><span class="admin-tag" :class="campaignStatusClass(item.status)">{{ item.status }}</span></td>
+              <td>{{ formatDate(item.createdAt) }}</td>
+              <td class="outreach-row-actions">
+                <button class="admin-btn" type="button" @click="openCampaignDetail(item)">查看详情</button>
+                <button class="admin-btn" type="button" :disabled="campaignRefreshingId === item.id" @click="refreshCampaignConversion(item)">
+                  刷新转化
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="admin-table-wrap admin-desktop-only">
       <table class="admin-table users-table">
         <colgroup>
@@ -407,6 +472,101 @@
       </section>
     </AdminDetailDialogShell>
 
+    <AdminDetailDialogShell
+      v-model:visible="outreachDialog.visible"
+      :title="outreachDialog.sendMode ? '发送运营提醒' : '预览触达用户'"
+      :loading="outreachLoading"
+      :max-width="720"
+    >
+      <div class="outreach-form">
+        <label class="outreach-field">
+          <span>分群 segment</span>
+          <select v-model="outreachDialog.segment" class="admin-select" @change="loadOutreachPreview">
+            <option v-for="opt in segmentOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+        <label class="outreach-field">
+          <span>运营模板</span>
+          <select v-model="outreachDialog.templateCode" class="admin-select" @change="syncTemplatePreview">
+            <option v-for="opt in templateOptions" :key="opt.code" :value="opt.code">{{ opt.title }}</option>
+          </select>
+        </label>
+        <label v-if="outreachDialog.sendMode" class="outreach-field">
+          <span>活动名称</span>
+          <input v-model.trim="outreachDialog.name" class="admin-filter-input" type="text" placeholder="例如：未认证用户引导">
+        </label>
+        <p class="platform-text">目标人数：<strong>{{ outreachDialog.targetCount }}</strong></p>
+        <article v-if="outreachDialog.templatePreview" class="outreach-template-preview">
+          <h4>将发送的内容</h4>
+          <p><strong>{{ outreachDialog.templatePreview.title }}</strong></p>
+          <p>{{ outreachDialog.templatePreview.content }}</p>
+          <p v-if="outreachDialog.templatePreview.actionUrl" class="outreach-action-url">
+            跳转：{{ outreachDialog.templatePreview.actionUrl }}
+          </p>
+        </article>
+        <div v-if="outreachDialog.sampleUsers.length" class="outreach-sample">
+          <h4>样例用户</h4>
+          <ul>
+            <li v-for="user in outreachDialog.sampleUsers" :key="user.id">
+              {{ user.nickname || `用户${user.id}` }} · 完成度 {{ user.profileCompletionRate }}% · {{ user.verificationTier }}
+            </li>
+          </ul>
+        </div>
+        <div v-if="outreachDialog.sendMode" class="outreach-confirm-actions">
+          <button class="admin-btn" type="button" :disabled="outreachLoading" @click="outreachDialog.visible = false">取消</button>
+          <button class="admin-btn primary" type="button" :disabled="outreachLoading || !outreachDialog.targetCount" @click="confirmSendCampaign">
+            确认发送
+          </button>
+        </div>
+      </div>
+    </AdminDetailDialogShell>
+
+    <AdminDetailDialogShell
+      v-model:visible="campaignDetailDialog.visible"
+      title="活动详情"
+      :loading="campaignDetailDialog.loading"
+      :max-width="900"
+    >
+      <div v-if="campaignDetailDialog.campaign" class="campaign-detail">
+        <p class="platform-text">
+          {{ campaignDetailDialog.campaign.name }} · {{ segmentLabel(campaignDetailDialog.campaign.segment) }}
+        </p>
+        <div class="campaign-funnel-grid">
+          <span>发送 {{ campaignDetailDialog.campaign.sentCount }}</span>
+          <span>打开 {{ campaignDetailDialog.campaign.openedCount }}（{{ formatFunnelRate(campaignDetailDialog.campaign.openRate) }}）</span>
+          <span>点击 {{ campaignDetailDialog.campaign.clickedCount }}（{{ formatFunnelRate(campaignDetailDialog.campaign.clickRate) }}）</span>
+          <span>完成 {{ campaignDetailDialog.campaign.completedCount }}（{{ formatFunnelRate(campaignDetailDialog.campaign.completeRate) }}）</span>
+          <span>点击→完成 {{ formatFunnelRate(campaignDetailDialog.campaign.clickToCompleteRate) }}</span>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>用户ID</th>
+                <th>状态</th>
+                <th>发送时间</th>
+                <th>打开时间</th>
+                <th>点击次数</th>
+                <th>最近点击</th>
+                <th>完成时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in campaignDetailDialog.deliveries" :key="row.id">
+                <td>{{ row.userId }}</td>
+                <td>{{ row.status }}</td>
+                <td>{{ formatDate(row.sentAt) }}</td>
+                <td>{{ formatDate(row.openedAt) }}</td>
+                <td>{{ row.clickedCount ?? 0 }}</td>
+                <td>{{ formatDate(row.lastClickedAt || row.clickedAt) }}</td>
+                <td>{{ formatDate(row.completedAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminDetailDialogShell>
+
     <section v-if="filteredUsers.length" class="platform-card admin-pagination-card">
       <div class="admin-pagination">
         <label class="admin-page-size">
@@ -461,12 +621,52 @@ import {
   updateAdminUserRole,
   updateAdminUserStatus
 } from '@/api/adminContent.js'
+import {
+  getGrowthCampaignDetail,
+  listGrowthCampaigns,
+  listGrowthCampaignTemplates,
+  previewGrowthCampaignSegment,
+  refreshGrowthCampaignConversion,
+  sendGrowthCampaign
+} from '@/api/adminGrowthCampaign.js'
 import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
 const loading = ref(false)
 const users = ref([])
 const growthDashboard = ref(null)
+const growthCampaigns = ref([])
+const outreachLoading = ref(false)
+const campaignRefreshingId = ref(null)
+const segmentOptions = [
+  { value: 'LOW_COMPLETION', label: '完成度 0–39%' },
+  { value: 'MEDIUM_COMPLETION', label: '完成度 40–79%' },
+  { value: 'NEARLY_COMPLETE', label: '完成度 80–99%' },
+  { value: 'UNVERIFIED', label: '未认证' },
+  { value: 'MISSING_CITY', label: '缺地区' },
+  { value: 'MISSING_AVATAR', label: '缺头像' },
+  { value: 'MISSING_PHOTOS', label: '缺照片' },
+  { value: 'MISSING_BIO', label: '缺简介' },
+  { value: 'NOT_ENABLE_FELLOWSHIP', label: '未开通联谊' },
+  { value: 'LOW_ACTIVITY', label: '近7天无活跃' }
+]
+const templateOptions = ref([])
+const outreachDialog = reactive({
+  visible: false,
+  sendMode: false,
+  segment: 'UNVERIFIED',
+  templateCode: 'VERIFY_NOW',
+  name: '',
+  targetCount: 0,
+  sampleUsers: [],
+  templatePreview: null
+})
+const campaignDetailDialog = reactive({
+  visible: false,
+  loading: false,
+  campaign: null,
+  deliveries: []
+})
 const savingRoleUserId = ref(null)
 const userStore = useUserStore()
 const currentPage = ref(1)
@@ -561,6 +761,9 @@ const paginatedUsers = computed(() => {
   const end = start + pageSize.value
   return filteredUsers.value.slice(start, end)
 })
+
+const suggestedOutreachSegment = computed(() => inferSegmentFromFilters())
+const suggestedOutreachLabel = computed(() => segmentLabel(suggestedOutreachSegment.value))
 
 watch(currentPage, (p) => {
   jumpPageDraft.value = p
@@ -860,6 +1063,166 @@ async function loadUsers() {
   }
 }
 
+async function loadGrowthCampaigns() {
+  try {
+    const data = await listGrowthCampaigns()
+    growthCampaigns.value = Array.isArray(data) ? data : []
+  } catch {
+    growthCampaigns.value = []
+  }
+}
+
+async function loadTemplateOptions() {
+  try {
+    const data = await listGrowthCampaignTemplates()
+    templateOptions.value = Array.isArray(data) ? data : []
+  } catch {
+    templateOptions.value = []
+  }
+}
+
+function inferSegmentFromFilters() {
+  if (filters.verificationFilter === 'none' || filters.missingItem === 'verification') return 'UNVERIFIED'
+  if (filters.missingItem === 'city') return 'MISSING_CITY'
+  if (filters.missingItem === 'avatar') return 'MISSING_AVATAR'
+  if (filters.missingItem === 'photos') return 'MISSING_PHOTOS'
+  if (filters.missingItem === 'bio') return 'MISSING_BIO'
+  if (filters.fellowshipOpsFilter === 'notEnabled' || filters.missingItem === 'fellowship') return 'NOT_ENABLE_FELLOWSHIP'
+  if (filters.lowActive === 'yes') return 'LOW_ACTIVITY'
+  if (filters.completionBucket === '0_39') return 'LOW_COMPLETION'
+  if (filters.completionBucket === '40_59' || filters.completionBucket === '60_79') return 'MEDIUM_COMPLETION'
+  if (filters.completionBucket === '80_99') return 'NEARLY_COMPLETE'
+  return 'UNVERIFIED'
+}
+
+function segmentLabel(segment) {
+  const hit = segmentOptions.find((item) => item.value === segment)
+  return hit?.label || segment || '-'
+}
+
+function templateLabel(code) {
+  const hit = templateOptions.value.find((item) => item.code === code)
+  return hit?.title || code || '-'
+}
+
+function campaignStatusClass(status) {
+  const raw = String(status || '').toUpperCase()
+  if (raw === 'SENT' || raw === 'COMPLETED') return 'active'
+  if (raw === 'FAILED') return 'disabled'
+  return 'pending'
+}
+
+function formatFunnelRate(value) {
+  if (value == null || Number.isNaN(Number(value))) return '-'
+  return `${(Number(value) * 100).toFixed(1)}%`
+}
+
+function syncTemplatePreview() {
+  const hit = templateOptions.value.find((item) => item.code === outreachDialog.templateCode)
+  outreachDialog.templatePreview = hit
+    ? { title: hit.title, content: hit.content, actionUrl: hit.actionUrl }
+    : null
+}
+
+async function openOutreachDialog(sendMode) {
+  outreachDialog.sendMode = sendMode
+  outreachDialog.segment = suggestedOutreachSegment.value
+  outreachDialog.name = `${segmentLabel(outreachDialog.segment)}运营触达`
+  outreachDialog.visible = true
+  await loadOutreachPreview()
+}
+
+async function loadOutreachPreview() {
+  outreachLoading.value = true
+  try {
+    const data = await previewGrowthCampaignSegment(outreachDialog.segment)
+    outreachDialog.targetCount = Number(data?.targetCount || 0)
+    outreachDialog.sampleUsers = Array.isArray(data?.sampleUsers) ? data.sampleUsers : []
+    if (data?.suggestedTemplateCode) {
+      outreachDialog.templateCode = data.suggestedTemplateCode
+    }
+    if (data?.suggestedTemplate) {
+      outreachDialog.templatePreview = {
+        title: data.suggestedTemplate.title,
+        content: data.suggestedTemplate.content,
+        actionUrl: data.suggestedTemplate.actionUrl
+      }
+    } else {
+      syncTemplatePreview()
+    }
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '分群预览失败' })
+  } finally {
+    outreachLoading.value = false
+  }
+}
+
+async function confirmSendCampaign() {
+  if (!outreachDialog.targetCount) {
+    showToast({ type: 'fail', message: '当前分群无目标用户' })
+    return
+  }
+  try {
+    await showConfirmDialog({
+      title: '确认发送',
+      message: `将向 ${outreachDialog.targetCount} 位用户发送「${outreachDialog.templatePreview?.title || outreachDialog.templateCode}」站内提醒，确认继续吗？`
+    })
+  } catch {
+    return
+  }
+  outreachLoading.value = true
+  try {
+    const result = await sendGrowthCampaign({
+      segment: outreachDialog.segment,
+      templateCode: outreachDialog.templateCode,
+      channel: 'IN_APP',
+      name: outreachDialog.name || `${segmentLabel(outreachDialog.segment)}运营触达`
+    })
+    showToast({
+      type: 'success',
+      message: `已发送 ${result?.sentCount ?? 0} 人，失败 ${result?.failedCount ?? 0} 人`
+    })
+    outreachDialog.visible = false
+    await loadGrowthCampaigns()
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '发送失败' })
+  } finally {
+    outreachLoading.value = false
+  }
+}
+
+async function openCampaignDetail(item) {
+  campaignDetailDialog.visible = true
+  campaignDetailDialog.loading = true
+  campaignDetailDialog.campaign = item
+  campaignDetailDialog.deliveries = []
+  try {
+    const data = await getGrowthCampaignDetail(item.id, { page: 1, size: 50 })
+    campaignDetailDialog.campaign = data?.campaign || item
+    campaignDetailDialog.deliveries = Array.isArray(data?.deliveries) ? data.deliveries : []
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '活动详情加载失败' })
+  } finally {
+    campaignDetailDialog.loading = false
+  }
+}
+
+async function refreshCampaignConversion(item) {
+  campaignRefreshingId.value = item.id
+  try {
+    const result = await refreshGrowthCampaignConversion(item.id)
+    showToast({
+      type: 'success',
+      message: `转化已刷新：完成 ${result?.completedCount ?? item.completedCount} 人`
+    })
+    await loadGrowthCampaigns()
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '刷新转化失败' })
+  } finally {
+    campaignRefreshingId.value = null
+  }
+}
+
 function formatDate(value) {
   if (!value) return '-'
   const d = new Date(value)
@@ -1062,7 +1425,7 @@ function formatPhotoStatus(status) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadUsers(), loadGrowthDashboard()])
+  await Promise.all([loadUsers(), loadGrowthDashboard(), loadGrowthCampaigns(), loadTemplateOptions()])
   const userId = route.query.userId
   if (!userId) return
   const target = users.value.find((item) => String(item.userId) === String(userId))
@@ -1107,10 +1470,81 @@ watch(totalPages, (pages) => {
   width: 100%;
 }
 
-.growth-dashboard-title {
+.growth-dashboard-title,
+.outreach-title {
   margin: 0 0 12px;
   font-size: 16px;
   color: var(--lc-text);
+}
+
+.outreach-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.outreach-row-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.outreach-form {
+  display: grid;
+  gap: 12px;
+}
+
+.outreach-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--lc-muted-light);
+}
+
+.outreach-template-preview,
+.outreach-sample {
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--lc-surface);
+}
+
+.outreach-template-preview h4,
+.outreach-sample h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--lc-text);
+}
+
+.outreach-action-url {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--lc-muted-light);
+  word-break: break-all;
+}
+
+.outreach-sample ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--lc-slate);
+}
+
+.outreach-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.campaign-funnel-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 13px;
+  color: var(--lc-slate);
 }
 
 .growth-dashboard-grid {

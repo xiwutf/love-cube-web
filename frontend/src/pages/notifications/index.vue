@@ -62,6 +62,7 @@ import {
   deleteNotification,
   unwrapNotificationList
 } from '@/api/notification.js'
+import { reportGrowthCampaignClick } from '@/api/growthCampaign.js'
 import { formatTime } from '@/utils/format.js'
 
 const router = useRouter()
@@ -90,7 +91,8 @@ const TYPE_LABELS = {
   CONTENT_LIKED: '互动',
   CONTENT_COMMENTED: '互动',
   USER_FOLLOWED: '互动',
-  MUTUAL_MATCH: '互动'
+  MUTUAL_MATCH: '互动',
+  GROWTH_OPERATOR_REMINDER: '运营'
 }
 
 const tabIndex = ref(0)
@@ -174,14 +176,33 @@ async function openItem(item) {
       /* ignore */
     }
   }
-  const url = item.linkUrl
-  if (url && typeof url === 'string' && url.startsWith('/')) {
-    router.push(url)
+
+  if (item.type === 'GROWTH_OPERATOR_REMINDER' && item.deliveryId) {
+    let targetUrl = item.actionUrl || item.linkUrl
+    try {
+      const res = await reportGrowthCampaignClick(item.deliveryId)
+      if (res?.actionUrl) targetUrl = res.actionUrl
+    } catch {
+      /* 上报失败仍兜底跳转 */
+    }
+    navigateByUrl(targetUrl)
     return
   }
+
+  if (navigateByUrl(item.linkUrl)) return
   if (item.targetType === 'USER' && item.targetId) {
     router.push(`/fellowship/user-profile/${item.targetId}`)
   }
+}
+
+function navigateByUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const path = url.startsWith('/#/') ? url.slice(2) : url
+  if (path.startsWith('/')) {
+    router.push(path)
+    return true
+  }
+  return false
 }
 
 async function onReadAll() {

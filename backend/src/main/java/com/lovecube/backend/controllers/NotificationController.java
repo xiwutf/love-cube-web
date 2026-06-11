@@ -2,6 +2,7 @@ package com.lovecube.backend.controllers;
 
 import com.lovecube.backend.entity.UserNotification;
 import com.lovecube.backend.models.User;
+import com.lovecube.backend.services.GrowthCampaignService;
 import com.lovecube.backend.services.NotificationService;
 import com.lovecube.backend.services.NotificationSettingService;
 import com.lovecube.backend.services.UnifiedProfileService;
@@ -22,13 +23,16 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final NotificationSettingService notificationSettingService;
     private final UnifiedProfileService unifiedProfileService;
+    private final GrowthCampaignService growthCampaignService;
 
     public NotificationController(NotificationService notificationService,
                                   NotificationSettingService notificationSettingService,
-                                  UnifiedProfileService unifiedProfileService) {
+                                  UnifiedProfileService unifiedProfileService,
+                                  GrowthCampaignService growthCampaignService) {
         this.notificationService = notificationService;
         this.notificationSettingService = notificationSettingService;
         this.unifiedProfileService = unifiedProfileService;
+        this.growthCampaignService = growthCampaignService;
     }
 
     @GetMapping
@@ -139,6 +143,7 @@ public class NotificationController {
         m.put("pushStatus", n.getPushStatus());
         m.put("createdAt", n.getCreatedAt());
         m.put("readAt", n.getReadAt());
+        growthCampaignService.enrichGrowthNotification(n, m);
         return m;
     }
 }
