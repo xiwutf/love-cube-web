@@ -111,6 +111,11 @@
           <span class="mh-setting-label">消息通知</span>
           <span class="mh-setting-arrow">›</span>
         </router-link>
+        <router-link class="mh-setting-row" to="/me/notification-settings">
+          <span class="mh-setting-icon">📬</span>
+          <span class="mh-setting-label">通知渠道设置</span>
+          <span class="mh-setting-arrow">›</span>
+        </router-link>
         <router-link class="mh-setting-row" to="/me/feedback">
           <span class="mh-setting-icon">💬</span>
           <span class="mh-setting-label">问题工单（提交可得经验）</span>
@@ -138,6 +143,8 @@
       :location-display="locationDisplay"
       :invite-code-display="inviteCodeDisplay"
       :invite-count="inviteCount"
+      :unread-count="unreadCount"
+      :joined-space-count="myGroupsList.length"
       :copy-feedback="copyFeedback"
       :copy-feedback-error="copyFeedbackError"
       :profile-light-stats="profileLightStats"

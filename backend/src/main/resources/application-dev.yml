@@ -23,7 +23,14 @@ spring:
     baseline-version: 13
     validate-on-migrate: true
 
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+
 lovecube:
+  notification:
+    mail:
+      enabled: ${NOTIFICATION_MAIL_ENABLED:false}
   seed:
     enabled: false
   admin:

@@ -46,6 +46,7 @@ public final class NotificationCatalog {
     public static final String TYPE_ACTIVITY_PROPOSAL_SUBMITTED = "ACTIVITY_PROPOSAL_SUBMITTED";
     public static final String TYPE_ACTIVITY_PROPOSAL_APPROVED = "ACTIVITY_PROPOSAL_APPROVED";
     public static final String TYPE_ACTIVITY_PROPOSAL_REJECTED = "ACTIVITY_PROPOSAL_REJECTED";
+    public static final String TYPE_NOTIFICATION_CHANNEL_TEST = "NOTIFICATION_CHANNEL_TEST";
 
     public static final String RELATED_GROWTH_CAMPAIGN_DELIVERY = "GROWTH_CAMPAIGN_DELIVERY";
 
@@ -170,5 +171,10 @@ public final class NotificationCatalog {
 
     public static boolean forceSkipWechat(String type) {
         return TYPE_PROFILE_VIEWED.equalsIgnoreCase(type == null ? "" : type);
+    }
+
+    /** 浏览类等隐私敏感通知不投递邮件 / PushPlus。 */
+    public static boolean forceSkipExternalChannels(String type) {
+        return forceSkipWechat(type);
     }
 }

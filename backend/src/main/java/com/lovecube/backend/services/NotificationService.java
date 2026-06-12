@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ import java.util.Map;
 @Service
 @SuppressWarnings("deprecation") // UserNotificationRepository：框架层唯一合法注入点
 public class NotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private static final int ANNOUNCEMENT_USER_BATCH = 500;
     private static final int ANNOUNCEMENT_MAX_USERS = 5000;
@@ -101,7 +105,29 @@ public class NotificationService {
         n.setIsRead(false);
         n.setPushChannel(NotificationCatalog.CHANNEL_SITE);
         notificationDispatchService.applyPushInMemory(n);
-        return userNotificationRepository.save(n);
+        UserNotification saved = userNotificationRepository.save(n);
+        try {
+            notificationDispatchService.scheduleExternalDispatch(saved.getId());
+        } catch (Exception e) {
+            log.warn("外发调度提交失败 notificationId={} userId={}: {}", saved.getId(), userId, e.getMessage());
+        }
+        return saved;
+    }
+
+    /**
+     * 渠道设置页「发送测试通知」：创建一条系统测试站内消息并触发邮件 / PushPlus 投递。
+     */
+    @Transactional
+    public UserNotification sendChannelTestNotification(Long userId) {
+        return createNotification(
+                userId,
+                NotificationCatalog.TYPE_NOTIFICATION_CHANNEL_TEST,
+                "测试通知",
+                "这是一条测试通知，用于验证邮件与 PushPlus 渠道是否配置正确。",
+                "/messages",
+                "SYSTEM",
+                "CHANNEL_TEST"
+        );
     }
 
     /**

@@ -1,5 +1,5 @@
 <template>
-  <article class="share-card">
+  <article class="share-card section-card reflection-card">
     <header class="share-head">
       <div class="author">
         <div class="avatar" :style="avatarStyle">
@@ -15,37 +15,38 @@
         <div class="author-info">
           <div class="name-row">
             <span class="name">{{ displayName }}</span>
-            <span class="cat-tag" :style="catTagStyle">{{ item.category }}</span>
+            <span class="status-badge info">{{ item.category || '成长记录' }}</span>
           </div>
           <span class="time">{{ formatTime(item.createdAt) }}</span>
         </div>
       </div>
-      <button type="button" class="more-btn" aria-label="更多操作">···</button>
+      <span class="status-badge neutral">{{ item.status || '已发布' }}</span>
     </header>
 
     <p class="content">{{ item.content }}</p>
 
+    <div class="share-meta-row">
+      <span class="status-badge success">连续 {{ streakLabel }} 天</span>
+      <span v-if="item.tags" class="status-badge neutral">{{ item.tags }}</span>
+    </div>
+
     <footer class="actions">
-      <button type="button" :class="['action-btn', 'like-btn', { liked: item.liked }]" @click="$emit('like', item)">
-        <span class="action-icon">{{ item.liked ? '❤' : '♡' }}</span>
-        为他加油
+      <button type="button" :class="['platform-btn', 'action-btn', 'like-btn', { liked: item.liked }]" @click="$emit('like', item)">
+        {{ item.liked ? '已点赞' : '点赞' }}
         <span class="action-count">{{ item.encourageCount || 0 }}</span>
       </button>
       <button
         type="button"
-        :class="['action-btn', 'bookmark-btn', { bookmarked: item.bookmarked }]"
+        :class="['platform-btn', 'platform-btn-ghost', 'action-btn', 'bookmark-btn', { bookmarked: item.bookmarked }]"
         @click="$emit('bookmark', item)"
       >
-        <span class="action-icon">{{ item.bookmarked ? '★' : '☆' }}</span>
-        收藏
+        {{ item.bookmarked ? '已收藏' : '收藏' }}
       </button>
-      <button type="button" class="action-btn comment-btn" @click="$emit('comment', item)">
-        <span class="action-icon">💬</span>
-        留言
+      <button type="button" class="platform-btn platform-btn-ghost action-btn comment-btn" @click="$emit('comment', item)">
+        评论
         <span class="action-count">{{ item.commentCount || 0 }}</span>
       </button>
-      <button type="button" class="action-btn share-btn">
-        <span class="action-icon">↗</span>
+      <button type="button" class="platform-btn platform-btn-ghost action-btn share-btn">
         分享
       </button>
     </footer>
@@ -118,6 +119,10 @@ const showAvatarImage = computed(() =>
   !props.item.anonymous && Boolean(resolvedAvatarUrl.value) && !avatarLoadFailed.value
 )
 
+const streakLabel = computed(() =>
+  Number(props.item.streakDays || props.item.continuousDays || props.item.currentStreak || 0)
+)
+
 const avatarStyle = computed(() => {
   if (props.item.anonymous) {
     return { background: '#f1f5f9', color: '#94a3b8' }
@@ -158,15 +163,17 @@ watch(
 
 <style scoped>
 .share-card {
-  border: 1px solid #f1ece8;
-  border-radius: 14px;
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
   background: var(--lc-surface);
   padding: 16px;
-  transition: box-shadow 0.2s;
+  box-shadow: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .share-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  border-color: var(--lc-blue-border);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 6%);
 }
 
 .share-head {
@@ -226,33 +233,9 @@ watch(
   text-overflow: ellipsis;
 }
 
-.cat-tag {
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .time {
   color: var(--lc-subtle);
   font-size: 12px;
-}
-
-.more-btn {
-  border: none;
-  background: transparent;
-  color: var(--lc-subtle);
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 2px 4px;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-}
-
-.more-btn:hover {
-  color: var(--lc-muted-light);
 }
 
 .content {
@@ -264,46 +247,31 @@ watch(
   font-size: 14px;
 }
 
+.share-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .actions {
   margin-top: 14px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 1px solid #f1ece8;
-  border-radius: 999px;
-  background: #fafaf9;
-  color: var(--lc-muted-light);
-  height: 30px;
+  min-height: 32px;
   padding: 0 10px;
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.action-btn:hover {
-  border-color: #e2d9d0;
-  background: #f5f0eb;
 }
 
 .like-btn.liked {
-  border-color: #fecdd3;
-  background: #fff1f2;
-  color: #e11d48;
-}
-
-.like-btn .action-icon {
-  color: #e11d48;
-}
-
-.comment-btn .action-icon {
-  font-size: 13px;
+  border-color: var(--lc-green);
+  background: var(--lc-green-light);
+  color: var(--lc-green);
 }
 
 .share-btn {
@@ -315,17 +283,9 @@ watch(
   font-size: 11px;
 }
 
-.like-btn.liked .action-count {
-  color: #f87171;
-}
-
 .bookmark-btn.bookmarked {
-  border-color: #fde68a;
-  background: #fffbeb;
-  color: #b45309;
-}
-
-.bookmark-btn.bookmarked .action-icon {
-  color: #d97706;
+  border-color: var(--lc-amber);
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
 }
 </style>

@@ -1,123 +1,230 @@
 <template>
-  <section class="help-square">
-    <header class="hero">
-      <div class="hero-text">
-        <p class="hero-kicker">Help Hub</p>
-        <h1>互助广场</h1>
-        <p class="hero-desc">需求 → 互助 → 解决 → 信任沉淀。成功标准是「有多少需求被真正解决」。</p>
-        <div class="hero-metrics">
-          <span class="metric-chip">当前需求 {{ items.length }}</span>
-          <span class="metric-chip">总回应 {{ totalReplies }}</span>
-          <span class="metric-chip">高热度 {{ hotCount }}</span>
+  <section class="help-hub operation-shell">
+    <section class="operation-hero help-hero">
+      <div class="hero-copy">
+        <p class="section-kicker">Help Hub</p>
+        <h1>互助协作中心</h1>
+        <p class="hero-desc">把求助、响应、推进和解决放在同一个工作台里，让每一条需求都能被看见、被承接、被完成。</p>
+        <div class="hero-status">
+          <span class="status-badge info">当前筛选：{{ currentFilterLabel }}</span>
+          <span class="status-badge neutral">协作模式：任务流转</span>
         </div>
         <div class="hero-actions">
-          <router-link v-if="userStore.isLoggedIn" :to="helpPath('create')" class="btn primary">发布需求</router-link>
-          <router-link v-else to="/login" class="btn primary">登录后发布</router-link>
-          <router-link :to="helpPath('my')" class="btn ghost">我的互助</router-link>
+          <router-link v-if="userStore.isLoggedIn" :to="helpPath('create')" class="platform-btn platform-btn-primary">发布求助</router-link>
+          <router-link v-else to="/login" class="platform-btn platform-btn-primary">登录后发布</router-link>
+          <router-link :to="helpPath('my')" class="platform-btn platform-btn-ghost">我的互助</router-link>
         </div>
       </div>
-    </header>
-
-    <div class="toolbar">
-      <nav class="type-tabs" aria-label="分类">
-        <button
-          v-for="t in typeFilters"
-          :key="t.value || 'ALL'"
-          type="button"
-          :class="['tab', { active: filterType === t.value }]"
-          @click="filterType = t.value; load(1)"
-        >
-          {{ t.label }}
-        </button>
-      </nav>
-    </div>
-
-    <section v-if="leaderboard.length" class="leaderboard-panel platform-card">
-      <h2>互助达人榜</h2>
-      <p class="lb-sub">信用分 = 回应×1 + 被接受×3 + 成功解决×10</p>
-      <ol class="lb-list">
-        <li v-for="row in leaderboard" :key="row.userId">
-          <span class="lb-rank">#{{ row.rank }}</span>
-          <span class="lb-name">{{ row.nickname }}</span>
-          <span class="lb-score">{{ row.creditScore }} 分</span>
-          <span class="lb-meta">成功 {{ row.successCount }} 次</span>
-        </li>
-      </ol>
-    </section>
-
-    <p v-if="error" class="banner error">{{ error }}</p>
-    <p v-else-if="loading" class="banner">加载中…</p>
-
-    <div v-else class="list-wrap">
-      <!-- 桌面：表格式列表 -->
-      <table class="help-table desktop-only" aria-label="互助需求列表">
-        <thead>
-          <tr>
-            <th>类型</th>
-            <th>标题 / 简述</th>
-            <th>发布人</th>
-            <th>地区</th>
-            <th>状态</th>
-            <th>回应</th>
-            <th>时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in items" :key="row.id">
-            <td><span class="pill">{{ typeLabel(row.helpType) }}</span></td>
-            <td>
-              <div class="title-cell">
-                <strong>{{ row.title }}</strong>
-                <span class="sum">{{ row.summary }}</span>
-              </div>
-            </td>
-            <td>{{ row.publisherName }}</td>
-            <td>{{ row.region || '—' }}</td>
-            <td><span class="status">进行中</span></td>
-            <td>{{ row.replyCount ?? 0 }}</td>
-            <td class="nowrap">{{ formatTime(row.createdAt) }}</td>
-            <td class="actions">
-              <router-link class="link" :to="helpPath(String(row.id))">查看详情</router-link>
-              <router-link
-                v-if="canOffer(row)"
-                class="link accent"
-                :to="`${helpPath(String(row.id))}?offer=1`"
-              >我能帮忙</router-link>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- 移动端：卡片 -->
-      <div class="card-list mobile-only">
-        <article v-for="row in items" :key="row.id" class="card">
-          <div class="card-top">
-            <span class="pill">{{ typeLabel(row.helpType) }}</span>
-            <span class="status">进行中</span>
-          </div>
-          <h2 class="card-title">{{ row.title }}</h2>
-          <p class="card-sum">{{ row.summary }}</p>
-          <p class="card-meta">{{ row.publisherName }} · {{ row.region || '地区未填' }} · {{ formatTime(row.createdAt) }}</p>
-          <p class="card-meta">回应 {{ row.replyCount ?? 0 }} 人</p>
-          <div class="card-actions">
-            <router-link class="btn sm ghost" :to="helpPath(String(row.id))">查看详情</router-link>
-            <router-link
-              v-if="canOffer(row)"
-              class="btn sm primary"
-              :to="`${helpPath(String(row.id))}?offer=1`"
-            >我能帮忙</router-link>
-          </div>
+      <div class="hero-metrics">
+        <article v-for="metric in heroMetrics" :key="metric.label" class="metric-card" :class="metric.tone">
+          <span class="metric-label">{{ metric.label }}</span>
+          <strong>{{ metric.value }}</strong>
+          <p>{{ metric.hint }}</p>
         </article>
       </div>
+    </section>
 
-      <p v-if="!items.length" class="empty">暂无已上架的互助需求，欢迎发布第一条。</p>
-
-      <div v-if="totalPages > 1" class="pager">
-        <button type="button" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
-        <span>第 {{ page }} / {{ totalPages }} 页</span>
-        <button type="button" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+    <section class="dashboard-section">
+      <div class="operation-section-head">
+        <div>
+          <p class="section-kicker">Quick Actions</p>
+          <h2>快速行动</h2>
+        </div>
       </div>
+      <div class="action-grid">
+        <router-link class="action-card" :to="userStore.isLoggedIn ? helpPath('create') : '/login'">
+          <div class="action-card-head">
+            <strong>发布求助</strong>
+            <span class="status-badge info">发起</span>
+          </div>
+          <p>提交一个需要协作处理的互助任务。</p>
+        </router-link>
+        <router-link class="action-card" :to="helpPath('my')">
+          <div class="action-card-head">
+            <strong>查看我的求助</strong>
+            <span class="status-badge neutral">个人</span>
+          </div>
+          <p>查看我发布、我响应和待处理的互助记录。</p>
+        </router-link>
+        <button type="button" class="action-card as-button" @click="setQuickFilter('mine')">
+          <div class="action-card-head">
+            <strong>查看我参与的</strong>
+            <span class="status-badge success">参与</span>
+          </div>
+          <p>聚焦与我相关的互助事项。</p>
+        </button>
+        <button type="button" class="action-card as-button warning" @click="setQuickFilter('needsResponse')">
+          <div class="action-card-head">
+            <strong>查看待响应</strong>
+            <span class="status-badge warning">待响应</span>
+          </div>
+          <p>优先处理尚未收到回应的求助。</p>
+        </button>
+      </div>
+    </section>
+
+    <section class="section-card filter-panel">
+      <div class="section-card-head">
+        <div>
+          <p class="section-kicker">Filters</p>
+          <h3>筛选区</h3>
+        </div>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="resetFilters">重置</button>
+      </div>
+      <div class="filter-grid">
+        <label class="filter-field">
+          <span>搜索</span>
+          <input v-model.trim="searchKeyword" type="search" placeholder="搜索标题、描述或发起人">
+        </label>
+        <label class="filter-field">
+          <span>分类</span>
+          <select v-model="filterType" @change="load(1)">
+            <option v-for="t in typeFilters" :key="t.value || 'ALL'" :value="t.value">{{ t.label }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>状态</span>
+          <select v-model="statusFilter">
+            <option value="">全部状态</option>
+            <option value="active">待响应 / 进行中</option>
+            <option value="resolved">已解决</option>
+            <option value="mine">我的参与</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>时间</span>
+          <select v-model="timeFilter">
+            <option value="">全部时间</option>
+            <option value="today">今日新增</option>
+            <option value="week">本周新增</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span>排序</span>
+          <select v-model="sortBy">
+            <option value="latest">最近发布</option>
+            <option value="updated">最近更新</option>
+            <option value="replies">响应数优先</option>
+            <option value="urgent">待响应优先</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <div class="hub-layout">
+      <main class="hub-main">
+        <section class="dashboard-section">
+          <div class="operation-section-head">
+            <div>
+              <p class="section-kicker">Requests</p>
+              <h2>互助列表</h2>
+            </div>
+            <span class="status-badge info">当前 {{ filteredItems.length }} 条</span>
+          </div>
+
+          <div v-if="loading" class="loading-state">加载中...</div>
+          <div v-else-if="error" class="error-state">{{ error }}</div>
+          <template v-else>
+            <div v-if="filteredItems.length" class="help-list">
+              <article v-for="row in filteredItems" :key="row.id" class="section-card help-card">
+                <div class="help-card-head">
+                  <div>
+                    <div class="badge-row">
+                      <span class="status-badge info">{{ typeLabel(row.helpType) }}</span>
+                      <span :class="['status-badge', statusTone(row)]">{{ requestStatusLabel(row) }}</span>
+                      <span v-if="row.isResolved" class="status-badge success">已解决</span>
+                    </div>
+                    <h3>{{ row.title }}</h3>
+                  </div>
+                  <span class="reply-count">{{ row.replyCount ?? 0 }} 响应</span>
+                </div>
+                <p class="help-summary">{{ row.summary || row.content || '暂无描述' }}</p>
+                <div class="help-meta">
+                  <span>发起人：{{ row.publisherName || '用户' }}</span>
+                  <span>发布时间：{{ formatTime(row.createdAt) }}</span>
+                  <span>地区：{{ row.region || '未填写' }}</span>
+                </div>
+                <div class="help-actions">
+                  <router-link class="platform-btn platform-btn-primary" :to="helpPath(String(row.id))">查看</router-link>
+                  <router-link
+                    v-if="canOffer(row)"
+                    class="platform-btn platform-btn-ghost"
+                    :to="`${helpPath(String(row.id))}?offer=1`"
+                  >响应</router-link>
+                  <button
+                    type="button"
+                    :class="['platform-btn', 'platform-btn-ghost', { saved: savedHelpIds.has(row.id) }]"
+                    @click="toggleSave(row)"
+                  >{{ savedHelpIds.has(row.id) ? '已收藏' : '收藏' }}</button>
+                  <button type="button" class="platform-btn platform-btn-ghost" @click="shareHelp(row)">分享</button>
+                </div>
+              </article>
+            </div>
+            <div v-else class="empty-state">
+              <div>
+                <strong>暂无匹配的互助需求</strong>
+                <p>调整筛选条件，或发布一条新的互助需求。</p>
+              </div>
+            </div>
+          </template>
+
+          <div v-if="totalPages > 1" class="pager">
+            <button type="button" class="platform-btn platform-btn-ghost" :disabled="page <= 1" @click="goPage(page - 1)">上一页</button>
+            <span>第 {{ page }} / {{ totalPages }} 页</span>
+            <button type="button" class="platform-btn platform-btn-ghost" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页</button>
+          </div>
+        </section>
+      </main>
+
+      <aside class="hub-side">
+        <section class="dashboard-section">
+          <div class="operation-section-head">
+            <div>
+              <p class="section-kicker">My Work</p>
+              <h2>我的参与</h2>
+            </div>
+          </div>
+          <div class="metric-grid side-metrics">
+            <article v-for="metric in myMetrics" :key="metric.label" class="metric-card">
+              <span class="metric-label">{{ metric.label }}</span>
+              <strong>{{ metric.value }}</strong>
+              <p>{{ metric.hint }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="section-kicker">Recommended</p>
+              <h3>推荐求助</h3>
+            </div>
+          </div>
+          <div class="recommend-list">
+            <article v-for="item in recommendedCards" :key="item.title" class="recommend-card">
+              <span :class="['status-badge', item.badgeClass]">{{ item.badge }}</span>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.desc }}</p>
+            </article>
+          </div>
+        </section>
+
+        <section v-if="leaderboard.length" class="section-card">
+          <div class="section-card-head">
+            <div>
+              <p class="section-kicker">Credit</p>
+              <h3>互助达人榜</h3>
+            </div>
+          </div>
+          <ol class="leaderboard-list">
+            <li v-for="row in leaderboard" :key="row.userId">
+              <span class="lb-rank">#{{ row.rank }}</span>
+              <span class="lb-name">{{ row.nickname }}</span>
+              <strong>{{ row.creditScore }} 分</strong>
+            </li>
+          </ol>
+        </section>
+      </aside>
     </div>
   </section>
 </template>
@@ -135,11 +242,17 @@ const error = ref('')
 const items = ref([])
 const page = ref(1)
 const totalPages = ref(1)
+const totalCount = ref(0)
 const filterType = ref('')
+const statusFilter = ref('')
+const timeFilter = ref('')
+const sortBy = ref('latest')
+const searchKeyword = ref('')
 const leaderboard = ref([])
+const savedHelpIds = ref(new Set())
 
 const typeFilters = [
-  { value: '', label: '全部' },
+  { value: '', label: '全部分类' },
   { value: 'JOB_SEEK', label: '找工作' },
   { value: 'RECRUIT', label: '招人' },
   { value: 'FIND_MATERIAL', label: '找资料' },
@@ -147,9 +260,6 @@ const typeFilters = [
   { value: 'ASK_EXP', label: '求经验' },
   { value: 'OTHER', label: '其他' }
 ]
-
-const totalReplies = computed(() => items.value.reduce((sum, row) => sum + Number(row.replyCount || 0), 0))
-const hotCount = computed(() => items.value.filter(row => Number(row.replyCount || 0) >= 3).length)
 
 const TYPE_LABELS = {
   JOB_SEEK: '找工作',
@@ -160,8 +270,118 @@ const TYPE_LABELS = {
   OTHER: '其他'
 }
 
+const todayKey = new Date().toISOString().slice(0, 10)
+const weekStart = (() => {
+  const d = new Date()
+  d.setDate(d.getDate() - 6)
+  d.setHours(0, 0, 0, 0)
+  return d
+})()
+
+const totalReplies = computed(() => items.value.reduce((sum, row) => sum + Number(row.replyCount || 0), 0))
+const pendingResponseCount = computed(() => items.value.filter(row => !row.isResolved && Number(row.replyCount || 0) === 0).length)
+const resolvedCount = computed(() => items.value.filter(row => row.isResolved || row.status === 'resolved').length)
+const myParticipationCount = computed(() => items.value.filter(row => isMine(row)).length)
+const todayNewCount = computed(() => items.value.filter(row => String(row.createdAt || '').slice(0, 10) === todayKey).length)
+
+const heroMetrics = computed(() => [
+  { label: '当前互助总数', value: totalCount.value || items.value.length, hint: '当前可见的互助任务', tone: 'accent' },
+  { label: '待响应求助', value: pendingResponseCount.value, hint: '尚未收到回应的需求', tone: 'warn' },
+  { label: '已解决求助', value: resolvedCount.value, hint: '已完成闭环的互助', tone: '' },
+  { label: '我的参与', value: myParticipationCount.value, hint: '与我相关的互助事项', tone: '' },
+  { label: '今日新增', value: todayNewCount.value, hint: '今天新增的互助需求', tone: '' },
+])
+
+const currentFilterLabel = computed(() => {
+  const category = typeFilters.find(item => item.value === filterType.value)?.label || '全部分类'
+  const status = statusFilter.value ? statusLabel(statusFilter.value) : '全部状态'
+  return `${category} / ${status}`
+})
+
+const filteredItems = computed(() => {
+  const keyword = searchKeyword.value.toLowerCase()
+  let list = items.value.filter((row) => {
+    const content = `${row.title || ''} ${row.summary || ''} ${row.publisherName || ''}`.toLowerCase()
+    if (keyword && !content.includes(keyword)) return false
+    if (statusFilter.value === 'active' && (row.isResolved || row.status === 'resolved')) return false
+    if (statusFilter.value === 'resolved' && !(row.isResolved || row.status === 'resolved')) return false
+    if (statusFilter.value === 'mine' && !isMine(row)) return false
+    if (timeFilter.value === 'today' && String(row.createdAt || '').slice(0, 10) !== todayKey) return false
+    if (timeFilter.value === 'week' && !isThisWeek(row.createdAt)) return false
+    return true
+  })
+
+  list = [...list]
+  if (sortBy.value === 'replies') {
+    list.sort((a, b) => Number(b.replyCount || 0) - Number(a.replyCount || 0))
+  } else if (sortBy.value === 'urgent') {
+    list.sort((a, b) => Number(a.replyCount || 0) - Number(b.replyCount || 0))
+  } else if (sortBy.value === 'updated') {
+    list.sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
+  } else {
+    list.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+  }
+  return list
+})
+
+const myMetrics = computed(() => [
+  { label: '我发布的', value: items.value.filter(row => String(row.userId) === String(userStore.userId)).length, hint: '当前列表中的我的求助' },
+  { label: '我响应的', value: myParticipationCount.value, hint: '当前列表中与我相关的事项' },
+  { label: '待我处理的', value: pendingResponseCount.value, hint: '可优先查看待响应任务' },
+  { label: '已完成的', value: resolvedCount.value, hint: '当前列表中的解决闭环' },
+])
+
+const recommendedCards = computed(() => {
+  const urgent = items.value.find(row => !row.isResolved && Number(row.replyCount || 0) === 0)
+  const recent = [...items.value].sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))[0]
+  const hot = [...items.value].sort((a, b) => Number(b.replyCount || 0) - Number(a.replyCount || 0))[0]
+  return [
+    {
+      badge: '急需响应',
+      badgeClass: 'warning',
+      title: urgent?.title || '暂无急需响应求助',
+      desc: urgent ? `${typeLabel(urgent.helpType)} · ${formatTime(urgent.createdAt)}` : '当前列表中的求助都已有回应',
+    },
+    {
+      badge: '最近更新',
+      badgeClass: 'info',
+      title: recent?.title || '暂无最近更新',
+      desc: recent ? `${recent.publisherName || '用户'} · ${formatTime(recent.updatedAt || recent.createdAt)}` : '有新求助后会显示在这里',
+    },
+    {
+      badge: '热门互助',
+      badgeClass: 'success',
+      title: hot?.title || '暂无热门互助',
+      desc: hot ? `${hot.replyCount || 0} 个响应 · ${typeLabel(hot.helpType)}` : '响应数较高的求助会展示在这里',
+    },
+  ]
+})
+
 function typeLabel(code) {
-  return TYPE_LABELS[code] || code
+  return TYPE_LABELS[code] || code || '其他'
+}
+
+function statusLabel(value) {
+  return {
+    active: '进行中',
+    resolved: '已解决',
+    mine: '我的参与',
+    pending: '审核中',
+    closed: '已关闭',
+    rejected: '未通过'
+  }[value] || value
+}
+
+function requestStatusLabel(row) {
+  if (row.isResolved || row.status === 'resolved') return '已解决'
+  if (Number(row.replyCount || 0) === 0) return '待响应'
+  return statusLabel(row.status || 'active')
+}
+
+function statusTone(row) {
+  if (row.isResolved || row.status === 'resolved') return 'success'
+  if (Number(row.replyCount || 0) === 0) return 'warning'
+  return 'info'
 }
 
 function formatTime(iso) {
@@ -171,9 +391,57 @@ function formatTime(iso) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function isThisWeek(iso) {
+  if (!iso) return false
+  const d = new Date(iso)
+  return !Number.isNaN(d.getTime()) && d >= weekStart
+}
+
+function isMine(row) {
+  if (!userStore.isLoggedIn || !userStore.userId) return false
+  return String(row.userId) === String(userStore.userId)
+}
+
 function canOffer(row) {
   if (!userStore.isLoggedIn) return true
-  return String(row.userId) !== String(userStore.userId)
+  return String(row.userId) !== String(userStore.userId) && !row.isResolved
+}
+
+function setQuickFilter(mode) {
+  if (mode === 'needsResponse') {
+    statusFilter.value = 'active'
+    sortBy.value = 'urgent'
+    return
+  }
+  if (mode === 'mine') {
+    statusFilter.value = 'mine'
+  }
+}
+
+function resetFilters() {
+  searchKeyword.value = ''
+  filterType.value = ''
+  statusFilter.value = ''
+  timeFilter.value = ''
+  sortBy.value = 'latest'
+  load(1)
+}
+
+function toggleSave(row) {
+  const next = new Set(savedHelpIds.value)
+  if (next.has(row.id)) next.delete(row.id)
+  else next.add(row.id)
+  savedHelpIds.value = next
+}
+
+async function shareHelp(row) {
+  const url = `${window.location.origin}${window.location.pathname}#${helpPath(String(row.id))}`
+  const title = row.title || '互助需求'
+  if (navigator.share) {
+    await navigator.share({ title, url })
+    return
+  }
+  await navigator.clipboard?.writeText(url)
 }
 
 async function load(p) {
@@ -188,9 +456,11 @@ async function load(p) {
     })
     items.value = Array.isArray(res?.list) ? res.list : []
     totalPages.value = Number(res?.totalPages) || 1
+    totalCount.value = Number(res?.total) || items.value.length
   } catch (e) {
     error.value = e.message || '加载失败'
     items.value = []
+    totalCount.value = 0
   } finally {
     loading.value = false
   }
@@ -213,339 +483,251 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.help-square {
+.help-hub {
   width: calc(100% - 48px);
   margin: 0 auto;
-  padding: 1.5rem 0 3rem;
+  padding: 24px 0 48px;
   color: var(--lc-text);
 }
 
-.hero {
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-  padding: 1.5rem;
-  border-radius: 16px;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--lc-blue-light) 82%, #ffffff 18%), var(--lc-surface));
-  border: 1px solid var(--lc-blue-border);
-  box-shadow: 0 14px 36px -24px color-mix(in srgb, var(--lc-blue) 36%, transparent);
+.help-hero {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
 }
 
-.hero::after {
-  content: '';
-  position: absolute;
-  right: -60px;
-  top: -72px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--lc-indigo) 34%, transparent), transparent 72%);
-  pointer-events: none;
+.hero-copy {
+  display: grid;
+  align-content: start;
+  gap: 14px;
 }
 
-.hero-kicker {
-  display: inline-flex;
-  margin: 0 0 0.5rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--lc-indigo);
-  background: color-mix(in srgb, var(--lc-indigo-light) 66%, #fff 34%);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.hero-text h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.75rem;
-  color: var(--lc-blue-dark);
+.hero-copy h1 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 32px;
+  line-height: 1.2;
 }
 
 .hero-desc {
-  margin: 0 0 1rem;
+  max-width: 720px;
+  margin: 0;
   color: var(--lc-muted);
-  line-height: 1.6;
-  max-width: 52rem;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
-.hero-actions {
+.hero-status,
+.hero-actions,
+.badge-row,
+.help-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 .hero-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.95rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.metric-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.32rem 0.62rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--lc-blue-border) 82%, #fff 18%);
-  background: color-mix(in srgb, var(--lc-surface) 80%, var(--lc-blue-light) 20%);
-  color: color-mix(in srgb, var(--lc-text) 74%, var(--lc-blue) 26%);
-  font-size: 0.78rem;
-  font-weight: 600;
+.hero-metrics .metric-card:first-child {
+  grid-column: span 2;
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.55rem 1.1rem;
-  border-radius: 8px;
-  font-weight: 600;
+.action-card {
+  color: inherit;
   text-decoration: none;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-size: 0.95rem;
 }
 
-.btn.primary {
-  background: var(--lc-blue);
-  color: #fff;
-}
-
-.btn.ghost {
-  background: var(--lc-surface);
-  color: var(--lc-blue);
-  border-color: var(--lc-blue-border);
-}
-
-.btn.sm {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.85rem;
-}
-
-.toolbar {
-  margin-bottom: 1rem;
-}
-
-.type-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.tab {
-  border: 1px solid var(--lc-border);
-  background: var(--lc-surface);
-  color: var(--lc-muted);
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-
-.tab.active {
-  border-color: var(--lc-blue);
-  color: var(--lc-blue);
-  background: var(--lc-blue-light);
-}
-
-.banner {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: var(--lc-soft);
-  color: var(--lc-muted);
-}
-
-.banner.error {
-  background: #FEF2F2;
-  color: var(--lc-red);
-}
-
-.help-table {
+.action-card.as-button {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  background: var(--lc-surface);
-  border: 1px solid var(--lc-border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 16px 28px -26px color-mix(in srgb, var(--lc-text) 40%, transparent);
-}
-
-.help-table th,
-.help-table td {
-  padding: 0.65rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid var(--lc-border);
-  vertical-align: top;
+  cursor: pointer;
 }
 
-.help-table th {
-  background: var(--lc-soft);
-  color: var(--lc-muted);
-  font-weight: 600;
-}
-
-.title-cell strong {
-  display: block;
+.action-card strong {
   color: var(--lc-text);
 }
 
-.sum {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--lc-subtle);
-  font-size: 0.8rem;
-  line-height: 1.4;
+.filter-panel {
+  display: grid;
+  gap: 16px;
 }
 
-.pill {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  background: var(--lc-indigo-light);
-  color: var(--lc-indigo);
-  font-size: 0.75rem;
-  font-weight: 600;
+.filter-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(150px, 1fr));
+  gap: 12px;
 }
 
-.status {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--lc-emerald);
+.filter-field {
+  display: grid;
+  gap: 6px;
 }
 
-.nowrap {
-  white-space: nowrap;
+.filter-field span {
   color: var(--lc-muted);
-  font-size: 0.85rem;
+  font-size: 12px;
+  font-weight: 900;
 }
 
-.actions {
-  white-space: nowrap;
-}
-
-.actions .link {
-  margin-right: 0.5rem;
-  color: var(--lc-blue);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.actions .link.accent {
-  color: var(--lc-indigo);
-}
-
-.card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.card {
-  padding: 1rem;
-  border-radius: 14px;
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
   border: 1px solid var(--lc-border);
+  border-radius: 8px;
   background: var(--lc-surface);
-  box-shadow: 0 12px 24px -24px color-mix(in srgb, var(--lc-text) 40%, transparent);
+  color: var(--lc-text);
+  font: inherit;
+  padding: 0 10px;
 }
 
-.card-top {
+.filter-field input:focus,
+.filter-field select:focus {
+  outline: none;
+  border-color: var(--lc-blue);
+  box-shadow: 0 0 0 3px var(--lc-blue-light);
+}
+
+.hub-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.hub-main,
+.hub-side {
+  display: grid;
+  gap: 16px;
+}
+
+.help-list {
+  display: grid;
+  gap: 12px;
+}
+
+.help-card {
+  display: grid;
+  gap: 12px;
+  box-shadow: none;
+}
+
+.help-card-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
+}
+
+.help-card h3 {
+  margin: 8px 0 0;
+  color: var(--lc-text);
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.reply-count {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 0.5rem;
+  justify-content: center;
+  min-width: 76px;
+  min-height: 34px;
+  border: 1px solid var(--lc-border);
+  border-radius: 999px;
+  background: var(--lc-bg);
+  color: var(--lc-blue);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
-.card-title {
-  margin: 0 0 0.35rem;
-  font-size: 1.05rem;
-}
-
-.card-sum {
-  margin: 0 0 0.5rem;
+.help-summary {
+  margin: 0;
   color: var(--lc-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-.card-meta {
-  margin: 0.15rem 0;
-  font-size: 0.8rem;
-  color: var(--lc-subtle);
-}
-
-.card-actions {
+.help-meta {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--lc-subtle);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.empty {
-  text-align: center;
-  color: var(--lc-muted);
-  padding: 2rem 1rem;
+.platform-btn.saved {
+  border-color: var(--lc-amber);
+  background: var(--lc-amber-light);
+  color: var(--lc-amber);
+}
+
+.empty-state p {
+  margin: 6px 0 0;
+  font-size: 13px;
 }
 
 .pager {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 12px;
+  margin-top: 16px;
+  color: var(--lc-muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.pager button {
-  padding: 0.4rem 0.9rem;
-  border-radius: 8px;
+.side-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.side-metrics .metric-card {
+  min-height: 112px;
+}
+
+.recommend-list,
+.leaderboard-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.recommend-card {
+  display: grid;
+  gap: 8px;
   border: 1px solid var(--lc-border);
-  background: var(--lc-surface);
-  cursor: pointer;
+  border-radius: 10px;
+  background: var(--lc-bg);
+  padding: 12px;
 }
 
-.desktop-only {
-  display: none;
+.recommend-card strong {
+  color: var(--lc-text);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.mobile-only {
-  display: block;
-}
-
-@media (min-width: 900px) {
-  .desktop-only {
-    display: table;
-  }
-
-  .mobile-only {
-    display: none;
-  }
-}
-
-.leaderboard-panel {
-  padding: 16px 18px;
-  margin-bottom: 12px;
-}
-
-.leaderboard-panel h2 {
-  margin: 0 0 6px;
-  font-size: 17px;
-}
-
-.lb-sub {
-  margin: 0 0 12px;
-  font-size: 12px;
-  color: var(--lc-subtle);
-}
-
-.lb-list {
-  list-style: none;
+.recommend-card p {
   margin: 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.leaderboard-list {
+  list-style: none;
   padding: 0;
 }
 
-.lb-list li {
+.leaderboard-list li {
   display: grid;
-  grid-template-columns: 36px 1fr auto auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   padding: 8px 0;
@@ -554,36 +736,67 @@ onMounted(async () => {
 }
 
 .lb-rank {
-  font-weight: 800;
   color: var(--lc-indigo);
+  font-weight: 900;
 }
 
-.lb-score {
-  font-weight: 700;
+.lb-name {
+  overflow: hidden;
+  color: var(--lc-slate);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-list strong {
   color: var(--lc-emerald);
 }
 
-.lb-meta {
-  font-size: 11px;
-  color: var(--lc-subtle);
-}
-
-@media (min-width: 768px) and (max-width: 1199px) {
-  .help-square {
-    width: calc(100% - 32px);
+@media (max-width: 1180px) {
+  .help-hero,
+  .hub-layout {
+    grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 900px) {
+  .hero-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 
-  .hero {
-    padding: 1.1rem 1rem;
+  .hero-metrics .metric-card:first-child {
+    grid-column: span 1;
+  }
+
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 767px) {
-  .help-square {
+  .help-hub {
     width: calc(100% - 24px);
+    padding-top: 16px;
+  }
+
+  .help-hero {
+    padding: 18px;
+  }
+
+  .hero-copy h1 {
+    font-size: 26px;
+  }
+
+  .hero-metrics,
+  .filter-grid,
+  .side-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .help-card-head {
+    display: grid;
+  }
+
+  .reply-count {
+    width: fit-content;
   }
 }
 </style>

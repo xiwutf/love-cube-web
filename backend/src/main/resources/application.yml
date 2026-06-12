@@ -76,6 +76,20 @@ spring:
       name: admin
       password: admin123
 
+  mail:
+    host: ${MAIL_HOST:smtp.example.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+
 logging:
   level:
     root: warn
@@ -102,6 +116,12 @@ wechat:
       path: /api/wechat/login
 
 lovecube:
+  notification:
+    mail:
+      enabled: ${NOTIFICATION_MAIL_ENABLED:false}
+      from-name: Love Cube
+    pushplus:
+      url: https://www.pushplus.plus/send
   admin:
     # 工作台 /api/admin/stats 聚合结果内存缓存秒数；0 表示不缓存（多实例各自 JVM 内生效）
     dashboard-stats-cache-seconds: 45

@@ -1,113 +1,186 @@
 <template>
-  <section class="dash" aria-label="平台个人中心工作台（桌面端）">
-    <header class="dash-header">
-      <div>
-        <h1>个人中心</h1>
-        <p>管理你的内容、团队、通知与账号资料</p>
+  <section class="dash operation-shell" aria-label="平台个人工作台">
+    <header class="me-hero operation-hero">
+      <div class="hero-profile">
+        <div class="avatar-wrap">
+          <img v-if="avatarSrc" :src="avatarSrc" class="avatar" alt="头像">
+          <div v-else class="avatar avatar-fallback" aria-hidden="true">{{ avatarFallback }}</div>
+        </div>
+        <div class="hero-main">
+          <p class="section-kicker">Personal Workbench</p>
+          <div class="name-row">
+            <h1>{{ displayName }}</h1>
+            <span class="status-badge info">{{ roleLabel }}</span>
+            <span class="status-badge" :class="verifyBadgeClass">{{ verificationLabel }}</span>
+          </div>
+          <p class="hero-meta">
+            UID {{ userIdDisplay }} · {{ locationDisplay || '未设置所在地' }}
+          </p>
+          <div class="completion-line">
+            <div>
+              <span>资料完整度</span>
+              <strong>{{ profileCompletion }}%</strong>
+            </div>
+            <i aria-hidden="true"><b :style="{ width: `${profileCompletion}%` }"></b></i>
+          </div>
+          <div class="invite-line">
+            <span>邀请码：<strong>{{ inviteCodeDisplay || '加载中' }}</strong></span>
+            <button type="button" class="mini-btn" :disabled="!inviteCodeDisplay" @click="onCopyInvite">复制</button>
+            <em v-if="copyFeedback" :class="{ 'is-error': copyFeedbackError }">{{ copyFeedback }}</em>
+          </div>
+          <div class="hero-actions">
+            <button type="button" class="platform-btn platform-btn-primary" @click="onOpenEdit">编辑资料</button>
+            <router-link class="platform-btn platform-btn-ghost" :to="messagesPath()">查看消息</router-link>
+            <router-link class="platform-btn platform-btn-ghost" :to="myGroupsPath()">进入我的 Space</router-link>
+          </div>
+        </div>
       </div>
-      <button type="button" class="icon-btn" aria-label="账号设置" @click="onOpenSettings">⚙</button>
+
+      <div class="metric-grid compact hero-metrics">
+        <article v-for="item in heroMetrics" :key="item.label" class="metric-card">
+          <span class="metric-label">{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.hint }}</p>
+        </article>
+      </div>
     </header>
 
-    <div class="dash-grid dash-top-grid">
-      <HeroUserCard
-        class="profile-panel"
-        :user="user"
-        :display-name="displayName"
-        :growth-title="growthLevel?.name || ''"
-        :user-id-display="userIdDisplay"
-        :location-display="locationDisplay"
-        :invite-code-display="inviteCodeDisplay"
-        :copy-feedback="copyFeedback"
-        :copy-feedback-error="copyFeedbackError"
-        :profile-light-stats="profileLightStats"
-        @edit="onOpenEdit"
-        @copy-invite="onCopyInvite"
-        @open-fellowship="onOpenFellowship"
-      />
-
-      <GrowthPanel class="growth-panel" :growth-level="growthLevel" :growth-progress="growthProgress" :compact="true" />
-
-      <section ref="tasksPanelRef" class="card top-task-card task-panel" aria-label="今日任务">
-        <div v-if="accountTasks.length" class="account-task-section" aria-label="账号成长任务">
-          <header class="panel-head sub">
-            <div>
-              <h2>账号成长任务 <span>一次性 · 经验更多</span></h2>
-            </div>
-            <p>待领取 <b>{{ accountClaimableCount }}</b></p>
-          </header>
-          <div class="top-task-list">
-            <div v-for="task in accountTasks" :key="task.code" class="top-task-row account-row" :class="{ done: task.completed }">
-              <span class="task-dot" :class="{ ok: task.completed }" aria-hidden="true">{{ task.completed ? '✓' : '' }}</span>
-              <strong>{{ task.title }}</strong>
-              <span class="exp">+{{ task.exp }} 经验</span>
-              <span class="mini-track" aria-hidden="true"><span :style="{ width: task.completed ? '100%' : '0%' }" /></span>
-              <small>{{ task.completed ? '可领' : '未完成' }}</small>
-              <button
-                v-if="task.completed"
-                type="button"
-                class="claim-task-btn"
-                :disabled="claimingAccountCode === task.code"
-                @click="$emit('claim-account-task', task.code)"
-              >
-                {{ claimingAccountCode === task.code ? '…' : '领取' }}
-              </button>
-              <router-link v-else class="go-task-link" :to="task.to">去完成</router-link>
-            </div>
-          </div>
-          <div class="task-section-divider" role="separator" />
+    <section class="dashboard-section">
+      <div class="operation-section-head">
+        <div>
+          <p class="section-kicker">Today</p>
+          <h2>今日状态</h2>
         </div>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="scrollToTasks">查看任务</button>
+      </div>
+      <div class="metric-grid today-grid">
+        <article v-for="item in todayStatusItems" :key="item.label" class="metric-card" :class="item.tone">
+          <span class="metric-label">{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.hint }}</p>
+        </article>
+      </div>
+    </section>
 
-        <header class="panel-head">
+    <div class="dashboard-main-grid">
+      <section ref="tasksPanelRef" class="section-card task-section">
+        <div class="section-card-head">
           <div>
-            <h2>今日任务 <span>每日 0 点刷新</span></h2>
+            <p class="section-kicker">Tasks</p>
+            <h3>今日待办</h3>
           </div>
-          <p>已完成 <b>{{ completedTaskCount }}</b>/<b>{{ dailyTaskTotal }}</b></p>
-        </header>
-
-        <div class="top-task-list">
-          <div v-for="task in dailyTasks" :key="task.title" class="top-task-row" :class="{ done: task.done }">
-            <span class="task-dot" :class="{ ok: task.done }" aria-hidden="true">{{ task.done ? '✓' : '' }}</span>
-            <strong>{{ task.title }}</strong>
-            <span class="exp">+{{ task.exp }} 经验</span>
-            <span class="mini-track" aria-hidden="true">
-              <span :style="{ width: taskProgress(task) }"></span>
-            </span>
-            <small>{{ task.done ? '已完成' : `${task.current}/${task.total}` }}</small>
-          </div>
+          <span class="status-badge neutral">{{ completedTaskCount }}/{{ dailyTaskTotal }} 已完成</span>
         </div>
 
-        <button type="button" class="ghost-wide-btn" @click="scrollToTasks">查看所有任务</button>
+        <div v-if="accountTasks.length" class="task-group">
+          <div class="task-group-title">
+            <strong>成长任务</strong>
+            <span class="status-badge warning">待领取 {{ accountClaimableCount }}</span>
+          </div>
+          <article v-for="task in accountTasks.slice(0, 3)" :key="task.code" class="task-row">
+            <span class="task-state" :class="{ done: task.completed }" aria-hidden="true"></span>
+            <div>
+              <strong>{{ task.title }}</strong>
+              <small>+{{ task.exp }} 经验</small>
+            </div>
+            <button
+              v-if="task.completed"
+              type="button"
+              class="platform-btn platform-btn-ghost task-action"
+              :disabled="claimingAccountCode === task.code"
+              @click="$emit('claim-account-task', task.code)"
+            >
+              {{ claimingAccountCode === task.code ? '领取中' : '领取' }}
+            </button>
+            <router-link v-else class="platform-btn platform-btn-ghost task-action" :to="task.to">去完成</router-link>
+          </article>
+        </div>
+
+        <div class="task-group">
+          <div class="task-group-title">
+            <strong>每日任务</strong>
+            <span class="status-badge info">每日刷新</span>
+          </div>
+          <article v-for="task in dailyTasks.slice(0, 4)" :key="task.title" class="task-row">
+            <span class="task-state" :class="{ done: task.done }" aria-hidden="true"></span>
+            <div>
+              <strong>{{ task.title }}</strong>
+              <small>{{ task.done ? '已完成' : `${task.current || 0}/${task.total || 1}` }} · +{{ task.exp }} 经验</small>
+            </div>
+            <router-link v-if="task.to && !task.done" class="platform-btn platform-btn-ghost task-action" :to="task.to">去完成</router-link>
+            <span v-else class="status-badge success">完成</span>
+          </article>
+          <p v-if="!dailyTasks.length" class="empty-state compact">暂无今日任务</p>
+        </div>
+      </section>
+
+      <section class="section-card assets-section">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Assets</p>
+            <h3>我的资产</h3>
+          </div>
+          <span class="status-badge neutral">Lv.{{ growthLevel?.level || 1 }}</span>
+        </div>
+        <div class="asset-grid">
+          <router-link v-for="item in assetItems" :key="item.label" class="asset-card" :to="item.to || '/'">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <em>{{ item.hint }}</em>
+          </router-link>
+        </div>
+      </section>
+
+      <section class="section-card recent-section">
+        <div class="section-card-head">
+          <div>
+            <p class="section-kicker">Recent</p>
+            <h3>最近动态</h3>
+          </div>
+          <router-link class="platform-btn platform-btn-ghost" :to="contentPath()">内容流</router-link>
+        </div>
+        <div class="recent-list">
+          <article v-for="item in recentItems" :key="item.label" class="recent-item">
+            <span class="status-badge" :class="item.tone">{{ item.label }}</span>
+            <div>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.hint }}</p>
+            </div>
+          </article>
+        </div>
       </section>
     </div>
 
-    <MyInvitePanel
-      :invite-code="inviteCodeDisplay"
-      :invite-count="inviteCount"
-    />
-
-    <div class="dash-grid dash-overview-row">
-      <StatsOverview class="overview-panel" :items="coreOverviewItems" />
-      <AchievementPanel class="achievement-panel" :items="achievementItems" />
-      <ActivityPanel class="activity-panel" :items="activityItems" />
-    </div>
-
-    <GroupPanel :group-info="groupInfo" :group-ranking="groupRanking" />
-
-    <QuickActions :items="quickActions" />
+    <section class="section-card quick-section">
+      <div class="section-card-head">
+        <div>
+          <p class="section-kicker">Shortcuts</p>
+          <h3>快捷入口</h3>
+        </div>
+      </div>
+      <div class="action-grid quick-grid">
+        <router-link
+          v-for="item in normalizedQuickActions"
+          :key="item.title"
+          class="action-card"
+          :to="item.to"
+        >
+          <div class="action-card-head">
+            <strong>{{ item.title }}</strong>
+            <span class="status-badge neutral">{{ item.tag }}</span>
+          </div>
+          <p>{{ item.desc }}</p>
+        </router-link>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import ActivityPanel from './panels/ActivityPanel.vue'
-import AchievementPanel from './panels/AchievementPanel.vue'
-import GroupPanel from './panels/GroupPanel.vue'
-import GrowthPanel from './panels/GrowthPanel.vue'
-import HeroUserCard from './panels/HeroUserCard.vue'
-import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
-import QuickActions from './panels/QuickActions.vue'
-import StatsOverview from './panels/StatsOverview.vue'
+import { toFullUrl } from '@/utils/image.js'
+import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -116,6 +189,8 @@ const props = defineProps({
   locationDisplay: { type: String, required: true },
   inviteCodeDisplay: { type: String, required: true },
   inviteCount: { type: Number, default: 0 },
+  unreadCount: { type: Number, default: 0 },
+  joinedSpaceCount: { type: Number, default: null },
   copyFeedback: { type: String, default: '' },
   copyFeedbackError: { type: Boolean, default: false },
   profileLightStats: { type: Array, required: true },
@@ -123,7 +198,6 @@ const props = defineProps({
   growthProgress: { type: String, required: true },
   completedTaskCount: { type: Number, required: true },
   dailyTasks: { type: Array, required: true },
-  /** { code, title, exp, completed, to } */
   accountTasks: { type: Array, default: () => [] },
   claimingAccountCode: { type: String, default: '' },
   overviewItems: { type: Array, required: true },
@@ -137,28 +211,103 @@ const props = defineProps({
 
 defineEmits(['claim-account-task'])
 
-const router = useRouter()
 const tasksPanelRef = ref(null)
+const { myGroupsPath, messagesPath, contentPath } = usePlatformPath()
+
 const dailyTaskTotal = computed(() => props.dailyTasks.length)
 const accountClaimableCount = computed(() => props.accountTasks.filter((t) => t.completed).length)
-const coreOverviewItems = computed(() => props.overviewItems.slice(0, 3))
+const avatarFallback = computed(() => String(props.displayName || 'U').trim().slice(0, 1).toUpperCase())
+const avatarSrc = computed(() => {
+  const raw = userAvatarUrlFromApi(props.user)
+  return raw ? toFullUrl(raw) : ''
+})
 
-const achievementItems = computed(() => [
-  { key: 'newbie', title: '新手创作者', desc: '完成首次创作', icon: '⬢', achieved: true },
-  { key: 'group-admin', title: '团体管理员', desc: '管理一个团体', icon: '⬣', achieved: true },
-  { key: 'daily-share', title: '每日心声', desc: '连续发布 7 天', icon: '⬡', achieved: false },
-  { key: 'explorer', title: '内容探索者', desc: '阅读 100 篇内容', icon: '⬟', achieved: false }
+const roleLabel = computed(() => {
+  const role = String(props.user?.role || '').toLowerCase()
+  if (role === 'admin' || role === 'super_admin' || role === 'root') return '平台管理员'
+  return '普通用户'
+})
+
+const verificationStatus = computed(() => String(props.user?.verificationStatus || 'none').toLowerCase())
+const verificationLabel = computed(() => {
+  if (verificationStatus.value === 'approved') return '账号已认证'
+  if (verificationStatus.value === 'pending') return '认证审核中'
+  if (verificationStatus.value === 'rejected') return '认证未通过'
+  return '账号未认证'
+})
+const verifyBadgeClass = computed(() => {
+  if (verificationStatus.value === 'approved') return 'success'
+  if (verificationStatus.value === 'pending') return 'warning'
+  if (verificationStatus.value === 'rejected') return 'danger'
+  return 'neutral'
+})
+
+const profileCompletion = computed(() => {
+  const checks = [
+    props.user?.username || props.user?.nickname,
+    userAvatarUrlFromApi(props.user),
+    props.user?.location,
+    props.user?.bio,
+    props.user?.phone,
+    verificationStatus.value === 'approved'
+  ]
+  const done = checks.filter(Boolean).length
+  return Math.round((done / checks.length) * 100)
+})
+
+const joinedSpaces = computed(() => {
+  if (props.joinedSpaceCount != null) return Number(props.joinedSpaceCount || 0)
+  const name = String(props.groupInfo?.name || '')
+  if (!name || name.includes('暂未') || name === '--') return 0
+  return 1
+})
+
+const heroMetrics = computed(() => [
+  { label: '资料完整度', value: `${profileCompletion.value}%`, hint: '头像、简介与认证' },
+  { label: '加入 Space', value: joinedSpaces.value, hint: '我参与的团体' },
+  { label: '未读消息', value: props.unreadCount, hint: props.unreadCount > 0 ? '需要处理' : '暂无未读' },
+  { label: '今日任务', value: `${props.completedTaskCount}/${dailyTaskTotal.value}`, hint: '每日成长任务' }
 ])
 
-const activityItems = computed(() => [
-  { key: 'a1', icon: '✦', title: '发布了 1 条每日心声', time: '2 小时前' },
-  { key: 'a2', icon: '♙', title: `加入了 ${props.groupInfo.name}`, time: '1 天前' },
-  { key: 'a3', icon: '✓', title: '完成了今日任务：发布每日心声', time: '2 天前' },
-  { key: 'a4', icon: '♡', title: '获得了 1 次点赞', time: '3 天前' }
+const todayStatusItems = computed(() => [
+  { label: '今日待办', value: Math.max(0, dailyTaskTotal.value - props.completedTaskCount), hint: '待完成任务', tone: 'warn' },
+  { label: '未读通知', value: props.unreadCount, hint: props.unreadCount > 0 ? '请及时查看' : '状态清爽', tone: props.unreadCount > 0 ? 'warn' : '' },
+  { label: '成长任务', value: accountClaimableCount.value, hint: '可领取奖励', tone: accountClaimableCount.value > 0 ? 'accent' : '' },
+  { label: '最近 Space', value: props.groupInfo?.name || '暂无', hint: props.groupInfo?.role || '最近参与', tone: '' }
 ])
 
-function onOpenFellowship() {
-  router.push('/fellowship')
+const assetItems = computed(() => {
+  const map = new Map((props.overviewItems || []).map((item) => [item.label, item]))
+  return [
+    { label: '我的 Space', value: joinedSpaces.value, hint: props.groupInfo?.name || '查看团体', to: myGroupsPath() },
+    { label: '我的内容', value: map.get('发布内容')?.value ?? 0, hint: '发布与管理', to: map.get('发布内容')?.to || contentPath() },
+    { label: '我的活动', value: map.get('活动参与')?.value ?? 0, hint: '报名与参与记录', to: map.get('活动参与')?.to || '/' },
+    { label: '收藏/记录', value: map.get('心声收藏')?.value ?? 0, hint: '收藏与点赞', to: map.get('心声收藏')?.to || contentPath() },
+    { label: '成长等级', value: `Lv.${props.growthLevel?.level || 1}`, hint: `${props.growthLevel?.currentExp || 0}/${props.growthLevel?.nextExp || 100} 经验`, to: '/' }
+  ]
+})
+
+const recentItems = computed(() => {
+  const firstTask = props.dailyTasks.find((task) => task.done) || props.dailyTasks[0]
+  const firstRank = props.groupRanking?.[0]
+  return [
+    { label: '最近发布', tone: 'info', title: `累计发布 ${assetItems.value[1].value} 条内容`, hint: '从内容中心继续管理你的表达' },
+    { label: '最近评论', tone: 'neutral', title: `互动热度 ${findOverviewValue('互动热度')}`, hint: '评论、点赞与内容互动会在这里汇总' },
+    { label: '最近打卡', tone: firstTask?.done ? 'success' : 'warning', title: firstTask ? firstTask.title : '暂无打卡记录', hint: firstTask?.done ? '今日已完成一项任务' : '今天还可以继续完成任务' },
+    { label: '最近加入', tone: 'info', title: props.groupInfo?.name || '暂无 Space', hint: firstRank ? `热门 Space：${firstRank.name}` : '去发现更多 Space' }
+  ]
+})
+
+const normalizedQuickActions = computed(() =>
+  props.quickActions.slice(0, 6).map((item) => ({
+    ...item,
+    tag: item.title.includes('设置') ? '账号' : item.title.includes('通知') ? '消息' : '入口'
+  }))
+)
+
+function findOverviewValue(label) {
+  const item = props.overviewItems.find((row) => row.label === label)
+  return item?.value ?? '--'
 }
 
 function scrollToTasks() {
@@ -167,280 +316,300 @@ function scrollToTasks() {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
-
-function taskProgress(task) {
-  if (!task?.total) return '0%'
-  return `${Math.min(100, Math.round((task.current / task.total) * 100))}%`
-}
 </script>
 
 <style scoped>
 .dash {
-  --dash-card: var(--lc-surface);
-  --dash-border: #e8ecf4;
-  --dash-soft: #f7f8fc;
-  --dash-text: var(--lc-text);
-  --dash-muted: #7b8498;
-  --dash-primary: var(--lc-violet);
-  --dash-primary-dark: var(--lc-indigo);
-  --dash-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
-  background: transparent;
-  color: var(--dash-text);
   width: min(100% - 40px, 1720px);
   margin: 0 auto;
-  padding: 0 0 24px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  padding: 0 0 var(--lc-space-6);
+  color: var(--lc-text);
 }
 
-.dash-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.dash-header h1 {
-  margin: 0;
-  font-size: 33px;
-  font-weight: 800;
-  line-height: 1.12;
-}
-
-.dash-header p {
-  margin: 6px 0 0;
-  font-size: 14px;
-  color: var(--dash-muted);
-}
-
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--dash-border);
-  background: var(--dash-card);
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--lc-muted);
-}
-
-.card {
-  background: var(--dash-card);
-  border: 1px solid var(--dash-border);
-  border-radius: 12px;
-  box-shadow: var(--dash-shadow);
-}
-
-.dash-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
+.me-hero {
   align-items: stretch;
 }
 
-.dash-top-grid {
-  grid-auto-rows: minmax(272px, auto);
+.hero-profile {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: var(--lc-space-5);
+  min-width: 0;
 }
 
-.dash-overview-row {
-  grid-auto-rows: minmax(210px, auto);
+.avatar-wrap,
+.avatar {
+  width: 92px;
+  height: 92px;
 }
 
-.profile-panel {
-  grid-column: span 5;
+.avatar {
+  display: block;
+  border: 1px solid var(--lc-border);
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.growth-panel {
-  grid-column: span 2;
-}
-
-.task-panel {
-  grid-column: span 5;
-}
-
-.overview-panel {
-  grid-column: span 3;
-}
-
-.achievement-panel {
-  grid-column: span 4;
-}
-
-.activity-panel {
-  grid-column: span 5;
-}
-
-.top-task-card {
-  display: flex;
-  flex-direction: column;
-  padding: 22px 28px 20px;
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.panel-head h2 {
-  margin: 0;
-  font-size: 16px;
+.avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
+  font-size: 30px;
   font-weight: 900;
 }
 
-.panel-head h2 span {
-  margin-left: 8px;
-  color: var(--dash-muted);
-  font-size: 12px;
-  font-weight: 600;
+.hero-main {
+  min-width: 0;
 }
 
-.panel-head p {
-  margin: 0;
-  color: var(--dash-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.panel-head b {
-  color: var(--dash-text);
-}
-
-.top-task-list {
-  display: grid;
-  flex: 1;
-  align-content: center;
-  gap: 12px;
-}
-
-.top-task-row {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 68px 88px 46px;
-  gap: 10px;
+.name-row {
+  display: flex;
   align-items: center;
-  min-height: 26px;
-  font-size: 12px;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
 }
 
-.top-task-row.account-row {
-  grid-template-columns: 22px minmax(0, 1fr) 76px 56px 44px minmax(72px, auto);
+.name-row h1 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 30px;
+  line-height: 1.15;
 }
 
-.claim-task-btn {
-  padding: 5px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--dash-primary);
-  background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-dark));
-  color: var(--dash-card);
-  font-size: 11px;
-  font-weight: 800;
+.hero-meta,
+.invite-line,
+.completion-line span,
+.completion-line strong,
+.recent-item p,
+.asset-card em,
+.task-row small,
+.action-card p {
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+}
+
+.hero-meta {
+  margin: var(--lc-space-2) 0 0;
+}
+
+.completion-line {
+  display: grid;
+  gap: var(--lc-space-2);
+  max-width: 520px;
+  margin-top: var(--lc-space-4);
+}
+
+.completion-line > div,
+.invite-line,
+.hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+}
+
+.completion-line strong {
+  color: var(--lc-text);
+  font-weight: 900;
+}
+
+.completion-line i {
+  overflow: hidden;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--lc-soft);
+}
+
+.completion-line b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lc-blue);
+}
+
+.invite-line {
+  margin-top: var(--lc-space-3);
+}
+
+.invite-line strong {
+  color: var(--lc-text);
+}
+
+.invite-line em {
+  color: var(--lc-green);
+  font-size: var(--lc-text-xs);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.invite-line em.is-error {
+  color: var(--lc-red);
+}
+
+.mini-btn {
+  min-height: 28px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-blue);
+  background: var(--lc-surface);
+  font-weight: 900;
   cursor: pointer;
 }
 
-.claim-task-btn:disabled {
-  opacity: 0.55;
+.mini-btn:disabled {
   cursor: not-allowed;
+  opacity: .55;
 }
 
-.go-task-link {
-  justify-self: end;
-  padding: 5px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--dash-border);
-  background: var(--dash-soft);
-  color: var(--dash-primary-dark);
-  font-size: 11px;
-  font-weight: 800;
-  text-decoration: none;
-  text-align: center;
+.hero-actions {
+  margin-top: var(--lc-space-4);
 }
 
-.task-section-divider {
-  height: 1px;
-  margin: 14px 0 6px;
-  background: linear-gradient(90deg, transparent, var(--dash-border), transparent);
+.hero-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
 }
 
-.panel-head.sub h2 {
-  font-size: 15px;
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: var(--lc-space-4);
 }
 
-.panel-head.sub h2 span {
-  font-size: 11px;
+.recent-section {
+  grid-column: 1 / -1;
 }
 
-.top-task-row strong {
+.task-section,
+.assets-section,
+.recent-section,
+.quick-section {
+  display: grid;
+  gap: var(--lc-space-4);
+}
+
+.task-group {
+  display: grid;
+  gap: var(--lc-space-3);
+}
+
+.task-group-title,
+.task-row,
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lc-space-3);
+}
+
+.task-group-title {
+  justify-content: space-between;
+}
+
+.task-row {
+  min-width: 0;
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-soft);
+}
+
+.task-row > div {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.task-row strong,
+.recent-item strong,
+.action-card strong,
+.asset-card strong {
   min-width: 0;
   overflow: hidden;
-  color: var(--dash-text);
-  font-weight: 700;
+  color: var(--lc-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.top-task-row.done strong {
-  color: var(--lc-subtle);
+.task-state {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--lc-border);
+  border-radius: 999px;
+  background: var(--lc-surface);
 }
 
-.task-dot {
+.task-state.done {
+  border-color: var(--lc-green);
+  background: var(--lc-green);
+}
+
+.task-action {
+  flex: 0 0 auto;
+}
+
+.asset-grid {
   display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid #cfd6e3;
-  border-radius: 50%;
-  color: var(--dash-card);
-  font-size: 11px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lc-space-3);
+}
+
+.asset-card,
+.recent-item {
+  min-width: 0;
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  background: var(--lc-soft);
+  text-decoration: none;
+}
+
+.asset-card {
+  display: grid;
+  gap: var(--lc-space-1);
+}
+
+.asset-card span {
+  color: var(--lc-muted);
+  font-size: var(--lc-text-xs);
   font-weight: 900;
 }
 
-.task-dot.ok {
-  border-color: var(--dash-primary);
-  background: var(--dash-primary);
+.asset-card strong {
+  font-size: 24px;
+  line-height: 1;
 }
 
-.exp,
-.top-task-row small {
-  color: var(--dash-muted);
-  font-size: 11px;
-  white-space: nowrap;
+.recent-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lc-space-3);
 }
 
-.mini-track {
-  overflow: hidden;
-  height: 6px;
-  border-radius: 999px;
-  background: #e7eaf1;
-}
-
-.mini-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-dark));
-}
-
-.ghost-wide-btn {
-  width: 100%;
-  height: 38px;
-  margin-top: 18px;
-  border: 1px solid var(--dash-border);
-  border-radius: 10px;
-  color: var(--lc-muted);
-  background: var(--dash-card);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.dash-top-grid > *,
-.dash-overview-row > * {
+.recent-item > div {
   min-width: 0;
-  height: 100%;
+}
+
+.recent-item p,
+.action-card p {
+  margin: 4px 0 0;
+}
+
+.quick-grid {
+  margin-top: 0;
+}
+
+.action-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+.empty-state.compact {
+  min-height: 88px;
+  margin: 0;
 }
 
 @media (max-width: 1180px) {
@@ -448,17 +617,14 @@ function taskProgress(task) {
     width: min(100% - 24px, 1180px);
   }
 
-  .dash-grid {
+  .me-hero,
+  .dashboard-main-grid,
+  .recent-list {
     grid-template-columns: 1fr;
   }
 
-  .profile-panel,
-  .overview-panel,
-  .growth-panel,
-  .achievement-panel,
-  .task-panel,
-  .activity-panel {
-    grid-column: auto;
+  .asset-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

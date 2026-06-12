@@ -7,6 +7,8 @@
       :location-display="locationDisplay"
       :invite-code-display="inviteCodeDisplay"
       :invite-count="inviteCount"
+      :unread-count="unreadCount"
+      :joined-space-count="1"
       :copy-feedback="copyFeedback"
       :copy-feedback-error="copyFeedbackError"
       :profile-light-stats="profileLightStats"

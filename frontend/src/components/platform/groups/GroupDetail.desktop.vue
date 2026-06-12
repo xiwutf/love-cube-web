@@ -9,32 +9,40 @@
     </div>
 
     <template v-else-if="group">
-      <section class="hero-card">
-        <div class="hero-cover" :style="{ backgroundImage: `url(${heroImage})` }"></div>
-        <div class="hero-body">
-          <img class="group-avatar" :src="heroImage" :alt="group.name">
-          <div class="hero-main">
-            <div class="title-row">
+      <section class="hero-card group-detail-hero operation-hero">
+        <div class="hero-main">
+          <p class="section-kicker">Space Overview</p>
+          <div class="title-row">
+            <img class="group-avatar" :src="heroImage" :alt="group.name">
+            <div>
               <h1>{{ group.name }}</h1>
-              <span>{{ group.category }}</span>
+              <div class="hero-badges">
+                <span class="status-badge neutral">{{ group.category }}</span>
+                <span class="status-badge info">{{ activeStateLabel }}</span>
+                <span class="status-badge" :class="myRoleBadge.tone">{{ myRoleBadge.label }}</span>
+                <span class="status-badge neutral">{{ group.joinLabel }}</span>
+              </div>
             </div>
-            <p class="meta-line">
-              {{ group.region }} · {{ group.memberCount }} 人
-              <template v-if="group.postCount != null"> · {{ group.postCount }} 条动态</template>
-              · {{ group.joinLabel }}
-            </p>
-            <p class="group-desc">{{ group.description }}</p>
           </div>
+          <p class="meta-line">{{ group.region }} · {{ group.memberCount }} 人<template v-if="group.postCount != null"> · {{ group.postCount }} 条动态</template></p>
+          <p class="group-desc">{{ group.description }}</p>
           <div class="hero-actions">
-            <button type="button" class="join-btn" :disabled="joinDisabled || joining" @click="applyJoin">
+            <button type="button" class="platform-btn platform-btn-primary join-btn" :disabled="joinDisabled || joining" @click="applyJoin">
               {{ joining ? '处理中...' : joinButtonText }}
             </button>
             <router-link
               v-if="showSpaceManageLink"
-              class="manage-link"
+              class="platform-btn platform-btn-ghost manage-link"
               :to="spaceManageEntry"
             >进入运营台</router-link>
           </div>
+        </div>
+        <div class="metric-grid compact detail-hero-metrics">
+          <article v-for="item in detailStats" :key="item.label" class="metric-card">
+            <span class="metric-label">{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <p>{{ item.hint }}</p>
+          </article>
         </div>
       </section>
 
@@ -74,6 +82,14 @@
           {{ tab.label }}
         </router-link>
       </nav>
+
+      <section class="detail-section-strip section-card" aria-label="Space 内容概览">
+        <router-link v-for="item in detailSections" :key="item.key" :to="item.to" class="detail-section-item">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <em>{{ item.hint }}</em>
+        </router-link>
+      </section>
 
       <section
         v-if="userStore.isLoggedIn && group.isMember"
@@ -408,12 +424,12 @@
                 <div class="member-main">
                   <div class="member-name-row">
                     <strong>{{ member.name }}</strong>
-                    <span class="role-pill">{{ member.roleLabel }}</span>
+                    <span class="status-badge neutral">{{ member.roleLabel }}</span>
                   </div>
                   <span>{{ member.joinedAt || '未记录加入时间' }}</span>
                   <p v-if="member.status === 'pending' && member.applyReason">申请说明：{{ member.applyReason }}</p>
                 </div>
-                <b :class="member.status">{{ member.statusLabel }}</b>
+                <span class="status-badge" :class="memberStatusBadgeClass(member)">{{ member.statusLabel }}</span>
                 <div class="member-actions-wrap">
                   <div v-if="canAuditMember(member)" class="member-actions">
                     <button type="button" :disabled="moderatingMemberId === member.id" @click="approvePendingMember(member)">通过</button>
@@ -1292,6 +1308,33 @@ const joinModeKey = computed(() => {
 const inviteCodeFromQuery = computed(() => String(route.query.invite || '').trim().toUpperCase())
 
 const pendingMemberCount = computed(() => Number(group.value?.pendingMemberCount || 0))
+const myRoleBadge = computed(() => {
+  const g = group.value
+  if (!userStore.isLoggedIn) return { label: '未登录', tone: 'neutral' }
+  if (g?.isOwner) return { label: 'Owner', tone: 'info' }
+  if (g?.managed || g?.canReviewJoins) return { label: '管理员', tone: 'info' }
+  if (g?.isMember) return { label: '已加入', tone: 'success' }
+  if (g?.hasPendingRequest) return { label: '待审核', tone: 'warning' }
+  return { label: '可申请', tone: 'info' }
+})
+const activeStateLabel = computed(() => {
+  if (posts.value.length || Number(group.value?.postCount || 0) > 0) return '近期活跃'
+  if (notices.value.length || activities.value.length) return '运营中'
+  return '等待更新'
+})
+const detailStats = computed(() => [
+  { label: '成员数', value: group.value?.memberCount ?? members.value.length, hint: 'Space 成员规模' },
+  { label: '内容流', value: group.value?.postCount ?? posts.value.length, hint: '动态与讨论' },
+  { label: '活动', value: activities.value.length, hint: '近期活动安排' },
+  { label: '待处理', value: pendingMemberCount.value + claimableCount.value, hint: '审核与任务提醒' }
+])
+const detailSections = computed(() => [
+  { key: 'notices', label: '公告', value: notices.value.length, hint: latestNotice.value ? '有最新公告' : '暂无公告', to: groupTabPath('notices') },
+  { key: 'activities', label: '活动', value: activities.value.length, hint: upcomingActivities.value.length ? '有进行中活动' : '查看活动', to: groupTabPath('activities') },
+  { key: 'members', label: '成员动态', value: members.value.length, hint: pendingMemberCount.value ? '有待审核成员' : '成员列表', to: groupTabPath('members') },
+  { key: 'tasks', label: '打卡/任务', value: todayTasks.value.length, hint: claimableCount.value ? '有奖励待领取' : '今日任务', to: groupTabPath('tasks') },
+  { key: 'posts', label: '内容流', value: posts.value.length, hint: posts.value.length ? '最近讨论' : '暂无动态', to: groupTabPath('posts') }
+])
 
 const joinDisabled = computed(() => {
   if (!group.value) return true
@@ -2318,6 +2361,14 @@ function memberStatusSlug(status) {
   return String(status ?? '').trim().toLowerCase()
 }
 
+function memberStatusBadgeClass(member) {
+  const status = memberStatusSlug(member?.status)
+  if (status === 'approved') return 'success'
+  if (status === 'pending') return 'warning'
+  if (status === 'left') return 'neutral'
+  return 'info'
+}
+
 /** 仅「团体成员表中 role=owner」且与后端 owner_user_id（缺省则 created_by）一致时可调角色 PATCH，对齐接口权限。 */
 function isCurrentUserGroupOwnerAligned() {
   if (!group.value || !userStore.isLoggedIn) return false
@@ -2705,6 +2756,11 @@ onMounted(async () => {
   border-radius: var(--lc-radius);
 }
 
+.group-detail-hero {
+  overflow: visible;
+  align-items: stretch;
+}
+
 .hero-cover {
   height: 220px;
   background-size: cover;
@@ -2728,8 +2784,17 @@ onMounted(async () => {
   box-shadow: var(--lc-shadow);
 }
 
+.group-detail-hero .group-avatar {
+  width: 72px;
+  height: 72px;
+  margin-top: 0;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  box-shadow: none;
+}
+
 .hero-main {
-  padding-top: var(--lc-space-4);
+  padding-top: 0;
 }
 
 .title-row {
@@ -2746,7 +2811,21 @@ onMounted(async () => {
   line-height: 1.15;
 }
 
-.title-row span,
+.hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  margin-top: var(--lc-space-2);
+}
+
+.detail-hero-metrics {
+  margin-top: 0;
+}
+
+.detail-hero-metrics .metric-card {
+  min-height: 104px;
+}
+
 .post-head em,
 .member-item em,
 .member-item b {
@@ -2797,7 +2876,6 @@ onMounted(async () => {
   font-size: var(--lc-text-sm);
 }
 
-.join-btn,
 .icon-btn {
   border: 1px solid var(--lc-border);
   color: var(--lc-muted);
@@ -2819,13 +2897,6 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 0 var(--lc-space-4);
-  border-radius: var(--lc-radius-xs);
-  border: 1px solid var(--lc-blue-border);
-  color: var(--lc-blue);
-  background: var(--lc-surface);
-  font-weight: 900;
   text-decoration: none;
 }
 
@@ -2889,6 +2960,38 @@ onMounted(async () => {
   height: 3px;
   border-radius: 999px;
   background: var(--lc-blue);
+}
+
+.detail-section-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--lc-space-3);
+  margin-top: var(--lc-space-4);
+}
+
+.detail-section-item {
+  display: grid;
+  gap: var(--lc-space-1);
+  min-width: 0;
+  padding: var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-muted);
+  background: var(--lc-soft);
+  text-decoration: none;
+  font-weight: 900;
+}
+
+.detail-section-item strong {
+  color: var(--lc-text);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.detail-section-item em {
+  color: var(--lc-subtle);
+  font-size: var(--lc-text-xs);
+  font-style: normal;
 }
 
 .member-display-name-panel {

@@ -1,11 +1,16 @@
 ﻿<template>
-  <article ref="cardEl" class="card" :class="{ 'no-cover': !item.cover }">
-    <img v-if="item.cover" :src="item.cover" alt="">
+  <article ref="cardEl" class="content-card section-card" :class="{ 'no-cover': !item.cover }">
+    <img v-if="item.cover" class="cover" :src="item.cover" alt="">
     <div class="body">
-      <p v-if="item.pinned" class="pinned">置顶</p>
+      <div class="card-head">
+        <div class="badges">
+          <span class="status-badge" :class="item.pinned ? 'warning' : 'info'">{{ item.pinned ? '官方推荐' : displayType }}</span>
+          <span v-if="displayCategory" class="status-badge neutral">{{ displayCategory }}</span>
+        </div>
+        <span class="status-badge success">已发布</span>
+      </div>
       <h4>{{ item.title }}</h4>
-      <p>{{ item.summary }}</p>
-      <div v-if="displayCategory" class="category">{{ displayCategory }}</div>
+      <p class="summary">{{ item.summary || '暂无摘要' }}</p>
       <small class="meta">
         <span class="author">
           <img v-if="item.avatar" :src="item.avatar" alt="" class="meta-avatar">
@@ -15,13 +20,14 @@
         <span>·</span>
         <span>{{ item.createdAt }}</span>
         <span>·</span>
-        <span>👍 {{ item.likeCount }}</span>
+        <span>阅读 {{ readCount }}</span>
         <span>·</span>
-        <span>💬 {{ item.commentCount }}</span>
+        <span>互动 {{ interactionCount }}</span>
       </small>
       <div class="actions">
-        <button type="button" class="action-btn" @click="$emit('like')">点赞</button>
-        <button type="button" class="action-btn" @click="$emit('comment')">评论</button>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="$emit('view')">查看</button>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="$emit('like')">收藏</button>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="$emit('share')">分享</button>
       </div>
     </div>
   </article>
@@ -32,7 +38,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { recordGrowthAction } from '@/api/growth.js'
 
 const props = defineProps({ item: Object })
-defineEmits(['like', 'comment'])
+defineEmits(['like', 'comment', 'view', 'share'])
 
 const cardEl = ref(null)
 let observer = null
@@ -53,6 +59,17 @@ onMounted(() => {
 onBeforeUnmount(() => { if (observer) { observer.disconnect(); observer = null } })
 
 const authorInitial = computed(() => String(props.item?.authorName || '用户').slice(0, 1))
+const interactionCount = computed(() => Number(props.item?.likeCount || 0) + Number(props.item?.commentCount || 0))
+const readCount = computed(() => Number(props.item?.readCount || props.item?.viewCount || props.item?.heat || interactionCount.value || 0))
+const displayType = computed(() => {
+  if (props.item?.type === 'local') return '本地资源'
+  if (props.item?.type === 'mood') return '每日心声'
+  if (props.item?.type === 'event') return '活动'
+  if (props.item?.type === 'dynamic') return '动态'
+  if (props.item?.type === 'ai') return 'AI'
+  if (props.item?.type === 'guide') return '攻略'
+  return '内容'
+})
 const displayCategory = computed(() => {
   const tags = Array.isArray(props.item?.tags) ? props.item.tags : []
   if (tags.length > 0 && tags[0]) return tags[0]
@@ -62,18 +79,23 @@ const displayCategory = computed(() => {
 </script>
 
 <style scoped>
-.card{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:12px;background:var(--lc-surface);border:1px solid var(--lc-border);border-radius:12px}
-.card.no-cover{grid-template-columns:1fr}
-img{width:96px;height:72px;object-fit:cover;border-radius:8px}
-h4{margin:0;font-size:15px}
-p{margin:4px 0;color:var(--lc-muted);font-size:13px}
-.pinned{margin:0;color:var(--lc-red);font-size:12px}
-.category{display:inline-flex;align-items:center;height:24px;padding:0 10px;border:1px solid var(--lc-blue);border-radius:12px;background:var(--lc-blue-light);color:var(--lc-blue);font-size:12px;margin:4px 0}
-.meta{display:flex;align-items:center;gap:6px;color:var(--lc-subtle);flex-wrap:wrap}
+.content-card{display:grid;grid-template-columns:112px minmax(0,1fr);gap:var(--lc-space-4);padding:var(--lc-space-4);box-shadow:none}
+.content-card.no-cover{grid-template-columns:1fr}
+.cover{width:112px;height:92px;object-fit:cover;border-radius:var(--lc-radius-xs)}
+.body{min-width:0;display:grid;gap:var(--lc-space-2)}
+.card-head,.badges,.meta,.actions{display:flex;align-items:center;gap:var(--lc-space-2);flex-wrap:wrap}
+.card-head{justify-content:space-between}
+h4{margin:0;color:var(--lc-text);font-size:var(--lc-text-lg);line-height:1.35}
+.summary{margin:0;color:var(--lc-muted);font-size:var(--lc-text-sm);line-height:1.6}
+.meta{color:var(--lc-subtle);font-size:var(--lc-text-xs)}
 .author{display:inline-flex;align-items:center;gap:6px}
 .meta-avatar,.meta-avatar-fallback{width:18px;height:18px;flex:0 0 18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
 .meta-avatar{object-fit:cover}
 .meta-avatar-fallback{background:var(--lc-border);color:var(--lc-muted);font-size:11px}
-.actions{display:flex;gap:8px;margin-top:8px}
-.action-btn{height:28px;padding:0 10px;border:1px solid var(--lc-border);border-radius:14px;background:var(--lc-surface);color:var(--lc-muted);font-size:12px}
+.actions{justify-content:flex-end;margin-top:var(--lc-space-1)}
+@media (max-width: 520px){
+  .content-card{grid-template-columns:1fr}
+  .cover{width:100%;height:150px}
+  .actions{justify-content:flex-start}
+}
 </style>

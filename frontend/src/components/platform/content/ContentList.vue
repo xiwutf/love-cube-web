@@ -6,6 +6,8 @@
       :item="item"
       @like="$emit('like', item)"
       @comment="$emit('comment', item)"
+      @view="$emit('view', item)"
+      @share="$emit('share', item)"
     />
   </section>
 </template>
@@ -14,9 +16,9 @@
 import ContentCard from './ContentCard.vue'
 
 defineProps({ items: Array })
-defineEmits(['like', 'comment'])
+defineEmits(['like', 'comment', 'view', 'share'])
 </script>
 
 <style scoped>
-.list{display:grid;gap:10px}
+.list{display:grid;gap:var(--lc-space-3)}
 </style>

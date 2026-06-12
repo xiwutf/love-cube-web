@@ -1,5 +1,5 @@
 <template>
-  <section class="editor-card">
+  <section class="editor-card reflection-editor">
     <h2 class="editor-title">写下你的今日心声</h2>
 
     <div class="textarea-wrap">
@@ -41,7 +41,7 @@
 
     <p v-if="message" :class="['feedback', { error }]">{{ message }}</p>
 
-    <button class="submit-btn" type="button" :disabled="submitting" @click="handleSubmit">
+    <button class="platform-btn platform-btn-primary submit-btn" type="button" :disabled="submitting" @click="handleSubmit">
       <span class="submit-icon" aria-hidden="true">✈</span>
       {{ submitting ? '发布中...' : '发布心声' }}
     </button>
@@ -117,10 +117,10 @@ async function handleSubmit() {
 
 <style scoped>
 .editor-card {
-  border: 1px solid #f0ebe5;
-  border-radius: 16px;
+  border: 1px solid var(--lc-border);
+  border-radius: 12px;
   background: var(--lc-surface);
-  padding: 20px 22px;
+  padding: 18px;
 }
 
 .editor-title {
@@ -137,7 +137,7 @@ async function handleSubmit() {
 .editor-textarea {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #e5e0da;
+  border: 1px solid var(--lc-border);
   border-radius: 10px;
   padding: 12px 14px 28px;
   font: inherit;
@@ -146,12 +146,12 @@ async function handleSubmit() {
   resize: none;
   line-height: 1.7;
   transition: border-color 0.15s;
-  background: #fdfcfb;
+  background: var(--lc-bg);
 }
 
 .editor-textarea:focus {
   outline: none;
-  border-color: var(--lc-orange);
+  border-color: var(--lc-blue);
   background: var(--lc-surface);
 }
 
@@ -190,9 +190,9 @@ async function handleSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid #e5e0da;
+  border: 1px solid var(--lc-border);
   border-radius: 999px;
-  background: #fafaf9;
+  background: var(--lc-surface);
   color: var(--lc-muted-light);
   height: 28px;
   padding: 0 11px;
@@ -204,8 +204,8 @@ async function handleSubmit() {
 }
 
 .chip:hover {
-  border-color: #d0c8c0;
-  background: #f5f0eb;
+  border-color: var(--lc-blue-border);
+  background: var(--lc-blue-light);
   color: var(--lc-slate);
 }
 
@@ -240,7 +240,7 @@ async function handleSubmit() {
 }
 
 .toggle-track.on {
-  background: var(--lc-orange);
+  background: var(--lc-blue);
 }
 
 .toggle-thumb {
@@ -283,20 +283,9 @@ async function handleSubmit() {
 
 .submit-btn {
   margin-top: 14px;
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
   height: 40px;
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--lc-orange), var(--lc-orange));
-  color: var(--lc-surface);
-  font-size: 14px;
-  font-weight: 700;
   padding: 0 22px;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
 }
 
 .submit-btn:hover {

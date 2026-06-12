@@ -1,11 +1,127 @@
-﻿<template>
-  <main class="page">
-    <header class="search"><input v-model.trim="keyword" placeholder="搜索内容、活动、攻略"></header>
-    <ContentTabs v-model="activeType" :tabs="contentTypes" />
-    <ContentFilterBar v-model="activeSort" :sorts="PLATFORM_SORTS" />
-    <ContentList v-if="filtered.length" :items="filtered" @like="handleLike" @comment="handleComment" />
-    <ContentEmpty v-else @publish="goPublish" />
-    <button class="fab" type="button" @click="goPublish">发布</button>
+<template>
+  <main class="content-hub operation-shell">
+    <header class="hub-hero operation-hero">
+      <div class="hero-copy">
+        <p class="section-kicker">Content Hub</p>
+        <h1>内容中心</h1>
+        <p>聚合平台公告、文章、活动、本地资源与每日心声，快速发现值得继续阅读和参与的内容。</p>
+        <div class="filter-summary">
+          <span class="status-badge info">{{ activeTypeLabel }}</span>
+          <span class="status-badge neutral">{{ activeSortLabel }}</span>
+          <span class="status-badge neutral">{{ activeTimeLabel }}</span>
+          <span v-if="keyword" class="status-badge warning">搜索：{{ keyword }}</span>
+        </div>
+      </div>
+      <div class="metric-grid compact hero-metrics">
+        <article v-for="item in hubMetrics" :key="item.label" class="metric-card">
+          <span class="metric-label">{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+          <p>{{ item.hint }}</p>
+        </article>
+      </div>
+    </header>
+
+    <section class="filter-panel section-card" aria-label="内容筛选">
+      <div class="section-card-head">
+        <h3>筛选内容</h3>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="resetFilters">重置</button>
+      </div>
+      <div class="filter-grid">
+        <label class="search">
+          <span>搜索</span>
+          <input v-model.trim="keyword" placeholder="搜索标题、摘要、作者">
+        </label>
+        <label>
+          <span>分类</span>
+          <select v-model="activeCategory">
+            <option value="all">全部分类</option>
+            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
+          </select>
+        </label>
+        <label>
+          <span>时间</span>
+          <select v-model="activeTime">
+            <option value="all">全部时间</option>
+            <option value="week">本周</option>
+            <option value="month">本月</option>
+          </select>
+        </label>
+      </div>
+      <div class="tab-row">
+        <span>内容类型</span>
+        <ContentTabs v-model="activeType" :tabs="contentTypes" />
+      </div>
+      <div class="tab-row">
+        <span>排序</span>
+        <ContentFilterBar v-model="activeSort" :sorts="PLATFORM_SORTS" />
+      </div>
+    </section>
+
+    <section class="dashboard-section recommend-section">
+      <div class="operation-section-head">
+        <div>
+          <p class="section-kicker">Recommended</p>
+          <h2>推荐内容</h2>
+        </div>
+        <button type="button" class="platform-btn platform-btn-primary" @click="goPublish">发布内容</button>
+      </div>
+      <div v-if="loading" class="loading-state">内容加载中...</div>
+      <div v-else-if="loadError" class="error-state">
+        <h3>内容加载失败</h3>
+        <p>{{ loadError }}</p>
+        <button type="button" class="platform-btn platform-btn-ghost" @click="loadContent">重试</button>
+      </div>
+      <div v-else class="recommend-grid">
+        <article v-for="item in recommendedItems" :key="item.id" class="section-card recommend-card">
+          <span class="status-badge" :class="item.pinned ? 'warning' : 'info'">{{ item.pinned ? '官方推荐' : typeLabel(item.type) }}</span>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.summary || '暂无摘要' }}</p>
+          <div class="recommend-meta">
+            <span>{{ item.authorName }}</span>
+            <span>{{ item.createdAt || '未记录时间' }}</span>
+            <span>{{ interactionCount(item) }} 互动</span>
+          </div>
+        </article>
+        <p v-if="!recommendedItems.length" class="empty-state compact">暂无推荐内容</p>
+      </div>
+    </section>
+
+    <section class="content-layout">
+      <section class="dashboard-section list-section">
+        <div class="operation-section-head">
+          <div>
+            <p class="section-kicker">Resources</p>
+            <h2>内容列表</h2>
+          </div>
+          <span class="status-badge neutral">当前 {{ filtered.length }} 条</span>
+        </div>
+        <div v-if="loading" class="loading-state">内容加载中...</div>
+        <div v-else-if="loadError" class="error-state">{{ loadError }}</div>
+        <ContentList
+          v-else-if="filtered.length"
+          :items="filtered"
+          @like="handleLike"
+          @comment="handleComment"
+          @view="handleView"
+          @share="handleShare"
+        />
+        <ContentEmpty v-else @publish="goPublish" />
+      </section>
+
+      <aside class="section-card recent-panel">
+        <div class="section-card-head">
+          <h3>最近阅读</h3>
+          <span class="status-badge neutral">{{ recentReading.length }} 条</span>
+        </div>
+        <div v-if="recentReading.length" class="recent-list">
+          <button v-for="item in recentReading" :key="item.id" type="button" class="recent-item" @click="handleView(item)">
+            <strong>{{ item.title }}</strong>
+            <span>{{ typeLabel(item.type) }} · {{ item.createdAt || '最近' }}</span>
+          </button>
+        </div>
+        <p v-else class="empty-state compact">阅读内容后会在这里留下记录</p>
+      </aside>
+    </section>
   </main>
 </template>
 
@@ -37,18 +153,50 @@ const router = useRouter()
 const keyword = ref('')
 const activeType = ref('local')
 const activeSort = ref('latest')
+const activeCategory = ref('all')
+const activeTime = ref('all')
 const contentList = ref([])
+const loading = ref(false)
+const loadError = ref('')
+const recentReading = ref([])
 const contentTypes = [{ key: 'local', label: '本地资源' }, ...PLATFORM_CONTENT_TYPES]
+const timeFilters = [
+  { key: 'all', label: '全部时间' },
+  { key: 'week', label: '本周' },
+  { key: 'month', label: '本月' }
+]
 
 watch(() => route.query.type, (type) => {
   if (typeof type === 'string' && contentTypes.some(item => item.key === type)) activeType.value = type
 }, { immediate: true })
 
+const categoryOptions = computed(() => {
+  const set = new Set()
+  contentList.value.forEach((item) => {
+    const tags = Array.isArray(item.tags) ? item.tags : []
+    tags.forEach((tag) => { if (tag) set.add(tag) })
+    const fallback = typeLabel(item.type)
+    if (fallback) set.add(fallback)
+  })
+  return [...set].slice(0, 12)
+})
+
 const filtered = computed(() => {
   let list = contentList.value.filter(item => activeType.value === 'all' || item.type === activeType.value)
+  if (activeCategory.value !== 'all') {
+    list = list.filter((item) => {
+      const tags = Array.isArray(item.tags) ? item.tags : []
+      return tags.includes(activeCategory.value) || typeLabel(item.type) === activeCategory.value
+    })
+  }
+  if (activeTime.value !== 'all') list = list.filter(item => isWithinTimeFilter(item.createdAt, activeTime.value))
   if (keyword.value) {
     const q = keyword.value.toLowerCase()
-    list = list.filter(item => item.title.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q))
+    list = list.filter(item =>
+      item.title.toLowerCase().includes(q) ||
+      item.summary.toLowerCase().includes(q) ||
+      String(item.authorName || '').toLowerCase().includes(q)
+    )
   }
   if (activeSort.value === 'hot') list = [...list].sort((a,b)=>(b.likeCount+b.commentCount)-(a.likeCount+a.commentCount))
   if (activeSort.value === 'recommend') list = [...list].sort((a,b)=>Number(b.pinned)-Number(a.pinned))
@@ -56,7 +204,61 @@ const filtered = computed(() => {
   return list
 })
 
+const recommendedItems = computed(() => {
+  const pinned = contentList.value.filter(item => item.pinned)
+  const hot = [...contentList.value].sort((a, b) => interactionCount(b) - interactionCount(a))
+  const latest = [...contentList.value].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+  const seen = new Set()
+  return [...pinned, ...hot, ...latest].filter((item) => {
+    if (seen.has(item.id)) return false
+    seen.add(item.id)
+    return true
+  }).slice(0, 3)
+})
+
+const latestUpdatedLabel = computed(() => {
+  const latest = [...contentList.value].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0]
+  return latest?.createdAt || '--'
+})
+
+const hubMetrics = computed(() => [
+  { label: '内容总量', value: contentList.value.length, hint: '平台聚合内容' },
+  { label: '本周新增', value: contentList.value.filter(item => isWithinTimeFilter(item.createdAt, 'week')).length, hint: '7 天内更新' },
+  { label: '推荐内容', value: recommendedItems.value.length, hint: '官方推荐与热门' },
+  { label: '最近更新', value: latestUpdatedLabel.value, hint: '最新发布时间' }
+])
+
+const activeTypeLabel = computed(() => `类型：${contentTypes.find(item => item.key === activeType.value)?.label || '全部'}`)
+const activeSortLabel = computed(() => `排序：${PLATFORM_SORTS.find(item => item.key === activeSort.value)?.label || '最新'}`)
+const activeTimeLabel = computed(() => `时间：${timeFilters.find(item => item.key === activeTime.value)?.label || '全部时间'}`)
+
 function goPublish(){ router.push('/platform/positive-share') }
+
+function resetFilters() {
+  keyword.value = ''
+  activeType.value = 'all'
+  activeSort.value = 'latest'
+  activeCategory.value = 'all'
+  activeTime.value = 'all'
+}
+
+function typeLabel(type) {
+  return contentTypes.find(item => item.key === type)?.label || '内容'
+}
+
+function interactionCount(item) {
+  return Number(item?.likeCount || 0) + Number(item?.commentCount || 0)
+}
+
+function isWithinTimeFilter(raw, type) {
+  if (type === 'all') return true
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return false
+  const diff = Date.now() - date.getTime()
+  if (type === 'week') return diff <= 7 * 86400000
+  if (type === 'month') return diff <= 31 * 86400000
+  return true
+}
 
 function unwrapList(res) {
   if (Array.isArray(res)) return res
@@ -245,7 +447,52 @@ async function handleComment(item) {
   }
 }
 
-onMounted(async () => {
+function readRecentReading() {
+  try {
+    const raw = window.localStorage?.getItem('platform-content-recent')
+    const rows = raw ? JSON.parse(raw) : []
+    recentReading.value = Array.isArray(rows) ? rows.slice(0, 5) : []
+  } catch {
+    recentReading.value = []
+  }
+}
+
+function rememberReading(item) {
+  if (!item?.id) return
+  const next = [
+    {
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      createdAt: item.createdAt
+    },
+    ...recentReading.value.filter(row => row.id !== item.id)
+  ].slice(0, 5)
+  recentReading.value = next
+  try {
+    window.localStorage?.setItem('platform-content-recent', JSON.stringify(next))
+  } catch {
+    // local history is best effort
+  }
+}
+
+function handleView(item) {
+  rememberReading(item)
+}
+
+async function handleShare(item) {
+  rememberReading(item)
+  const url = `${window.location.origin}${window.location.pathname}${window.location.hash || '#/platform/content'}?content=${item.id}`
+  try {
+    await navigator?.clipboard?.writeText(url)
+  } catch {
+    window.prompt('复制分享链接', url)
+  }
+}
+
+async function loadContent() {
+  loading.value = true
+  loadError.value = ''
   try {
     const [localRaw, raw] = await Promise.all([
       getLocalResources({ type: 'all' }).catch(() => []),
@@ -255,17 +502,220 @@ onMounted(async () => {
     const body = unwrapContentFeedBody(raw)
     if (body) {
       contentList.value = [...localItems, ...mergeNormalizedFromFeedBody(body)]
+      loading.value = false
       return
     }
-  } catch {
+  } catch (error) {
+    loadError.value = error?.message || ''
     // 未部署 content-feed 或网络错误：回退四条接口（与改聚合接口前行为一致）
   }
-  contentList.value = await loadContentListLegacy()
+  try {
+    contentList.value = await loadContentListLegacy()
+  } catch (error) {
+    loadError.value = error?.message || '无法加载内容'
+    contentList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  readRecentReading()
+  await loadContent()
 })
 </script>
 
 <style scoped>
-.page{width:min(100% - 24px,560px);margin:16px auto;display:grid;gap:12px;padding-bottom:calc(92px + env(safe-area-inset-bottom));}
-.search input{width:100%;height:40px;border:1px solid var(--lc-border);border-radius:10px;padding:0 12px;background:var(--lc-surface)}
-.fab{position:fixed;right:16px;bottom:calc(74px + env(safe-area-inset-bottom));height:44px;padding:0 16px;border:0;border-radius:22px;background:var(--lc-blue);color:var(--lc-surface);font-weight:700;box-shadow:var(--lc-shadow-blue);}
+.content-hub {
+  width: min(100% - 32px, 1320px);
+  margin: var(--lc-space-4) auto;
+  padding-bottom: calc(var(--lc-space-8) + env(safe-area-inset-bottom));
+}
+
+.hub-hero {
+  align-items: stretch;
+}
+
+.hero-copy h1 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.hero-copy p:not(.section-kicker) {
+  max-width: 620px;
+  margin: var(--lc-space-2) 0 0;
+  color: var(--lc-muted);
+  line-height: 1.7;
+}
+
+.filter-summary,
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lc-space-2);
+}
+
+.filter-summary {
+  margin-top: var(--lc-space-4);
+}
+
+.hero-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.filter-panel {
+  display: grid;
+  gap: var(--lc-space-4);
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 180px 160px;
+  gap: var(--lc-space-3);
+}
+
+.filter-grid label {
+  display: grid;
+  gap: var(--lc-space-2);
+  color: var(--lc-muted);
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+}
+
+.filter-grid input,
+.filter-grid select {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  padding: 0 var(--lc-space-3);
+  color: var(--lc-text);
+  background: var(--lc-surface);
+}
+
+.tab-row > span {
+  flex: 0 0 72px;
+  color: var(--lc-muted);
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+}
+
+.recommend-section,
+.list-section {
+  display: grid;
+  gap: var(--lc-space-4);
+}
+
+.recommend-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lc-space-3);
+}
+
+.recommend-card {
+  display: grid;
+  gap: var(--lc-space-2);
+}
+
+.recommend-card h3 {
+  margin: 0;
+  color: var(--lc-text);
+  font-size: var(--lc-text-lg);
+}
+
+.recommend-card p,
+.recommend-meta,
+.recent-item span {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: var(--lc-text-sm);
+}
+
+.recommend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--lc-space-4);
+}
+
+.recent-panel {
+  align-self: start;
+  display: grid;
+  gap: var(--lc-space-3);
+}
+
+.recent-list {
+  display: grid;
+  gap: var(--lc-space-2);
+}
+
+.recent-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  padding: var(--lc-space-3);
+  background: var(--lc-soft);
+  cursor: pointer;
+}
+
+.recent-item strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--lc-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-state.compact {
+  min-height: 96px;
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .content-hub {
+    width: min(100% - 24px, 720px);
+  }
+
+  .hub-hero,
+  .filter-grid,
+  .recommend-grid,
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .content-hub {
+    width: min(100% - 20px, 480px);
+    margin-top: var(--lc-space-3);
+  }
+
+  .hero-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-row {
+    display: grid;
+  }
+
+  .tab-row > span {
+    flex-basis: auto;
+  }
+}
 </style>

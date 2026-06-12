@@ -3,6 +3,53 @@
     <van-nav-bar title="通知设置" left-arrow fixed placeholder @click-left="router.back()" />
 
     <section class="section">
+      <h3 class="section-title">邮件与 PushPlus</h3>
+      <p class="hint">
+        开启后，站内消息将同步投递至邮件或 PushPlus（微信）。PushPlus 需在 pushplus.plus 获取 Token；不接微信公众号/服务号/企业微信。
+      </p>
+      <van-cell-group inset>
+        <van-cell title="邮件通知">
+          <template #label>
+            <div class="switch-row">
+              <span>{{ channelPrefs.hasEmail ? `发送至 ${channelPrefs.emailMasked}` : '请先在账号中绑定邮箱' }}</span>
+              <van-switch
+                :model-value="channelPrefs.emailEnabled"
+                size="20"
+                :disabled="!channelPrefs.hasEmail"
+                @update:model-value="(v) => (channelPrefs.emailEnabled = v)"
+              />
+            </div>
+          </template>
+        </van-cell>
+        <van-cell title="PushPlus 微信推送">
+          <template #label>
+            <div class="switch-row">
+              <span>通过 PushPlus 推送到微信</span>
+              <van-switch
+                :model-value="channelPrefs.pushplusEnabled"
+                size="20"
+                @update:model-value="(v) => (channelPrefs.pushplusEnabled = v)"
+              />
+            </div>
+            <van-field
+              v-model="channelPrefs.pushplusToken"
+              label="Token"
+              placeholder="在 pushplus.plus 个人中心复制"
+              class="token-field"
+            />
+          </template>
+        </van-cell>
+        <van-cell>
+          <template #title>
+            <van-button type="primary" size="small" block plain :loading="testingChannel" @click="sendChannelTest">
+              发送测试通知
+            </van-button>
+          </template>
+        </van-cell>
+      </van-cell-group>
+    </section>
+
+    <section class="section">
       <h3 class="section-title">微信绑定</h3>
       <p class="bind-hint">
         当前为<strong>模拟绑定</strong>，仅用于联调占位；后续接入微信公众号后，可在此完成正式授权并接收模板消息（本阶段后端不接真实微信接口）。
@@ -59,6 +106,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { getNotificationSettings, putNotificationSettings } from '@/api/notificationSettings.js'
+import {
+  getNotificationChannelPrefs,
+  putNotificationChannelPrefs,
+  postNotificationChannelTest
+} from '@/api/notificationChannelPrefs.js'
 import { getSocialBindings, mockBindWechatOfficial, deleteSocialBinding } from '@/api/socialBindings.js'
 
 const router = useRouter()
@@ -81,8 +133,16 @@ const LABELS = {
 
 const settings = ref([])
 const bindings = ref([])
+const channelPrefs = ref({
+  emailEnabled: false,
+  pushplusEnabled: false,
+  pushplusToken: '',
+  hasEmail: false,
+  emailMasked: ''
+})
 const saving = ref(false)
 const binding = ref(false)
+const testingChannel = ref(false)
 
 const wechatOfficial = computed(() =>
   bindings.value.find((b) => b.provider === 'WECHAT_OFFICIAL' && b.bindStatus === 'BOUND')
@@ -106,29 +166,63 @@ function onWechatToggle(row, v) {
 
 async function load() {
   try {
-    const [s, b] = await Promise.all([getNotificationSettings(), getSocialBindings()])
+    const [s, b, ch] = await Promise.all([
+      getNotificationSettings(),
+      getSocialBindings(),
+      getNotificationChannelPrefs()
+    ])
     settings.value = Array.isArray(s) ? s.map((x) => ({ ...x })) : []
     bindings.value = Array.isArray(b) ? b : []
+    channelPrefs.value = {
+      emailEnabled: !!ch.emailEnabled,
+      pushplusEnabled: !!ch.pushplusEnabled,
+      pushplusToken: ch.pushplusToken || '',
+      hasEmail: !!ch.hasEmail,
+      emailMasked: ch.emailMasked || ''
+    }
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '加载失败' })
   }
 }
 
 async function saveAll() {
+  if (channelPrefs.value.pushplusEnabled && !channelPrefs.value.pushplusToken.trim()) {
+    showToast({ type: 'fail', message: '开启 PushPlus 前请填写 Token' })
+    return
+  }
   saving.value = true
   try {
-    await putNotificationSettings(
-      settings.value.map((r) => ({
-        type: r.type,
-        siteEnabled: !!r.siteEnabled,
-        wechatEnabled: !!r.wechatEnabled
-      }))
-    )
+    await Promise.all([
+      putNotificationSettings(
+        settings.value.map((r) => ({
+          type: r.type,
+          siteEnabled: !!r.siteEnabled,
+          wechatEnabled: !!r.wechatEnabled
+        }))
+      ),
+      putNotificationChannelPrefs({
+        emailEnabled: !!channelPrefs.value.emailEnabled,
+        pushplusEnabled: !!channelPrefs.value.pushplusEnabled,
+        pushplusToken: channelPrefs.value.pushplusToken.trim()
+      })
+    ])
     showToast({ type: 'success', message: '已保存' })
   } catch (e) {
     showToast({ type: 'fail', message: e.message || '保存失败' })
   } finally {
     saving.value = false
+  }
+}
+
+async function sendChannelTest() {
+  testingChannel.value = true
+  try {
+    const res = await postNotificationChannelTest()
+    showToast({ type: 'success', message: res.message || '测试通知已发送' })
+  } catch (e) {
+    showToast({ type: 'fail', message: e.message || '发送失败' })
+  } finally {
+    testingChannel.value = false
   }
 }
 
@@ -209,5 +303,10 @@ onMounted(load)
 }
 .footer-actions {
   padding: 16px;
+}
+.token-field {
+  margin-top: 8px;
+  padding-left: 0;
+  padding-right: 0;
 }
 </style>

@@ -1,20 +1,28 @@
 ﻿<template>
   <section class="groups-page">
-    <div class="groups-panel desktop-shell">
-      <header class="hero">
+    <div class="groups-panel desktop-shell operation-shell">
+      <header class="group-list-hero operation-hero">
         <div class="hero-text">
-          <h1>寻找或创建你的团体</h1>
-          <p>你可以加入已有团体，也可以创建自己的团体，成为团体管理者。</p>
+          <p class="section-kicker">Space Workbench</p>
+          <h1>我的 Space / 发现 Space</h1>
+          <p>用于加入、管理、参与团体，快速回到你正在协作的 Space。</p>
         </div>
         <div class="hero-actions">
-          <button type="button" class="primary-btn" @click="goCreate">创建团体</button>
-          <router-link :to="myGroupsPath()" class="secondary-link">我的团体</router-link>
-          <router-link :to="groupsPath('join')" class="secondary-link">我有邀请码</router-link>
-          <router-link :to="groupsPath('season')" class="secondary-link">赛季排行榜</router-link>
+          <button type="button" class="platform-btn platform-btn-primary" @click="goCreate">创建 Space</button>
+          <router-link :to="myGroupsPath()" class="platform-btn platform-btn-ghost">我的团体</router-link>
+          <router-link :to="groupsPath('join')" class="platform-btn platform-btn-ghost">我有邀请码</router-link>
+          <router-link :to="groupsPath('season')" class="platform-btn platform-btn-ghost">赛季榜</router-link>
+        </div>
+        <div class="metric-grid compact group-list-metrics">
+          <article v-for="item in listStats" :key="item.label" class="metric-card">
+            <span class="metric-label">{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <p>{{ item.hint }}</p>
+          </article>
         </div>
       </header>
 
-      <div class="toolbar-row">
+      <div class="toolbar-row section-card">
         <form class="search-bar" role="search" @submit.prevent="onSearch">
           <span aria-hidden="true">⌕</span>
           <input v-model.trim="searchKeyword" type="search" placeholder="搜索团体名称">
@@ -35,6 +43,7 @@
             <option value="newest">最新创建</option>
             <option value="members">成员最多</option>
           </select>
+          <button type="button" class="reset-filter-btn" @click="resetFilters">重置</button>
         </div>
       </div>
 
@@ -50,29 +59,28 @@
               <button type="button" @click="loadGroups">重试</button>
             </div>
             <div v-else-if="groupItems.length" class="groups-grid">
-              <article v-for="group in groupItems" :key="group.id" class="group-card">
+              <article v-for="group in groupItems" :key="group.id" class="group-card section-card">
                 <router-link :to="groupsPath(String(group.id))" class="card-cover">
                   <img :src="group.coverUrl" :alt="group.name">
                 </router-link>
                 <div class="group-info">
                   <div class="title-line">
                     <h2>{{ group.name }}</h2>
-                    <span class="pill">{{ group.category }}</span>
+                    <span class="status-badge neutral">{{ group.category }}</span>
+                    <span class="status-badge" :class="statusBadgeClass(group)">{{ statusLabel(group) }}</span>
                   </div>
-                  <p class="meta">
-                    {{ group.memberCount }} 人
-                    <template v-if="group.postCount"> · {{ group.postCount }} 条动态</template>
-                    <template v-if="group.lastActiveLabel"> · 活跃 {{ group.lastActiveLabel }}</template>
-                    · {{ group.joinModeLabel }}
-                    <template v-if="group.ownerName"> · {{ group.ownerName }}</template>
-                  </p>
                   <p class="desc">{{ group.description }}</p>
+                  <div class="space-card-metrics" aria-label="Space 状态">
+                    <span><strong>{{ group.memberCount }}</strong> 成员</span>
+                    <span>{{ activityLabel(group) }}</span>
+                    <span>{{ group.joinModeLabel }}</span>
+                  </div>
                   <div class="tags" v-if="group.tags">
                     <span v-for="t in group.tagList" :key="t" class="tag">{{ t }}</span>
                   </div>
                   <div class="card-actions">
-                    <router-link class="link-detail" :to="groupsPath(String(group.id))">查看详情</router-link>
-                    <button type="button" class="action-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
+                    <router-link class="platform-btn platform-btn-ghost" :to="groupsPath(String(group.id))">进入</router-link>
+                    <button type="button" class="platform-btn platform-btn-primary action-btn" :disabled="actionDisabled(group)" @click="onAction(group)">
                       {{ actionLabel(group) }}
                     </button>
                   </div>
@@ -304,6 +312,19 @@ const groupItems = computed(() => remoteGroups.value)
 const totalPages = computed(() => Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE)))
 const activities = computed(() => groupFeed.value)
 const popularGroups = computed(() => hotGroups.value)
+const listStats = computed(() => {
+  const rows = groupItems.value
+  const joined = rows.filter((g) => g.isMember).length
+  const pending = rows.filter((g) => g.hasPendingRequest).length
+  const joinable = rows.filter((g) => !g.isMember && !g.hasPendingRequest && g.joinModeKey !== 'invite').length
+  const active = rows.filter((g) => g.lastActiveLabel || g.postCount > 0).length
+  return [
+    { label: '我加入的', value: joined, hint: '当前列表内已加入' },
+    { label: '可加入的', value: joinable, hint: '可直接申请或加入' },
+    { label: '待审核的', value: pending, hint: '申请处理中' },
+    { label: '活跃 Space', value: active, hint: '近期有动态' }
+  ]
+})
 
 function joinModeLabel(g) {
   const k = g.joinModeKey || (g.joinMode === 'free' ? 'open' : g.joinMode === 'invite' ? 'invite' : 'audit')
@@ -387,6 +408,29 @@ function actionDisabled(g) {
   if (g.joinModeKey === 'invite' && !g.isMember) return true
   if (g.isMember || g.hasPendingRequest) return true
   return false
+}
+
+function statusLabel(g) {
+  if (g.isOwner) return 'Owner'
+  if (g.managed) return '管理员'
+  if (g.isMember) return '已加入'
+  if (g.hasPendingRequest) return '待审核'
+  if (g.joinModeKey === 'invite') return '邀请加入'
+  return '可申请'
+}
+
+function statusBadgeClass(g) {
+  if (g.isMember) return 'success'
+  if (g.hasPendingRequest) return 'warning'
+  if (g.isOwner || g.managed) return 'info'
+  if (g.joinModeKey === 'invite') return 'neutral'
+  return 'info'
+}
+
+function activityLabel(g) {
+  if (g.lastActiveLabel) return `活跃 ${g.lastActiveLabel}`
+  if (g.postCount) return `${g.postCount} 条动态`
+  return '暂无动态'
 }
 
 function memberDisplayNameTrimmed(g) {
@@ -565,6 +609,14 @@ function reloadFirstPage() {
   loadGroups({ resetPage: false })
 }
 
+function resetFilters() {
+  searchKeyword.value = ''
+  category.value = ''
+  joinMode.value = ''
+  sort.value = 'newest'
+  reloadFirstPage()
+}
+
 function goPage(delta) {
   const next = page.value + delta
   const max = Math.max(1, Math.ceil(listTotal.value / PAGE_SIZE))
@@ -584,6 +636,7 @@ onMounted(() => {
 .groups-page {
   width: calc(100% - var(--lc-space-8));
   margin: var(--lc-space-4) auto 0;
+  color: var(--lc-text);
 }
 
 .mobile-shell {
@@ -591,11 +644,19 @@ onMounted(() => {
 }
 
 .groups-panel {
-  padding: var(--lc-space-8);
-  border: 1px solid var(--lc-border);
-  border-radius: var(--lc-radius);
-  background: var(--lc-surface);
-  box-shadow: var(--lc-shadow-sm);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.group-list-hero {
+  align-items: stretch;
+}
+
+.group-list-metrics {
+  margin-top: 0;
 }
 
 .hero {
@@ -666,9 +727,7 @@ onMounted(() => {
   grid-template-columns: minmax(280px, 520px) auto;
   gap: var(--lc-space-5);
   align-items: center;
-  margin-top: var(--lc-space-6);
-  padding-bottom: var(--lc-space-4);
-  border-bottom: 1px solid var(--lc-border);
+  margin-top: 0;
 }
 
 .search-bar {
@@ -702,8 +761,8 @@ onMounted(() => {
   height: 100%;
   border: 0;
   border-radius: 0;
-  color: var(--lc-surface);
-  background: linear-gradient(135deg, var(--lc-pink), var(--lc-blue));
+  color: var(--lc-blue);
+  background: var(--lc-blue-light);
   font-weight: 900;
   cursor: pointer;
 }
@@ -726,6 +785,17 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.reset-filter-btn {
+  height: 38px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: var(--lc-radius-xs);
+  color: var(--lc-muted);
+  background: var(--lc-surface);
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .page-message {
   margin-top: var(--lc-space-3);
   padding: var(--lc-space-2) var(--lc-space-3);
@@ -745,7 +815,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: var(--lc-space-6);
-  margin-top: var(--lc-space-4);
+  margin-top: 0;
 }
 
 .loading-state,
@@ -783,13 +853,10 @@ onMounted(() => {
 
 .group-card {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: var(--lc-space-4);
-  padding: var(--lc-space-3);
-  border: 1px solid var(--lc-border);
-  border-radius: var(--lc-radius-sm);
-  background: var(--lc-surface);
-  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.04);
+  padding: var(--lc-space-4);
+  box-shadow: none;
 }
 
 .card-cover {
@@ -800,9 +867,15 @@ onMounted(() => {
 }
 
 .card-cover img {
-  width: 140px;
-  height: 120px;
+  width: 72px;
+  height: 72px;
   object-fit: cover;
+}
+
+.group-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .title-line {
@@ -825,6 +898,31 @@ onMounted(() => {
   font-weight: 900;
   color: var(--lc-blue);
   background: var(--lc-blue-light);
+}
+
+.space-card-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lc-space-2);
+  margin-top: var(--lc-space-3);
+}
+
+.space-card-metrics span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--lc-space-3);
+  border: 1px solid var(--lc-border);
+  border-radius: 999px;
+  color: var(--lc-muted);
+  background: var(--lc-soft);
+  font-size: var(--lc-text-xs);
+  font-weight: 900;
+}
+
+.space-card-metrics strong {
+  margin-right: 4px;
+  color: var(--lc-text);
 }
 
 .meta,
@@ -875,15 +973,6 @@ onMounted(() => {
 
 .action-btn {
   min-width: 88px;
-  height: 32px;
-  padding: 0 var(--lc-space-3);
-  border-radius: var(--lc-radius-xs);
-  border: 1px solid var(--lc-blue-border);
-  color: var(--lc-blue);
-  background: var(--lc-surface);
-  font-weight: 900;
-  font-size: var(--lc-text-sm);
-  cursor: pointer;
 }
 
 .action-btn:disabled {
