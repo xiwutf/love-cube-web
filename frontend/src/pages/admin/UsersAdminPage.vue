@@ -207,6 +207,7 @@
     <section class="admin-table-wrap admin-desktop-only">
       <table class="admin-table users-table">
         <colgroup>
+          <col class="cg-actions">
           <col class="cg-avatar">
           <col class="cg-user">
           <col class="cg-phone">
@@ -226,10 +227,10 @@
           <col class="cg-location">
           <col class="cg-login">
           <col class="cg-date">
-          <col class="cg-actions">
         </colgroup>
         <thead>
           <tr>
+            <th class="col-actions-head">操作</th>
             <th class="col-avatar-head">头像</th>
             <th class="col-user-head">用户</th>
             <th class="col-phone-head">手机</th>
@@ -248,11 +249,20 @@
             <th class="col-location">地区</th>
             <th class="col-login">最近登录</th>
             <th class="col-date">注册时间</th>
-            <th class="col-actions-head">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in paginatedUsers" :key="item.userId">
+            <td class="col-actions">
+              <button
+                class="admin-btn primary users-table-detail-btn"
+                type="button"
+                :title="`用户详情：${item.username || item.userId}`"
+                @click="openDetailDialog(item)"
+              >
+                详情
+              </button>
+            </td>
             <td class="col-avatar">
               <img
                 v-if="rowAvatarUrl(item)"
@@ -296,16 +306,6 @@
             <td class="col-location" :title="item.location || '-'">{{ item.location || '-' }}</td>
             <td class="col-login" :title="formatDate(item.lastLoginAt)">{{ formatDate(item.lastLoginAt) }}</td>
             <td class="col-date" :title="formatDate(item.createdAt)">{{ formatDate(item.createdAt) }}</td>
-            <td class="col-actions">
-              <button
-                class="admin-btn primary users-table-detail-btn"
-                type="button"
-                :title="`用户详情：${item.username || item.userId}`"
-                @click="openDetailDialog(item)"
-              >
-                详情
-              </button>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -314,6 +314,9 @@
 
     <div class="admin-list admin-mobile-only">
       <article v-for="item in paginatedUsers" :key="item.userId" class="admin-row">
+        <div class="admin-toolbar users-mobile-actions-top">
+          <button class="admin-btn primary" type="button" @click="openDetailDialog(item)">用户详情</button>
+        </div>
         <div class="admin-row-head">
           <div class="users-mobile-head-left">
             <img
@@ -335,9 +338,6 @@
         <p class="admin-row-meta">待补：{{ formatMissingShort(item.profileMissingItems) }}</p>
         <p class="admin-row-meta">地区：{{ item.location || '-' }} · 登录：{{ formatDate(item.lastLoginAt) }}</p>
         <p class="admin-row-meta">注册：{{ formatDate(item.createdAt) }}</p>
-        <div class="admin-toolbar">
-          <button class="admin-btn primary" type="button" @click="openDetailDialog(item)">用户详情</button>
-        </div>
       </article>
       <van-empty v-if="!loading && !filteredUsers.length" description="暂无匹配用户" />
     </div>
@@ -1826,6 +1826,10 @@ watch(totalPages, (pages) => {
   border-radius: 50%;
   border: 1px dashed var(--lc-border);
   background: var(--lc-soft);
+}
+
+.users-mobile-actions-top {
+  margin-bottom: 10px;
 }
 
 .users-mobile-head-left {
