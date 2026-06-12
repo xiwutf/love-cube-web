@@ -371,10 +371,19 @@
 
       <!-- 活动 -->
       <div v-else-if="activeTab === 'activities'" class="gd-panel">
-        <div v-if="group.managed" class="gd-panel-head">
-          <button type="button" class="gd-btn sm" @click="showCreateActivity = !showCreateActivity">
+        <div v-if="group.managed || (userStore.isLoggedIn && group.isMember)" class="gd-panel-head">
+          <button
+            v-if="group.managed"
+            type="button"
+            class="gd-btn sm"
+            @click="showCreateActivity = !showCreateActivity"
+          >
             {{ showCreateActivity ? '取消' : '发布活动' }}
           </button>
+          <template v-else>
+            <router-link class="gd-link" :to="`/platform/groups/${group.id}/my-activity-proposals`">我的投稿</router-link>
+            <button type="button" class="gd-btn sm primary" @click="handleProposeActivity">发起活动</button>
+          </template>
         </div>
         <form v-if="showCreateActivity && group.managed" class="gd-compose gd-form-block" @submit.prevent="submitActivity">
           <input v-model.trim="activityForm.title" type="text" maxlength="200" placeholder="活动标题 *" required>
@@ -619,10 +628,18 @@
       @close="reportDialogOpen = false"
       @submitted="message = '举报已提交'; messageType = 'success'"
     />
+
+    <ActivityProposalDialog
+      :open="showProposalDialog"
+      :group-id="group?.id"
+      @close="closeProposalDialog"
+      @submitted="onProposalSubmitted"
+    />
   </section>
 </template>
 
 <script setup>
+import ActivityProposalDialog from '@/components/platform/groups/ActivityProposalDialog.vue'
 import GroupCapabilityBanner from '@/components/platform/groups/GroupCapabilityBanner.vue'
 import SpaceCampaignMemberPanel from '@/components/platform/spaces/SpaceCampaignMemberPanel.vue'
 import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
@@ -684,6 +701,7 @@ const {
   signingActivityId,
   cancellingActivityId,
   showCreateActivity,
+  showProposalDialog,
   creatingActivity,
   activityForm,
   expandedPollId,
@@ -723,6 +741,9 @@ const {
   cancelSignUpActivity,
   cancelActivity,
   submitActivity,
+  handleProposeActivity,
+  closeProposalDialog,
+  onProposalSubmitted,
   setRankingTab,
   rankSlotDisplay,
   toggleLikeCheckin,

@@ -55,4 +55,13 @@ public class PlatGroupActivity {
 
     @Column(name = "platform_event_id", length = 64)
     private String platformEventId;
+
+    @Column(name = "reviewed_by")
+    private Long reviewedBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "review_comment", length = 500)
+    private String reviewComment;
 }

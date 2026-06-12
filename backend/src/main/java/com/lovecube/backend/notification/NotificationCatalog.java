@@ -43,6 +43,9 @@ public final class NotificationCatalog {
     public static final String TYPE_GROUP_WEEKLY_DIGEST = "GROUP_WEEKLY_DIGEST";
     public static final String TYPE_GROWTH_OPERATOR_REMINDER = "GROWTH_OPERATOR_REMINDER";
     public static final String TYPE_SPACE_CAMPAIGN_REMINDER = "SPACE_CAMPAIGN_REMINDER";
+    public static final String TYPE_ACTIVITY_PROPOSAL_SUBMITTED = "ACTIVITY_PROPOSAL_SUBMITTED";
+    public static final String TYPE_ACTIVITY_PROPOSAL_APPROVED = "ACTIVITY_PROPOSAL_APPROVED";
+    public static final String TYPE_ACTIVITY_PROPOSAL_REJECTED = "ACTIVITY_PROPOSAL_REJECTED";
 
     public static final String RELATED_GROWTH_CAMPAIGN_DELIVERY = "GROWTH_CAMPAIGN_DELIVERY";
 
@@ -52,6 +55,9 @@ public final class NotificationCatalog {
             TYPE_GROUP_APPLICATION_APPROVED,
             TYPE_GROUP_APPLICATION_REJECTED,
             TYPE_GROUP_JOIN_REQUEST,
+            TYPE_ACTIVITY_PROPOSAL_SUBMITTED,
+            TYPE_ACTIVITY_PROPOSAL_APPROVED,
+            TYPE_ACTIVITY_PROPOSAL_REJECTED,
             TYPE_GROUP_WEEKLY_DIGEST,
             TYPE_CONTENT_MODERATION_PASSED,
             TYPE_CONTENT_MODERATION_REJECTED,
@@ -73,6 +79,9 @@ public final class NotificationCatalog {
             case TYPE_GROUP_APPLICATION_APPROVED,
                  TYPE_GROUP_APPLICATION_REJECTED,
                  TYPE_GROUP_JOIN_REQUEST,
+                 TYPE_ACTIVITY_PROPOSAL_SUBMITTED,
+                 TYPE_ACTIVITY_PROPOSAL_APPROVED,
+                 TYPE_ACTIVITY_PROPOSAL_REJECTED,
                  TYPE_GROUP_WEEKLY_DIGEST,
                  TYPE_CONTENT_MODERATION_PASSED,
                  TYPE_CONTENT_MODERATION_REJECTED,
@@ -128,6 +137,7 @@ public final class NotificationCatalog {
         return switch (tab.toUpperCase(Locale.ROOT)) {
             case "GROUP" -> TYPE_GROUP_JOIN_REQUEST.equals(t)
                 || t.startsWith("GROUP_APPLICATION")
+                || t.startsWith("ACTIVITY_PROPOSAL")
                 || "GROUP_POST_CREATED".equals(t)
                 || t.startsWith("GROUP_CHECKIN")
                 || t.startsWith("GROUP_TASK")

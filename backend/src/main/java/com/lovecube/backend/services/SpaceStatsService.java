@@ -93,6 +93,9 @@ public class SpaceStatsService {
                 groupId, "published", since7d);
         long noticesCount = noticeRepository.countByGroupIdAndStatus(groupId, "published");
         long activitiesCount = activityRepository.countByGroupIdAndStatus(groupId, "published");
+        long memberActivitiesSubmitted = activityRepository.countMemberActivityProposalsSubmitted(groupId);
+        long memberActivitiesApproved = activityRepository.countMemberActivityProposalsApproved(groupId);
+        long pendingActivityProposals = activityRepository.countByGroupIdAndStatus(groupId, "pending");
 
         List<PlatGroupMember> approvedMembers = memberRepository
                 .findByGroupIdAndStatusOrderByJoinedAtAsc(groupId, "approved");
@@ -139,6 +142,9 @@ public class SpaceStatsService {
         content.put("posts7d", posts7d);
         content.put("noticesCount", noticesCount);
         content.put("activitiesCount", activitiesCount);
+        content.put("memberActivitiesSubmitted", memberActivitiesSubmitted);
+        content.put("memberActivitiesApproved", memberActivitiesApproved);
+        content.put("pendingActivityProposals", pendingActivityProposals);
         result.put("content", content);
 
         Map<String, Object> risks = new LinkedHashMap<>();

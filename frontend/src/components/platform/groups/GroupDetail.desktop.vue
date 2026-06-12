@@ -677,9 +677,15 @@
           <section v-else-if="activeTab === 'activities'" class="panel-card">
             <div class="section-head">
               <h2>团体活动</h2>
-              <button v-if="group.managed" type="button" class="primary-btn small" @click="showCreateActivity = !showCreateActivity">
-                {{ showCreateActivity ? '取消' : '发布活动' }}
-              </button>
+              <div class="section-head-actions">
+                <button v-if="group.managed" type="button" class="primary-btn small" @click="showCreateActivity = !showCreateActivity">
+                  {{ showCreateActivity ? '取消' : '发布活动' }}
+                </button>
+                <template v-else-if="userStore.isLoggedIn && group.isMember">
+                  <router-link class="text-link-btn" :to="`/platform/groups/${group.id}/my-activity-proposals`">我的投稿</router-link>
+                  <button type="button" class="primary-btn small" @click="handleProposeActivity">发起活动</button>
+                </template>
+              </div>
             </div>
 
             <form v-if="showCreateActivity" class="activity-form" @submit.prevent="submitActivity">
@@ -1004,6 +1010,13 @@
       @close="reportDialogOpen = false"
       @submitted="flashMessage('举报已提交')"
     />
+
+    <ActivityProposalDialog
+      :open="showProposalDialog"
+      :group-id="group?.id"
+      @close="showProposalDialog = false"
+      @submitted="onProposalSubmitted"
+    />
   </section>
 </template>
 
@@ -1081,6 +1094,7 @@ import SpaceCampaignMemberPanel from '@/components/platform/spaces/SpaceCampaign
 import GroupInvitePanel from '@/components/platform/groups/GroupInvitePanel.vue'
 import GroupSeasonPanel from '@/components/platform/groups/GroupSeasonPanel.vue'
 import GroupPostReportDialog from '@/components/platform/groups/GroupPostReportDialog.vue'
+import ActivityProposalDialog from '@/components/platform/groups/ActivityProposalDialog.vue'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1400&q=80'
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/initials/svg?seed=LC&backgroundColor=eff6ff,fdf2f8,eef2ff'
@@ -1173,6 +1187,7 @@ const claimingTask = ref('')
 const activities = ref([])
 const upcomingActivities = ref([])
 const showCreateActivity = ref(false)
+const showProposalDialog = ref(false)
 const activityForm = reactive({
   title: '',
   description: '',
@@ -2539,6 +2554,19 @@ function unwrapList(res) {
   if (Array.isArray(res)) return res
   if (Array.isArray(res?.data)) return res.data
   return []
+}
+
+function handleProposeActivity() {
+  if (group.value?.managed) {
+    flashMessage('你是运营者，可前往运营台直接发布活动。', 'error')
+    return
+  }
+  if (!group.value?.isMember || !userStore.isLoggedIn) return
+  showProposalDialog.value = true
+}
+
+function onProposalSubmitted() {
+  flashMessage('活动投稿已提交，等待审核')
 }
 
 function flashMessage(text, type = 'success') {

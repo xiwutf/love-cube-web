@@ -122,6 +122,7 @@ export function useGroupDetailMobile() {
   const signingActivityId = ref(null)
   const cancellingActivityId = ref(null)
   const showCreateActivity = ref(false)
+  const showProposalDialog = ref(false)
   const creatingActivity = ref(false)
   const activityForm = reactive({
     title: '',
@@ -1155,6 +1156,23 @@ export function useGroupDetailMobile() {
     }
   }
 
+  function handleProposeActivity() {
+    if (group.value?.managed) {
+      flash('你是运营者，可前往运营台直接发布活动。', 'error')
+      return
+    }
+    if (!group.value?.isMember || !userStore.isLoggedIn) return
+    showProposalDialog.value = true
+  }
+
+  function closeProposalDialog() {
+    showProposalDialog.value = false
+  }
+
+  function onProposalSubmitted() {
+    flash('活动投稿已提交，等待审核')
+  }
+
   async function loadRelated() {
     if (!group.value?.id) return
     await Promise.all([
@@ -1459,6 +1477,7 @@ export function useGroupDetailMobile() {
     signingActivityId,
     cancellingActivityId,
     showCreateActivity,
+    showProposalDialog,
     creatingActivity,
     activityForm,
     expandedPollId,
@@ -1491,6 +1510,9 @@ export function useGroupDetailMobile() {
     cancelSignUpActivity,
     cancelActivity,
     submitActivity,
+    handleProposeActivity,
+    closeProposalDialog,
+    onProposalSubmitted,
     loadActivities,
     setRankingTab,
     rankSlotDisplay,

@@ -29,4 +29,25 @@ public interface PlatGroupActivityRepository extends JpaRepository<PlatGroupActi
     void decrementParticipantCount(@Param("id") Long id);
 
     long countByGroupIdAndStatus(Long groupId, String status);
+
+    List<PlatGroupActivity> findByGroupIdAndCreatorUserIdAndStatusInOrderByCreatedAtDesc(
+            Long groupId, Long creatorUserId, List<String> statuses);
+
+    List<PlatGroupActivity> findByGroupIdAndStatusOrderByCreatedAtDesc(Long groupId, String status);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM platform_group_activity
+            WHERE group_id = :groupId
+              AND (status IN ('pending', 'rejected')
+                   OR (status = 'published' AND reviewed_by IS NOT NULL))
+            """, nativeQuery = true)
+    long countMemberActivityProposalsSubmitted(@Param("groupId") Long groupId);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM platform_group_activity
+            WHERE group_id = :groupId
+              AND status = 'published'
+              AND reviewed_by IS NOT NULL
+            """, nativeQuery = true)
+    long countMemberActivityProposalsApproved(@Param("groupId") Long groupId);
 }

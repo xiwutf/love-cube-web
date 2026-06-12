@@ -262,11 +262,32 @@ const keyMetrics = computed(() => [
     hint: camp.value.activeCampaignTitle ? '当前营期完成进度' : '暂无进行中营期',
     badge: '进度',
     tone: Number(camp.value.campaignCompletionRate || 0) >= 60 ? 'accent' : 'warn'
+  },
+  {
+    key: 'member-activities',
+    label: '成员投稿',
+    value: content.value.memberActivitiesSubmitted ?? 0,
+    hint: `已通过 ${content.value.memberActivitiesApproved ?? 0} 个`,
+    badge: '共创',
+    tone: Number(content.value.memberActivitiesSubmitted || 0) > 0 ? 'accent' : ''
   }
 ])
 
 const operationActions = computed(() => {
   const actions = []
+
+  if (Number(content.value.pendingActivityProposals || 0) > 0) {
+    actions.push({
+      key: 'pending-activity-proposals',
+      badge: `${content.value.pendingActivityProposals} 待审核`,
+      badgeTone: 'warning',
+      title: '处理成员活动投稿',
+      desc: '有成员投稿了新活动，审核通过后将自动发布到活动列表。',
+      label: '去审核活动',
+      target: 'activity-review',
+      tone: 'warning'
+    })
+  }
 
   if (Number(mg.value.pendingMembers || 0) > 0) {
     actions.push({

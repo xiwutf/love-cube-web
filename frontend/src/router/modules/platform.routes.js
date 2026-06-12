@@ -78,6 +78,11 @@ export default {
     { path: 'platform/groups/:id/checkin', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/:id/tasks', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/:id/activities', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
+    {
+      path: 'platform/groups/:id/my-activity-proposals',
+      component: () => import('@/pages/platform/SpaceMyActivityProposals.vue'),
+      meta: { module: 'platform', requiresAuth: true }
+    },
     { path: 'platform/groups/:id/polls', component: () => import('@/pages/platform/GroupDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'platform/groups/:id/announcements', redirect: to => `/platform/groups/${to.params.id}/notices` },
     { path: 'platform/groups/:id/materials', redirect: to => `/platform/groups/${to.params.id}/profile` }

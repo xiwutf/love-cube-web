@@ -477,8 +477,11 @@ public class GrowthService {
         profile.put("realnameVerified", realnameVerified);
         if (user.getBirthDate() != null) {
             profile.put("birthYear", user.getBirthDate().getYear());
-        } else if (user.getAge() > 0) {
-            profile.put("age", user.getAge());
+        } else {
+            Integer age = user.getAge();
+            if (age != null && age > 0) {
+                profile.put("age", age);
+            }
         }
 
         Map<String, Object> completion = FellowshipProfileCompletion.build(

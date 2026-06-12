@@ -145,6 +145,7 @@
           <span class="tab-label">
             {{ tab.label }}
             <span v-if="tab.key === 'members' && pendingCount" class="badge">{{ pendingCount }}</span>
+            <span v-if="tab.key === 'activity-review' && pendingActivityCount" class="badge">{{ pendingActivityCount }}</span>
           </span>
           <small>{{ tab.desc }}</small>
         </button>
@@ -372,6 +373,16 @@
         <p v-else class="inline-state">暂无活动</p>
       </section>
 
+      <!-- 活动审核 -->
+      <section v-else-if="activeTab === 'activity-review'" class="tab-panel">
+        <SpaceActivityReviewPanel
+          ref="activityReviewPanelRef"
+          :group-id="spaceId"
+          @flash="onCampFlash"
+          @updated="onActivityReviewUpdated"
+        />
+      </section>
+
       <!-- 打卡营 -->
       <section v-else-if="activeTab === 'camp'" class="tab-panel">
         <SpaceCampaignManagePanel :group-id="spaceId" @flash="onCampFlash" />
@@ -461,7 +472,9 @@ import {
   removeGroupMember,
   updateGroup
 } from '@/api/groups.js'
+import { fetchPendingActivityProposals } from '@/api/groupActivityProposals.js'
 import { fetchSpaceStats } from '@/api/spaceStats.js'
+import SpaceActivityReviewPanel from '@/components/platform/spaces/SpaceActivityReviewPanel.vue'
 import SpaceCampaignManagePanel from '@/components/platform/spaces/SpaceCampaignManagePanel.vue'
 import SpaceManageOverviewPanel from '@/components/platform/spaces/SpaceManageOverviewPanel.vue'
 import { PLATFORM_GROUP_TASK_CATALOG } from '@/constants/platformGroupTasks.js'
@@ -488,6 +501,8 @@ const flashType = ref('success')
 
 const activeTab = ref(normalizeTab(route.query.tab))
 const pendingCount = ref(0)
+const pendingActivityCount = ref(0)
+const activityReviewPanelRef = ref(null)
 const spaceStats = ref(null)
 const loadingSpaceStats = ref(false)
 const spaceStatsError = ref('')
@@ -539,6 +554,7 @@ const tabs = [
   { key: 'review', label: '成员审核', desc: '准入待办' },
   { key: 'notices', label: '公告触达', desc: '同步安排' },
   { key: 'activities', label: '活动运营', desc: '线下/线上' },
+  { key: 'activity-review', label: '活动审核', desc: '成员投稿' },
   { key: 'camp', label: '打卡营', desc: '进度跟进' },
   { key: 'tasks', label: '任务管理', desc: '行动执行' },
   { key: 'settings', label: 'Space 设置', desc: '资料与权限' }
@@ -624,6 +640,7 @@ function switchTab(key) {
   if (key === 'review') loadMembers('pending')
   if (key === 'notices') loadNotices()
   if (key === 'activities') loadActivities()
+  if (key === 'activity-review') loadPendingActivityCount()
 }
 
 function showFlash(msg, type = 'success') {
@@ -634,6 +651,21 @@ function showFlash(msg, type = 'success') {
 
 function onCampFlash(msg, type = 'success') {
   showFlash(msg, type)
+}
+
+function onActivityReviewUpdated(count) {
+  pendingActivityCount.value = Number(count || 0)
+  loadSpaceStats()
+}
+
+async function loadPendingActivityCount() {
+  try {
+    const res = await fetchPendingActivityProposals(spaceId.value)
+    const data = res?.data ?? res
+    pendingActivityCount.value = Number(data?.pendingCount ?? data?.total ?? 0)
+  } catch {
+    pendingActivityCount.value = 0
+  }
 }
 
 function formatDate(v) {
@@ -735,10 +767,12 @@ async function bootstrap() {
     inviteCode.value = data?.inviteCode || inviteCode.value
 
     await loadSpaceStats()
+    await loadPendingActivityCount()
     if (activeTab.value === 'members') await loadMembers(memberStatus.value)
     if (activeTab.value === 'review') await loadMembers('pending')
     if (activeTab.value === 'notices') await loadNotices()
     if (activeTab.value === 'activities') await loadActivities()
+    if (activeTab.value === 'activity-review') await loadPendingActivityCount()
   } catch (err) {
     loadError.value = err?.message || '无法加载社区空间'
   } finally {
@@ -755,6 +789,10 @@ async function loadSpaceStats() {
     const pending = Number(spaceStats.value?.memberGrowth?.pendingMembers)
     if (!Number.isNaN(pending)) {
       pendingCount.value = pending
+    }
+    const pendingActivities = Number(spaceStats.value?.content?.pendingActivityProposals)
+    if (!Number.isNaN(pendingActivities)) {
+      pendingActivityCount.value = pendingActivities
     }
   } catch (err) {
     spaceStatsError.value = err?.message || '数据加载失败'

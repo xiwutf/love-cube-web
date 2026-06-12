@@ -1838,7 +1838,10 @@ public class PlatformGroupController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found"));
 
         Long userId = resolveOptionalUserId(authHeader);
-        List<PlatGroupActivity> all = activityRepository.findByGroupIdOrderByStartTimeDesc(id);
+        List<PlatGroupActivity> all = activityRepository.findByGroupIdOrderByStartTimeDesc(id).stream()
+                .filter(a -> "published".equals(a.getStatus()) || "ended".equals(a.getStatus())
+                        || "cancelled".equals(a.getStatus()))
+                .collect(Collectors.toList());
 
         // filter: upcoming(已发布且未结束) / ended / all，默认返回全部
         if ("upcoming".equals(filter)) {

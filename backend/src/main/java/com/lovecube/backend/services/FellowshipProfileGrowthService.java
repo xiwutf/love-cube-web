@@ -64,9 +64,10 @@ public class FellowshipProfileGrowthService {
         if (isNotBlank(str(profile.get("avatarUrl")))) {
             growthEventsCreated += publish(userId, GrowthEventType.PROFILE_AVATAR_SET, "growth:profile_avatar_set:user:" + userId);
         }
+        Integer userAge = activeUser.getAge();
         if (profile.get("birthYear") != null
                 || (profile.get("age") instanceof Number ageN && ageN.intValue() > 0)
-                || activeUser.getAge() > 0) {
+                || (userAge != null && userAge > 0)) {
             growthEventsCreated += publish(userId, GrowthEventType.PROFILE_AGE_SET, "growth:profile_age_set:user:" + userId);
         }
         if (isNotBlank(str(profile.get("city"))) || isNotBlank(activeUser.getLocation())) {
