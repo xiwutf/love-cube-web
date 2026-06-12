@@ -482,8 +482,11 @@ public class UnifiedProfileService {
         profile.put("bio", defaultText(user.getBio(), ""));
         if (user.getBirthDate() != null) {
             profile.put("birthYear", user.getBirthDate().getYear());
-        } else if (user.getAge() > 0) {
-            profile.put("age", user.getAge());
+        } else {
+            Integer age = user.getAge();
+            if (age != null && age > 0) {
+                profile.put("age", age);
+            }
         }
         profile.put("photoVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified")));
         profile.put("realnameVerified", verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("realnameVerified")));
@@ -578,9 +581,13 @@ public class UnifiedProfileService {
         if (!vOcc.isEmpty() && !cOcc.isEmpty() && vOcc.equals(cOcc)) {
             reasons.add("职业相同");
         }
-        int ageDiff = Math.abs(viewer.getAge() - candidate.getAge());
-        if (viewer.getAge() > 0 && candidate.getAge() > 0 && ageDiff <= 3) {
-            reasons.add("年龄相近");
+        Integer viewerAge = viewer.getAge();
+        Integer candidateAge = candidate.getAge();
+        if (viewerAge != null && candidateAge != null && viewerAge > 0 && candidateAge > 0) {
+            int ageDiff = Math.abs(viewerAge - candidateAge);
+            if (ageDiff <= 3) {
+                reasons.add("年龄相近");
+            }
         }
         if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"))) {
             reasons.add("真人认证");
@@ -621,9 +628,13 @@ public class UnifiedProfileService {
         if (!vOcc.isEmpty() && !cOcc.isEmpty() && vOcc.equals(cOcc)) {
             reasons.add("职业相同");
         }
-        int ageDiff = Math.abs(viewer.getAge() - candidate.getAge());
-        if (viewer.getAge() > 0 && candidate.getAge() > 0 && ageDiff <= 3) {
-            reasons.add("年龄相近");
+        Integer viewerAge = viewer.getAge();
+        Integer candidateAge = candidate.getAge();
+        if (viewerAge != null && candidateAge != null && viewerAge > 0 && candidateAge > 0) {
+            int ageDiff = Math.abs(viewerAge - candidateAge);
+            if (ageDiff <= 3) {
+                reasons.add("年龄相近");
+            }
         }
         if (verifyBadges != null && Boolean.TRUE.equals(verifyBadges.get("photoVerified"))) {
             reasons.add("真人认证");

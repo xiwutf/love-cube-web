@@ -12,8 +12,9 @@ public class SimilarityCalculator
 {
     public static double calculateSimilarity(User currentUser, User otherUser)
     {
-        // 假设 getAge() 返回 int，直接用即可，不需要判空
-        double ageSimilarity = 1 - (Math.abs(currentUser.getAge() - otherUser.getAge()) / 100.0);
+        int currentAge = currentUser.getAge() == null ? 0 : currentUser.getAge();
+        int otherAge = otherUser.getAge() == null ? 0 : otherUser.getAge();
+        double ageSimilarity = 1 - (Math.abs(currentAge - otherAge) / 100.0);
 
         // 防止 location 或 occupation 为 null
         double citySimilarity = Objects.equals(currentUser.getLocation(), otherUser.getLocation()) ? 1 : 0;

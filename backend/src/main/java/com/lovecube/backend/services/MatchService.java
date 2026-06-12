@@ -160,7 +160,9 @@ public class MatchService
     private double calculateMatchScore(User user1, User user2) {
         double score = 0.0;
 
-        int ageDiff = Math.abs(user1.getAge() - user2.getAge());
+        int age1 = user1.getAge() == null ? 0 : user1.getAge();
+        int age2 = user2.getAge() == null ? 0 : user2.getAge();
+        int ageDiff = Math.abs(age1 - age2);
         score += Math.max(0, 10 - ageDiff) * 2;
 
         if (user1.getLocation() != null && user2.getLocation() != null) {

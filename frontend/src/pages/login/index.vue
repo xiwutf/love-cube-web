@@ -69,7 +69,8 @@
                   v-model="regForm.inviteCode"
                   name="inviteCode"
                   label="邀请码"
-                  placeholder="可选，扫码会自动带入"
+                  placeholder="请输入邀请码"
+                  :rules="[{ required: true, message: '请填写邀请码' }]"
                 />
                 <van-field
                   v-model="regForm.gender"
@@ -88,7 +89,7 @@
                 </van-field>
               </van-cell-group>
               <p class="register-tip">注册后默认仅开通平台账号；联谊功能需本人手动开启。</p>
-              <p class="invite-tip">如果你通过邀请二维码进入，邀请码会自动填入，也可以手动修改。</p>
+              <p class="invite-tip">注册需填写有效邀请码；通过邀请二维码进入时会自动填入。</p>
               <div class="btn-wrap">
                 <van-button round block type="primary" native-type="submit" :loading="loading" loading-text="注册中...">
                   注册
@@ -153,6 +154,11 @@ async function handleLogin() {
 
 async function handleRegister() {
   const username = regForm.username.trim()
+  const inviteCode = regForm.inviteCode.trim()
+  if (!inviteCode) {
+    showToast({ message: '请填写邀请码', type: 'fail' })
+    return
+  }
   if (username.length > USERNAME_MAX_LENGTH) {
     showToast({ message: `昵称最多 ${USERNAME_MAX_LENGTH} 个字符`, type: 'fail' })
     return
@@ -163,7 +169,7 @@ async function handleRegister() {
       username,
       phone: regForm.phone,
       password: regForm.password,
-      inviteCode: regForm.inviteCode.trim(),
+      inviteCode,
       gender: regForm.gender
     })
     showToast({ message: '注册成功，欢迎来到 Love Cube', type: 'success' })

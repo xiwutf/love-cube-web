@@ -158,13 +158,14 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "Phone number is already registered"));
         }
 
-        User inviter = null;
-        if (!inviteCode.isEmpty()) {
-            try {
-                inviter = fellowshipInviteService.validateInviteCodeForRegistration(inviteCode);
-            } catch (IllegalArgumentException ex) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Invalid invite code"));
-            }
+        if (inviteCode.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "请填写邀请码"));
+        }
+        User inviter;
+        try {
+            inviter = fellowshipInviteService.validateInviteCodeForRegistration(inviteCode);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", "邀请码无效，请检查后重试"));
         }
 
         try {

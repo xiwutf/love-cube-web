@@ -328,8 +328,11 @@ public class AdminFellowshipUserInsightService {
             profile.put("birthYear", main.getBirthday().getYear());
         } else if (legacy != null && legacy.getBirthYear() != null) {
             profile.put("birthYear", legacy.getBirthYear());
-        } else if (user.getAge() > 0) {
-            profile.put("age", user.getAge());
+        } else {
+            Integer age = user.getAge();
+            if (age != null && age > 0) {
+                profile.put("age", age);
+            }
         }
         return profile;
     }
