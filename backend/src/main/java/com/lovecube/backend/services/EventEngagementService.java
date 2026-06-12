@@ -1,5 +1,6 @@
 package com.lovecube.backend.services;
 
+import com.lovecube.backend.entity.EventGuestParticipant;
 import com.lovecube.backend.entity.EventPeerReview;
 import com.lovecube.backend.entity.EventSignup;
 import com.lovecube.backend.entity.PlatformEvent;
@@ -24,17 +25,20 @@ public class EventEngagementService {
     private final EventSignupRepository signupRepository;
     private final EventPeerReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final DatingEventService datingEventService;
 
     public EventEngagementService(
             PlatformEventRepository eventRepository,
             EventSignupRepository signupRepository,
             EventPeerReviewRepository reviewRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            DatingEventService datingEventService
     ) {
         this.eventRepository = eventRepository;
         this.signupRepository = signupRepository;
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
+        this.datingEventService = datingEventService;
     }
 
     @Transactional
@@ -54,25 +58,94 @@ public class EventEngagementService {
         EventSignup signup = signupRepository.findByEventIdAndUserId(eventId, user.getUserid())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先报名活动"));
         if (Boolean.TRUE.equals(signup.getCheckedIn())) {
-            return Map.of(
-                    "checkedIn", true,
-                    "alreadyCheckedIn", true,
-                    "checkedInAt", signup.getCheckedInAt() != null ? signup.getCheckedInAt().toString() : null,
-                    "message", "你已签到，无需重复操作"
-            );
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("checkedIn", true);
+            result.put("alreadyCheckedIn", true);
+            result.put("checkedInAt", signup.getCheckedInAt() != null ? signup.getCheckedInAt().toString() : null);
+            result.put("message", "你已签到，无需重复操作");
+            appendDatingIdentity(event, user, eventId, result);
+            return result;
         }
         signup.setCheckedIn(true);
         signup.setCheckedInAt(LocalDateTime.now());
         signupRepository.save(signup);
-        return Map.of(
-                "checkedIn", true,
-                "alreadyCheckedIn", false,
-                "checkedInAt", signup.getCheckedInAt().toString(),
-                "message", "签到成功"
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("checkedIn", true);
+        result.put("alreadyCheckedIn", false);
+        result.put("checkedInAt", signup.getCheckedInAt().toString());
+        result.put("message", "签到成功");
+        appendDatingIdentity(event, user, eventId, result);
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> checkinGuest(EventGuestParticipant guest, String eventId, String code) {
+        PlatformEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        if (!"published".equals(event.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动暂不可签到");
+        }
+        String expected = event.getCheckinCode();
+        if (expected == null || expected.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动尚未开启签到");
+        }
+        if (code == null || !expected.equalsIgnoreCase(code.trim())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "签到码不正确");
+        }
+        EventSignup signup = signupRepository.findByEventIdAndGuestParticipantId(eventId, guest.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先加入本场活动"));
+        if (Boolean.TRUE.equals(signup.getCheckedIn())) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("checkedIn", true);
+            result.put("alreadyCheckedIn", true);
+            result.put("checkedInAt", signup.getCheckedInAt() != null ? signup.getCheckedInAt().toString() : null);
+            result.put("message", "你已签到，无需重复操作");
+            appendDatingIdentityForGuest(event, guest, eventId, result);
+            return result;
+        }
+        signup.setCheckedIn(true);
+        signup.setCheckedInAt(LocalDateTime.now());
+        signupRepository.save(signup);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("checkedIn", true);
+        result.put("alreadyCheckedIn", false);
+        result.put("checkedInAt", signup.getCheckedInAt().toString());
+        result.put("message", "签到成功");
+        appendDatingIdentityForGuest(event, guest, eventId, result);
+        return result;
+    }
+
+    private void appendDatingIdentity(PlatformEvent event, User user, String eventId, Map<String, Object> result) {
+        if (!datingEventService.isDatingEvent(event)) {
+            return;
+        }
+        try {
+            Map<String, Object> identity = datingEventService.ensureIdentityAfterCheckin(user, eventId);
+            result.put("datingIdentity", identity);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void appendDatingIdentityForGuest(
+            PlatformEvent event,
+            EventGuestParticipant guest,
+            String eventId,
+            Map<String, Object> result
+    ) {
+        if (!datingEventService.isDatingEvent(event)) {
+            return;
+        }
+        try {
+            Map<String, Object> identity = datingEventService.ensureIdentityAfterGuestCheckin(guest, eventId);
+            result.put("datingIdentity", identity);
+        } catch (Exception ignored) {
+        }
     }
 
     public List<Map<String, Object>> listReviewCandidates(User user, String eventId) {
+        PlatformEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        requireEventEnded(event);
         EventSignup mySignup = signupRepository.findByEventIdAndUserId(eventId, user.getUserid())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先报名并签到"));
         if (!Boolean.TRUE.equals(mySignup.getCheckedIn())) {
@@ -81,6 +154,7 @@ public class EventEngagementService {
         List<EventSignup> checkedIns = signupRepository.findByEventIdAndCheckedInTrue(eventId);
         List<Long> userIds = checkedIns.stream()
                 .map(EventSignup::getUserId)
+                .filter(Objects::nonNull)
                 .filter(id -> !id.equals(user.getUserid()))
                 .distinct()
                 .collect(Collectors.toList());
@@ -107,6 +181,9 @@ public class EventEngagementService {
 
     @Transactional
     public Map<String, Object> submitReview(User user, String eventId, Long targetUserId, Integer rating, String comment) {
+        PlatformEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        requireEventEnded(event);
         if (targetUserId == null || targetUserId.equals(user.getUserid())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "参数不合法");
         }
@@ -174,11 +251,11 @@ public class EventEngagementService {
                 .count();
     }
 
-    public Map<String, Object> buildReviewSummary(Long userId, String eventId, boolean checkedIn) {
+    public Map<String, Object> buildReviewSummary(Long userId, String eventId, boolean checkedIn, boolean eventEnded) {
         Map<String, Object> summary = new LinkedHashMap<>();
-        if (!checkedIn) {
+        if (!checkedIn || !eventEnded) {
             summary.put("pendingReviewCount", 0);
-            summary.put("reviewCompleted", true);
+            summary.put("reviewCompleted", !checkedIn);
             summary.put("canReview", false);
             return summary;
         }
@@ -187,5 +264,11 @@ public class EventEngagementService {
         summary.put("reviewCompleted", pending <= 0);
         summary.put("canReview", true);
         return summary;
+    }
+
+    private void requireEventEnded(PlatformEvent event) {
+        if (!PlatformEventLifecycle.isEnded(event, LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动尚未结束，暂不可互评");
+        }
     }
 }

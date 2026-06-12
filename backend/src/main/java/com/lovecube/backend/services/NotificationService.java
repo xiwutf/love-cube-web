@@ -138,6 +138,15 @@ public class NotificationService {
         createNotification(userId, type, title, content, null, relatedType, relatedId);
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasNotification(Long userId, String type, String relatedType, String relatedId) {
+        if (userId == null || type == null || relatedType == null || relatedId == null) {
+            return false;
+        }
+        return userNotificationRepository.existsByUserIdAndTypeAndRelatedTypeAndRelatedId(
+                userId, type, relatedType, relatedId);
+    }
+
     @Transactional
     public void markAsRead(Long userId, Long notificationId) {
         userNotificationRepository.findById(notificationId).ifPresent(n -> {
@@ -188,22 +197,48 @@ public class NotificationService {
      */
     @Transactional
     public int broadcastPlatformAnnouncement(String title, String summary, String announcementId, String linkUrl) {
+        return broadcastToActiveUsers(
+                NotificationCatalog.TYPE_PLATFORM_ANNOUNCEMENT,
+                title,
+                summary,
+                linkUrl != null ? linkUrl : "/platform/announcements",
+                "ANNOUNCEMENT",
+                announcementId
+        );
+    }
+
+    /**
+     * 平台活动发布：向活跃用户推送站内活动通知（报名入口指向活动详情）。
+     */
+    @Transactional
+    public int broadcastPlatformEventPublished(String title, String summary, String eventId, String linkUrl) {
+        return broadcastToActiveUsers(
+                NotificationCatalog.TYPE_PLATFORM_EVENT_PUBLISHED,
+                title,
+                summary,
+                linkUrl != null ? linkUrl : "/events/" + eventId,
+                "EVENT",
+                eventId
+        );
+    }
+
+    private int broadcastToActiveUsers(
+            String type,
+            String title,
+            String summary,
+            String linkUrl,
+            String relatedType,
+            String relatedId
+    ) {
         int sent = 0;
         int pageIdx = 0;
+        String body = summary != null && !summary.isBlank() ? summary : title;
         while (sent < ANNOUNCEMENT_MAX_USERS) {
             Page<Long> ids = userRepository.findActiveUserIds(PageRequest.of(pageIdx++, ANNOUNCEMENT_USER_BATCH));
             if (!ids.hasContent()) break;
             for (Long uid : ids.getContent()) {
                 if (sent >= ANNOUNCEMENT_MAX_USERS) break;
-                createNotification(
-                        uid,
-                        NotificationCatalog.TYPE_PLATFORM_ANNOUNCEMENT,
-                        title,
-                        summary != null && !summary.isBlank() ? summary : title,
-                        linkUrl != null ? linkUrl : "/platform/announcements",
-                        "ANNOUNCEMENT",
-                        announcementId
-                );
+                createNotification(uid, type, title, body, linkUrl, relatedType, relatedId);
                 sent++;
             }
             if (!ids.hasNext()) break;

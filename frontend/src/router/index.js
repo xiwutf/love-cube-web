@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
+import { hasEventGuestToken } from '@/utils/eventGuestToken.js'
 import platformRoutes from './modules/platform.routes.js'
 import fellowshipRoutes from './modules/fellowship.routes.js'
 import adminRoutes from './modules/admin.routes.js'
@@ -24,6 +25,10 @@ router.beforeEach(async (to) => {
   const token = userStore.token
 
   if (to.meta.requiresAuth && !token) {
+    const eventId = to.params.eventId || to.params.id
+    if (to.meta.allowEventGuest && eventId && hasEventGuestToken(eventId)) {
+      return true
+    }
     userStore.setPostLoginRedirect(to.fullPath)
     if (to.path.startsWith('/fellowship')) {
       return { path: '/fellowship/login', query: { redirect: encodeURIComponent(to.fullPath) } }

@@ -33,6 +33,7 @@ public final class NotificationCatalog {
     public static final String TYPE_CONTENT_MODERATION_REJECTED = "CONTENT_MODERATION_REJECTED";
     public static final String TYPE_CONTENT_COMMENTED = "CONTENT_COMMENTED";
     public static final String TYPE_PLATFORM_ANNOUNCEMENT = "PLATFORM_ANNOUNCEMENT";
+    public static final String TYPE_PLATFORM_EVENT_PUBLISHED = "PLATFORM_EVENT_PUBLISHED";
     public static final String TYPE_MATCH_PROFILE_REVIEW_PASSED = "MATCH_PROFILE_REVIEW_PASSED";
     public static final String TYPE_MATCH_PROFILE_REVIEW_REJECTED = "MATCH_PROFILE_REVIEW_REJECTED";
     public static final String TYPE_PROFILE_LIKED = "PROFILE_LIKED";
@@ -46,7 +47,13 @@ public final class NotificationCatalog {
     public static final String TYPE_ACTIVITY_PROPOSAL_SUBMITTED = "ACTIVITY_PROPOSAL_SUBMITTED";
     public static final String TYPE_ACTIVITY_PROPOSAL_APPROVED = "ACTIVITY_PROPOSAL_APPROVED";
     public static final String TYPE_ACTIVITY_PROPOSAL_REJECTED = "ACTIVITY_PROPOSAL_REJECTED";
+    public static final String TYPE_ACTIVITY_REMINDER_24H = "ACTIVITY_REMINDER_24H";
+    public static final String TYPE_ACTIVITY_REMINDER_2H = "ACTIVITY_REMINDER_2H";
+    public static final String TYPE_ACTIVITY_REVIEW_REMINDER = "ACTIVITY_REVIEW_REMINDER";
+    public static final String TYPE_DATING_MUTUAL_MATCHED = "DATING_MUTUAL_MATCHED";
     public static final String TYPE_NOTIFICATION_CHANNEL_TEST = "NOTIFICATION_CHANNEL_TEST";
+
+    public static final String RELATED_DATING_MUTUAL_MATCH = "DATING_MUTUAL_MATCH";
 
     public static final String RELATED_GROWTH_CAMPAIGN_DELIVERY = "GROWTH_CAMPAIGN_DELIVERY";
 
@@ -89,14 +96,19 @@ public final class NotificationCatalog {
                  TYPE_MATCH_PROFILE_REVIEW_PASSED,
                  TYPE_MATCH_PROFILE_REVIEW_REJECTED -> LEVEL_IMPORTANT;
             case TYPE_PLATFORM_ANNOUNCEMENT,
+                 TYPE_PLATFORM_EVENT_PUBLISHED,
                  TYPE_GROWTH_OPERATOR_REMINDER,
-                 TYPE_SPACE_CAMPAIGN_REMINDER -> LEVEL_ANNOUNCEMENT;
+                 TYPE_SPACE_CAMPAIGN_REMINDER,
+                 TYPE_ACTIVITY_REMINDER_24H,
+                 TYPE_ACTIVITY_REMINDER_2H,
+                 TYPE_ACTIVITY_REVIEW_REMINDER -> LEVEL_ANNOUNCEMENT;
             case TYPE_PROFILE_LIKED,
                  TYPE_PROFILE_VIEWED,
                  TYPE_CONTENT_LIKED,
                  TYPE_CONTENT_COMMENTED,
                  TYPE_USER_FOLLOWED,
                  TYPE_MUTUAL_MATCH,
+                 TYPE_DATING_MUTUAL_MATCHED,
                  "LIKE",
                  "GROUP_POST_LIKED",
                  "GROUP_POST_COMMENTED",
@@ -156,8 +168,13 @@ public final class NotificationCatalog {
                 || "GROUP_POST_LIKED".equals(t)
                 || "GROUP_POST_COMMENTED".equals(t)
                 || "LIKE".equals(t)
-                || TYPE_MUTUAL_MATCH.equals(t);
+                || TYPE_MUTUAL_MATCH.equals(t)
+                || TYPE_DATING_MUTUAL_MATCHED.equals(t);
             case "ANNOUNCEMENT" -> TYPE_PLATFORM_ANNOUNCEMENT.equals(t)
+                || TYPE_PLATFORM_EVENT_PUBLISHED.equals(t)
+                || TYPE_ACTIVITY_REMINDER_24H.equals(t)
+                || TYPE_ACTIVITY_REMINDER_2H.equals(t)
+                || TYPE_ACTIVITY_REVIEW_REMINDER.equals(t)
                 || TYPE_GROWTH_OPERATOR_REMINDER.equals(t)
                 || TYPE_SPACE_CAMPAIGN_REMINDER.equals(t);
             case "SYSTEM" -> LEVEL_SYSTEM.equals(resolveLevel(type))

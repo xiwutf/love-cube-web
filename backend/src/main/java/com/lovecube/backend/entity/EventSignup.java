@@ -16,7 +16,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "event_signups",
-        uniqueConstraints = @UniqueConstraint(name = "uk_event_signups_event_user", columnNames = {"event_id", "user_id"})
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_event_signups_event_user", columnNames = {"event_id", "user_id"}),
+                @UniqueConstraint(name = "uk_event_signups_event_guest", columnNames = {"event_id", "guest_participant_id"})
+        }
 )
 public class EventSignup {
     @Id
@@ -26,8 +29,11 @@ public class EventSignup {
     @Column(name = "event_id", nullable = false, length = 64)
     private String eventId;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Long userId;
+
+    @Column(name = "guest_participant_id")
+    private Long guestParticipantId;
 
     @Column(name = "checked_in", nullable = false)
     private Boolean checkedIn;

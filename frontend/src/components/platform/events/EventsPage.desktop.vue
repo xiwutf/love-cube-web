@@ -12,6 +12,12 @@
             <span class="stat-label">{{ stat.label }}</span>
             <span class="stat-note">{{ stat.note }}</span>
           </article>
+          <router-link to="/platform/activity-showcase" class="stat-card showcase-entry">
+            <span class="stat-icon violet" aria-hidden="true">展</span>
+            <span class="stat-value showcase-label">活动展示</span>
+            <span class="stat-label">活动流程</span>
+            <span class="stat-note">参与者完整旅程</span>
+          </router-link>
         </div>
       </div>
 
@@ -118,7 +124,10 @@
                 <span class="cover-badge" :class="item.tone">{{ item.category }}</span>
               </div>
               <div class="activity-body">
-                <h3>{{ item.title }}</h3>
+                <div class="title-row">
+                  <h3>{{ item.title }}</h3>
+                  <span class="status-badge" :class="item.displayTone">{{ item.displayStatus }}</span>
+                </div>
                 <div class="chips">
                   <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
                 </div>
@@ -172,6 +181,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { fetchEvents, fetchEventsStats } from '@/api/platformContent.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
+import { getActivityDisplayStatus } from '@/utils/activityStatus.js'
 
 const { eventsPath } = usePlatformPath()
 
@@ -206,21 +216,30 @@ const stats = computed(() => [
   { icon: '城', value: eventsApiStats.value.citiesCount || cityOptions.value.length, label: '城市覆盖', note: '活动举办城市', tone: 'green' }
 ])
 
-const normalizedItems = computed(() => allItems.value.map((item, index) => ({
-  id: item.id,
-  title: item.title || '',
-  category: item.category || '',
-  type: item.type || item.category || '',
-  time: item.eventTime || item.time || '',
-  location: item.location || '',
-  city: item.city || parseCity(item.location) || '',
-  signupCount: Number(item.signupCount ?? 0),
-  capacity: Number(item.capacity ?? 0),
-  coverUrl: item.coverUrl || '',
-  tags: item.tags || [],
-  tone: EVENT_TONES[index % EVENT_TONES.length],
-  hotLabel: item.recommended ? '推荐' : ''
-})))
+const normalizedItems = computed(() => allItems.value.map((item, index) => {
+  const display = getActivityDisplayStatus({
+    status: item.status || 'published',
+    eventTime: item.eventTime || item.time,
+    endTime: item.endTime
+  })
+  return {
+    id: item.id,
+    title: item.title || '',
+    category: item.category || '',
+    type: item.type || item.category || '',
+    time: item.eventTime || item.time || '',
+    location: item.location || '',
+    city: item.city || parseCity(item.location) || '',
+    signupCount: Number(item.signupCount ?? 0),
+    capacity: Number(item.capacity ?? 0),
+    coverUrl: item.coverUrl || '',
+    tags: item.tags || [],
+    tone: EVENT_TONES[index % EVENT_TONES.length],
+    hotLabel: item.recommended ? '推荐' : '',
+    displayStatus: display.label,
+    displayTone: display.tone
+  }
+}))
 
 const cityOptions = computed(() => [...new Set(normalizedItems.value.map(item => item.city).filter(Boolean))])
 const typeOptions = computed(() => [...new Set(normalizedItems.value.map(item => item.type).filter(Boolean))])
@@ -352,8 +371,24 @@ onMounted(async () => {
 .stats-grid {
   margin-top: var(--lc-space-8);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--lc-space-4);
+}
+
+.showcase-entry {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.showcase-entry:hover {
+  border-color: rgba(255, 95, 132, 0.45);
+  box-shadow: var(--lc-shadow-md);
+}
+
+.showcase-label {
+  font-size: var(--lc-text-lg);
 }
 
 .stat-card {
@@ -758,11 +793,19 @@ onMounted(async () => {
   padding: var(--lc-space-4);
 }
 
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--lc-space-2);
+}
+
 .activity-body h3 {
   margin: 0;
   color: var(--lc-text);
   font-size: var(--lc-text-md);
   line-height: 1.35;
+  flex: 1;
 }
 
 .chips {

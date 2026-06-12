@@ -40,8 +40,13 @@
       </div>
       <ul v-if="homeUpdates.length" class="updates-list">
         <li v-for="item in homeUpdates" :key="`${item.version || 'v'}-${item.title}`">
-          <strong>{{ item.title }}</strong>
-          <span>{{ item.version || '最新' }} {{ item.date || '' }}</span>
+          <div class="updates-item-main">
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.version || '最新' }} {{ item.date || '' }}</span>
+          </div>
+          <p v-if="changelogPreview(item.detail)" class="updates-item-detail">
+            {{ changelogPreview(item.detail) }}
+          </p>
         </li>
       </ul>
       <p v-else class="local-empty-tip">暂无更新日志。</p>
@@ -84,6 +89,11 @@ function goContent(){ router.push('/platform/content') }
 function goPublish(){ router.push('/platform/positive-share') }
 function goLocal(){ router.push('/platform/local') }
 function goChangelog(){ router.push('/platform/changelog') }
+function changelogPreview(detail) {
+  const text = String(detail || '').trim()
+  if (!text) return ''
+  return text.split('\n').find((line) => line.trim())?.trim() || ''
+}
 function goPendingUpdates(){ router.push('/platform/pending-updates') }
 function goQuick(type){
   if (type === 'match') {
@@ -139,8 +149,10 @@ onMounted(async () => {
 .updates-head p { margin: 6px 0 0; font-size: 13px; color: var(--lc-muted); }
 .updates-actions { display: flex; gap: 8px; align-items: center; }
 .updates-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
-.updates-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--lc-border); border-radius: 10px; background: var(--lc-surface); }
+.updates-list li { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--lc-border); border-radius: 10px; background: var(--lc-surface); }
+.updates-item-main { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .updates-list strong { font-size: 14px; color: var(--lc-text); }
-.updates-list span { font-size: 12px; color: var(--lc-subtle); }
+.updates-list span { font-size: 12px; color: var(--lc-subtle); white-space: nowrap; }
+.updates-item-detail { margin: 0; font-size: 12px; line-height: 1.5; color: var(--lc-muted); }
 .platform-btn.is-ghost { background: var(--lc-surface); color: var(--lc-text); border: 1px solid var(--lc-border); box-shadow: none; }
 </style>

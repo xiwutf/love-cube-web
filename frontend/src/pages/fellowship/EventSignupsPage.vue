@@ -42,6 +42,14 @@
         </div>
         <div class="event-actions">
           <van-button
+            v-if="isDatingEvent(item) && item.checkedIn"
+            size="small"
+            type="primary"
+            @click="goDatingHub(item.eventId)"
+          >
+            联谊专场
+          </van-button>
+          <van-button
             v-if="item.checkinEnabled && !item.checkedIn && !item.eventEnded"
             size="small"
             type="primary"
@@ -186,6 +194,15 @@ async function loadList() {
 function goDetail(eventId) {
   if (!eventId) return
   router.push(`/events/${eventId}`)
+}
+
+function isDatingEvent(item) {
+  return String(item?.templateType || '').toUpperCase() === 'DATING'
+}
+
+function goDatingHub(eventId) {
+  if (!eventId) return
+  router.push(`/fellowship/events/${eventId}/dating`)
 }
 
 function openCheckin(item) {

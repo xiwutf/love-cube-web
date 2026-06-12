@@ -130,8 +130,11 @@
 
     <section class="hc-panel">
       <div class="panel-head panel-head-with-action">
-        <h3>更新日志配置</h3>
-        <button type="button" class="admin-btn small" @click="addChangelogItem">新增日志</button>
+        <div>
+          <h3>用户更新日志</h3>
+          <p class="panel-hint">展示于平台「更新日志」页（`/#/platform/changelog`），仅写用户能感知的功能与体验。</p>
+        </div>
+        <button type="button" class="admin-btn small" @click="addChangelogItem">新增用户日志</button>
       </div>
       <div class="list-grid list-grid-changelog">
         <article v-for="(item, index) in form.changelog" :key="`${item.version || 'log'}-${index}`" class="item-card">
@@ -153,6 +156,15 @@
             <span>更新标题</span>
             <input v-model.trim="item.title" class="admin-input" type="text" placeholder="本次版本更新内容">
           </label>
+          <label class="field">
+            <span>更新详情</span>
+            <textarea
+              v-model="item.detail"
+              class="admin-textarea"
+              rows="4"
+              placeholder="用户可见要点，每行一条（如：• 新增某某功能）"
+            />
+          </label>
           <div class="grid-2">
             <label class="field">
               <span>排序</span>
@@ -161,6 +173,61 @@
             <label class="inline-check">
               <input v-model="item.enabled" type="checkbox">
               展示
+            </label>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="hc-panel hc-panel-internal">
+      <div class="panel-head panel-head-with-action">
+        <div>
+          <h3>后台更新记录</h3>
+          <p class="panel-hint">仅保存在管理端，不对用户展示。可记录表结构、接口、定时任务、投递等技术变更。</p>
+        </div>
+        <button type="button" class="admin-btn small" @click="addAdminChangelogItem">新增后台记录</button>
+      </div>
+      <div class="list-grid list-grid-changelog">
+        <article
+          v-for="(item, index) in form.adminChangelog"
+          :key="`${item.version || 'admin-log'}-${index}`"
+          class="item-card item-card-internal"
+        >
+          <div class="item-head">
+            <strong>{{ item.version || `后台记录 ${index + 1}` }}</strong>
+            <button type="button" class="text-btn danger" @click="removeAdminChangelogItem(index)">删除</button>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>版本号</span>
+              <input v-model.trim="item.version" class="admin-input" type="text" placeholder="v1.6.0">
+            </label>
+            <label class="field">
+              <span>日期</span>
+              <input v-model.trim="item.date" class="admin-input" type="date">
+            </label>
+          </div>
+          <label class="field">
+            <span>记录标题</span>
+            <input v-model.trim="item.title" class="admin-input" type="text" placeholder="后台变更摘要">
+          </label>
+          <label class="field">
+            <span>技术详情</span>
+            <textarea
+              v-model="item.detail"
+              class="admin-textarea"
+              rows="4"
+              placeholder="迁移版本、服务类、表名等，每行一条"
+            />
+          </label>
+          <div class="grid-2">
+            <label class="field">
+              <span>排序</span>
+              <input v-model.number="item.sortOrder" class="admin-input" type="number" min="0">
+            </label>
+            <label class="inline-check">
+              <input v-model="item.enabled" type="checkbox">
+              保留
             </label>
           </div>
         </article>
@@ -235,6 +302,7 @@ const form = reactive({
     imageUrl: ''
   },
   changelog: [],
+  adminChangelog: [],
   pendingUpdates: []
 })
 
@@ -245,6 +313,9 @@ function applyConfig(data) {
   form.foundation = { ...form.foundation, ...(data?.foundation || {}) }
   form.changelog = Array.isArray(data?.changelog)
     ? data.changelog.map((item, index) => ({ ...item, sortOrder: Number(item?.sortOrder ?? index) }))
+    : []
+  form.adminChangelog = Array.isArray(data?.adminChangelog)
+    ? data.adminChangelog.map((item, index) => ({ ...item, sortOrder: Number(item?.sortOrder ?? index) }))
     : []
   form.pendingUpdates = Array.isArray(data?.pendingUpdates)
     ? data.pendingUpdates.map((item, index) => ({ ...item, id: item?.id || `pending-${index + 1}` }))
@@ -272,6 +343,7 @@ async function saveConfig() {
       abilities: form.abilities,
       foundation: form.foundation,
       changelog: form.changelog,
+      adminChangelog: form.adminChangelog,
       pendingUpdates: form.pendingUpdates
     }
     const result = await saveAdminHomeConfig(payload)
@@ -289,6 +361,7 @@ function addChangelogItem() {
     version: '',
     title: '',
     date: '',
+    detail: '',
     enabled: true,
     sortOrder: form.changelog.length
   })
@@ -297,6 +370,22 @@ function addChangelogItem() {
 function removeChangelogItem(index) {
   if (index < 0 || index >= form.changelog.length) return
   form.changelog.splice(index, 1)
+}
+
+function addAdminChangelogItem() {
+  form.adminChangelog.push({
+    version: '',
+    title: '',
+    date: '',
+    detail: '',
+    enabled: true,
+    sortOrder: form.adminChangelog.length
+  })
+}
+
+function removeAdminChangelogItem(index) {
+  if (index < 0 || index >= form.adminChangelog.length) return
+  form.adminChangelog.splice(index, 1)
 }
 
 function addPendingUpdateItem() {
@@ -351,9 +440,26 @@ loadConfig()
 
 .panel-head-with-action {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.panel-hint {
+  margin: 6px 0 0;
+  color: var(--lc-muted-light);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.hc-panel-internal {
+  border-color: color-mix(in srgb, var(--lc-amber) 35%, var(--lc-border));
+  background: color-mix(in srgb, var(--lc-amber) 6%, var(--lc-surface));
+}
+
+.item-card-internal {
+  border-style: dashed;
 }
 
 .hero-form,

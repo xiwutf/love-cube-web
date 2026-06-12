@@ -15,7 +15,10 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.services.AdminAuthService;
 import com.lovecube.backend.services.GrowthService;
 import com.lovecube.backend.services.HomeConfigService;
+import com.lovecube.backend.services.DatingEventService;
 import com.lovecube.backend.services.EventEngagementService;
+import com.lovecube.backend.services.EventSignupService;
+import com.lovecube.backend.services.PlatformEventLifecycle;
 import com.lovecube.backend.services.PositiveShareService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -45,6 +48,8 @@ public class PlatformContentController {
     private final GrowthService growthService;
     private final PositiveShareService positiveShareService;
     private final EventEngagementService eventEngagementService;
+    private final DatingEventService datingEventService;
+    private final EventSignupService eventSignupService;
 
     public PlatformContentController(
             AnnouncementRepository announcementRepository,
@@ -58,7 +63,9 @@ public class PlatformContentController {
             DynamicRepository dynamicRepository,
             GrowthService growthService,
             PositiveShareService positiveShareService,
-            EventEngagementService eventEngagementService
+            EventEngagementService eventEngagementService,
+            DatingEventService datingEventService,
+            EventSignupService eventSignupService
     ) {
         this.announcementRepository = announcementRepository;
         this.articleRepository = articleRepository;
@@ -72,6 +79,8 @@ public class PlatformContentController {
         this.growthService = growthService;
         this.positiveShareService = positiveShareService;
         this.eventEngagementService = eventEngagementService;
+        this.datingEventService = datingEventService;
+        this.eventSignupService = eventSignupService;
     }
 
     /**
@@ -212,6 +221,7 @@ public class PlatformContentController {
         if (category != null && !category.isBlank()) {
             items = items.stream().filter(e -> category.equals(e.getCategory())).toList();
         }
+        items.forEach(this::stripOrganizerOnlyFields);
         return items;
     }
 
@@ -225,7 +235,14 @@ public class PlatformContentController {
         item.setViewCount((item.getViewCount() == null ? 0 : item.getViewCount()) + 1);
         platformEventRepository.save(item);
         tryRecordViewAction(authHeader, "EVENT_" + id);
+        stripOrganizerOnlyFields(item);
         return item;
+    }
+
+    private void stripOrganizerOnlyFields(PlatformEvent event) {
+        if (event != null) {
+            event.setCheckinCode(null);
+        }
     }
 
     @PostMapping("/events/{id}/signup")
@@ -235,29 +252,7 @@ public class PlatformContentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader
     ) {
         User user = adminAuthService.requireUser(authHeader);
-        PlatformEvent item = platformEventRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
-        if (!"published".equals(item.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "活动暂不可报名");
-        }
-
-        boolean alreadySignedUp = eventSignupRepository.existsByEventIdAndUserId(id, user.getUserid());
-        if (!alreadySignedUp) {
-            EventSignup signup = new EventSignup();
-            signup.setEventId(id);
-            signup.setUserId(user.getUserid());
-            eventSignupRepository.save(signup);
-            item.setSignupCount((item.getSignupCount() == null ? 0 : item.getSignupCount()) + 1);
-        }
-
-        platformEventRepository.save(item);
-
-        return Map.of(
-                "signedUp", true,
-                "alreadySignedUp", alreadySignedUp,
-                "signupCount", item.getSignupCount() == null ? 0 : item.getSignupCount(),
-                "message", alreadySignedUp ? "已报名，无需重复提交" : "报名成功"
-        );
+        return eventSignupService.signup(user, id);
     }
 
     @GetMapping("/events/my-signups")
@@ -418,38 +413,35 @@ public class PlatformContentController {
     }
 
     private Map<String, Object> buildSignupRow(PlatformEvent event, EventSignup signup, Long userId) {
+        LocalDateTime now = LocalDateTime.now();
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("eventId", event.getId());
         row.put("title", event.getTitle());
         row.put("summary", event.getSummary() == null ? "" : event.getSummary());
         row.put("location", event.getLocation() == null ? "" : event.getLocation());
         row.put("eventTime", event.getEventTime());
+        row.put("endTime", event.getEndTime());
+        row.put("effectiveEndTime", PlatformEventLifecycle.resolveEnd(event));
         row.put("signupAt", signup.getCreatedAt());
         row.put("checkedIn", Boolean.TRUE.equals(signup.getCheckedIn()));
         row.put("checkedInAt", signup.getCheckedInAt());
         row.put("checkinEnabled", event.getCheckinCode() != null && !event.getCheckinCode().isBlank());
         boolean checkedIn = Boolean.TRUE.equals(signup.getCheckedIn());
-        Map<String, Object> reviewSummary = eventEngagementService.buildReviewSummary(userId, event.getId(), checkedIn);
+        boolean eventEnded = PlatformEventLifecycle.isEnded(event, now);
+        boolean eventStarted = PlatformEventLifecycle.hasStarted(event, now);
+        Map<String, Object> reviewSummary = eventEngagementService.buildReviewSummary(
+                userId, event.getId(), checkedIn, eventEnded);
         row.put("canReview", Boolean.TRUE.equals(reviewSummary.get("canReview")));
         row.put("pendingReviewCount", reviewSummary.get("pendingReviewCount"));
         row.put("reviewCompleted", reviewSummary.get("reviewCompleted"));
-        boolean eventEnded = event.getEventTime() != null && event.getEventTime().isBefore(LocalDateTime.now());
         row.put("eventEnded", eventEnded);
-        row.put("status", resolveSignupStatus(checkedIn, eventEnded, reviewSummary));
+        row.put("eventStarted", eventStarted);
+        row.put("eventOngoing", PlatformEventLifecycle.isOngoing(event, now));
+        boolean reviewCompleted = Boolean.TRUE.equals(reviewSummary.get("reviewCompleted"));
+        row.put("status", PlatformEventLifecycle.resolveParticipationStatus(
+                checkedIn, event, now, reviewCompleted));
+        datingEventService.enrichSignupRow(row, event, userId);
         return row;
-    }
-
-    private String resolveSignupStatus(boolean checkedIn, boolean eventEnded, Map<String, Object> reviewSummary) {
-        if (!eventEnded) {
-            return checkedIn ? "checked_in" : "upcoming";
-        }
-        if (!checkedIn) {
-            return "missed";
-        }
-        if (Boolean.TRUE.equals(reviewSummary.get("reviewCompleted"))) {
-            return "completed";
-        }
-        return "review_pending";
     }
 
     private Long parseLong(Object value) {

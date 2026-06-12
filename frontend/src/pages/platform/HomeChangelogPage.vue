@@ -4,7 +4,7 @@
       <p class="platform-kicker">Release notes</p>
       <h1 class="platform-title">更新日志</h1>
       <p class="platform-subtitle">
-        按版本记录平台功能迭代与体验优化，数据来自运营配置。
+        按版本记录你能直接感受到的功能与体验优化；后台技术变更不在此展示。
       </p>
       <router-link class="back-link" to="/">← 返回首页</router-link>
     </header>
@@ -17,6 +17,7 @@
           <div class="log-body">
             <strong>{{ item.title }}</strong>
             <time v-if="item.date">{{ item.date }}</time>
+            <p v-if="item.detail" class="log-detail">{{ item.detail }}</p>
           </div>
         </li>
       </ul>
@@ -117,6 +118,14 @@ onMounted(async () => {
 .log-body time {
   color: var(--lc-subtle);
   font-size: 12px;
+}
+
+.log-detail {
+  margin: var(--lc-space-2) 0 0;
+  color: var(--lc-subtle);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-line;
 }
 
 .state-muted {

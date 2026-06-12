@@ -18,6 +18,8 @@ public interface PlatGroupActivitySignupRepository extends JpaRepository<PlatGro
     List<PlatGroupActivitySignup> findByActivityIdInAndUserIdAndStatus(
             List<Long> activityIds, Long userId, String status);
 
+    List<PlatGroupActivitySignup> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, String status);
+
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
     List<PlatGroupActivitySignup> findByActivityIdAndStatusAndCheckedInTrue(Long activityId, String status);

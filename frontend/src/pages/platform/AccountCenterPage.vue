@@ -300,6 +300,7 @@ const mobileGridItems = [
   { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
   { title: '心声收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
   { title: '点赞心声', icon: '❤', tone: 'rose', to: '/me/likes' },
+  { title: '我的活动', icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '今日任务', icon: '✅', tone: 'green', to: '/me/tasks' },
   { title: '我的徽章', icon: '🏅', tone: 'amber', to: '/me/badges' },
   { title: '账号安全', icon: '🔐', tone: 'blue', to: '/me/security' },
@@ -399,13 +400,13 @@ const profileLightStats = [
 const workspaceItems = computed(() => [
   { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
   { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
-  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
+  { title: '我的活动', desc: '报名、签到与互评', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
 ])
 
 const overviewItems = computed(() => [
   { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
-  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/platform/my-activities' },
   { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
   { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: '/me/likes' },
   { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: '/platform/positive-share' },

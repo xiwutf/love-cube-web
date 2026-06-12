@@ -16,6 +16,7 @@
   "dependencies": {
     "@vant/area-data": "^2.1.0",
     "axios": "^1.7.9",
+    "mermaid": "^11.15.0",
     "pinia": "^2.2.8",
     "qrcode": "^1.5.4",
     "vant": "^4.9.16",

@@ -185,6 +185,11 @@ export default {
       meta: { module: 'platform' }
     },
     {
+      path: 'events/:id/onsite',
+      component: () => import('@/pages/platform/OnsiteActivityEntryPage.vue'),
+      meta: { module: 'platform' }
+    },
+    {
       path: 'events/:id',
       component: () => import('@/pages/platform/EventDetailPage.vue'),
       meta: { module: 'platform' }

@@ -50,4 +50,33 @@ public interface PlatGroupActivityRepository extends JpaRepository<PlatGroupActi
               AND reviewed_by IS NOT NULL
             """, nativeQuery = true)
     long countMemberActivityProposalsApproved(@Param("groupId") Long groupId);
+
+    List<PlatGroupActivity> findByCreatorUserIdOrderByCreatedAtDesc(Long creatorUserId);
+
+    @Query("""
+            SELECT a FROM PlatGroupActivity a
+            WHERE a.creatorUserId = :userId
+            AND (a.status IN ('pending', 'rejected')
+                 OR (a.status = 'published' AND a.reviewedBy IS NOT NULL))
+            ORDER BY a.createdAt DESC
+            """)
+    List<PlatGroupActivity> findMemberProposalsByCreatorUserId(@Param("userId") Long userId);
+
+    @Query("""
+            SELECT a FROM PlatGroupActivity a
+            WHERE a.status = 'published'
+            AND a.startTime >= :start AND a.startTime < :end
+            """)
+    List<PlatGroupActivity> findPublishedStartingBetween(
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
+
+    @Query("""
+            SELECT a FROM PlatGroupActivity a
+            WHERE a.status = 'published'
+            AND a.endTime < :now AND a.endTime >= :since
+            """)
+    List<PlatGroupActivity> findPublishedEndedBetween(
+            @Param("since") java.time.LocalDateTime since,
+            @Param("now") java.time.LocalDateTime now);
 }

@@ -26,4 +26,12 @@ public interface PlatformEventRepository extends JpaRepository<PlatformEvent, St
     long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
     long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(LocalDateTime start, LocalDateTime end);
+
+    List<PlatformEvent> findByStatusAndEventTimeGreaterThanEqualAndEventTimeLessThan(
+            String status, LocalDateTime start, LocalDateTime end);
+
+    List<PlatformEvent> findByStatusAndEventTimeLessThanAndEventTimeGreaterThanEqual(
+            String status, LocalDateTime before, LocalDateTime since);
+
+    List<PlatformEvent> findByStatusAndTemplateType(String status, String templateType);
 }

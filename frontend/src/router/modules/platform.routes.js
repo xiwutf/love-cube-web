@@ -49,6 +49,13 @@ export default {
     { path: 'articles/:id', component: () => import('@/pages/platform/ArticleDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'events', redirect: '/platform/events', meta: { module: 'platform' } },
     { path: 'platform/events', component: () => import('@/pages/platform/EventsPage.vue'), meta: { module: 'platform' } },
+    { path: 'platform/activity-showcase', component: () => import('@/pages/platform/ActivityShowcasePage.vue'), meta: { module: 'platform' } },
+    {
+      path: 'platform/my-activities',
+      component: () => import('@/pages/platform/MyActivitiesPage.vue'),
+      meta: { module: 'platform', requiresAuth: true }
+    },
+    { path: 'events/:id/onsite', component: () => import('@/pages/platform/OnsiteActivityEntryPage.vue'), meta: { module: 'platform' } },
     { path: 'events/:id', component: () => import('@/pages/platform/EventDetailPage.vue'), meta: { module: 'platform' } },
     { path: 'about', redirect: '/feedback', meta: { module: 'platform' } },
     { path: 'fellowship-intro', component: () => import('@/pages/platform/FellowshipIntroPage.vue'), meta: { module: 'platform' } },

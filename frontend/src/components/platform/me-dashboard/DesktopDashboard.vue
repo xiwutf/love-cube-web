@@ -32,9 +32,16 @@
             <button type="button" class="platform-btn platform-btn-primary" @click="onOpenEdit">编辑资料</button>
             <router-link class="platform-btn platform-btn-ghost" :to="messagesPath()">查看消息</router-link>
             <router-link class="platform-btn platform-btn-ghost" :to="myGroupsPath()">进入我的 Space</router-link>
+            <router-link class="platform-btn platform-btn-ghost" to="/platform/my-activities">我的活动</router-link>
           </div>
         </div>
       </div>
+
+      <aside class="hero-invite-qr" aria-label="邀请二维码">
+        <InviteQrCode :invite-code="inviteCodeDisplay" :size="148" loading-text="生成中…" />
+        <p class="qr-caption">扫码注册 · 已邀请 {{ inviteCount }} 人</p>
+        <router-link class="qr-link" to="/fellowship/invite">邀请详情</router-link>
+      </aside>
 
       <div class="metric-grid compact hero-metrics">
         <article v-for="item in heroMetrics" :key="item.label" class="metric-card">
@@ -181,6 +188,7 @@ import { computed, ref } from 'vue'
 import { toFullUrl } from '@/utils/image.js'
 import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
+import InviteQrCode from '@/components/common/InviteQrCode.vue'
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -328,6 +336,34 @@ function scrollToTasks() {
 
 .me-hero {
   align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) 168px 430px;
+}
+
+.hero-invite-qr {
+  display: grid;
+  gap: var(--lc-space-2);
+  align-content: start;
+  justify-items: center;
+  width: 168px;
+}
+
+.qr-caption {
+  margin: 0;
+  color: var(--lc-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.qr-link {
+  color: var(--lc-blue);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.qr-link:hover {
+  text-decoration: underline;
 }
 
 .hero-profile {
@@ -617,7 +653,16 @@ function scrollToTasks() {
     width: min(100% - 24px, 1180px);
   }
 
-  .me-hero,
+  .me-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-invite-qr {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+
   .dashboard-main-grid,
   .recent-list {
     grid-template-columns: 1fr;

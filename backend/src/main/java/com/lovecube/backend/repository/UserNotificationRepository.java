@@ -34,4 +34,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     long countByIsReadFalse();
 
     long countByCreatedAtGreaterThanEqual(LocalDateTime start);
+
+    boolean existsByUserIdAndTypeAndRelatedTypeAndRelatedId(
+            Long userId, String type, String relatedType, String relatedId);
 }

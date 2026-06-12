@@ -13,6 +13,13 @@
   margin: 40px auto 80px;
 }
 
+/* 个人中心与顶栏同宽，避免两侧留白过大 */
+.platform-page.me-page {
+  width: min(calc(100% - 32px), 1720px);
+  margin-top: 20px;
+  margin-bottom: 48px;
+}
+
 /* Wide layout variant used by homepage-like platform pages */
 .platform-page-fluid {
   max-width: none;

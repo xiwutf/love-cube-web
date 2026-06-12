@@ -31,6 +31,9 @@ public class PlatformEvent {
     @Column(name = "event_time")
     private LocalDateTime eventTime;
 
+    @Column(name = "end_time")
+    private LocalDateTime endTime;
+
     @Column(name = "signup_count")
     private Integer signupCount;
 
@@ -51,6 +54,12 @@ public class PlatformEvent {
 
     @Column(name = "checkin_code", length = 16)
     private String checkinCode;
+
+    @Column(name = "template_type", length = 32)
+    private String templateType = "GENERAL";
+
+    @Column(name = "max_signup_count")
+    private Integer maxSignupCount;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

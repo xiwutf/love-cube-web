@@ -27,6 +27,7 @@ import com.lovecube.backend.repository.UserRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.services.AdminAuthService;
+import com.lovecube.backend.services.DatingEventService;
 import com.lovecube.backend.services.AdminFellowshipUserInsightService;
 import com.lovecube.backend.services.AdminFellowshipUserInsightService.AdminUserListFilters;
 import com.lovecube.backend.services.AdminFellowshipUserInsightService.InsightBatchContext;
@@ -83,6 +84,7 @@ public class AdminContentController {
     private final VerificationService verificationService;
     private final FellowshipProfileGrowthService fellowshipProfileGrowthService;
     private final AdminFellowshipUserInsightService adminFellowshipUserInsightService;
+    private final DatingEventService datingEventService;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AdminContentController(
@@ -107,6 +109,7 @@ public class AdminContentController {
             VerificationService verificationService,
             FellowshipProfileGrowthService fellowshipProfileGrowthService,
             AdminFellowshipUserInsightService adminFellowshipUserInsightService,
+            DatingEventService datingEventService,
             BCryptPasswordEncoder passwordEncoder
     ) {
         this.announcementRepository = announcementRepository;
@@ -130,6 +133,7 @@ public class AdminContentController {
         this.verificationService = verificationService;
         this.fellowshipProfileGrowthService = fellowshipProfileGrowthService;
         this.adminFellowshipUserInsightService = adminFellowshipUserInsightService;
+        this.datingEventService = datingEventService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -235,12 +239,34 @@ public class AdminContentController {
         return platformEventRepository.findAll();
     }
 
+    @GetMapping("/events/{id}/dating-stats")
+    public Map<String, Object> datingEventStats(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable String id
+    ) {
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
+        return datingEventService.getAdminDatingStats(id);
+    }
+
+    @PostMapping("/events/{id}/dating/mutual-matches/recompute")
+    public Map<String, Object> recomputeDatingMutualMatches(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable String id
+    ) {
+        adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
+        return datingEventService.recomputeMutualMatches(id);
+    }
+
     @PostMapping("/events")
     public PlatformEvent saveEvent(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody PlatformEvent payload
     ) {
         adminAuthService.requirePermission(authHeader, PermissionConstants.CONTENT_EVENT_MANAGE);
+        Optional<PlatformEvent> previous = Optional.empty();
+        if (payload.getId() != null && !payload.getId().isBlank()) {
+            previous = platformEventRepository.findById(payload.getId());
+        }
         if (payload.getId() == null || payload.getId().isBlank()) {
             payload.setId("event-" + UUID.randomUUID());
         }
@@ -250,11 +276,34 @@ public class AdminContentController {
         if (payload.getSignupCount() == null) {
             payload.setSignupCount(0);
         }
+        if (payload.getTemplateType() == null || payload.getTemplateType().isBlank()) {
+            payload.setTemplateType("GENERAL");
+        }
         if ("published".equals(payload.getStatus())
                 && (payload.getCheckinCode() == null || payload.getCheckinCode().isBlank())) {
             payload.setCheckinCode(com.lovecube.backend.services.EventEngagementService.generateCheckinCode());
         }
-        return platformEventRepository.save(payload);
+        String prevStatus = previous.map(PlatformEvent::getStatus).orElse("");
+        PlatformEvent saved = platformEventRepository.save(payload);
+        boolean nowPublished = "published".equalsIgnoreCase(saved.getStatus());
+        boolean wasPublished = prevStatus != null && "published".equalsIgnoreCase(prevStatus);
+        if (nowPublished
+                && !wasPublished
+                && (Boolean.TRUE.equals(saved.getPinned()) || Boolean.TRUE.equals(saved.getRecommended()))) {
+            try {
+                String summary = saved.getSummary() != null && !saved.getSummary().isBlank()
+                        ? saved.getSummary()
+                        : "新活动已发布，欢迎报名参与。";
+                notificationService.broadcastPlatformEventPublished(
+                        "【活动通知】" + saved.getTitle(),
+                        summary,
+                        saved.getId(),
+                        "/events/" + saved.getId()
+                );
+            } catch (Exception ignored) {
+            }
+        }
+        return saved;
     }
 
     @GetMapping("/users")

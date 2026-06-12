@@ -83,6 +83,15 @@
         </div>
       </div>
 
+      <router-link class="mh-card mh-task-entry" to="/platform/my-activities">
+        <span class="mh-task-entry-icon" aria-hidden="true">▣</span>
+        <div class="mh-task-entry-body">
+          <span class="mh-task-entry-title">我的活动</span>
+          <span class="mh-task-entry-meta">报名、签到与互评待办</span>
+        </div>
+        <span class="mh-task-entry-arrow" aria-hidden="true">›</span>
+      </router-link>
+
       <!-- 任务中心：列表与领取在 /me/tasks，此处仅保留入口 -->
       <router-link class="mh-card mh-task-entry" to="/me/tasks">
         <span class="mh-task-entry-icon" aria-hidden="true">✅</span>
@@ -135,34 +144,16 @@
       </div>
     </div>
 
-    <DesktopDashboard
-      class="me-desktop"
-      :user="user"
-      :display-name="displayName"
-      :user-id-display="userIdDisplay"
-      :location-display="locationDisplay"
-      :invite-code-display="inviteCodeDisplay"
-      :invite-count="inviteCount"
-      :unread-count="unreadCount"
-      :joined-space-count="myGroupsList.length"
-      :copy-feedback="copyFeedback"
-      :copy-feedback-error="copyFeedbackError"
-      :profile-light-stats="profileLightStats"
-      :growth-level="growthLevel"
-      :growth-progress="growthProgress"
-      :completed-task-count="completedTaskCount"
-      :daily-tasks="dailyTasks"
-      :account-tasks="dashboardAccountTasks"
-      :claiming-account-code="claimingAccountCode"
-      :overview-items="overviewItems"
-      :group-info="groupInfo"
-      :group-ranking="groupRanking"
-      :quick-actions="quickActions"
-      :on-open-settings="openSettingsPanel"
-      :on-open-edit="openEditPanel"
-      :on-copy-invite="copyInviteCode"
-      @claim-account-task="onClaimAccountTask"
-    />
+    <div class="me-desktop">
+      <MePersonalHub
+        :user="user"
+        :display-name="displayName"
+        :unread-count="unreadCount"
+        :growth-level="growthLevel"
+        :on-open-settings="openSettingsPanel"
+        :on-open-edit="openEditPanel"
+      />
+    </div>
 
     <div v-if="editOpen" class="me-modal-backdrop" @click.self="closeEditPanel">
       <section class="me-modal" role="dialog" aria-modal="true" aria-label="编辑个人资料">
@@ -296,7 +287,7 @@ import { getInviteInfo } from '@/api/invite.js'
 import { claimAccountTask, getMyGrowth } from '@/api/growth.js'
 import { fetchMyGroups, fetchHotGroups } from '@/api/groups.js'
 import { useImageUpload } from '@/composables/useImageUpload.js'
-import DesktopDashboard from '@/components/platform/me-dashboard/DesktopDashboard.vue'
+import MePersonalHub from '@/components/platform/me/MePersonalHub.desktop.vue'
 import MyInvitePanel from '@/components/common/MyInvitePanel.vue'
 import MhHeroBadgeLink from '@/components/platform/me/MhHeroBadgeLink.vue'
 import { getAvatar } from '@/utils/image.js'
@@ -459,6 +450,7 @@ const mobileGridItems = computed(() => {
   const items = [
     { title: '我的资料', icon: '👤', tone: 'violet', to: '/me/profile' },
     { title: '我的团体', icon: '🏠', tone: 'blue', to: '/me/groups' },
+    { title: '我的活动', icon: '▣', tone: 'amber', to: '/platform/my-activities', tip: '报名·签到·互评' },
     { title: '我的动态', icon: '📝', tone: 'rose', to: '/me/posts' },
     { title: '心声收藏', icon: '⭐', tone: 'amber', to: '/me/favorites' },
     { title: '点赞心声', icon: '❤', tone: 'rose', to: '/me/likes' },
@@ -594,13 +586,13 @@ const profileLightStats = computed(() => [
 const workspaceItems = computed(() => [
   { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: '/platform/positive-share' },
   { title: '每日心声', desc: '记录每日想法', value: `${myContentCount.value} 条内容`, icon: '♡', tone: 'rose', to: '/platform/positive-share' },
-  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/events' },
+  { title: '我的活动', desc: '报名、签到与互评', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: '/messages' }
 ])
 
 const overviewItems = computed(() => [
   { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: '/platform/positive-share' },
-  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/events' },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/platform/my-activities' },
   { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: '/me/favorites' },
   { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: '/me/likes' },
   { label: '互动热度', value: myLikesReceived.value, icon: '♨', tone: 'green', to: '/platform/positive-share' },
@@ -608,6 +600,7 @@ const overviewItems = computed(() => [
 ])
 
 const quickActions = computed(() => [
+  { title: '我的活动', desc: '报名、签到与互评', icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: '/platform/positive-share' },
   { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: '/modules' },
   { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: '/messages' },
@@ -1963,8 +1956,10 @@ onBeforeUnmount(() => {
 
 @media (min-width: 1024px) {
   .me-page {
-    width: 100%;
-    margin: 0 auto 42px;
+    width: min(calc(100% - 32px), 1720px);
+    max-width: none;
+    margin: 20px auto 48px;
+    padding: 0;
   }
 
   .me-mobile {
@@ -1973,6 +1968,7 @@ onBeforeUnmount(() => {
 
   .me-desktop {
     display: block;
+    width: 100%;
   }
 
   .me-shell {

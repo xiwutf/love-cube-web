@@ -331,13 +331,13 @@ const profileLightStats = [
 const workspaceItems = computed(() => [
   { title: '我的内容', desc: '发布、管理文章', value: `${myContentCount.value} 篇内容`, icon: '▤', tone: 'violet', to: pcPath('positive-share') },
   { title: '每日心声', desc: '记录每日想法', value: `${Math.min(myContentCount.value, 7)} 条心声`, icon: '♡', tone: 'rose', to: pcPath('positive-share') },
-  { title: '活动中心', desc: '查看活动参与', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: PC_EVENTS },
+  { title: '我的活动', desc: '报名、签到与互评', value: `${myEventCount.value} 个活动`, icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '消息中心', desc: '系统通知与互动', value: unreadCount.value > 0 ? `${unreadCount.value} 条未读` : '暂无未读', icon: '●', tone: 'blue', to: pcPath('messages') }
 ])
 
 const overviewItems = computed(() => [
   { label: '发布内容', value: myContentCount.value, icon: '↗', tone: 'violet', to: pcPath('positive-share') },
-  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: PC_EVENTS },
+  { label: '活动参与', value: myEventCount.value, icon: '✦', tone: 'rose', to: '/platform/my-activities' },
   { label: '心声收藏', value: myFavoriteCount.value, icon: '☆', tone: 'amber', to: pcPath('me/favorites') },
   { label: '点赞心声', value: myPositiveShareLikeCount.value, icon: '♥', tone: 'rose', to: pcPath('positive-share') },
   { label: '互动热度', value: '--', icon: '♨', tone: 'green', to: pcPath('positive-share') },
@@ -345,6 +345,7 @@ const overviewItems = computed(() => [
 ])
 
 const quickActions = computed(() => [
+  { title: '我的活动', desc: '报名、签到与互评', icon: '▣', tone: 'amber', to: '/platform/my-activities' },
   { title: '内容中心', desc: '管理文章和内容', icon: '▤', tone: 'violet', to: pcPath('positive-share') },
   { title: '模块中心', desc: '管理平台模块', icon: '▦', tone: 'green', to: pcPath('modules') },
   { title: '通知中心', desc: '查看系统通知', icon: '●', tone: 'rose', to: pcPath('messages') },

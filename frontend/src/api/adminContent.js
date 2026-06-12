@@ -81,6 +81,10 @@ export function deleteEvent(id) {
   return request.delete(`/admin/events/${id}`)
 }
 
+export function getDatingEventStats(eventId) {
+  return request.get(`/admin/events/${eventId}/dating-stats`)
+}
+
 // Local resources
 export function getAdminLocalResources() {
   return request.get('/admin/local-resources')
