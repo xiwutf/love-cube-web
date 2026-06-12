@@ -166,6 +166,7 @@ public class DatingEventService {
         return getContext(DatingParticipant.fromUser(user, eventId));
     }
 
+    @Transactional
     public Map<String, Object> getContext(DatingParticipant participant) {
         String eventId = participant.eventId();
         PlatformEvent event = requireDatingEvent(eventId);
@@ -175,7 +176,8 @@ public class DatingEventService {
         ctx.put("eventTitle", event.getTitle());
         ctx.put("templateType", event.getTemplateType());
         ctx.put("signedUp", signup != null);
-        ctx.put("checkedIn", signup != null && Boolean.TRUE.equals(signup.getCheckedIn()));
+        boolean checkedIn = signup != null && Boolean.TRUE.equals(signup.getCheckedIn());
+        ctx.put("checkedIn", checkedIn);
         ctx.put("eventTime", event.getEventTime());
         ctx.put("endTime", event.getEndTime());
         ctx.put("effectiveEndTime", PlatformEventLifecycle.resolveEnd(event));
@@ -185,6 +187,10 @@ public class DatingEventService {
         }
 
         Optional<DatingEventIdentity> identity = findIdentity(participant);
+        if (identity.isEmpty() && checkedIn) {
+            ensureIdentityAfterCheckin(participant);
+            identity = findIdentity(participant);
+        }
         identity.ifPresent(i -> ctx.put("identity", toIdentityMap(i)));
 
         Optional<DatingEventProfile> profile = findProfile(participant);
@@ -1042,16 +1048,17 @@ public class DatingEventService {
     }
 
     private String resolveGenderSide(User user) {
-        if (user.getGender() == null) {
-            return null;
+        if (user.getGender() != null) {
+            if (user.getGender() == 1) {
+                return DatingEventTemplate.SIDE_MALE;
+            }
+            if (user.getGender() == 2) {
+                return DatingEventTemplate.SIDE_FEMALE;
+            }
+            return DatingEventTemplate.SIDE_OTHER;
         }
-        if (user.getGender() == 1) {
-            return DatingEventTemplate.SIDE_MALE;
-        }
-        if (user.getGender() == 2) {
-            return DatingEventTemplate.SIDE_FEMALE;
-        }
-        return DatingEventTemplate.SIDE_OTHER;
+        Map<String, Object> fellowship = unifiedProfileService.buildFellowshipPayload(user);
+        return mapGenderToSide((String) fellowship.get("gender"));
     }
 
     private String mapGenderToSide(String gender) {

@@ -20,7 +20,29 @@
       <div class="badge-card">
         <p class="badge-label">你的活动编号</p>
         <p v-if="badgeLabel" class="badge-no">{{ badgeLabel }}</p>
-        <p v-else class="badge-pending">待分配</p>
+        <template v-else>
+          <p class="badge-pending">待分配</p>
+          <p v-if="context.needGender" class="badge-assign-hint">
+            编号与活动是否开始无关，请先确认本场编号性别
+          </p>
+          <div v-if="context.needGender" class="gender-assign">
+            <van-radio-group v-model="genderSide" direction="horizontal">
+              <van-radio name="MALE">男</van-radio>
+              <van-radio name="FEMALE">女</van-radio>
+            </van-radio-group>
+            <van-button
+              size="small"
+              round
+              type="primary"
+              color="#ff5f84"
+              :loading="assigningBadge"
+              @click="assignBadge"
+            >
+              确认并分配编号
+            </van-button>
+          </div>
+          <p v-else class="badge-assign-hint">系统正在为你分配编号，请稍后刷新</p>
+        </template>
         <p class="badge-hint">编号仅在本场活动有效，便于现场交流</p>
       </div>
 
@@ -78,7 +100,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import NavBar from '@/components/NavBar.vue'
-import { fetchDatingConnectionStats, fetchDatingContext, fetchDatingLikeStats } from '@/api/datingEvent.js'
+import { fetchDatingConnectionStats, fetchDatingContext, fetchDatingLikeStats, saveDatingProfile } from '@/api/datingEvent.js'
 import { useUserStore } from '@/stores/user.js'
 import { hasEventGuestToken } from '@/utils/eventGuestToken.js'
 
@@ -93,6 +115,8 @@ const error = ref('')
 const context = ref({})
 const connectionCount = ref(0)
 const likeCount = ref(0)
+const genderSide = ref('MALE')
+const assigningBadge = ref(false)
 
 const badgeLabel = computed(() => context.value?.identity?.badgeLabel || '')
 const matchHint = computed(() => {
@@ -123,6 +147,23 @@ async function load() {
 
 function goOnsite() {
   router.push(`/events/${eventId.value}/onsite`)
+}
+
+async function assignBadge() {
+  if (!genderSide.value) {
+    showToast('请选择本场编号性别')
+    return
+  }
+  assigningBadge.value = true
+  try {
+    await saveDatingProfile(eventId.value, { genderSide: genderSide.value })
+    showToast({ message: '编号已分配', type: 'success' })
+    await load()
+  } catch (e) {
+    showToast(e.message || '分配失败')
+  } finally {
+    assigningBadge.value = false
+  }
 }
 
 function showRegisterHint() {
@@ -202,6 +243,20 @@ onMounted(load)
   font-size: 24px;
   font-weight: 700;
   color: #b45309;
+}
+
+.badge-assign-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #b45309;
+}
+
+.gender-assign {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
 }
 
 .badge-hint {

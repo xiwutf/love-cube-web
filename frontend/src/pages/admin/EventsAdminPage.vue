@@ -12,11 +12,11 @@
           </label>
           <label class="field-block">
             <span class="field-label">开始时间</span>
-            <input v-model="draft.time" class="admin-input" placeholder="例如：2026-05-08 19:00" />
+            <input v-model="draft.time" type="datetime-local" class="admin-input admin-datetime-input" />
           </label>
           <label class="field-block">
             <span class="field-label">结束时间</span>
-            <input v-model="draft.endTime" class="admin-input" placeholder="例如：2026-05-08 22:00（留空则默认开始+3小时）" />
+            <input v-model="draft.endTime" type="datetime-local" class="admin-input admin-datetime-input" title="留空则默认开始时间 +3 小时" />
           </label>
           <label class="field-block">
             <span class="field-label">地点</span>
@@ -121,11 +121,11 @@
           </label>
           <label class="admin-detail-field">
             <span class="admin-detail-label">开始时间</span>
-            <input v-model="detailDialog.form.time" class="admin-input" placeholder="开始时间" />
+            <input v-model="detailDialog.form.time" type="datetime-local" class="admin-input admin-datetime-input" />
           </label>
           <label class="admin-detail-field">
             <span class="admin-detail-label">结束时间</span>
-            <input v-model="detailDialog.form.endTime" class="admin-input" placeholder="结束时间（留空则默认开始+3小时）" />
+            <input v-model="detailDialog.form.endTime" type="datetime-local" class="admin-input admin-datetime-input" title="留空则默认开始时间 +3 小时" />
           </label>
           <label class="admin-detail-field">
             <span class="admin-detail-label">地点</span>
@@ -331,12 +331,13 @@ async function create() {
   }
 }
 
-async function save(item, options = {}) {
+async function save(source, options = {}) {
   saving.value = true
   try {
-    const updated = await saveEvent(toEventPayload(item))
-    Object.assign(item, updated)
-    if (detailDialog.visible && detailDialog.itemId === item.id) {
+    const updated = await saveEvent(toEventPayload(source))
+    const item = items.value.find((entry) => entry.id === (updated.id || source.id))
+    if (item) Object.assign(item, updated)
+    if (detailDialog.visible && detailDialog.itemId === (updated.id || source.id)) {
       syncDetailForm(updated)
     }
     const message = options.fromEditor ? `活动已保存（字数：${options.contentLength || 0}）` : '活动已保存'
@@ -401,6 +402,24 @@ async function loadDatingStats(eventId, templateType) {
   }
 }
 
+function toDatetimeLocalInput(value) {
+  if (!value) return ''
+  const normalized = String(value).trim().replace(' ', 'T')
+  const matched = normalized.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)
+  if (matched) return matched[1]
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function fromDatetimeLocalInput(value) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return null
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) return `${trimmed}:00`
+  return trimmed.replace(' ', 'T')
+}
+
 function openDetail(item) {
   detailDialog.visible = true
   detailDialog.editorVisible = false
@@ -410,8 +429,8 @@ function openDetail(item) {
     title: item.title || '',
     summary: item.summary || '',
     content: item.content || '',
-    time: item.eventTime || item.time || '',
-    endTime: item.endTime || '',
+    time: toDatetimeLocalInput(item.eventTime || item.time || ''),
+    endTime: toDatetimeLocalInput(item.endTime || ''),
     location: item.location || '',
     signupCount: Number(item.signupCount || 0),
     category: item.category || '',
@@ -426,20 +445,21 @@ function openDetail(item) {
 }
 
 function toEventPayload(source) {
-  const eventTime = source.eventTime || source.time || null
-  const endTime = source.endTime || null
+  const eventTime = fromDatetimeLocalInput(source.time || source.eventTime)
+  const endTime = fromDatetimeLocalInput(source.endTime)
+  const { time, ...rest } = source
   return {
-    ...source,
+    ...rest,
     eventTime,
-    endTime: endTime || null
+    endTime
   }
 }
 
 function syncDetailForm(updated) {
   Object.assign(detailDialog.form, {
     ...updated,
-    time: updated.eventTime || '',
-    endTime: updated.endTime || ''
+    time: toDatetimeLocalInput(updated.eventTime || ''),
+    endTime: toDatetimeLocalInput(updated.endTime || '')
   })
 }
 
@@ -486,9 +506,8 @@ function findCurrentItem() {
 async function saveDetail(options = {}) {
   const item = findCurrentItem()
   if (!item) return
-  Object.assign(item, detailDialog.form)
-  await save(item, options)
-  detailDialog.title = item.title || detailDialog.title
+  await save({ ...item, ...detailDialog.form }, options)
+  detailDialog.title = detailDialog.form.title || detailDialog.title
 }
 
 async function toggleDetail() {
@@ -709,6 +728,11 @@ onMounted(load)
 
 .pagination-card {
   margin-top: 12px;
+}
+
+.admin-datetime-input {
+  min-width: 0;
+  color-scheme: light;
 }
 
 @media (max-width: 1360px) {

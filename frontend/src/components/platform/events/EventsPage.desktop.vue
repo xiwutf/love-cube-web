@@ -12,12 +12,6 @@
             <span class="stat-label">{{ stat.label }}</span>
             <span class="stat-note">{{ stat.note }}</span>
           </article>
-          <router-link to="/platform/activity-showcase" class="stat-card showcase-entry">
-            <span class="stat-icon violet" aria-hidden="true">展</span>
-            <span class="stat-value showcase-label">活动展示</span>
-            <span class="stat-label">活动流程</span>
-            <span class="stat-note">参与者完整旅程</span>
-          </router-link>
         </div>
       </div>
 
@@ -371,24 +365,8 @@ onMounted(async () => {
 .stats-grid {
   margin-top: var(--lc-space-8);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--lc-space-4);
-}
-
-.showcase-entry {
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.showcase-entry:hover {
-  border-color: rgba(255, 95, 132, 0.45);
-  box-shadow: var(--lc-shadow-md);
-}
-
-.showcase-label {
-  font-size: var(--lc-text-lg);
 }
 
 .stat-card {

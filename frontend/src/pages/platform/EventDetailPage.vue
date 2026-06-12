@@ -23,6 +23,7 @@
         <section v-if="userStore.isAdmin && item.status === 'published'" class="organizer-onsite-card">
           <h2 class="section-subtitle">现场入口</h2>
           <p class="section-hint">参与者扫码此链接可快速加入本场活动（报名与签到）。</p>
+          <EventOnsiteQrCode v-if="onsiteEntryUrl" class="organizer-onsite-qr" :url="onsiteEntryUrl" :size="180" />
           <p class="organizer-onsite-link">{{ onsiteEntryUrl }}</p>
           <button type="button" class="platform-btn sm" @click="copyOnsiteLink">复制现场链接</button>
           <p v-if="onsiteCopyHint" class="organizer-onsite-hint">{{ onsiteCopyHint }}</p>
@@ -172,6 +173,7 @@ import {
   resolveEffectiveEndMs
 } from '@/utils/activityStatus.js'
 import { createEventOnsiteUrl } from '@/utils/eventOnsiteUrl.js'
+import EventOnsiteQrCode from '@/components/common/EventOnsiteQrCode.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -406,10 +408,16 @@ async function handleSubmitReview(targetUserId) {
   border: 1px dashed var(--lc-pink-border, #f5c2d6);
   border-radius: var(--lc-radius);
   background: var(--lc-pink-light, #fff5f9);
+  display: grid;
+  gap: var(--lc-space-3);
+}
+
+.organizer-onsite-qr {
+  justify-self: start;
 }
 
 .organizer-onsite-link {
-  margin: 0 0 var(--lc-space-3);
+  margin: 0;
   font-size: 12px;
   word-break: break-all;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
