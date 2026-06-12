@@ -2877,6 +2877,7 @@ onMounted(async () => {
 }
 
 .icon-btn {
+  width: 36px;
   border: 1px solid var(--lc-border);
   color: var(--lc-muted);
   background: var(--lc-surface);
@@ -2916,10 +2917,6 @@ onMounted(async () => {
   font-size: var(--lc-text-xs);
   font-weight: 900;
   cursor: pointer;
-}
-
-.icon-btn {
-  width: 36px;
 }
 
 .tabs {
