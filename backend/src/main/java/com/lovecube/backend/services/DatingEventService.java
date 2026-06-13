@@ -567,6 +567,8 @@ public class DatingEventService {
                 .map(like -> like.getTargetParticipantType() + ":" + like.getTargetParticipantId())
                 .collect(Collectors.toSet());
 
+        Map<Long, String> photoByUserId = unifiedProfileService.getPrimaryPhotoUrlByUserIds(checkedInUserIds);
+
         List<Map<String, Object>> male = new ArrayList<>();
         List<Map<String, Object>> female = new ArrayList<>();
         List<Map<String, Object>> other = new ArrayList<>();
@@ -579,7 +581,10 @@ public class DatingEventService {
                     DatingEventProfile profile = identity.getUserId() != null
                             ? userProfileMap.get(identity.getUserId())
                             : guestProfileMap.get(identity.getGuestParticipantId());
-                    Map<String, Object> row = toRosterRow(identity, profile);
+                    String photoUrl = identity.getUserId() != null
+                            ? photoByUserId.get(identity.getUserId())
+                            : null;
+                    Map<String, Object> row = toRosterRow(identity, profile, photoUrl);
                     String participantKey = String.valueOf(row.get("participantKey"));
                     row.put("liked", likedKeys.contains(participantKey));
                     if (DatingEventTemplate.SIDE_FEMALE.equals(identity.getGenderSide())) {
@@ -908,7 +913,7 @@ public class DatingEventService {
         return normalized;
     }
 
-    private Map<String, Object> toRosterRow(DatingEventIdentity identity, DatingEventProfile profile) {
+    private Map<String, Object> toRosterRow(DatingEventIdentity identity, DatingEventProfile profile, String photoUrl) {
         Map<String, Object> row = new LinkedHashMap<>();
         if (identity.getUserId() != null) {
             row.put("userId", identity.getUserId());
@@ -929,6 +934,9 @@ public class DatingEventService {
             row.put("age", profile.getAge());
             row.put("city", profile.getCity());
             row.put("occupation", profile.getOccupation());
+        }
+        if (photoUrl != null && !photoUrl.isBlank()) {
+            row.put("photo", photoUrl);
         }
         return row;
     }

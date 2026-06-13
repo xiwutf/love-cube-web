@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface UserPhotoRepository extends JpaRepository<UserPhoto, Long> {
     List<UserPhoto> findByUserIdOrderBySortOrderAscIdAsc(Long userId);
+
+    List<UserPhoto> findByUserIdInAndStatusOrderBySortOrderAscIdAsc(Collection<Long> userIds, String status);
 
     long countByUserId(Long userId);
 

@@ -676,6 +676,36 @@ public class UnifiedProfileService {
                 .toList();
     }
 
+    /** 批量取用户生活照封面：优先主图，否则按排序取第一张 ACTIVE 照片 */
+    public Map<Long, String> getPrimaryPhotoUrlByUserIds(Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = userIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<UserPhoto>> grouped = userPhotoRepository
+                .findByUserIdInAndStatusOrderBySortOrderAscIdAsc(ids, "ACTIVE")
+                .stream()
+                .filter(p -> p.getPhotoUrl() != null && !p.getPhotoUrl().isBlank())
+                .collect(Collectors.groupingBy(UserPhoto::getUserId));
+        Map<Long, String> result = new LinkedHashMap<>();
+        for (Long userId : ids) {
+            List<UserPhoto> photos = grouped.get(userId);
+            if (photos == null || photos.isEmpty()) {
+                continue;
+            }
+            String url = photos.stream()
+                    .filter(p -> Boolean.TRUE.equals(p.getPrimary()))
+                    .map(UserPhoto::getPhotoUrl)
+                    .findFirst()
+                    .orElse(photos.get(0).getPhotoUrl());
+            result.put(userId, url);
+        }
+        return result;
+    }
+
     /** 联谊开通门槛：至少一张已落库 user_photos 的生活照（与资料页「生活照」一致） */
     public boolean hasFellowshipLifePhotos(Long userId) {
         if (userId == null) {
