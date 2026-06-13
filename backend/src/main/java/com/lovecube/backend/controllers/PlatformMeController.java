@@ -101,6 +101,9 @@ public class PlatformMeController {
         }
 
         appendModernPlatformGroupBuckets(user, createdGroups, managedGroups, joinedGroups);
+        dedupeCrossTableGroups(createdGroups);
+        dedupeCrossTableGroups(managedGroups);
+        dedupeCrossTableGroups(joinedGroups);
         List<Map<String, Object>> pendingJoinGroups =
                 buildPendingJoinGroups(user, createdGroups, managedGroups, joinedGroups);
         pendingJoinGroups.addAll(legacyPlatPending);
@@ -245,10 +248,15 @@ public class PlatformMeController {
             List<Map<String, Object>> joinedGroups) {
         Long uid = user.getUserid();
         Set<String> seen = new HashSet<>();
+        Set<String> seenCrossTableKeys = new HashSet<>();
         for (List<Map<String, Object>> bucket : List.of(createdGroups, managedGroups, joinedGroups)) {
             for (Map<String, Object> row : bucket) {
                 if (row.get("id") != null) {
                     seen.add(String.valueOf(row.get("id")));
+                }
+                String crossKey = groupCrossTableDedupeKey(row);
+                if (!crossKey.equals("|")) {
+                    seenCrossTableKeys.add(crossKey);
                 }
             }
         }
@@ -268,7 +276,14 @@ public class PlatformMeController {
             if (seen.contains(idStr)) {
                 continue;
             }
+            String crossKey = groupCrossTableDedupeKey(summary);
+            if (!crossKey.equals("|") && seenCrossTableKeys.contains(crossKey)) {
+                continue;
+            }
             seen.add(idStr);
+            if (!crossKey.equals("|")) {
+                seenCrossTableKeys.add(crossKey);
+            }
             String role = gm.getRole() == null ? "" : gm.getRole().trim().toLowerCase();
             if ("owner".equals(role)) {
                 createdGroups.add(summary);
@@ -325,5 +340,58 @@ public class PlatformMeController {
             item.put("myMemberRealName", gm.getMemberRealName());
         }
         return item;
+    }
+
+    /**
+     * 迁移期：legacy platform_group 与 platform_groups 可能同名同团长各一条，按「名称+团长」去重，优先保留数字 ID（Space 运营台）。
+     */
+    private void dedupeCrossTableGroups(List<Map<String, Object>> bucket) {
+        Map<String, Map<String, Object>> byKey = new LinkedHashMap<>();
+        for (Map<String, Object> row : bucket) {
+            String key = groupCrossTableDedupeKey(row);
+            if ("|".equals(key)) {
+                key = "id:" + row.get("id");
+            }
+            byKey.merge(key, row, PlatformMeController::pickPreferredCrossTableDuplicate);
+        }
+        bucket.clear();
+        bucket.addAll(byKey.values());
+    }
+
+    private static String groupCrossTableDedupeKey(Map<String, Object> row) {
+        String name = row.get("name") != null ? String.valueOf(row.get("name")).trim().toLowerCase(Locale.ROOT) : "";
+        Object owner = row.get("ownerUserId") != null ? row.get("ownerUserId") : row.get("createdBy");
+        return name + "|" + (owner != null ? String.valueOf(owner) : "");
+    }
+
+    private static boolean isNumericGroupId(Object id) {
+        if (id == null) {
+            return false;
+        }
+        return id.toString().matches("\\d+");
+    }
+
+    private static Map<String, Object> pickPreferredCrossTableDuplicate(
+            Map<String, Object> existing,
+            Map<String, Object> incoming) {
+        boolean existingNumeric = isNumericGroupId(existing.get("id"));
+        boolean incomingNumeric = isNumericGroupId(incoming.get("id"));
+        if (existingNumeric && !incomingNumeric) {
+            return existing;
+        }
+        if (incomingNumeric && !existingNumeric) {
+            return incoming;
+        }
+        int existingCount = memberCountFromSummary(existing);
+        int incomingCount = memberCountFromSummary(incoming);
+        return incomingCount > existingCount ? incoming : existing;
+    }
+
+    private static int memberCountFromSummary(Map<String, Object> row) {
+        Object mc = row.get("memberCount");
+        if (mc instanceof Number n) {
+            return n.intValue();
+        }
+        return 0;
     }
 }

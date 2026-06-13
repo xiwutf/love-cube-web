@@ -75,7 +75,7 @@
                   v-if="group.managed && manageLink(group)"
                   class="enter-btn enter-btn-manage"
                   :to="manageLink(group)"
-                >进入运营台</router-link>
+                >运营台</router-link>
                 <router-link class="enter-btn" :to="groupsPath(String(group.id))">{{ group.enterLabel }}</router-link>
               </div>
             </div>
@@ -150,6 +150,13 @@ function manageLink(group) {
   return resolveSpaceManageEntry(group.id)
 }
 
+function mapGroupStatusLabel(status, hasPendingRequest) {
+  if (hasPendingRequest) return '审核中'
+  const s = String(status || '').trim().toLowerCase()
+  if (s === 'published' || s === 'active') return '进行中'
+  return status || '进行中'
+}
+
 function normalize(item, tabKey) {
   const joinKey = item.joinModeKey || (item.joinMode === 'free' ? 'open' : item.joinMode === 'invite' ? 'invite' : 'audit')
   const joinModeLabel = joinKey === 'open' ? '公开加入' : joinKey === 'invite' ? '仅限邀请' : '审核加入'
@@ -160,8 +167,8 @@ function normalize(item, tabKey) {
   else if (item.myRole === 'owner') roleLabel = '团长'
   else if (item.hasPendingRequest) roleLabel = '审核中'
 
-  const statusLabel = item.hasPendingRequest ? '审核中' : (item.status === 'published' ? '进行中' : item.status || '进行中')
-  const enterLabel = item.applicationPending ? '查看' : item.managed ? '管理' : '进入'
+  const statusLabel = mapGroupStatusLabel(item.status, item.hasPendingRequest)
+  const enterLabel = item.applicationPending ? '查看' : item.managed ? '查看主页' : '进入'
 
   return {
     id: item.id,
