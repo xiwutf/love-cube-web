@@ -10,9 +10,17 @@
 
     <div class="hero-strip" aria-hidden="true" />
 
+    <section v-if="campaignBanner" class="campaign-card">
+      <p class="campaign-kicker">{{ campaignBanner.kicker }}</p>
+      <p class="campaign-text">{{ campaignBanner.text }}</p>
+      <router-link v-if="campaignBanner.link" :to="campaignBanner.link" class="campaign-link">
+        {{ campaignBanner.linkLabel }}
+      </router-link>
+    </section>
+
     <div class="editor-stack">
       <section class="editor-card compose-card">
-        <p class="compose-lead">今天想和大家分享什么？</p>
+        <p class="compose-lead">{{ composeLead }}</p>
         <van-field
           v-model="content"
           class="compose-field"
@@ -20,7 +28,7 @@
           rows="8"
           maxlength="500"
           show-word-limit
-          placeholder="可以写心情、故事、心愿或生活片段…真诚分享更容易遇见同路人。"
+          :placeholder="placeholder"
           :border="false"
         />
 
@@ -77,9 +85,7 @@
           发布小贴士
         </div>
         <ul class="tips-list">
-          <li>尊重他人，避免人身攻击与不当言论。</li>
-          <li>勿发布广告、外链引流或隐私信息（电话、住址等）。</li>
-          <li>内容会展示在动态广场，请使用友善、真实的表达。</li>
+          <li v-for="tip in publishTips" :key="tip">{{ tip }}</li>
         </ul>
       </section>
     </div>
@@ -95,6 +101,7 @@ import { showToast } from 'vant'
 import AppTabBar from '@/components/AppTabBar.vue'
 import { publishDynamic } from '@/api/dynamic.js'
 import { uploadImage } from '@/api/upload.js'
+import { getDynamicPublishCampaign } from '@/config/fellowshipDynamicCampaign.js'
 
 const router = useRouter()
 const content = ref('')
@@ -102,9 +109,7 @@ const fileList = ref([])
 const imageUrls = ref([])
 const submitting = ref(false)
 
-const quickEmojis = ['🙏', '✨', '💛', '🌿', '🎵', '☕', '📖', '🌅', '💭', '🤝', '🎉', '☀️']
-
-const topicTags = ['#今日感恩', '#读经心得', '#代祷', '#联谊日常', '#周末计划', '#新朋友']
+const { topicTags, composeLead, placeholder, quickEmojis, campaignBanner, publishTips } = getDynamicPublishCampaign()
 
 const canSubmit = computed(() => {
   const text = content.value.trim()
@@ -230,6 +235,38 @@ async function submitDynamic() {
   border-radius: 4px;
   background: linear-gradient(90deg, var(--lc-pink-light), var(--lc-indigo-light), var(--lc-pink-border));
   opacity: 0.95;
+}
+
+.campaign-card {
+  margin: var(--lc-space-3) 12px 0;
+  padding: 14px 16px;
+  border-radius: var(--lc-radius);
+  background: linear-gradient(145deg, var(--lc-surface) 0%, var(--lc-indigo-light) 140%);
+  border: 1px solid var(--lc-indigo-border, var(--lc-border));
+}
+
+.campaign-kicker {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lc-indigo);
+  letter-spacing: 0.04em;
+}
+
+.campaign-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--lc-muted);
+}
+
+.campaign-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lc-indigo);
+  text-decoration: none;
 }
 
 .editor-stack {

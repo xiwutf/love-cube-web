@@ -42,6 +42,8 @@ public interface DynamicRepository extends JpaRepository<Dynamic, Long> {
 
     boolean existsByUserIdAndMarkerAndSceneTypeAndIsDeletedFalse(Long userId, String marker, String sceneType);
 
+    boolean existsByMarkerAndSceneTypeAndIsDeletedFalse(String marker, String sceneType);
+
     /**
      * 获取热门动态（按点赞数排序）
      */

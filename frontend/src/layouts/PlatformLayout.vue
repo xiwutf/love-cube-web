@@ -242,6 +242,7 @@ const navItems = [
 ]
 
 const mobileModuleNavItems = [
+  { to: '/platform/play', label: '全部功能' },
   { to: '/', label: '首页' },
   { to: '/platform/local', label: '本地推荐' },
   { to: '/platform/help', label: '互助' },

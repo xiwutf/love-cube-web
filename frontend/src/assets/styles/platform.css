@@ -788,9 +788,13 @@
     gap: 8px;
   }
 
+  .platform-actions .platform-btn,
+  .platform-form-actions .platform-btn {
+    width: 100%;
+  }
+
   .platform-btn {
     height: 48px;
-    width: 100%;
     font-size: 15px;
   }
 

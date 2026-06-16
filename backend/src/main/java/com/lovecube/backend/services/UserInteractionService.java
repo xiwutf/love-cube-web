@@ -227,6 +227,34 @@ public class UserInteractionService {
         return buildUserSummaryList(follows, false);
     }
 
+  /**
+     * 我的粉丝（关注我的人）
+     */
+    public List<Map<String, Object>> getFansUsers(Long userId) {
+        List<UserInteraction> followers = interactionRepository.findByToUserIdAndInteractionTypeOrderByCreatedAtDesc(
+            userId, UserInteraction.InteractionType.FOLLOW);
+        Map<Long, Map<String, Object>> users = new LinkedHashMap<>();
+        for (UserInteraction interaction : followers) {
+            Long fromUserId = interaction.getFromUserId();
+            if (users.containsKey(fromUserId)) continue;
+            User fromUser = userRepository.findById(fromUserId).orElse(null);
+            if (fromUser == null) continue;
+
+            Map<String, Object> row = new HashMap<>();
+            row.put("userId", fromUser.getUserid());
+            row.put("nickname", fromUser.getUsername());
+            row.put("avatarUrl", fromUser.getProfilePhoto());
+            row.put("age", fromUser.getAge());
+            row.put("location", fromUser.getLocation());
+            row.put("occupation", fromUser.getOccupation());
+            row.put("createdAt", interaction.getCreatedAt());
+            row.put("lastActiveAt", resolveLastActiveAt(fromUser));
+            users.put(fromUserId, row);
+        }
+        enrichInterestListMeta(users.keySet(), users);
+        return new ArrayList<>(users.values());
+    }
+
     public UserInteraction followUser(Long fromUserId, Long toUserId) {
         return createInteraction(fromUserId, toUserId, UserInteraction.InteractionType.FOLLOW,
             UserInteraction.TargetType.USER, null, null);

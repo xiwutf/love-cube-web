@@ -15,8 +15,17 @@
               <span class="mh-verify-tag" :class="{ 'is-verified': user?.verificationStatus === 'approved' }">{{ verifyLabel }}</span>
               <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
-            <MhHeroBadgeLink :badges="badges" />
-            <div class="mh-hero-meta" aria-label="账号与邀请码">
+          </div>
+          <div class="mh-hero-actions">
+            <router-link class="mh-message-btn" to="/me/notifications">
+              消息
+              <em v-if="unreadCount > 0" class="mh-message-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</em>
+            </router-link>
+            <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
+          </div>
+        </div>
+        <MhHeroBadgeLink :badges="badges" />
+        <div class="mh-hero-meta" aria-label="账号与邀请码">
               <span class="mh-meta-line">
                 <span class="mh-meta-id">UID {{ userIdDisplay }}</span>
                 <span class="mh-meta-sep" aria-hidden="true">·</span>
@@ -35,20 +44,16 @@
               </span>
               <span v-if="copyFeedback" class="mh-meta-feedback" :class="{ err: copyFeedbackError }">{{ copyFeedback }}</span>
             </div>
-          </div>
-          <div class="mh-hero-actions">
-            <router-link class="mh-message-btn" to="/me/notifications">
-              消息
-              <em v-if="unreadCount > 0" class="mh-message-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</em>
-            </router-link>
-            <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
-          </div>
-        </div>
         <div class="mh-hero-stats">
-          <span v-for="item in profileLightStats" :key="item.label" class="mh-hero-stat">
+          <router-link
+            v-for="item in profileLightStats"
+            :key="item.label"
+            :to="item.to"
+            class="mh-hero-stat"
+          >
             <strong>{{ item.value }}</strong>
             <small>{{ item.label }}</small>
-          </span>
+          </router-link>
         </div>
       </div>
 
@@ -578,9 +583,9 @@ const registerDate = computed(() => {
 })
 
 const profileLightStats = computed(() => [
-  { label: '关注', value: myFollowingCount.value },
-  { label: '粉丝', value: myFansCount.value },
-  { label: '获赞', value: myLikesReceived.value }
+  { label: '关注', value: myFollowingCount.value, to: '/me/following' },
+  { label: '粉丝', value: myFansCount.value, to: '/me/fans' },
+  { label: '获赞', value: myLikesReceived.value, to: '/me/received-likes' }
 ])
 
 const workspaceItems = computed(() => [
@@ -2279,9 +2284,13 @@ onBeforeUnmount(() => {
 }
 
 .mh-hero-meta {
-  margin-top: 6px;
+  margin-top: 10px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.72);
+}
+
+.mh-hero :deep(.mh-badge-row) {
+  margin-top: 14px;
 }
 
 .mh-meta-line {
@@ -2402,6 +2411,14 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 3px;
   text-align: center;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mh-hero-stat:active {
+  opacity: 0.82;
 }
 
 .mh-hero-stat + .mh-hero-stat {
@@ -2750,6 +2767,23 @@ onBeforeUnmount(() => {
 
 .mh-setting-danger .mh-setting-label {
   color: var(--lc-red);
+}
+
+/* ── Responsive tweaks (≤ 390 px, iPhone 13 等) ─────────── */
+@media (max-width: 390px) {
+  .mh-hero-inner {
+    gap: 10px;
+  }
+
+  .mh-message-btn,
+  .mh-edit-btn {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .mh-hero-name {
+    font-size: 17px;
+  }
 }
 
 /* ── Responsive tweaks (≤ 375 px) ───────────────────────── */

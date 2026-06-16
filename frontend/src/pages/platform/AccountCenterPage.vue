@@ -15,11 +15,11 @@
               <span class="mh-verify-tag" :class="{ 'is-verified': user?.verificationStatus === 'approved' }">{{ verifyLabel }}</span>
               <span class="mh-role-tag">{{ roleLabel }}</span>
             </div>
-            <MhHeroBadgeLink :badges="badges" />
-            <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
           </div>
           <button type="button" class="mh-edit-btn" @click="openEditPanel">编辑资料</button>
         </div>
+        <MhHeroBadgeLink :badges="badges" />
+        <div class="mh-hero-id">UID {{ userIdDisplay }}</div>
         <div class="mh-hero-stats">
           <span v-for="item in profileLightStats" :key="item.label" class="mh-hero-stat">
             <strong>{{ item.value }}</strong>
@@ -1983,9 +1983,13 @@ onBeforeUnmount(() => {
 }
 
 .mh-hero-id {
-  margin-top: 6px;
+  margin-top: 10px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.55);
+}
+
+.mh-hero :deep(.mh-badge-row) {
+  margin-top: 14px;
 }
 
 .mh-edit-btn {

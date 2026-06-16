@@ -66,7 +66,7 @@ export function usePlatformPath() {
   function playPath() {
     if (route.path.startsWith('/pc')) return '/pc/platform/play'
     if (route.path.startsWith('/m/platform')) return '/m/platform'
-    return '/platform'
+    return '/platform/play'
   }
 
   function modulesPath() {

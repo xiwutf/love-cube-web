@@ -3,6 +3,8 @@
  * 规范见 docs/field-governance.md
  */
 
+import { resolveUploadUrl } from '@/utils/image.js'
+
 /** 用户头像 URL（主字段 avatarUrl） */
 export function userAvatarUrlFromApi(item) {
   if (item == null || typeof item !== 'object') return ''
@@ -15,6 +17,16 @@ export function groupFeedCoverUrlFromApi(item) {
   if (item == null || typeof item !== 'object') return ''
   const v = item.coverUrl ?? item.avatarUrl
   return typeof v === 'string' ? v.trim() : String(v ?? '').trim()
+}
+
+/** 团体卡片封面：解析上传路径并支持默认图 */
+export function groupCoverUrlFromApi(item, fallback = '') {
+  const raw = groupFeedCoverUrlFromApi(item)
+  if (!raw) return fallback
+  const resolved = resolveUploadUrl(raw)
+  if (resolved) return resolved
+  if (/^https?:\/\//i.test(raw)) return raw
+  return fallback
 }
 
 /** 与审核通过等状态对齐，用于展示「已认证」徽章（含大小写与历史别名） */

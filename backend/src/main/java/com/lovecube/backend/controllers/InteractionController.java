@@ -464,6 +464,19 @@ public class InteractionController {
         List<Map<String, Object>> list = interactionService.getFollowingUsers(currentUser.getUserid());
         return ResponseEntity.ok(list);
     }
+
+    /**
+     * 我的粉丝
+     */
+    @GetMapping("/fans")
+    public ResponseEntity<?> getFans(@RequestHeader("Authorization") String authHeader) {
+        User currentUser = getCurrentUser(authHeader);
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户认证失败"));
+        }
+        List<Map<String, Object>> list = interactionService.getFansUsers(currentUser.getUserid());
+        return ResponseEntity.ok(list);
+    }
     
     /**
      * 从token获取当前用户

@@ -83,7 +83,13 @@
             <span class="status-badge info">Space 运营控制台</span>
           </div>
           <div class="title-row">
-            <img v-if="group.coverUrl" :src="group.coverUrl" :alt="group.name" class="cover-thumb">
+            <img
+              v-if="heroCoverUrl"
+              :src="heroCoverUrl"
+              :alt="group.name"
+              class="cover-thumb"
+              @error="onHeroCoverError"
+            >
             <div v-else class="cover-thumb cover-fallback">{{ group.name?.slice(0, 1) || 'S' }}</div>
             <div class="title-block">
               <div class="title-meta">
@@ -453,6 +459,13 @@
         </div>
       </section>
     </template>
+
+    <div v-else class="state-card err">
+      <h2>暂时无法打开运营台</h2>
+      <p>团体信息未加载完成，请返回重试。</p>
+      <router-link class="btn ghost" :to="groupsPath()">返回我的团体</router-link>
+      <button type="button" class="btn primary" @click="bootstrap">重新加载</button>
+    </div>
   </section>
 </template>
 
@@ -481,6 +494,7 @@ import { PLATFORM_GROUP_TASK_CATALOG } from '@/constants/platformGroupTasks.js'
 import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { useUserStore } from '@/stores/user.js'
 import { PLATFORM_GROUP_CATEGORY_OPTIONS } from '@/utils/groupCategories.js'
+import { groupCoverUrlFromApi } from '@/utils/displayFields.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -537,6 +551,7 @@ const settingsForm = reactive({
 })
 
 const inviteCode = ref('')
+const heroCoverUrl = ref('')
 const onboardingStep = ref(1)
 const taskCatalog = PLATFORM_GROUP_TASK_CATALOG
 const categoryOptions = PLATFORM_GROUP_CATEGORY_OPTIONS
@@ -722,6 +737,11 @@ function fillSettingsFromGroup(g) {
   settingsForm.description = g.description || ''
   settingsForm.tags = g.tags || ''
   inviteCode.value = g.inviteCode || ''
+  heroCoverUrl.value = groupCoverUrlFromApi(g, '')
+}
+
+function onHeroCoverError() {
+  heroCoverUrl.value = ''
 }
 
 async function ensureAuth() {
@@ -740,6 +760,7 @@ async function bootstrap() {
   })
   if (legacyEntry?.path?.startsWith('/admin/my-groups')) {
     redirecting.value = true
+    loading.value = false
     await router.replace(legacyEntry)
     return
   }
@@ -747,16 +768,28 @@ async function bootstrap() {
   loading.value = true
   loadError.value = ''
   forbidden.value = false
+  group.value = null
 
   try {
     const ok = await ensureAuth()
-    if (!ok) return
+    if (!ok) {
+      loadError.value = '请先登录后再进入运营台'
+      return
+    }
 
     const detail = await fetchGroupDetail(spaceId.value)
     const data = detail?.data ?? detail
+    if (!data || data.id == null) {
+      loadError.value = '团体不存在或已下线'
+      return
+    }
     group.value = data
 
-    const canManage = Boolean(data?.managed) || userStore.hasPermission('group.manage.all')
+    const canManage =
+      Boolean(data?.managed) ||
+      Boolean(data?.isOwner) ||
+      ['owner', 'admin'].includes(String(data?.myRole || '').toLowerCase()) ||
+      userStore.hasPermission('group.manage.all')
     if (!canManage) {
       forbidden.value = true
       return
@@ -775,6 +808,7 @@ async function bootstrap() {
     if (activeTab.value === 'activity-review') await loadPendingActivityCount()
   } catch (err) {
     loadError.value = err?.message || '无法加载社区空间'
+    group.value = null
   } finally {
     loading.value = false
   }
@@ -1029,7 +1063,7 @@ onMounted(() => {
 <style scoped>
 .space-manage-page {
   width: min(100% - 48px, 1360px);
-  margin: var(--lc-space-4) auto var(--lc-space-8);
+  margin: var(--lc-space-4) auto calc(var(--lc-space-8) + 72px + env(safe-area-inset-bottom, 0px));
   padding: var(--lc-space-5);
   color: var(--lc-text);
   border-radius: 12px;
@@ -1786,9 +1820,10 @@ onMounted(() => {
 
 @media (max-width: 720px) {
   .space-manage-page {
-    width: min(100% - 24px, 480px);
+    width: min(100% - 16px, 480px);
     margin-top: var(--lc-space-3);
-    padding: 0;
+    margin-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding: 0 0 12px;
   }
 
   .operation-hero,

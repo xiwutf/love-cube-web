@@ -2,16 +2,16 @@
   <main class="platform-home">
     <HomeHero title="Love Cube 平台" subtitle="连接内容、团体与真实互动" @browse="goContent" @publish="goPublish" />
     <HomeNotice :notice="platformNotices[0]" />
-    <HomeQuickEntry :entries="quickEntries" @go="goQuick" />
+    <HomeQuickEntry :entries="quickEntries" featured-type="play" @go="goQuick" />
     <HomeFeatured :items="featured" @open="openDetail" />
     <HomeActivityBanner text="运营活动位：本周活动报名进行中，欢迎参与。" />
     <section class="local-recommend platform-card">
       <div class="local-head">
-        <div>
+        <div class="section-head-copy">
           <h3>本地推荐</h3>
           <p>发现附近的人、活动、圈子和实用信息</p>
         </div>
-        <button type="button" class="platform-btn" @click="goLocal">查看更多</button>
+        <button type="button" class="home-action-btn" @click="goLocal">查看更多</button>
       </div>
       <div v-if="localRecommendations.length" class="local-list">
         <button
@@ -29,13 +29,13 @@
     </section>
     <section class="updates-card platform-card">
       <div class="updates-head">
-        <div>
+        <div class="section-head-copy">
           <h3>最近更新</h3>
           <p>你可以快速查看近期改动与待处理事项</p>
         </div>
         <div class="updates-actions">
-          <button type="button" class="platform-btn is-ghost" @click="goChangelog">查看全部</button>
-          <button v-if="isAdmin" type="button" class="platform-btn" @click="goPendingUpdates">快速处理</button>
+          <button type="button" class="home-action-btn is-ghost" @click="goChangelog">查看全部</button>
+          <button v-if="isAdmin" type="button" class="home-action-btn is-primary" @click="goPendingUpdates">快速处理</button>
         </div>
       </div>
       <ul v-if="homeUpdates.length" class="updates-list">
@@ -74,6 +74,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const { isAdmin } = storeToRefs(userStore)
 const quickEntries = [
+  { label: '全部功能', type: 'play' },
   { label: '每日心声', type: 'mood' },
   { label: '平台公告', type: 'dynamic' },
   { label: '活动中心', type: 'event' },
@@ -96,6 +97,10 @@ function changelogPreview(detail) {
 }
 function goPendingUpdates(){ router.push('/platform/pending-updates') }
 function goQuick(type){
+  if (type === 'play') {
+    router.push('/platform/play')
+    return
+  }
   if (type === 'match') {
     router.push('/fellowship')
     return
@@ -132,27 +137,220 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.platform-home{width:min(100% - 24px,560px);margin:16px auto;display:grid;gap:12px;padding-bottom:calc(72px + env(safe-area-inset-bottom));}
-.local-recommend { border: 1px solid var(--lc-blue-border); background: linear-gradient(135deg, var(--lc-surface), var(--lc-blue-light)); }
-.local-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.local-head h3 { margin: 0; font-size: 18px; color: var(--lc-text); }
-.local-head p { margin: 6px 0 0; color: var(--lc-muted); font-size: 13px; }
-.local-list { margin-top: 10px; display: grid; gap: 8px; }
-.local-item { width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; background: var(--lc-surface); border: 1px solid var(--lc-border); display: grid; gap: 2px; cursor: pointer; }
-.local-item strong { font-size: 14px; color: var(--lc-text); }
-.local-item span { font-size: 12px; color: var(--lc-muted); }
-.local-item:hover { border-color: var(--lc-blue-border); background: var(--lc-blue-light); }
-.local-empty-tip { margin: 10px 0 0; font-size: 13px; color: var(--lc-subtle); }
-.updates-card { border: 1px solid var(--lc-border); }
-.updates-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-.updates-head h3 { margin: 0; font-size: 18px; color: var(--lc-text); }
-.updates-head p { margin: 6px 0 0; font-size: 13px; color: var(--lc-muted); }
-.updates-actions { display: flex; gap: 8px; align-items: center; }
-.updates-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
-.updates-list li { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--lc-border); border-radius: 10px; background: var(--lc-surface); }
-.updates-item-main { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.updates-list strong { font-size: 14px; color: var(--lc-text); }
-.updates-list span { font-size: 12px; color: var(--lc-subtle); white-space: nowrap; }
-.updates-item-detail { margin: 0; font-size: 12px; line-height: 1.5; color: var(--lc-muted); }
-.platform-btn.is-ghost { background: var(--lc-surface); color: var(--lc-text); border: 1px solid var(--lc-border); box-shadow: none; }
+.platform-home {
+  width: min(100% - 24px, 560px);
+  margin: 16px auto;
+  display: grid;
+  gap: 12px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.local-recommend {
+  border: 1px solid var(--lc-blue-border);
+  background: linear-gradient(135deg, var(--lc-surface), var(--lc-blue-light));
+}
+
+.local-head,
+.updates-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 12px;
+}
+
+.section-head-copy {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.local-head h3,
+.updates-head h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--lc-text);
+  line-height: 1.3;
+}
+
+.local-head p,
+.updates-head p {
+  margin: 6px 0 0;
+  color: var(--lc-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.home-action-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--lc-blue-border);
+  background: var(--lc-surface);
+  color: var(--lc-blue);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-action-btn.is-ghost {
+  background: var(--lc-surface);
+  color: var(--lc-text);
+  border-color: var(--lc-border);
+}
+
+.home-action-btn.is-primary {
+  background: var(--lc-blue);
+  color: var(--lc-surface);
+  border-color: var(--lc-blue);
+}
+
+.updates-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.local-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.local-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-border);
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.local-item strong {
+  font-size: 14px;
+  color: var(--lc-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.local-item span {
+  font-size: 12px;
+  color: var(--lc-muted);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.local-item:hover {
+  border-color: var(--lc-blue-border);
+  background: var(--lc-blue-light);
+}
+
+.local-empty-tip {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--lc-subtle);
+}
+
+.updates-card {
+  border: 1px solid var(--lc-border);
+}
+
+.updates-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.updates-list li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--lc-border);
+  border-radius: 10px;
+  background: var(--lc-surface);
+}
+
+.updates-item-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+
+.updates-list strong {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--lc-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.updates-list span {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--lc-subtle);
+  line-height: 1.35;
+}
+
+.updates-item-detail {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lc-muted);
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .platform-home {
+    width: calc(100% - 16px);
+    margin: 12px auto;
+    gap: 10px;
+  }
+
+  .local-head h3,
+  .updates-head h3 {
+    font-size: 17px;
+  }
+
+  .local-head,
+  .updates-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-action-btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .updates-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .updates-actions .home-action-btn:only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .updates-actions {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

@@ -12,8 +12,10 @@
         <div v-if="unlockedBadges.length" class="sp-card">
           <div class="sp-card-title">已获得 ({{ unlockedBadges.length }})</div>
           <div class="badge-grid">
-            <div v-for="b in unlockedBadges" :key="b.code" class="badge-item unlocked">
-              <div class="badge-icon">{{ getBadgeIcon(b) }}</div>
+            <div v-for="(b, index) in unlockedBadges" :key="b.code" class="badge-item unlocked">
+              <div class="badge-icon-wrap">
+                <PlatformBadgeIcon :type="resolveBadgeIconKey(b, index)" />
+              </div>
               <div class="badge-name">{{ getBadgeName(b) }}</div>
               <div class="badge-desc">{{ getBadgeDescription(b) }}</div>
             </div>
@@ -24,8 +26,11 @@
         <div v-if="lockedBadges.length" class="sp-card">
           <div class="sp-card-title">未获得 ({{ lockedBadges.length }})</div>
           <div class="badge-grid">
-            <div v-for="b in lockedBadges" :key="b.code" class="badge-item locked">
-              <div class="badge-icon locked-icon">🔒</div>
+            <div v-for="(b, index) in lockedBadges" :key="b.code" class="badge-item locked">
+              <div class="badge-icon-wrap locked">
+                <PlatformBadgeIcon :type="resolveBadgeIconKey(b, index)" locked />
+                <span class="badge-lock" aria-hidden="true">🔒</span>
+              </div>
               <div class="badge-name">{{ getBadgeName(b) }}</div>
               <div class="badge-desc">{{ getBadgeCondition(b) }}</div>
             </div>
@@ -43,6 +48,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getMyGrowth, getMyBadges } from '@/api/growth.js'
+import PlatformBadgeIcon from '@/components/platform/badges/PlatformBadgeIcon.vue'
+import { resolveBadgeIconKey } from '@/constants/platformBadges.js'
 
 const loading = ref(false)
 const allBadges = ref([])
@@ -134,12 +141,6 @@ function getBadgeCondition(badge) {
   )
 }
 
-function getBadgeIcon(badge) {
-  const raw = pickFirstString(badge?.icon)
-  if (raw && !raw.includes('-') && raw.length <= 4) return raw
-  return pickFirstString(getBadgeMeta(badge)?.icon, '🏅')
-}
-
 onMounted(async () => {
   loading.value = true
   try {
@@ -198,8 +199,27 @@ onMounted(async () => {
 .badge-item.unlocked { background: linear-gradient(145deg, var(--lc-indigo-soft), var(--lc-surface)); border-color: #e0d9ff; }
 .badge-item.locked { background: var(--lc-bg); opacity: 0.6; }
 
-.badge-icon { font-size: 28px; line-height: 1; }
-.locked-icon { font-size: 22px; }
+.badge-icon-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.badge-icon-wrap.locked .badge-lock {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--lc-surface);
+  border: 1px solid var(--lc-soft-alt);
+  font-size: 10px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
 .badge-name { font-size: 12px; font-weight: 700; color: var(--lc-text); }
 .badge-desc { font-size: 10px; color: var(--lc-subtle); line-height: 1.3; }
 

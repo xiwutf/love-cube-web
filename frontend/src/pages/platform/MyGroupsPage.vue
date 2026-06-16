@@ -37,7 +37,12 @@
       <div v-if="currentList.length" class="groups-grid">
         <article v-for="group in currentList" :key="group.joinRequestId || group.id" class="group-card">
           <router-link :to="groupsPath(String(group.id))" class="cover-wrap">
-            <img :src="group.coverUrl" :alt="group.name">
+            <img
+              :src="group.coverUrl"
+              :alt="group.name"
+              loading="lazy"
+              @error="onCoverError($event)"
+            >
           </router-link>
           <div class="group-info">
             <div class="title-line">
@@ -107,6 +112,7 @@ import {
   MEMBER_DISPLAY_PANEL_HINT,
   supplementMemberDisplayTitle
 } from '@/utils/groupMemberDisplayName.js'
+import { groupCoverUrlFromApi } from '@/utils/displayFields.js'
 import { useUserStore } from '@/stores/user.js'
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=640&q=80'
@@ -146,8 +152,21 @@ const emptyText = computed(() => {
 })
 
 function manageLink(group) {
-  if (!group?.managed || !group.id) return null
-  return resolveSpaceManageEntry(group.id)
+  if (!group?.managed || group.id == null || group.id === '') return null
+  const entry = resolveSpaceManageEntry(group.id)
+  if (!entry) return null
+  // 非站点管理员但为团长：仍可进后台「我的团体」运营页
+  if (entry.path?.startsWith('/admin/my-groups') && !userStore.isAdmin && !userStore.isGroupStewardOnly) {
+    return groupsPath(String(group.id))
+  }
+  return entry
+}
+
+function onCoverError(event) {
+  const img = event?.target
+  if (!img || img.dataset.fallbackApplied === '1') return
+  img.dataset.fallbackApplied = '1'
+  img.src = DEFAULT_COVER
 }
 
 function mapGroupStatusLabel(status, hasPendingRequest) {
@@ -177,7 +196,7 @@ function normalize(item, tabKey) {
     region: item.location || item.region || '未设置地区',
     memberCount: Number(item.memberCount || 0),
     description: item.description || '暂无团体简介',
-    coverUrl: item.coverUrl || DEFAULT_COVER,
+    coverUrl: groupCoverUrlFromApi(item, DEFAULT_COVER),
     joinModeLabel,
     roleLabel,
     statusLabel,
@@ -555,6 +574,58 @@ onMounted(load)
   color: var(--lc-red);
   font-weight: 900;
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .my-groups-page {
+    width: calc(100% - 16px);
+    margin-top: 8px;
+    padding: 12px 12px calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page-head h1 {
+    font-size: 22px;
+  }
+
+  .head-actions {
+    width: 100%;
+  }
+
+  .head-actions .btn-secondary,
+  .head-actions .btn-primary {
+    flex: 1;
+    height: 40px;
+    font-size: 13px;
+  }
+
+  .tabs button {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .group-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .cover-wrap img {
+    width: 100%;
+    height: 140px;
+  }
+
+  .card-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-foot-actions {
+    width: 100%;
+  }
+
+  .enter-btn {
+    flex: 1;
+    min-height: 36px;
+  }
 }
 
 @media (max-width: 920px) {
