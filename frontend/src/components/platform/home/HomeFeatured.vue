@@ -82,7 +82,7 @@ function onCoverError(event) {
   font-size: 14px;
   line-height: 1.35;
   color: var(--lc-text);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .featured-copy p {

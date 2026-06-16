@@ -38,7 +38,7 @@ li {
   margin: 6px 0;
   font-size: 14px;
   line-height: 1.45;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .feed-empty {

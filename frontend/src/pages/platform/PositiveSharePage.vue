@@ -1647,8 +1647,7 @@ onMounted(() => {
   }
 
   .stats-band {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    display: none;
   }
 
   .stat-card {
@@ -1702,10 +1701,6 @@ onMounted(() => {
     width: 100%;
     text-align: center;
     box-sizing: border-box;
-  }
-
-  .stats-band {
-    display: none;
   }
 
   .hero-sub + .hero-sub {

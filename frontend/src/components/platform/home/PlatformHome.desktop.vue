@@ -240,14 +240,14 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--lc-text);
   line-height: 1.35;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .local-item span {
   font-size: 12px;
   color: var(--lc-muted);
   line-height: 1.4;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .local-item:hover {
@@ -296,7 +296,7 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--lc-text);
   line-height: 1.35;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .updates-list span {
@@ -311,7 +311,7 @@ onMounted(async () => {
   font-size: 12px;
   line-height: 1.5;
   color: var(--lc-muted);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 480px) {
