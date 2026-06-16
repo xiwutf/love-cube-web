@@ -1,15 +1,35 @@
 <template>
-  <div class="ps-m">
+  <div class="ps-m" :class="{ 'ps-m--dragon-boat': campaign.active }">
     <header class="ps-m-head">
       <button type="button" class="ps-m-back" @click="goBack()">‹ 玩法</button>
-      <h1>每日心声</h1>
-      <p>记录温暖与成长，连续分享有 streak 奖励</p>
+      <p v-if="campaign.pageKicker" class="ps-m-kicker">{{ campaign.active ? '🫔 ' : '' }}{{ campaign.pageKicker }}</p>
+      <h1>{{ campaign.pageTitle }}</h1>
+      <p>{{ campaign.pageSubtitle }}</p>
     </header>
+
+    <section v-if="campaignBannerLink" class="ps-m-campaign">
+      <span class="ps-m-campaign-kicker">🌿 {{ campaignBannerLink.kicker }}</span>
+      <p>{{ campaignBannerLink.text }}</p>
+      <router-link
+        v-if="campaignBannerLink.link"
+        :to="campaignBannerLink.link"
+        class="ps-m-campaign-link"
+      >
+        {{ campaignBannerLink.linkLabel }}
+      </router-link>
+    </section>
 
     <section v-if="dailyTopic" class="ps-m-topic">
       <span class="ps-m-topic-label">今日话题</span>
       <p class="ps-m-topic-text">{{ dailyTopic.topicText }}</p>
       <p v-if="dailyTopic.hintText" class="ps-m-topic-hint">{{ dailyTopic.hintText }}</p>
+      <router-link
+        v-if="campaignTopicLink"
+        :to="campaignTopicLink.to"
+        class="ps-m-topic-link"
+      >
+        {{ campaignTopicLink.label }} →
+      </router-link>
     </section>
 
     <section class="ps-m-meta">
@@ -72,13 +92,12 @@
         <div v-for="item in visibleList" :key="item.id" class="ps-m-item">
           <PositiveShareCard
             :item="item"
+            :comments-open="expandedShareId === item.id"
             @like="handleLike"
             @bookmark="handleBookmark"
             @comment="openComment"
+            @toggle-comments="toggleComments"
           />
-          <button type="button" class="ps-m-comments-toggle" @click="toggleComments(item)">
-            {{ expandedShareId === item.id ? '收起评论' : '查看评论' }}
-          </button>
           <div v-if="expandedShareId === item.id" class="ps-m-comments">
             <p v-if="commentsLoading" class="ps-m-loading">加载评论…</p>
             <ul v-else>
@@ -142,8 +161,21 @@ import {
 } from '@/api/positiveShare.js'
 import PositiveShareEditor from '@/components/platform/positive/PositiveShareEditor.vue'
 import PositiveShareCard from '@/components/platform/positive/PositiveShareCard.vue'
+import { getPositiveShareCampaign } from '@/config/positiveShareCampaign.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 
 const { goBack } = useBackNavigation('/m/platform')
+const { topicsPath } = usePlatformPath()
+
+const campaign = computed(() => getPositiveShareCampaign())
+const campaignTopicLink = computed(() => {
+  if (!campaign.value.topicLink) return null
+  return { to: topicsPath(), label: campaign.value.topicLink.label }
+})
+const campaignBannerLink = computed(() => {
+  if (!campaign.value.campaignBanner) return null
+  return { ...campaign.value.campaignBanner, link: topicsPath() }
+})
 
 const mainTabs = [
   { label: '最新', value: 'latest' },
@@ -324,6 +356,59 @@ onMounted(() => {
   min-height: 100vh;
   padding: 16px 14px 32px;
   background: linear-gradient(180deg, #fff7fb 0%, #f4f5fb 120px, #f4f5fb 100%);
+}
+
+.ps-m--dragon-boat {
+  background: linear-gradient(180deg, #ecfdf5 0%, #f4f5fb 140px, #f4f5fb 100%);
+}
+
+.ps-m-kicker {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.ps-m-campaign {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #ecfdf5, #f0fdf4);
+  border: 1px solid #86efac;
+}
+
+.ps-m-campaign-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.ps-m-campaign p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #166534;
+}
+
+.ps-m-campaign-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ps-m-topic-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #15803d;
+  text-decoration: none;
 }
 
 .ps-m-head h1 {
@@ -507,17 +592,8 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
-.ps-m-comments-toggle {
-  width: 100%;
-  margin-top: 4px;
-  padding: 8px;
-  border: none;
-  background: transparent;
-  font-size: 12px;
-  color: var(--lc-blue, #3b82f6);
-}
-
 .ps-m-comments {
+  margin: 0 0 0 46px;
   padding: 8px 12px;
   background: #f8fafc;
   border-radius: 10px;

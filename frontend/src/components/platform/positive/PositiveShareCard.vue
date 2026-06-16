@@ -1,53 +1,62 @@
 <template>
-  <article class="share-card section-card reflection-card">
-    <header class="share-head">
-      <div class="author">
-        <div class="avatar" :style="avatarStyle">
-          <img
-            v-if="showAvatarImage"
-            :src="resolvedAvatarUrl"
-            :alt="`${displayName}头像`"
-            class="avatar-img"
-            @error="handleAvatarError"
-          >
-          <span v-else>{{ avatarText }}</span>
-        </div>
-        <div class="author-info">
-          <div class="name-row">
-            <span class="name">{{ displayName }}</span>
-            <span class="status-badge info">{{ item.category || '成长记录' }}</span>
-          </div>
-          <span class="time">{{ formatTime(item.createdAt) }}</span>
-        </div>
+  <article class="feed-card" :class="{ 'feed-card--campaign': isCampaignPost }">
+    <header class="feed-head">
+      <div class="avatar" :style="avatarStyle">
+        <img
+          v-if="showAvatarImage"
+          :src="resolvedAvatarUrl"
+          :alt="`${displayName}头像`"
+          class="avatar-img"
+          @error="handleAvatarError"
+        >
+        <span v-else>{{ avatarText }}</span>
       </div>
-      <span class="status-badge neutral">{{ item.status || '已发布' }}</span>
+      <div class="feed-meta">
+        <div class="feed-name-line">
+          <span class="name">{{ displayName }}</span>
+          <span v-if="item.category" class="cat-tag">{{ item.category }}</span>
+          <span v-if="statusLabel" class="status-tag">{{ statusLabel }}</span>
+        </div>
+        <p class="feed-subline">
+          <span v-if="streakLabel > 0" class="streak">连续 {{ streakLabel }} 天</span>
+          <time>{{ formatTime(item.createdAt) }}</time>
+        </p>
+      </div>
     </header>
 
-    <p class="content">{{ item.content }}</p>
+    <p class="feed-body">{{ item.content }}</p>
 
-    <div class="share-meta-row">
-      <span class="status-badge success">连续 {{ streakLabel }} 天</span>
-      <span v-if="item.tags" class="status-badge neutral">{{ item.tags }}</span>
-    </div>
-
-    <footer class="actions">
-      <button type="button" :class="['platform-btn', 'action-btn', 'like-btn', { liked: item.liked }]" @click="$emit('like', item)">
-        {{ item.liked ? '已点赞' : '点赞' }}
-        <span class="action-count">{{ item.encourageCount || 0 }}</span>
+    <footer class="feed-toolbar">
+      <button
+        type="button"
+        class="tool"
+        :class="{ active: commentsOpen }"
+        :aria-expanded="commentsOpen"
+        @click="$emit('toggle-comments', item)"
+      >
+        <span class="tool-icon" aria-hidden="true">💬</span>
+        <span class="tool-label">{{ item.commentCount ? item.commentCount : '评论' }}</span>
       </button>
       <button
         type="button"
-        :class="['platform-btn', 'platform-btn-ghost', 'action-btn', 'bookmark-btn', { bookmarked: item.bookmarked }]"
+        class="tool"
+        :class="{ active: item.liked }"
+        @click="$emit('like', item)"
+      >
+        <span class="tool-icon" aria-hidden="true">{{ item.liked ? '♥' : '♡' }}</span>
+        <span class="tool-label">{{ item.encourageCount ? item.encourageCount : '赞' }}</span>
+      </button>
+      <button
+        type="button"
+        class="tool"
+        :class="{ active: item.bookmarked }"
         @click="$emit('bookmark', item)"
       >
-        {{ item.bookmarked ? '已收藏' : '收藏' }}
+        <span class="tool-icon" aria-hidden="true">{{ item.bookmarked ? '★' : '☆' }}</span>
+        <span class="tool-label">{{ item.bookmarked ? '已藏' : '收藏' }}</span>
       </button>
-      <button type="button" class="platform-btn platform-btn-ghost action-btn comment-btn" @click="$emit('comment', item)">
-        评论
-        <span class="action-count">{{ item.commentCount || 0 }}</span>
-      </button>
-      <button type="button" class="platform-btn platform-btn-ghost action-btn share-btn">
-        分享
+      <button type="button" class="tool tool-compose" @click="$emit('comment', item)">
+        写评论
       </button>
     </footer>
   </article>
@@ -62,10 +71,14 @@ const props = defineProps({
   item: {
     type: Object,
     required: true
+  },
+  commentsOpen: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['like', 'bookmark', 'comment'])
+defineEmits(['like', 'bookmark', 'comment', 'toggle-comments'])
 
 const avatarLoadFailed = ref(false)
 
@@ -79,19 +92,6 @@ const AVATAR_PALETTES = [
   { bg: '#f0d8e8', text: '#c0507a' },
   { bg: '#d8eef0', text: '#1a8090' },
 ]
-
-const CAT_CONFIG = {
-  '感恩': { bg: '#fee2e2', color: '#ef4444' },
-  '鼓励': { bg: '#f3e8ff', color: '#a855f7' },
-  '成长': { bg: '#dcfce7', color: '#16a34a' },
-  '理想': { bg: '#dbeafe', color: '#2563eb' },
-  '生活': { bg: '#fce7f3', color: '#db2777' },
-  '学习': { bg: '#ffedd5', color: '#ea580c' },
-  '工作': { bg: '#f1f5f9', color: '#475569' },
-  '人际': { bg: '#ede9fe', color: '#7c3aed' },
-  '正能量': { bg: '#fef9c3', color: '#ca8a04' },
-  '其他': { bg: '#f1f5f9', color: '#64748b' },
-}
 
 function nameHash(str) {
   let h = 0
@@ -123,17 +123,24 @@ const streakLabel = computed(() =>
   Number(props.item.streakDays || props.item.continuousDays || props.item.currentStreak || 0)
 )
 
+const statusLabel = computed(() => {
+  const status = String(props.item.status || 'PUBLISHED').toUpperCase()
+  if (status === 'PENDING') return '审核中'
+  if (status === 'REJECTED') return '未通过'
+  return ''
+})
+
+const isCampaignPost = computed(() => {
+  const text = String(props.item.content || '')
+  return text.includes('#端午') || text.includes('端午')
+})
+
 const avatarStyle = computed(() => {
   if (props.item.anonymous) {
     return { background: '#f1f5f9', color: '#94a3b8' }
   }
   const palette = AVATAR_PALETTES[nameHash(displayName.value) % AVATAR_PALETTES.length]
   return { background: palette.bg, color: palette.text }
-})
-
-const catTagStyle = computed(() => {
-  const cfg = CAT_CONFIG[props.item.category] || CAT_CONFIG['其他']
-  return { background: cfg.bg, color: cfg.color }
 })
 
 function formatTime(value) {
@@ -162,43 +169,37 @@ watch(
 </script>
 
 <style scoped>
-.share-card {
-  border: 1px solid var(--lc-border);
-  border-radius: 12px;
-  background: var(--lc-surface);
-  padding: 16px;
-  box-shadow: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.feed-card {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--lc-border, #eef2f7);
 }
 
-.share-card:hover {
-  border-color: var(--lc-blue-border);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 6%);
+.feed-card:last-child {
+  border-bottom: none;
 }
 
-.share-head {
+.feed-card--campaign {
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.45) 0%, transparent 72%);
+  margin: 0 -4px;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 8px;
+}
+
+.feed-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 10px;
-}
-
-.author {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
 }
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
   overflow: hidden;
@@ -210,14 +211,12 @@ watch(
   object-fit: cover;
 }
 
-.author-info {
+.feed-meta {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex: 1;
 }
 
-.name-row {
+.feed-name-line {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -228,64 +227,99 @@ watch(
   color: var(--lc-text);
   font-size: 14px;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.time {
-  color: var(--lc-subtle);
-  font-size: 12px;
+.cat-tag,
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.content {
-  margin: 12px 0 0;
-  color: var(--lc-slate);
-  line-height: 1.75;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  font-size: 14px;
+.cat-tag {
+  background: var(--lc-blue-light, #eff6ff);
+  color: var(--lc-blue, #2563eb);
 }
 
-.share-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+.status-tag {
+  background: var(--lc-amber-light, #fffbeb);
+  color: var(--lc-amber, #d97706);
 }
 
-.actions {
-  margin-top: 14px;
+.feed-subline {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  min-height: 32px;
-  padding: 0 10px;
+  gap: 6px;
+  margin: 2px 0 0;
+  color: var(--lc-subtle);
   font-size: 12px;
 }
 
-.like-btn.liked {
-  border-color: var(--lc-green);
-  background: var(--lc-green-light);
-  color: var(--lc-green);
+.streak::after {
+  content: '·';
+  margin-left: 6px;
+  color: var(--lc-muted, #cbd5e1);
 }
 
-.share-btn {
-  margin-left: auto;
+.feed-body {
+  margin: 8px 0 0 46px;
+  color: var(--lc-slate);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  font-size: 15px;
 }
 
-.action-count {
+.feed-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0 46px;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   color: var(--lc-subtle);
-  font-size: 11px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
-.bookmark-btn.bookmarked {
-  border-color: var(--lc-amber);
-  background: var(--lc-amber-light);
-  color: var(--lc-amber);
+.tool:hover {
+  background: var(--lc-soft, #f1f5f9);
+  color: var(--lc-text);
+}
+
+.tool.active {
+  color: var(--lc-pink, #ec4899);
+}
+
+.tool.active .tool-icon {
+  color: var(--lc-pink, #ec4899);
+}
+
+.tool-compose {
+  margin-left: auto;
+  color: var(--lc-blue, #3b82f6);
+  font-weight: 600;
+}
+
+.tool-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tool-label {
+  min-width: 0;
 }
 </style>

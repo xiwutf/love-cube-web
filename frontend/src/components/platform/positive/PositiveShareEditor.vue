@@ -7,7 +7,7 @@
         v-model.trim="form.content"
         maxlength="300"
         rows="4"
-        placeholder="今天有什么值得感恩、被鼓励、想记录的事情？"
+        :placeholder="campaign.editorPlaceholder"
         class="editor-textarea"
       />
       <span class="char-counter">{{ form.content.length }}/300</span>
@@ -49,10 +49,13 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { getPositiveShareCampaign } from '@/config/positiveShareCampaign.js'
 import { createPositiveShare } from '@/api/positiveShare.js'
 
 const emit = defineEmits(['published'])
+
+const campaign = computed(() => getPositiveShareCampaign())
 
 const categories = [
   { value: '感恩', label: '感恩', icon: '♥', bgActive: '#fee2e2', colorActive: '#ef4444', borderActive: '#fca5a5' },

@@ -2,16 +2,23 @@
   <section class="positive-page">
 
     <!-- ═══ Hero ═══ -->
-    <section class="hero">
+    <section class="hero" :class="{ 'hero--dragon-boat': campaign.active }">
       <div class="hero-content">
-        <h1 class="hero-title">每日心声</h1>
-        <p class="hero-sub">把今天的温暖、感恩与思考记录下来</p>
-        <p class="hero-sub">一句鼓励，也许能照亮另一个人的一天</p>
+        <p v-if="campaign.pageKicker" class="hero-kicker">{{ campaign.active ? '🫔 ' : '' }}{{ campaign.pageKicker }}</p>
+        <h1 class="hero-title">{{ campaign.pageTitle }}</h1>
+        <p class="hero-sub">{{ campaign.pageSubtitle }}</p>
         <div v-if="dailyTopic" class="hero-topic">
           <span class="hero-topic-label">今日话题</span>
           <p class="hero-topic-text">{{ dailyTopic.topicText }}</p>
           <p v-if="dailyTopic.hintText" class="hero-topic-hint">{{ dailyTopic.hintText }}</p>
         </div>
+        <router-link
+          v-if="campaignTopicLink"
+          :to="campaignTopicLink.to"
+          class="hero-topic-link"
+        >
+          {{ campaignTopicLink.label }} →
+        </router-link>
         <button type="button" class="hero-btn" @click="scrollToEditor">✏ 写下今日心声</button>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -24,6 +31,20 @@
         <div class="art-bloom art-bloom-1"></div>
         <div class="art-bloom art-bloom-2"></div>
       </div>
+    </section>
+
+    <section v-if="campaignBannerLink" class="campaign-strip">
+      <div class="campaign-strip-main">
+        <span class="campaign-strip-kicker">🌿 {{ campaignBannerLink.kicker }}</span>
+        <p class="campaign-strip-text">{{ campaignBannerLink.text }}</p>
+      </div>
+      <router-link
+        v-if="campaignBannerLink.link"
+        :to="campaignBannerLink.link"
+        class="campaign-strip-link"
+      >
+        {{ campaignBannerLink.linkLabel }}
+      </router-link>
     </section>
 
     <!-- ═══ Stats Band ═══ -->
@@ -106,16 +127,12 @@
               <div v-for="item in visibleList" :key="item.id" class="share-item">
                 <PositiveShareCard
                   :item="item"
+                  :comments-open="expandedShareId === item.id"
                   @like="handleLike"
                   @bookmark="handleBookmark"
                   @comment="openComment"
+                  @toggle-comments="toggleComments"
                 />
-                <!-- Inline comments -->
-                <div class="inline-comment-trigger">
-                  <button type="button" class="toggle-comment-btn" @click="toggleComments(item)">
-                    {{ expandedShareId === item.id ? '▲ 收起评论' : '▼ 查看评论' }}
-                  </button>
-                </div>
                 <div v-if="expandedShareId === item.id" class="comment-section">
                   <p v-if="commentsLoading" class="comment-loading">加载中...</p>
                   <p v-else-if="!comments.length" class="comment-empty">暂无评论，欢迎留下第一句鼓励 ✨</p>
@@ -294,6 +311,8 @@ import {
 import { getUserStats } from '@/api/user.js'
 import PositiveShareEditor from '@/components/platform/positive/PositiveShareEditor.vue'
 import PositiveShareCard from '@/components/platform/positive/PositiveShareCard.vue'
+import { getPositiveShareCampaign } from '@/config/positiveShareCampaign.js'
+import { usePlatformPath } from '@/composables/usePlatformPath.js'
 import { getAvatar } from '@/utils/image.js'
 import { userAvatarUrlFromApi } from '@/utils/displayFields.js'
 
@@ -316,6 +335,17 @@ const CAT_DOT_COLORS = {
   '工作': '#64748b',
   '人际': '#6366f1',
 }
+
+const campaign = computed(() => getPositiveShareCampaign())
+const { topicsPath } = usePlatformPath()
+const campaignTopicLink = computed(() => {
+  if (!campaign.value.topicLink) return null
+  return { to: topicsPath(), label: campaign.value.topicLink.label }
+})
+const campaignBannerLink = computed(() => {
+  if (!campaign.value.campaignBanner) return null
+  return { ...campaign.value.campaignBanner, link: topicsPath() }
+})
 
 const activeTab = ref('latest')
 const activeCategory = ref(null)
@@ -607,12 +637,71 @@ onMounted(() => {
   z-index: 1;
 }
 
+.hero--dragon-boat {
+  background: linear-gradient(120deg, #f0fdf4 0%, #dcfce7 45%, #bbf7d0 100%);
+  border-color: #86efac;
+}
+
+.hero-kicker {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #15803d;
+  letter-spacing: 0.04em;
+}
+
 .hero-title {
   margin: 0;
   color: #1a1714;
   font-size: clamp(30px, 3.5vw, 44px);
   font-weight: 800;
   line-height: 1.2;
+}
+
+.hero-topic-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #15803d;
+  text-decoration: none;
+}
+
+.campaign-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #ecfdf5, #f0fdf4);
+  border: 1px solid #86efac;
+}
+
+.campaign-strip-kicker {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.campaign-strip-text {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #166534;
+}
+
+.campaign-strip-link {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .hero-sub {
@@ -1033,24 +1122,8 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.inline-comment-trigger {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
-
-.toggle-comment-btn {
-  border: none;
-  background: transparent;
-  color: var(--lc-orange);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-
 .comment-section {
-  margin-top: 8px;
+  margin: 0 0 0 46px;
   border: 1px dashed #fde8d0;
   border-radius: 10px;
   background: #fffaf6;
@@ -1618,6 +1691,25 @@ onMounted(() => {
 
   .filter-icon-btn {
     margin-left: 0;
+  }
+
+  .campaign-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .campaign-strip-link {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .stats-band {
+    display: none;
+  }
+
+  .hero-sub + .hero-sub {
+    display: none;
   }
 }
 </style>

@@ -69,6 +69,12 @@ export function usePlatformPath() {
     return '/platform/play'
   }
 
+  function topicsPath() {
+    if (route.path.startsWith('/pc')) return '/pc/platform/topics'
+    if (route.path.startsWith('/m/platform')) return '/m/platform/topics'
+    return '/m/platform/topics'
+  }
+
   function modulesPath() {
     if (route.path.startsWith('/pc')) return '/pc/platform/modules'
     return '/modules'
@@ -108,6 +114,7 @@ export function usePlatformPath() {
     messagesPath,
     mePath,
     playPath,
+    topicsPath,
     modulesPath,
     contentPath,
     announcementsPath,
