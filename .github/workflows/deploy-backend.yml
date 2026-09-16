@@ -32,7 +32,20 @@ jobs:
         working-directory: backend
         run: ./mvnw -DskipTests package
 
-      - name: Upload jar to server temp directory
+      - name: Prepare remote staging directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: 22
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+            mkdir -p /tmp/lovecube-api-release /tmp/lovecube-deploy /opt/lovecube-api/backup
+            rm -rf /tmp/lovecube-api-release/*
+            rm -rf /tmp/lovecube-deploy/*
+
+      - name: Upload jar to staging
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -42,8 +55,21 @@ jobs:
           source: "backend/target/*.jar"
           target: "/tmp/lovecube-api-release"
           strip_components: 2
+          overwrite: true
 
-      - name: Deploy and restart backend
+      - name: Upload deploy scripts
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: 22
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/deploy.sh,deploy/health-check.sh"
+          target: "/tmp/lovecube-deploy"
+          strip_components: 1
+          overwrite: true
+
+      - name: Publish backend via deploy.sh
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -51,110 +77,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -eu
-
-            DEPLOY_DIR="/opt/lovecube-api"
-            RELEASE_DIR="/tmp/lovecube-api-release"
-            TARGET_JAR="$DEPLOY_DIR/lovecube-api.jar"
-            BACKUP_DIR="$DEPLOY_DIR/backup"
-            APP_LOG="$DEPLOY_DIR/app.log"
-
-            echo "[deploy] Prepare directories"
-            mkdir -p "$DEPLOY_DIR" "$BACKUP_DIR" "$RELEASE_DIR"
-
-            NEW_JAR="$(ls -t "$RELEASE_DIR"/*.jar | head -n 1)"
-            if [ -z "${NEW_JAR:-}" ] || [ ! -f "$NEW_JAR" ]; then
-              echo "[deploy] ERROR: no jar found in $RELEASE_DIR"
-              exit 1
-            fi
-            echo "[deploy] New jar: $NEW_JAR"
-
-            OLD_PIDS="$(ss -ltnp | awk '/:8090/ {print $NF}' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
-            if [ -z "${OLD_PIDS:-}" ]; then
-              OLD_PIDS="$(pgrep -f "$TARGET_JAR" || true)"
-            fi
-            if [ -n "$OLD_PIDS" ]; then
-              echo "[deploy] Stop old process: $OLD_PIDS"
-              echo "$OLD_PIDS" | xargs kill || true
-              sleep 3
-              STILL_RUNNING="$(ss -ltnp | awk '/:8090/ {print $NF}' | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' | sort -u)"
-              if [ -z "${STILL_RUNNING:-}" ]; then
-                STILL_RUNNING="$(pgrep -f "$TARGET_JAR" || true)"
-              fi
-              if [ -n "$STILL_RUNNING" ]; then
-                echo "[deploy] Force stop process: $STILL_RUNNING"
-                echo "$STILL_RUNNING" | xargs kill -9 || true
-              fi
-            else
-              echo "[deploy] No old process found"
-            fi
-
-            if [ -f "$TARGET_JAR" ]; then
-              BACKUP_FILE="$BACKUP_DIR/lovecube-api-$(date +%Y%m%d-%H%M%S).jar"
-              cp "$TARGET_JAR" "$BACKUP_FILE"
-              echo "[deploy] Backup old jar to $BACKUP_FILE"
-            fi
-
-            mv -f "$NEW_JAR" "$TARGET_JAR"
-            chmod 644 "$TARGET_JAR"
-            echo "[deploy] Deployed jar -> $TARGET_JAR"
-
-            echo "[deploy] Start backend"
-            export OSS_ENABLED='${{ secrets.OSS_ENABLED }}'
-            export OSS_ACCESS_KEY_ID='${{ secrets.OSS_ACCESS_KEY_ID }}'
-            export OSS_ACCESS_KEY_SECRET='${{ secrets.OSS_ACCESS_KEY_SECRET }}'
-            export OSS_ENDPOINT='${{ secrets.OSS_ENDPOINT }}'
-            export OSS_BUCKET_NAME='${{ secrets.OSS_BUCKET_NAME }}'
-            export OSS_CDN_DOMAIN='${{ secrets.OSS_CDN_DOMAIN }}'
-            nohup java -jar "$TARGET_JAR" \
-              --spring.config.location=file:/opt/lovecube-api/application.yml \
-              --spring.flyway.baseline-on-migrate=true \
-              --spring.flyway.baseline-version=13 \
-              > "$APP_LOG" 2>&1 &
-
-            echo "[deploy] Wait for port 8090 to be ready (max 120s)"
-            READY=0
-            for i in $(seq 1 24); do
-              if ss -ltnp | grep -q ":8090"; then
-                READY=1
-                break
-              fi
-              sleep 5
-            done
-            if [ "$READY" -ne 1 ]; then
-              echo "[deploy] ERROR: 8090 is not listening after 120s"
-              echo "[deploy] Last 160 lines of app.log:"
-              tail -n 160 "$APP_LOG" || true
-              exit 1
-            fi
-
-            echo "[deploy] Check API: /admin/api/announcements"
-            if ! curl -fsS "http://127.0.0.1:8090/admin/api/announcements" >/tmp/lovecube-health.json; then
-              echo "[deploy] ERROR: health check failed"
-              echo "[deploy] Last 120 lines of app.log:"
-              tail -n 120 "$APP_LOG" || true
-              exit 1
-            fi
-
-            echo "[deploy] Check storage mode endpoint"
-            if ! curl -fsS "http://127.0.0.1:8090/admin/api/upload/storage-status" >/tmp/lovecube-storage.json; then
-              echo "[deploy] ERROR: storage status check failed"
-              echo "[deploy] Last 120 lines of app.log:"
-              tail -n 120 "$APP_LOG" || true
-              exit 1
-            fi
-            if ! grep -q '"mode":"oss"' /tmp/lovecube-storage.json; then
-              echo "[deploy] ERROR: storage mode is not oss"
-              cat /tmp/lovecube-storage.json || true
-              exit 1
-            fi
-
-            echo "[deploy] Health check response (first 300 chars):"
-            head -c 300 /tmp/lovecube-health.json || true
-            echo
-            echo "[deploy] Storage status response:"
-            cat /tmp/lovecube-storage.json || true
-            echo
-            echo "[deploy] Last 80 lines of app.log:"
-            tail -n 80 "$APP_LOG" || true
-            echo "[deploy] SUCCESS"
+            set -euo pipefail
+            sed -i 's/\r$//' /tmp/lovecube-deploy/*.sh
+            chmod +x /tmp/lovecube-deploy/*.sh
+            bash /tmp/lovecube-deploy/deploy.sh backend /tmp/lovecube-api-release
