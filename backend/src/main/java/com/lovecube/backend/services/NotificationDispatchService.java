@@ -56,8 +56,12 @@ public class NotificationDispatchService {
     private final JavaMailSender mailSender;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${lovecube.notification.mail.enabled:false}")
     private boolean mailEnabled;
+
+    @Value("${lovecube.notification.mail.enabled:false}")
+    public void setMailEnabled(String value) {
+        this.mailEnabled = value != null && Boolean.parseBoolean(value.trim());
+    }
 
     @Value("${spring.mail.username:}")
     private String mailFrom;

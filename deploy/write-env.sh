@@ -71,8 +71,23 @@ if [ -z "$OSS_ENABLED_VAL" ]; then
   OSS_ENABLED_VAL="true"
 fi
 
+NOTIFICATION_MAIL_ENABLED_VAL="$(pick NOTIFICATION_MAIL_ENABLED)"
+if [ -z "$NOTIFICATION_MAIL_ENABLED_VAL" ]; then
+  NOTIFICATION_MAIL_ENABLED_VAL="false"
+fi
+
 write_kv() {
   printf '%s=%s\n' "$1" "$2"
+}
+
+# systemd EnvironmentFile 里 KEY= 会变成空字符串，并覆盖 YAML 默认值。
+# 布尔/数字空值会让 Spring 启动失败，因此空的可选变量直接不写。
+write_optional() {
+  local key="$1"
+  local value="$2"
+  if [ -n "$value" ]; then
+    write_kv "$key" "$value"
+  fi
 }
 
 {
@@ -82,20 +97,20 @@ write_kv() {
   write_kv SPRING_DATASOURCE_USERNAME "$SPRING_DATASOURCE_USERNAME_VAL"
   write_kv SPRING_DATASOURCE_PASSWORD "$SPRING_DATASOURCE_PASSWORD_VAL"
   write_kv JWT_SECRET "$JWT_SECRET_VAL"
-  write_kv APP_BASE_URL "$(pick APP_BASE_URL)"
-  write_kv WECHAT_APPID "$(pick WECHAT_APPID)"
-  write_kv WECHAT_SECRET "$(pick WECHAT_SECRET)"
+  write_optional APP_BASE_URL "$(pick APP_BASE_URL)"
+  write_optional WECHAT_APPID "$(pick WECHAT_APPID)"
+  write_optional WECHAT_SECRET "$(pick WECHAT_SECRET)"
   write_kv OSS_ENABLED "$OSS_ENABLED_VAL"
-  write_kv OSS_ACCESS_KEY_ID "$(pick OSS_ACCESS_KEY_ID)"
-  write_kv OSS_ACCESS_KEY_SECRET "$(pick OSS_ACCESS_KEY_SECRET)"
-  write_kv OSS_ENDPOINT "$(pick OSS_ENDPOINT)"
-  write_kv OSS_BUCKET_NAME "$(pick OSS_BUCKET_NAME)"
-  write_kv OSS_CDN_DOMAIN "$(pick OSS_CDN_DOMAIN)"
-  write_kv MAIL_HOST "$(pick MAIL_HOST)"
-  write_kv MAIL_PORT "$(pick MAIL_PORT)"
-  write_kv MAIL_USERNAME "$(pick MAIL_USERNAME)"
-  write_kv MAIL_PASSWORD "$(pick MAIL_PASSWORD)"
-  write_kv NOTIFICATION_MAIL_ENABLED "$(pick NOTIFICATION_MAIL_ENABLED)"
+  write_optional OSS_ACCESS_KEY_ID "$(pick OSS_ACCESS_KEY_ID)"
+  write_optional OSS_ACCESS_KEY_SECRET "$(pick OSS_ACCESS_KEY_SECRET)"
+  write_optional OSS_ENDPOINT "$(pick OSS_ENDPOINT)"
+  write_optional OSS_BUCKET_NAME "$(pick OSS_BUCKET_NAME)"
+  write_optional OSS_CDN_DOMAIN "$(pick OSS_CDN_DOMAIN)"
+  write_optional MAIL_HOST "$(pick MAIL_HOST)"
+  write_optional MAIL_PORT "$(pick MAIL_PORT)"
+  write_optional MAIL_USERNAME "$(pick MAIL_USERNAME)"
+  write_optional MAIL_PASSWORD "$(pick MAIL_PASSWORD)"
+  write_kv NOTIFICATION_MAIL_ENABLED "$NOTIFICATION_MAIL_ENABLED_VAL"
 } > "$TMP_FILE"
 
 MANAGED=" SPRING_PROFILES_ACTIVE SPRING_DATASOURCE_URL SPRING_DATASOURCE_USERNAME SPRING_DATASOURCE_PASSWORD JWT_SECRET APP_BASE_URL WECHAT_APPID WECHAT_SECRET OSS_ENABLED OSS_ACCESS_KEY_ID OSS_ACCESS_KEY_SECRET OSS_ENDPOINT OSS_BUCKET_NAME OSS_CDN_DOMAIN MAIL_HOST MAIL_PORT MAIL_USERNAME MAIL_PASSWORD NOTIFICATION_MAIL_ENABLED "
@@ -104,7 +119,7 @@ if [ "${#OLD[@]}" -gt 0 ]; then
     case "$MANAGED" in
       *" $key "*) continue ;;
     esac
-    write_kv "$key" "${OLD[$key]}" >> "$TMP_FILE"
+    write_optional "$key" "${OLD[$key]}" >> "$TMP_FILE"
   done
 fi
 
