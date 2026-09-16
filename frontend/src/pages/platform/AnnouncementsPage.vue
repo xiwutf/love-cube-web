@@ -80,7 +80,7 @@
               </div>
             </div>
             <div class="announcement-visual" aria-hidden="true">
-              <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" loading="lazy">
+              <img v-if="item.coverUrl" :src="resolveUploadUrl(item.coverUrl)" :alt="item.title" loading="lazy">
               <span v-else>{{ getCategoryIcon(item.category) }}</span>
             </div>
             <span class="card-arrow" aria-hidden="true">→</span>
@@ -143,6 +143,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { fetchAnnouncements } from '@/api/platformContent.js'
+import { resolveUploadUrl } from '@/utils/image.js'
 
 const PAGE_SIZE = 6
 const loading = ref(false)

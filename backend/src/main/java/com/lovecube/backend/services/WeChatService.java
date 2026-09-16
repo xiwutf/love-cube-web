@@ -49,7 +49,6 @@ public class WeChatService
             if (user != null) {
                 // ✅ 生成 JWT
                 String token = JwtUtil.generateToken(user.getOpenid());
-                System.out.println("✅ 生成的 Token: " + token); // 打印检查
                 result.put("userId", user.getUserid());
                 result.put("token", token);
             } else {

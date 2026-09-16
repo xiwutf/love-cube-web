@@ -1,66 +1,29 @@
 /**
  * 图片 URL 处理工具
- * 后端返回的图片路径可能是相对路径（/uploads/avatar/xxx.jpg），
- * 需要拼接 baseUrl 才能正常显示。
+ * 后端返回的图片路径可能是相对路径（/uploads/avatar/xxx.jpg 或 /admin/uploads/...），
+ * 浏览器应请求 /admin/uploads/...（由 Nginx 反代到 Spring context-path=/admin）。
  */
+
+import { toBrowserUploadUrl } from '@/utils/uploadUrl.js'
 
 const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/api$/, '')
 
-/** 将后端返回的图片路径转为可访问的完整 URL */
+/** 将后端返回的图片路径转为当前页面可加载的地址（不拼接生产域名）。 */
 export function toFullUrl(url) {
   if (!url) return ''
-  if (/^https?:\/\//.test(url)) return url   // 已是完整 URL
-  if (url.startsWith('/')) return BASE + url   // 绝对路径
-  return BASE + '/' + url                      // 相对路径
+  const resolved = resolveUploadUrl(url)
+  if (!resolved) return ''
+  if (/^https?:\/\//i.test(resolved)) return resolved
+  if (resolved.startsWith('/admin/')) return resolved
+  if (resolved.startsWith('/')) return `${BASE}${resolved}`
+  return `${BASE}/${resolved}`
 }
 
 /**
- * 将头像/相册/认证图地址转为当前页面可加载的 URL。
- * 库中常存完整 http(s) 指向 :8090、localhost 或 OSS；HTTPS 管理页引用 HTTP 资源时需同域 /admin/uploads/...。
+ * 将头像/相册/认证图/公告附件地址转为当前页面可加载的 URL。
  */
 export function resolveUploadUrl(url) {
-  const value = String(url || '').trim()
-  if (!value) return ''
-  const normalized = value.replace(/\\/g, '/')
-
-  if (/^https?:\/\//i.test(normalized)) {
-    try {
-      const u = new URL(normalized)
-      const p = u.pathname
-      const q = u.search || ''
-      const isLocalHost = ['localhost', '127.0.0.1'].includes((u.hostname || '').toLowerCase())
-      const isHttpOnHttpsPage =
-        typeof window !== 'undefined' &&
-        window.location.protocol === 'https:' &&
-        u.protocol === 'http:'
-      if (p.startsWith('/admin/uploads/')) {
-        if (isLocalHost || isHttpOnHttpsPage) return `${p}${q}`
-        return normalized
-      }
-      if (p.startsWith('/admin/api/uploads/')) {
-        const fixed = p.replace('/admin/api/uploads/', '/admin/uploads/')
-        if (isLocalHost || isHttpOnHttpsPage) return `${fixed}${q}`
-        return `${u.origin}${fixed}${q}`
-      }
-      if (p.startsWith('/uploads/')) {
-        if (isLocalHost || isHttpOnHttpsPage) return `/admin${p}${q}`
-        return normalized
-      }
-    } catch {
-      /* ignore */
-    }
-    return normalized
-  }
-
-  if (normalized.startsWith('/admin/uploads/')) return normalized
-  if (normalized.startsWith('/admin/api/uploads/')) return normalized.replace('/admin/api/uploads/', '/admin/uploads/')
-  if (normalized.startsWith('/uploads/')) return `/admin${normalized}`
-  if (normalized.startsWith('uploads/')) return `/admin/${normalized}`
-  if (normalized.startsWith('admin/uploads/')) return `/${normalized}`
-  if (normalized.startsWith('admin/api/uploads/')) return `/${normalized.replace('admin/api/uploads/', 'admin/uploads/')}`
-  if (normalized.startsWith('/')) return normalized
-  if (normalized.includes('/')) return `/admin/${normalized.replace(/^\//, '')}`
-  return `/admin/uploads/photos/${normalized}`
+  return toBrowserUploadUrl(url)
 }
 
 /** 默认头像（本地占位） */
@@ -76,7 +39,8 @@ export function getAvatar(user) {
     user?.avatar ||
     resolveFirstPhoto(user) ||
     ''
-  return toFullUrl(raw) || DEFAULT_AVATAR
+  const resolved = resolveUploadUrl(raw)
+  return resolved || DEFAULT_AVATAR
 }
 
 function resolveFirstPhoto(user) {

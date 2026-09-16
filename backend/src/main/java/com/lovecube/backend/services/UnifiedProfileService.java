@@ -17,6 +17,7 @@ import com.lovecube.backend.repository.UserGrowthRepository;
 import com.lovecube.backend.repository.UserVerificationRepository;
 import com.lovecube.backend.repository.VerificationRequestRepository;
 import com.lovecube.backend.utils.JwtUtil;
+import com.lovecube.backend.utils.UploadUrlSupport;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,11 +125,11 @@ public class UnifiedProfileService {
         result.put("height", merged.get("height"));
         result.put("signature", merged.getOrDefault("bio", ""));
         result.put("bio", merged.getOrDefault("bio", ""));
-        String avatarUrl = merged.getOrDefault("avatarUrl", "").toString();
+        String avatarUrl = UploadUrlSupport.toPublicApiUrl(merged.getOrDefault("avatarUrl", "").toString());
         result.put("avatarUrl", avatarUrl);
         // 过渡期别名：与 users.profile_photo 及旧客户端对齐，与 avatarUrl 同值
         result.put("profilePhoto", avatarUrl);
-        result.put("photos", merged.getOrDefault("photos", List.of()));
+        result.put("photos", sanitizeUploadUrls(merged.getOrDefault("photos", List.of())));
         result.put("role", normalizeRole(user.getRole()));
         result.put("status", "DISABLED".equalsIgnoreCase(user.getUserStatus()) ? "disabled" : "active");
         result.put("fellowshipEnabled", Boolean.TRUE.equals(user.getFellowshipEnabled()));
@@ -193,7 +194,7 @@ public class UnifiedProfileService {
             );
             Map<String, String> row = new LinkedHashMap<>();
             row.put("nickname", defaultText(nickname, ""));
-            row.put("avatarUrl", defaultText(avatar, ""));
+            row.put("avatarUrl", UploadUrlSupport.toPublicApiUrl(defaultText(avatar, "")));
             out.put(uid, row);
         }
         return out;
@@ -358,7 +359,7 @@ public class UnifiedProfileService {
         result.put("bio", merged.getOrDefault("bio", ""));
         result.put("intention", merged.getOrDefault("intention", ""));
         result.put("maritalStatus", merged.getOrDefault("maritalStatus", ""));
-        result.put("avatarUrl", merged.getOrDefault("avatarUrl", ""));
+        result.put("avatarUrl", UploadUrlSupport.toPublicApiUrl(String.valueOf(merged.getOrDefault("avatarUrl", ""))));
         result.put("tags", merged.getOrDefault("tags", ""));
         result.put("identityRole", merged.getOrDefault("identityRole", "self"));
         result.put("guardianRole", merged.getOrDefault("guardianRole", ""));
@@ -478,7 +479,7 @@ public class UnifiedProfileService {
 
     private Map<String, Object> buildCompletionProfileFromUser(User user, Map<String, Boolean> verifyBadges) {
         Map<String, Object> profile = new LinkedHashMap<>();
-        profile.put("avatarUrl", defaultText(user.getProfilePhoto(), ""));
+        profile.put("avatarUrl", UploadUrlSupport.toPublicApiUrl(defaultText(user.getProfilePhoto(), "")));
         profile.put("city", defaultText(user.getLocation(), ""));
         profile.put("bio", defaultText(user.getBio(), ""));
         if (user.getBirthDate() != null) {
@@ -674,6 +675,7 @@ public class UnifiedProfileService {
                 .filter(p -> "ACTIVE".equalsIgnoreCase(p.getStatus()))
                 .map(UserPhoto::getPhotoUrl)
                 .filter(Objects::nonNull)
+                .map(UploadUrlSupport::toPublicApiUrl)
                 .toList();
     }
 
@@ -702,7 +704,7 @@ public class UnifiedProfileService {
                     .map(UserPhoto::getPhotoUrl)
                     .findFirst()
                     .orElse(photos.get(0).getPhotoUrl());
-            result.put(userId, url);
+            result.put(userId, UploadUrlSupport.toPublicApiUrl(url));
         }
         return result;
     }
@@ -849,7 +851,7 @@ public class UnifiedProfileService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("userId", user.getUserid());
         out.put("nickname", defaultText(nickname, ""));
-        out.put("avatarUrl", defaultText(avatar, ""));
+        out.put("avatarUrl", UploadUrlSupport.toPublicApiUrl(defaultText(avatar, "")));
         out.put("gender", defaultText(gender, ""));
         out.put("birthYear", birthYear);
         out.put("birthday", birthYear == null ? "" : birthYear + "-01-01");
@@ -1151,5 +1153,16 @@ public class UnifiedProfileService {
         if (value instanceof String s && s.isBlank()) {
             missing.add(key);
         }
+    }
+
+    private List<String> sanitizeUploadUrls(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        return list.stream()
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .map(UploadUrlSupport::toPublicApiUrl)
+                .toList();
     }
 }

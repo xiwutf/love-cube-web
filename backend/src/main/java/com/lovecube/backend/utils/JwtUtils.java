@@ -3,6 +3,8 @@ package com.lovecube.backend.utils;
 import com.lovecube.backend.config.JwtConfig;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -12,6 +14,7 @@ import java.util.Date;
 
 @Component
 public class JwtUtils {
+    private static final Logger log = LoggerFactory.getLogger(JwtUtils.class);
 
     private final JwtConfig jwtConfig;
     private final SecretKey key;
@@ -51,15 +54,15 @@ public class JwtUtils {
                 .parseSignedClaims(token);
             return true;
         } catch (SecurityException ex) {
-            System.out.println("Invalid JWT signature");
+            log.debug("Invalid JWT signature");
         } catch (MalformedJwtException ex) {
-            System.out.println("Invalid JWT token");
+            log.debug("Invalid JWT token");
         } catch (ExpiredJwtException ex) {
-            System.out.println("Expired JWT token");
+            log.debug("Expired JWT token");
         } catch (UnsupportedJwtException ex) {
-            System.out.println("Unsupported JWT token");
+            log.debug("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
-            System.out.println("JWT claims string is empty");
+            log.debug("JWT claims string is empty");
         }
         return false;
     }

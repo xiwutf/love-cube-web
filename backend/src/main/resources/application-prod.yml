@@ -26,9 +26,9 @@ spring:
       max-request-size: 120MB
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:3306/${DB_NAME:lovecube}?useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:localhost}:3306/${DB_NAME:lovecube}?useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:root}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -81,7 +81,7 @@ spring:
     type: none
 
 jwt:
-  secret: ${JWT_SECRET:9a4f2c8d3b7a1e6f45c8a0b3f267d8b1d4e6f3c8a9d2b5f8e3a9c6b5d4e1f7a2}
+  secret: ${JWT_SECRET}
   expiration: 864000000  # 10 days in milliseconds
 
 logging:
@@ -96,8 +96,8 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"
 
 wechat:
-  appid: ${WECHAT_APPID:wx5cd57f95b505d1f4}
-  secret: ${WECHAT_SECRET:f82aa93556baeaee07ca60297c7a2509}
+  appid: ${WECHAT_APPID:}
+  secret: ${WECHAT_SECRET:}
   api:
     login:
       path: /api/wechat/login

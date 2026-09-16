@@ -1,7 +1,7 @@
 <template>
   <div class="cover-upload-field">
     <div v-if="modelValue" class="cover-preview-wrap">
-      <img :src="modelValue" alt="封面图预览" class="cover-preview" />
+      <img :src="resolveUploadUrl(modelValue)" alt="封面图预览" class="cover-preview" />
       <div class="cover-actions">
         <label class="admin-btn cover-upload-btn" :class="{ disabled: disabled || uploading }">
           {{ uploading ? '上传中...' : changeLabel }}
@@ -53,6 +53,7 @@
 import { ref } from 'vue'
 import { showToast } from 'vant'
 import { uploadImage } from '@/api/upload.js'
+import { resolveUploadUrl } from '@/utils/image.js'
 
 const props = defineProps({
   modelValue: {

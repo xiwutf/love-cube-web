@@ -10,14 +10,14 @@
       <h1 class="detail-title">{{ item.title || '未命名公告' }}</h1>
       <p class="detail-lead">{{ item.summary || '暂无摘要信息' }}</p>
       <figure v-if="item.coverUrl" class="detail-cover">
-        <img :src="item.coverUrl" :alt="item.title || '公告封面'" loading="lazy">
+        <img :src="resolveUploadUrl(item.coverUrl)" :alt="item.title || '公告封面'" loading="lazy">
       </figure>
       <div class="detail-body">
         <p>{{ item.content || '暂无正文内容。' }}</p>
       </div>
       <section v-if="item.attachmentUrl" class="detail-attachment">
         <h3>公告附件</h3>
-        <img :src="item.attachmentUrl" :alt="`${item.title || '公告'}附件`" loading="lazy">
+        <img :src="resolveUploadUrl(item.attachmentUrl)" :alt="`${item.title || '公告'}附件`" loading="lazy">
       </section>
     </article>
 
@@ -32,6 +32,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { fetchAnnouncementDetail } from '@/api/platformContent.js'
+import { resolveUploadUrl } from '@/utils/image.js'
 
 const route = useRoute()
 const item = ref(null)

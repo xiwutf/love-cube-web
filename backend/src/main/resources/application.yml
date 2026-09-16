@@ -4,13 +4,33 @@ server:
   servlet:
     context-path: /admin
 
+# 密钥与数据库账号一律走环境变量，不要写进仓库。
+# 本地启动至少需要：SPRING_DATASOURCE_URL、SPRING_DATASOURCE_USERNAME、SPRING_DATASOURCE_PASSWORD
+# 生产额外需要：SPRING_PROFILES_ACTIVE=prod、JWT_SECRET
+
 jwt:
-  secret: 9a4f2c8d3b7a1e6f45c8a0b3f267d8b1d4e6f3c8a9d2b5f8e3a9c6b5d4e1f7a2
+  # 生产必须用 JWT_SECRET 覆盖；默认值仅供本地开发，勿当生产密钥
+  secret: ${JWT_SECRET:local-dev-only-insecure-jwt-secret-do-not-use-in-prod}
   expiration: 864000000  # 10 days in milliseconds
+
+app:
+  base-url: ${APP_BASE_URL:}
+  avatar-path: /uploads/avatar/
+  photos-path: /uploads/photos/
+  oss:
+    enabled: ${OSS_ENABLED:false}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+    endpoint: ${OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+    bucket-name: ${OSS_BUCKET_NAME:love-cube-files}
+    cdn-domain: ${OSS_CDN_DOMAIN:}
+    avatar-folder: ${OSS_AVATAR_FOLDER:avatars/}
+    photos-folder: ${OSS_PHOTOS_FOLDER:photos/}
+    verify-folder: ${OSS_VERIFY_FOLDER:verify/}
 
 spring:
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   servlet:
     multipart:
@@ -18,9 +38,9 @@ spring:
       max-request-size: 120MB
     
   datasource:
-    url: jdbc:mysql://rm-2zereaqi1k536nd38zo.mysql.rds.aliyuncs.com:3306/lovecube?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: xifg
-    password: Lj962464!
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/lovecube?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:root}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -38,10 +58,10 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
   flyway:
     enabled: true
@@ -70,11 +90,6 @@ spring:
 
   cache:
     type: none  # 暂时禁用 Redis 缓存
-
-  security:
-    user:
-      name: admin
-      password: admin123
 
   mail:
     host: ${MAIL_HOST:smtp.example.com}

@@ -5,6 +5,9 @@ import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.CannedAccessControlList;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.lovecube.backend.config.AppProperties;
+import com.lovecube.backend.utils.UploadUrlSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,7 +20,8 @@ import java.util.UUID;
 
 @Service
 public class FileStorageServiceImpl implements FileStorageService {
-    
+    private static final Logger log = LoggerFactory.getLogger(FileStorageServiceImpl.class);
+
     @Autowired
     private AppProperties appProperties;
     
@@ -27,7 +31,7 @@ public class FileStorageServiceImpl implements FileStorageService {
             try {
                 return uploadToOss(file, normalizeFolder(appProperties.getOss().getAvatarFolder(), "avatars/"));
             } catch (Exception e) {
-                System.err.println("OSS avatar upload failed, fallback to local storage: " + e.getMessage());
+                log.error("OSS avatar upload failed, fallback to local storage: {}", e.getMessage());
                 return uploadToLocal(file, "uploads/avatar/");
             }
         } else {
@@ -41,7 +45,7 @@ public class FileStorageServiceImpl implements FileStorageService {
             try {
                 return uploadToOss(file, normalizeFolder(appProperties.getOss().getPhotosFolder(), "photos/"));
             } catch (Exception e) {
-                System.err.println("OSS photo upload failed, fallback to local storage: " + e.getMessage());
+                log.error("OSS photo upload failed, fallback to local storage: {}", e.getMessage());
                 return uploadToLocal(file, "uploads/photos/");
             }
         } else {
@@ -55,7 +59,7 @@ public class FileStorageServiceImpl implements FileStorageService {
             try {
                 return uploadToOss(file, normalizeFolder(appProperties.getOss().getVerifyFolder(), "verify/"));
             } catch (Exception e) {
-                System.err.println("OSS verify upload failed, fallback to local: " + e.getMessage());
+                log.error("OSS verify upload failed, fallback to local: {}", e.getMessage());
                 return uploadToLocal(file, "uploads/verify/");
             }
         } else {
@@ -85,8 +89,8 @@ public class FileStorageServiceImpl implements FileStorageService {
         
         File dest = new File(dir, filename);
         file.transferTo(dest);
-        
-        return trimTrailingSlash(appProperties.getBaseUrl()) + "/" + trimSlash(folder) + "/" + filename;
+
+        return UploadUrlSupport.toLocalStoredUrl(folder, filename);
     }
     
     /**
@@ -94,16 +98,14 @@ public class FileStorageServiceImpl implements FileStorageService {
      */
     private boolean deleteFromLocal(String fileUrl) {
         try {
-            String baseUrl = trimTrailingSlash(appProperties.getBaseUrl());
-            if (fileUrl.startsWith(baseUrl)) {
-                String relativePath = fileUrl.substring(baseUrl.length());
-                String filePath = System.getProperty("user.dir") + relativePath;
-                File file = new File(filePath);
-                return file.delete();
+            String relativePath = UploadUrlSupport.toFilesystemRelativePath(fileUrl);
+            if (relativePath == null) {
+                return false;
             }
-            return false;
+            File file = new File(System.getProperty("user.dir") + relativePath);
+            return file.delete();
         } catch (Exception e) {
-            System.err.println("从本地删除文件失败: " + e.getMessage());
+            log.warn("从本地删除文件失败: {}", e.getMessage());
             return false;
         }
     }
@@ -156,7 +158,7 @@ public class FileStorageServiceImpl implements FileStorageService {
                 client.shutdown();
             }
         } catch (Exception e) {
-            System.err.println("删除OSS文件失败: " + e.getMessage());
+            log.warn("删除OSS文件失败: {}", e.getMessage());
             return false;
         }
     }

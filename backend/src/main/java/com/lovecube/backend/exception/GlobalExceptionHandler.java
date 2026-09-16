@@ -1,5 +1,7 @@
 package com.lovecube.backend.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -21,6 +23,8 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler
 {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<String> handleUserNotFoundException(UserNotFoundException ex)
     {
@@ -31,7 +35,7 @@ public class GlobalExceptionHandler
     public ResponseEntity<?> handleAuthenticationException(AuthenticationException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiResponse(false, "Authentication failed: " + ex.getMessage()));
+                .body(new ApiResponse(false, "Authentication failed"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -56,23 +60,25 @@ public class GlobalExceptionHandler
 
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<?> handleMultipartException(MultipartException ex) {
+        log.warn("Invalid upload request: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(new ApiResponse(false, "Invalid upload request: " + ex.getMessage()));
+                .body(new ApiResponse(false, "Invalid upload request"));
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> handleResponseStatusException(ResponseStatusException ex) {
         return ResponseEntity
                 .status(ex.getStatusCode())
-                .body(new ApiResponse(false, ex.getReason() == null ? ex.getMessage() : ex.getReason()));
+                .body(new ApiResponse(false, ex.getReason() == null ? "Request failed" : ex.getReason()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGlobalException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiResponse(false, "An error occurred: " + ex.getMessage()));
+                .body(new ApiResponse(false, "An error occurred"));
     }
 
     private static class ApiResponse {
@@ -91,7 +97,6 @@ public class GlobalExceptionHandler
             this.data = data;
         }
 
-        // Getters and setters
         public boolean isSuccess() {
             return success;
         }

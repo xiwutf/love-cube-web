@@ -1,6 +1,6 @@
 app:
-  # 服务器基础URL配置 - 需要更改时请同时更新 frontend/global-config.js
-  base-url: http://localhost:8090/admin
+  # 仅本地调试；上传接口不会把该值拼进对外 URL
+  base-url: ${APP_BASE_URL:http://localhost:8090/admin}
   avatar-path: /uploads/avatar/
   photos-path: /uploads/photos/
   # OSS配置（开发环境：通过环境变量控制，避免明文密钥入库）
@@ -22,6 +22,12 @@ spring:
     baseline-on-migrate: true
     baseline-version: 13
     validate-on-migrate: true
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
   mail:
     host: ${MAIL_HOST:localhost}

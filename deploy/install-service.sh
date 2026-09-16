@@ -56,8 +56,8 @@ else
   log "保留已有 EnvironmentFile: $ENV_FILE"
 fi
 
-if [ ! -f "$APP_DIR/application.yml" ]; then
-  log "WARN: ${APP_DIR}/application.yml 不存在。启动仍依赖该文件，本脚本不会生成或覆盖它。"
+if [ -f "$APP_DIR/application.yml" ]; then
+  log "WARN: ${APP_DIR}/application.yml 仍存在，但服务已改用 JAR 内配置 + EnvironmentFile，该文件不再参与启动。"
 fi
 
 UNIT_TMP="$(mktemp)"

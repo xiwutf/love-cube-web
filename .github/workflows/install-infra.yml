@@ -69,12 +69,25 @@ jobs:
       - name: Write env file and install systemd
         uses: appleboy/ssh-action@v1.0.3
         env:
+          SPRING_PROFILES_ACTIVE: ${{ secrets.SPRING_PROFILES_ACTIVE }}
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          WECHAT_APPID: ${{ secrets.WECHAT_APPID }}
+          WECHAT_SECRET: ${{ secrets.WECHAT_SECRET }}
           OSS_ENABLED: ${{ secrets.OSS_ENABLED }}
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
           OSS_BUCKET_NAME: ${{ secrets.OSS_BUCKET_NAME }}
           OSS_CDN_DOMAIN: ${{ secrets.OSS_CDN_DOMAIN }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          NOTIFICATION_MAIL_ENABLED: ${{ secrets.NOTIFICATION_MAIL_ENABLED }}
           WRITE_ENV_FILE: ${{ inputs.write_env_file }}
           INSTALL_SYSTEMD: ${{ inputs.install_systemd }}
         with:
@@ -82,25 +95,14 @@ jobs:
           port: 22
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: OSS_ENABLED,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET,OSS_ENDPOINT,OSS_BUCKET_NAME,OSS_CDN_DOMAIN,WRITE_ENV_FILE,INSTALL_SYSTEMD
+          envs: SPRING_PROFILES_ACTIVE,SPRING_DATASOURCE_URL,SPRING_DATASOURCE_USERNAME,SPRING_DATASOURCE_PASSWORD,JWT_SECRET,APP_BASE_URL,WECHAT_APPID,WECHAT_SECRET,OSS_ENABLED,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET,OSS_ENDPOINT,OSS_BUCKET_NAME,OSS_CDN_DOMAIN,MAIL_HOST,MAIL_PORT,MAIL_USERNAME,MAIL_PASSWORD,NOTIFICATION_MAIL_ENABLED,WRITE_ENV_FILE,INSTALL_SYSTEMD
           script: |
             set -euo pipefail
             sed -i 's/\r$//' /tmp/lovecube-deploy/* || true
             chmod +x /tmp/lovecube-deploy/*.sh
 
             if [ "${WRITE_ENV_FILE}" = "true" ]; then
-              umask 077
-              mkdir -p /opt/lovecube-api
-              {
-                printf 'OSS_ENABLED=%s\n' "${OSS_ENABLED}"
-                printf 'OSS_ACCESS_KEY_ID=%s\n' "${OSS_ACCESS_KEY_ID}"
-                printf 'OSS_ACCESS_KEY_SECRET=%s\n' "${OSS_ACCESS_KEY_SECRET}"
-                printf 'OSS_ENDPOINT=%s\n' "${OSS_ENDPOINT}"
-                printf 'OSS_BUCKET_NAME=%s\n' "${OSS_BUCKET_NAME}"
-                printf 'OSS_CDN_DOMAIN=%s\n' "${OSS_CDN_DOMAIN}"
-              } > /opt/lovecube-api/lovecube-api.env
-              chmod 600 /opt/lovecube-api/lovecube-api.env
-              echo "[infra] wrote /opt/lovecube-api/lovecube-api.env"
+              bash /tmp/lovecube-deploy/write-env.sh /opt/lovecube-api/lovecube-api.env
             else
               echo "[infra] skip writing env file"
             fi

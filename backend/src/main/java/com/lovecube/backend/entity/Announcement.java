@@ -7,6 +7,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Data;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.lovecube.backend.utils.PublicUploadUrlSerializer;
 
 import java.time.LocalDateTime;
 
@@ -34,9 +36,11 @@ public class Announcement {
 
     private String category;
 
+    @JsonSerialize(using = PublicUploadUrlSerializer.class)
     @Column(name = "cover_url", length = 512)
     private String coverUrl;
 
+    @JsonSerialize(using = PublicUploadUrlSerializer.class)
     @Column(name = "attachment_url", length = 512)
     private String attachmentUrl;
 

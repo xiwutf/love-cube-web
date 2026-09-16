@@ -21,8 +21,8 @@ public class HomeConfig {
     @Column(name = "config_key", nullable = false, length = 100)
     private String configKey;
 
-    @Lob
-    @Column(name = "config_value", nullable = false)
+    /** Flyway 定义为 LONGTEXT。禁止使用 @Lob：Hibernate 6 + MySQL 会映射成 TINYTEXT 并尝试 ALTER。 */
+    @Column(name = "config_value", nullable = false, columnDefinition = "LONGTEXT")
     private String configValue;
 
     @Column(name = "config_group", nullable = false, length = 50)

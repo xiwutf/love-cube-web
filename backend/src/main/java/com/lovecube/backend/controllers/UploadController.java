@@ -5,6 +5,7 @@ import com.lovecube.backend.models.User;
 import com.lovecube.backend.services.FileStorageService;
 import com.lovecube.backend.services.FellowshipProfileGrowthService;
 import com.lovecube.backend.services.UnifiedProfileService;
+import com.lovecube.backend.utils.UploadUrlSupport;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -223,7 +224,10 @@ public class UploadController {
     public ResponseEntity<?> getUserPhotos(@RequestHeader("Authorization") String authHeader) {
         try {
             User user = unifiedProfileService.requireCurrentUser(authHeader);
-            List<String> photos = unifiedProfileService.getUserPhotos(user.getUserid());
+            List<String> photos = unifiedProfileService.getUserPhotos(user.getUserid())
+                    .stream()
+                    .map(UploadUrlSupport::toPublicApiUrl)
+                    .toList();
             return ResponseEntity.ok(Map.of("photos", photos, "photosCount", photos.size()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
@@ -294,9 +298,10 @@ public class UploadController {
 
     private boolean isValidPhotoUrl(String url) {
         if (url == null || url.isBlank()) return false;
-        String trimmed = url.trim();
-        String localPrefix = trimTrailingSlash(appProperties.getBaseUrl()) + appProperties.getPhotosPath();
-        if (trimmed.startsWith(localPrefix)) return true;
+        String trimmed = UploadUrlSupport.toPublicApiUrl(url.trim());
+        if (UploadUrlSupport.isLocalUploadUrl(trimmed) && trimmed.contains("/uploads/photos/")) {
+            return true;
+        }
 
         AppProperties.Oss oss = appProperties.getOss();
         if (oss == null || !oss.isEnabled()) return false;
