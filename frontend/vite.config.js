@@ -70,11 +70,15 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         '/admin/api': {
-          target: env.VITE_BACKEND_ORIGIN || 'http://xifg.com.cn:8090',
+          target: env.VITE_BACKEND_ORIGIN || 'https://lovecube.xifg.com.cn',
+          changeOrigin: true
+        },
+        '/admin/uploads': {
+          target: env.VITE_BACKEND_ORIGIN || 'https://lovecube.xifg.com.cn',
           changeOrigin: true
         },
         '/admin/ws': {
-          target: env.VITE_BACKEND_ORIGIN || 'http://xifg.com.cn:8090',
+          target: env.VITE_BACKEND_ORIGIN || 'https://lovecube.xifg.com.cn',
           changeOrigin: true,
           ws: true
         }

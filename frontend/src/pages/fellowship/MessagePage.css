@@ -1,7 +1,8 @@
 ﻿.message-page {
   min-height: 100dvh;
-  background: #f2f4f8;
-  padding-bottom: 72px;
+  background: #fff;
+  /* 底栏 placeholder 已留出高度，再加 padding 会在列表和底栏之间空出一条灰带 */
+  padding-bottom: 0;
 }
 
 .msg-header {
@@ -52,7 +53,7 @@
 .msg-tabs :deep(.van-tab) { font-size: 16px; font-weight: 700; color: #7e8ea4; }
 .msg-tabs :deep(.van-tab--active) { color: #ff5f84; font-weight: 800; }
 .msg-tabs :deep(.van-tabs__line) { height: 3px; border-radius: 2px; width: 24px !important; }
-.tab-content { background: #fff; min-height: calc(100dvh - 52px - 44px - 72px - env(safe-area-inset-top, 0px)); }
+.tab-content { background: #fff; }
 .chat-cell :deep(.van-swipe-cell__wrapper) { background: #fff; }
 .chat-item { display: flex; align-items: center; gap: 12px; padding: 13px 16px; background: #fff; border-bottom: 1px solid #f1f4f8; }
 .chat-avatar-wrap { position: relative; flex-shrink: 0; }

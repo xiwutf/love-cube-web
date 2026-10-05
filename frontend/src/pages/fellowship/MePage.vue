@@ -454,8 +454,8 @@ const menuItems = computed(() => {
       theme: 'rose'
     },
     { key: 'match', title: '我的匹配', sub: s.mutualMatchCount > 0 ? `${s.mutualMatchCount}人与你匹配` : '破冰与默契', icon: 'like', to: '/fellowship/my-likes?tab=mutual', theme: 'pink' },
-    { key: 'tasks', title: '今日任务', sub: dailyTaskSub.value || '查看成长任务', icon: 'todo-list-o', to: '/fellowship/tasks', theme: 'teal' },
-    { key: 'swipe-history', title: '滑卡记录', sub: '喜欢 · 超级喜欢 · 跳过', icon: 'clock-o', to: '/fellowship/match/history', theme: 'cyan' },
+    { key: 'tasks', title: '今日任务', sub: dailyTaskTotal.value ? `今日 ${dailyTaskDone.value}/${dailyTaskTotal.value}` : '查看成长任务', icon: 'todo-list-o', to: '/fellowship/tasks', theme: 'teal' },
+    { key: 'swipe-history', title: '滑卡记录', sub: '喜欢与跳过', icon: 'clock-o', to: '/fellowship/match/history', theme: 'cyan' },
     { key: 'visitor', title: '谁看过我', sub: s.todayVisitorCount > 0 ? `今日+${s.todayVisitorCount}` : '查看访客', icon: 'eye', to: '/fellowship/messages?tab=visitor', theme: 'blue' },
     { key: 'likes', title: '喜欢我的人', sub: s.likesReceived > 0 ? `${s.likesReceived}人喜欢你` : '查看喜欢', icon: 'good-job', to: '/fellowship/liked-me', theme: 'yellow' },
     { key: 'play', title: '平台玩法', sub: '签到与每日心声', icon: 'gem-o', to: '/m/platform', theme: 'gray' },
@@ -693,30 +693,39 @@ onMounted(async () => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 13px 132px 9px 16px;
+  gap: 8px;
+  padding: 12px 16px 8px;
 }
 
 .page-title {
-  margin: 0 6px 0 0;
+  margin: 0;
+  flex: 0 0 auto;
   font-size: 22px;
-  line-height: 1;
+  line-height: 1.2;
   font-weight: 800;
   color: #212334;
+  white-space: nowrap;
 }
 
 .header-tip {
-  margin: 4px auto 0 0;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 11px;
+  line-height: 1.4;
   color: #9497ab;
   background: rgba(255, 255, 255, 0.72);
   border-radius: 12px;
-  padding: 2px 9px;
+  padding: 4px 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-actions {
   display: flex;
-  gap: 6px;
+  flex: 0 0 auto;
+  gap: 2px;
 }
 
 .header-icon-btn {
@@ -983,7 +992,7 @@ onMounted(async () => {
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  padding-right: 96px;
+  padding-right: 68px;
   min-width: 0;
   align-self: stretch;
 }
@@ -999,8 +1008,8 @@ onMounted(async () => {
   margin: 0;
   align-self: stretch;
   min-width: 0;
-  font-size: 29px;
-  line-height: 1.15;
+  font-size: 20px;
+  line-height: 1.3;
   font-weight: 700;
   color: #222334;
   white-space: normal;
@@ -1391,15 +1400,26 @@ onMounted(async () => {
 
 .menu-title {
   margin: 0;
-  font-size: 14px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.3;
   color: #2c3048;
   font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .menu-sub {
   margin: 0;
+  width: 100%;
   font-size: 11px;
+  line-height: 1.35;
   color: #9ba0b6;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .photos-card,

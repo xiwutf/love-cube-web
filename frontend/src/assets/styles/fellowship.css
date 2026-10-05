@@ -46,9 +46,11 @@
     box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
   }
 
-  /* 与 max-width:480px 的联谊壳体左缘对齐 */
+  /* 宽屏时放到手机栏左侧空白处，避免悬在消息列表中间 */
   .fellowship-layout .back-platform {
-    left: calc((100vw - min(480px, 100vw)) / 2 + 12px);
+    top: 20px;
+    bottom: auto;
+    left: 20px;
     right: auto;
   }
 }

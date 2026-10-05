@@ -47,13 +47,12 @@ function go(path) {
 </script>
 
 <style scoped>
-:deep(.fellowship-tabbar.van-tabbar--fixed) {
-  position: fixed;
+/* placeholder 才是根节点，fixed 底栏是它里面的 .van-tabbar--fixed，类名不在同一个元素上 */
+.fellowship-tabbar :deep(.van-tabbar--fixed) {
   left: 50%;
   right: auto;
-  transform: translateX(-50%);
   width: min(100%, 480px);
-  bottom: 0;
+  transform: translateX(-50%);
   z-index: 120;
 }
 </style>
