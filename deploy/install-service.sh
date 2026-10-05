@@ -35,11 +35,21 @@ fi
 log "使用 Java: $JAVA_BIN"
 java -version 2>&1 || true
 
-log "确保项目目录存在（不迁移现有路径）: $APP_DIR"
+log "确保项目目录存在: $APP_DIR"
 $SUDO mkdir -p "$APP_DIR" "$APP_DIR/backup" "$APP_DIR/logs" "$APP_DIR/uploads" "$APP_DIR/deploy"
 
-if [ -d /root/uploads ] || [ -d /root/logs ]; then
-  log "WARN: 发现 /root/uploads 或 /root/logs。WorkingDirectory 将固定为 ${APP_DIR}，不会自动迁移这些目录。"
+# 旧 nohup 的 user.dir 是 /root，历史上传都在 /root/uploads。
+# systemd 只读 ${APP_DIR}/uploads，不合并的话网站图片会全部 404/500。
+if [ -d /root/uploads ]; then
+  log "合并历史上传 /root/uploads -> ${APP_DIR}/uploads（不删除目标里多出来的文件，也不删除 /root/uploads）"
+  if command -v rsync >/dev/null 2>&1; then
+    $SUDO rsync -a /root/uploads/ "${APP_DIR}/uploads/"
+  else
+    $SUDO cp -a /root/uploads/. "${APP_DIR}/uploads/"
+  fi
+fi
+if [ -d /root/logs ]; then
+  log "WARN: 发现 /root/logs。服务日志目录已固定为 ${APP_DIR}/logs，不会自动迁移旧日志。"
 fi
 
 if [ ! -f "$ENV_FILE" ]; then
